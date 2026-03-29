@@ -1,0 +1,296 @@
+/**
+ * ImageChef — Built-in System Recipes
+ *
+ * These are read-only. Users can clone them to create their own.
+ * Seeded into IndexedDB on first launch by db.js.
+ */
+
+export const SYSTEM_RECIPES = [
+
+  // ─── 1. Web Optimise ──────────────────────────────────
+  {
+    id:          'sys-web-optimise',
+    name:        'Web Optimise',
+    description: 'Resize to max 1920px wide, strip GPS metadata, export as WebP at 85% quality.',
+    isSystem:    true,
+    coverColor:  '#0077ff',
+    tags:        ['web', 'performance', 'resize'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id:   'step-1', type: 'transform', transformId: 'geo-resize',
+        params: { width: '1920', height: '', maintainAspect: true, algo: 'Lanczos' },
+        label: 'Resize to 1920px'
+      },
+      {
+        id:   'step-2', type: 'transform', transformId: 'meta-strip',
+        params: { level: 'GPS Only' },
+        label: 'Strip GPS'
+      },
+      {
+        id:   'step-3', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '', format: 'image/webp', quality: 85 },
+        label: 'Export WebP 85%'
+      }
+    ]
+  },
+
+  // ─── 2. Thumbnail Pack ────────────────────────────────
+  {
+    id:          'sys-thumbnail-pack',
+    name:        'Thumbnail Pack',
+    description: 'Create three size variants — Full (1920px), Medium (800px), Thumb (400px) — as JPEGs.',
+    isSystem:    true,
+    coverColor:  '#8b5cf6',
+    tags:        ['thumbnails', 'variants', 'resize'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id:   'branch-1', type: 'branch',
+        label: 'Size Variants',
+        branches: [
+          {
+            id: 'variant-full', label: 'Full',
+            nodes: [
+              { id: 'f-resize', type: 'transform', transformId: 'geo-resize', params: { width: '1920', maintainAspect: true } },
+              { id: 'f-export', type: 'transform', transformId: 'flow-export', params: { suffix: '_full', format: 'image/jpeg', quality: 92 } }
+            ]
+          },
+          {
+            id: 'variant-med', label: 'Medium',
+            nodes: [
+              { id: 'm-resize', type: 'transform', transformId: 'geo-resize', params: { width: '800', maintainAspect: true } },
+              { id: 'm-export', type: 'transform', transformId: 'flow-export', params: { suffix: '_med', format: 'image/jpeg', quality: 85 } }
+            ]
+          },
+          {
+            id: 'variant-thumb', label: 'Thumb',
+            nodes: [
+              { id: 't-resize', type: 'transform', transformId: 'geo-resize', params: { width: '400', maintainAspect: true } },
+              { id: 't-export', type: 'transform', transformId: 'flow-export', params: { suffix: '_thumb', format: 'image/jpeg', quality: 80 } }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+
+  // ─── 3. Privacy Scrub ─────────────────────────────────
+  {
+    id:          'sys-privacy-scrub',
+    name:        'Privacy Scrub',
+    description: 'Blur detected faces and remove all EXIF metadata including GPS. Safe to share.',
+    isSystem:    true,
+    coverColor:  '#22c55e',
+    tags:        ['privacy', 'faces', 'metadata'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'step-1', type: 'transform', transformId: 'ai-face-privacy',
+        params: { mode: 'Blur', confidence: 70 },
+        label: 'Blur Faces'
+      },
+      {
+        id: 'step-2', type: 'transform', transformId: 'meta-strip',
+        params: { level: 'All' },
+        label: 'Strip All Metadata'
+      },
+      {
+        id: 'step-3', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_private', format: 'image/jpeg', quality: 90 },
+        label: 'Export'
+      }
+    ]
+  },
+
+  // ─── 4. Polaroid Simulator ────────────────────────────
+  {
+    id:          'sys-polaroid',
+    name:        'Polaroid Simulator',
+    description: 'Square-crop, add a classic white Polaroid border with a wider bottom, gentle vignette and warm tones.',
+    isSystem:    true,
+    coverColor:  '#f59e0b',
+    tags:        ['creative', 'retro', 'border'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'step-1', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' },
+        label: 'Square Crop'
+      },
+      {
+        id: 'step-2', type: 'transform', transformId: 'geo-padding',
+        params: { top: '8%', right: '8%', bottom: '14%', left: '8%', color: '#ffffff' },
+        label: 'Polaroid Border'
+      },
+      {
+        id: 'step-3', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 30, radius: 70 },
+        label: 'Vignette'
+      },
+      {
+        id: 'step-4', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 5, saturation: 15, vibrance: 10 },
+        label: 'Warm Tones'
+      },
+      {
+        id: 'step-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_polaroid', format: 'image/jpeg', quality: 92 },
+        label: 'Export'
+      }
+    ]
+  },
+
+  // ─── 5. Copyrighter ───────────────────────────────────
+  {
+    id:          'sys-copyrighter',
+    name:        'Copyrighter',
+    description: 'Stamps a © copyright notice with the image\'s EXIF date (DD-MMM-YYYY) in the bottom-right corner.',
+    isSystem:    true,
+    coverColor:  '#f472b6',
+    tags:        ['copyright', 'text', 'watermark'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'step-1', type: 'transform', transformId: 'overlay-rich-text',
+        params: {
+          content:   '© {{exif.author | "Owner"}} {{exif.date | date("DD-MMM-YYYY")}}',
+          font:      'Inter',
+          size:      22,
+          color:     '#ffffff',
+          opacity:   85,
+          anchor:    'bottom-right',
+          offsetX:   24,
+          offsetY:   24,
+          shadow:    true,
+          shadowColor: 'rgba(0,0,0,0.7)',
+          blendMode: 'source-over',
+        },
+        label: 'Copyright Stamp'
+      },
+      {
+        id: 'step-2', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '', format: 'image/jpeg', quality: 92 },
+        label: 'Export'
+      }
+    ]
+  },
+
+  // ─── 6. Black & White Classic ─────────────────────────
+  {
+    id:          'sys-bw-classic',
+    name:        'Black & White Classic',
+    description: 'High-contrast desaturated conversion with vignette and light sharpening.',
+    isSystem:    true,
+    coverColor:  '#374151',
+    tags:        ['black and white', 'classic', 'filter'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'step-1', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: -100, contrast: 20 },
+        label: 'Desaturate + Contrast'
+      },
+      {
+        id: 'step-2', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 40, radius: 65 },
+        label: 'Vignette'
+      },
+      {
+        id: 'step-3', type: 'transform', transformId: 'filter-advanced',
+        params: { sharpenAmount: 20 },
+        label: 'Sharpen'
+      },
+      {
+        id: 'step-4', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_bw', format: 'image/jpeg', quality: 90 },
+        label: 'Export'
+      }
+    ]
+  },
+
+  // ─── 7. Film Grain ────────────────────────────────────
+  {
+    id:          'sys-film-grain',
+    name:        'Film Grain',
+    description: 'Warm tones, film grain noise and vignette for an analogue photography look.',
+    isSystem:    true,
+    coverColor:  '#92400e',
+    tags:        ['film', 'grain', 'vintage', 'filter'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'step-1', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 15, saturation: -10 },
+        label: 'Film Tone'
+      },
+      {
+        id: 'step-2', type: 'transform', transformId: 'color-tint',
+        params: { color: '#c8a97e', strength: 12, blendMode: 'multiply' },
+        label: 'Warm Tint'
+      },
+      {
+        id: 'step-3', type: 'transform', transformId: 'filter-advanced',
+        params: { noiseLevel: 18 },
+        label: 'Film Grain'
+      },
+      {
+        id: 'step-4', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 35, radius: 60 },
+        label: 'Vignette'
+      },
+      {
+        id: 'step-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_film', format: 'image/jpeg', quality: 90 },
+        label: 'Export'
+      }
+    ]
+  },
+
+  // ─── 8. Social Ready ──────────────────────────────────
+  {
+    id:          'sys-social-ready',
+    name:        'Social Ready',
+    description: 'Square-crop for social media, subtle tuning, strip metadata, export as high-quality WebP.',
+    isSystem:    true,
+    coverColor:  '#0ea5e9',
+    tags:        ['social', 'instagram', 'square', 'webp'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'step-1', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Attention' },
+        label: 'Square Crop'
+      },
+      {
+        id: 'step-2', type: 'transform', transformId: 'geo-resize',
+        params: { width: '1080', maintainAspect: true },
+        label: 'Resize to 1080px'
+      },
+      {
+        id: 'step-3', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 8, saturation: 12, vibrance: 8 },
+        label: 'Pop Tuning'
+      },
+      {
+        id: 'step-4', type: 'transform', transformId: 'meta-strip',
+        params: { level: 'GPS Only' },
+        label: 'Strip GPS'
+      },
+      {
+        id: 'step-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_social', format: 'image/webp', quality: 90 },
+        label: 'Export WebP'
+      }
+    ]
+  }
+
+];

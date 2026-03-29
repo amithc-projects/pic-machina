@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark" data-theme="pro-studio">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ImageChef</title>
+
+  <!-- Aurora Design System -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/amithc-projects/aurora-docs@main/static/css/aurora.css" />
+
+  <!-- Material Symbols (used across all screens) -->
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <!-- Monospace font for logs / technical labels -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" />
+
+  <!-- Pro Studio Theme (overrides Aurora tokens) -->
+  <link rel="stylesheet" href="/src/theme.css" />
+
+  <!-- App-level layout & utilities -->
+  <link rel="stylesheet" href="/src/app.css" />
+</head>
+
+<body>
+
+  <!-- App Shell -->
+  <div id="app-shell" class="app-shell">
+
+    <!-- Left Navigation Rail -->
+    <nav id="app-nav" class="app-nav" aria-label="Main navigation">
+      <div class="app-nav__brand">
+        <span class="app-nav__logo" aria-label="ImageChef">
+          <span class="material-symbols-outlined">restaurant</span>
+        </span>
+        <span class="app-nav__wordmark">PicMachina</span>
+      </div>
+
+      <ul class="app-nav__items" role="list">
+        <li>
+          <a href="#lib" class="app-nav__item" data-screen="lib" title="Recipe Library">
+            <span class="material-symbols-outlined">library_books</span>
+            <span class="app-nav__label">Library</span>
+          </a>
+        </li>
+        <li>
+          <a href="#set" class="app-nav__item" data-screen="set" title="Batch Setup">
+            <span class="material-symbols-outlined">folder_open</span>
+            <span class="app-nav__label">Batch Setup</span>
+          </a>
+        </li>
+        <li>
+          <a href="#bld" class="app-nav__item" data-screen="bld" title="Recipe Builder">
+            <span class="material-symbols-outlined">format_list_numbered</span>
+            <span class="app-nav__label">Builder</span>
+          </a>
+        </li>
+        <li>
+          <a href="#bkb" class="app-nav__item" data-screen="bkb" title="Block Builder">
+            <span class="material-symbols-outlined">widgets</span>
+            <span class="app-nav__label">Block Builder</span>
+          </a>
+        </li>
+        <li class="app-nav__divider"></li>
+        <li>
+          <a href="#que" class="app-nav__item" data-screen="que" title="Processing Queue">
+            <span class="material-symbols-outlined">pending_actions</span>
+            <span class="app-nav__label">Queue</span>
+          </a>
+        </li>
+        <li>
+          <a href="#out" class="app-nav__item" data-screen="out" title="Output History">
+            <span class="material-symbols-outlined">history</span>
+            <span class="app-nav__label">History</span>
+          </a>
+        </li>
+        <li>
+          <a href="#fld" class="app-nav__item" data-screen="fld" title="Folder Viewer">
+            <span class="material-symbols-outlined">folder_open</span>
+            <span class="app-nav__label">Folder</span>
+          </a>
+        </li>
+        <li>
+          <a href="#cmp" class="app-nav__item" data-screen="cmp" title="Comparison View">
+            <span class="material-symbols-outlined">compare</span>
+            <span class="app-nav__label">Compare</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="app-nav__footer">
+        <button class="app-nav__item app-nav__item--icon-only" id="btn-theme-toggle" title="Toggle theme"
+          aria-label="Toggle theme">
+          <span class="material-symbols-outlined">contrast</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-main" class="app-main" role="main">
+      <!-- Screen content is injected here by the router -->
+      <div id="screen-container" class="screen-container">
+        <div class="screen-loading">
+          <div class="spinner spinner--lg"></div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Toast portal is created dynamically by Aurora toast.js -->
+
+  <!-- Entry point -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

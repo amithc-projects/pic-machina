@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pro Studio Batch - Block Builder</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700&amp;family=Space+Grotesk:wght@300;500;700&amp;family=JetBrains+Mono:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            deep: "#121214",
+                            surface: "#1a1a1e",
+                            accent: "#0055FF",
+                            border: "#1e293b",
+                            text: "#94a3b8"
+                        }
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk", "sans-serif"],
+                        "body": ["Public Sans", "sans-serif"],
+                        "label": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "none": "0px",
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #121214;
+            color: #f8fafc;
+            overflow: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #121214;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-blue-500 selection:text-white">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 w-full h-16 bg-slate-950 flex justify-between items-center px-6 border-b border-slate-800 z-50">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-blue-500 font-mono uppercase tracking-tighter">Pro Studio Batch</span>
+<div class="hidden md:flex items-center gap-6">
+<nav class="flex gap-4 font-mono uppercase tracking-tighter text-xs">
+<a class="text-blue-400 border-b-2 border-blue-500 pb-1" href="#">Library</a>
+<a class="text-slate-400 hover:text-blue-300 duration-75 ease-in-out" href="#">Batch Process</a>
+<a class="text-slate-400 hover:text-blue-300 duration-75 ease-in-out" href="#">Analytics</a>
+</nav>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 text-sm">search</span>
+<input class="bg-slate-900 border border-slate-800 text-[10px] font-mono py-1.5 pl-9 pr-4 w-64 focus:outline-none focus:border-blue-500" placeholder="SEARCH ASSETS..." type="text"/>
+</div>
+<span class="material-symbols-outlined text-blue-500 cursor-pointer hover:text-blue-300 duration-75">notifications</span>
+<span class="material-symbols-outlined text-blue-500 cursor-pointer hover:text-blue-300 duration-75">cloud_upload</span>
+<img alt="User profile avatar" class="w-8 h-8 border border-slate-700" data-alt="close up professional headshot of a creative director in a dark studio setting with blue rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHmHzC1G1x1br4Is-MT-Z28T0LiyPjqexecXKkE_csmfbstY0MUbqBoUrAemnTRdmgdGyZwJB6Nriyp79KhYh7Hch85fCQ2SOd-niYaYa_MCFN_uw1RIwKcZiGbHsw7Bhj7lqHLKx1C79W4CgaW2on-fOwGJX0XwkCVcbA3L5zDaoASNTpFCcAu34TekoHckqMCe5WC14yj1FAVuvi9lWcs5D6h3IWaRFuSVB8QHRfxT2n8jftW6CVilbXYRiIcO7Vvjo9MZTEB3c"/>
+</div>
+</header>
+<div class="flex pt-16 h-screen">
+<!-- SideNavBar -->
+<aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col py-4 h-full shrink-0">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-blue-500 font-black">box</span>
+<span class="font-black text-blue-500 font-mono text-xs tracking-widest">BATCH ENGINE</span>
+</div>
+<div class="text-[10px] font-mono text-slate-500 uppercase">v2.4.0-stable</div>
+</div>
+<nav class="flex-grow flex flex-col gap-1">
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 font-mono text-xs uppercase hover:bg-slate-900 hover:text-slate-200 transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span> Library
+                </a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 font-mono text-xs uppercase hover:bg-slate-900 hover:text-slate-200 transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span> Dashboard
+                </a>
+<a class="flex items-center gap-3 bg-blue-500/10 text-blue-400 border-r-4 border-blue-500 px-4 py-3 font-mono text-xs uppercase" href="#">
+<span class="material-symbols-outlined" data-icon="auto_fix_high">auto_fix_high</span> Recipes
+                </a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 font-mono text-xs uppercase hover:bg-slate-900 hover:text-slate-200 transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span> Settings
+                </a>
+</nav>
+<div class="mt-auto pt-4 border-t border-slate-900">
+<a class="flex items-center gap-3 text-slate-500 px-4 py-2 font-mono text-[10px] uppercase hover:text-slate-200" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span> Support
+                </a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-2 font-mono text-[10px] uppercase hover:text-slate-200" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="terminal">terminal</span> Logs
+                </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-grow flex flex-col min-w-0 bg-[#121214]">
+<!-- Main Header -->
+<div class="px-8 py-6 border-b border-slate-800 flex flex-col gap-4">
+<div class="flex justify-between items-end">
+<div>
+<h1 class="font-headline text-2xl font-bold tracking-tight text-white mb-1">BLOCK BUILDER: NEW BLOCK</h1>
+<p class="font-label text-[10px] text-blue-500 uppercase tracking-widest">SUB-RECIPE DEFINITION INTERFACE</p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-6">
+<div class="col-span-1">
+<label class="font-label text-[10px] text-slate-500 block mb-1">BLOCK NAME</label>
+<input class="w-full bg-[#1a1a1e] border border-slate-800 font-label text-sm p-2 text-white focus:border-blue-500 focus:ring-0 outline-none" type="text" value="VINTAGE_FILM_BASE_01"/>
+</div>
+<div class="col-span-2">
+<label class="font-label text-[10px] text-slate-500 block mb-1">DESCRIPTION</label>
+<input class="w-full bg-[#1a1a1e] border border-slate-800 font-label text-sm p-2 text-white focus:border-blue-500 focus:ring-0 outline-none" placeholder="Enter purpose of this block..." type="text"/>
+</div>
+</div>
+</div>
+<div class="flex flex-grow overflow-hidden">
+<!-- Left Sidebar: Chooser -->
+<aside class="w-72 border-r border-slate-800 flex flex-col bg-[#1a1a1e] custom-scrollbar overflow-y-auto">
+<div class="p-4 border-b border-slate-800">
+<h3 class="font-label text-[11px] font-bold text-slate-400 uppercase tracking-widest">Node Library</h3>
+</div>
+<div class="p-2">
+<div class="mb-4">
+<div class="px-2 py-1 text-[10px] font-label text-blue-500 font-bold mb-1">GEOMETRIC</div>
+<div class="space-y-1">
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">aspect_ratio</span> Resize
+                                </button>
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">crop</span> Smart Crop
+                                </button>
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">rotate_right</span> Rotation/Flip
+                                </button>
+</div>
+</div>
+<div class="mb-4">
+<div class="px-2 py-1 text-[10px] font-label text-blue-500 font-bold mb-1">COLOR &amp; TONE</div>
+<div class="space-y-1">
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">tune</span> Standard Tuning
+                                </button>
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">palette</span> Color Grading
+                                </button>
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">exposure</span> Exposure Compensation
+                                </button>
+</div>
+</div>
+<div class="mb-4">
+<div class="px-2 py-1 text-[10px] font-label text-blue-500 font-bold mb-1">AI &amp; COMPOSITION</div>
+<div class="space-y-1">
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500" data-weight="fill">grain</span> 35mm Film Grain
+                                </button>
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">auto_fix_high</span> AI Denoise
+                                </button>
+<button class="w-full text-left p-2 hover:bg-slate-800 font-label text-xs text-slate-300 flex items-center gap-2 group">
+<span class="material-symbols-outlined text-sm group-hover:text-blue-500">magic_button</span> Neural Upscale
+                                </button>
+</div>
+</div>
+</div>
+</aside>
+<!-- Central Canvas: Node Sequence -->
+<section class="flex-grow bg-[#121214] p-12 overflow-y-auto custom-scrollbar flex flex-col items-center">
+<div class="w-full max-w-xl space-y-0 flex flex-col items-center">
+<!-- Start Anchor -->
+<div class="w-2 h-2 bg-blue-500 mb-0"></div>
+<div class="w-px h-8 bg-slate-800"></div>
+<!-- Node 1 -->
+<div class="w-full bg-[#1a1a1e] border border-slate-800 p-4 relative group">
+<div class="absolute -left-12 top-1/2 -translate-y-1/2 font-label text-[10px] text-slate-600">01</div>
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-500">aspect_ratio</span>
+<div>
+<h4 class="font-label text-xs font-bold text-white uppercase">Resize</h4>
+<p class="font-label text-[9px] text-slate-500">GEOMETRIC OPERATOR</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-600 text-sm cursor-pointer hover:text-white">close</span>
+</div>
+<div class="grid grid-cols-2 gap-4 font-label text-[10px] text-slate-400 bg-black/30 p-2">
+<div>WIDTH: <span class="text-blue-400">3840 PX</span></div>
+<div>METHOD: <span class="text-blue-400">LANCZOS3</span></div>
+</div>
+</div>
+<div class="w-px h-8 bg-slate-800 relative">
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-xs text-slate-700">arrow_downward</span>
+</div>
+</div>
+<!-- Node 2 -->
+<div class="w-full bg-[#1a1a1e] border border-blue-500 p-4 relative ring-1 ring-blue-500/20 shadow-lg">
+<div class="absolute -left-12 top-1/2 -translate-y-1/2 font-label text-[10px] text-blue-500">02</div>
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-500">tune</span>
+<div>
+<h4 class="font-label text-xs font-bold text-white uppercase">Standard Tuning</h4>
+<p class="font-label text-[9px] text-slate-500">TONAL ADJUSTMENT</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-600 text-sm cursor-pointer hover:text-white">close</span>
+</div>
+<div class="grid grid-cols-3 gap-2 font-label text-[10px] text-slate-400 bg-black/30 p-2 border-l-2 border-blue-500">
+<div>EXP: <span class="text-blue-400">+0.45</span></div>
+<div>CONT: <span class="text-blue-400">12%</span></div>
+<div>SAT: <span class="text-blue-400">-5%</span></div>
+</div>
+</div>
+<div class="w-px h-8 bg-slate-800 relative">
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-xs text-slate-700">arrow_downward</span>
+</div>
+</div>
+<!-- Node 3 -->
+<div class="w-full bg-[#1a1a1e] border border-slate-800 p-4 relative group">
+<div class="absolute -left-12 top-1/2 -translate-y-1/2 font-label text-[10px] text-slate-600">03</div>
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-500" style="font-variation-settings: 'FILL' 1;">grain</span>
+<div>
+<h4 class="font-label text-xs font-bold text-white uppercase">35mm Film Grain</h4>
+<p class="font-label text-[9px] text-slate-500">EMULSION SIMULATOR</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-600 text-sm cursor-pointer hover:text-white">close</span>
+</div>
+<div class="grid grid-cols-2 gap-4 font-label text-[10px] text-slate-400 bg-black/30 p-2">
+<div>INTENSITY: <span class="text-blue-400">0.82</span></div>
+<div>ROUGHNESS: <span class="text-blue-400">0.14</span></div>
+</div>
+</div>
+<div class="w-px h-12 bg-slate-800 border-dashed border-l"></div>
+<!-- Add Button -->
+<button class="flex items-center gap-2 px-4 py-2 border border-slate-800 hover:border-blue-500 hover:text-blue-400 transition-all font-label text-[10px] text-slate-500">
+<span class="material-symbols-outlined text-sm">add</span> INSERT NODE
+                        </button>
+</div>
+</section>
+<!-- Right Sidebar: Properties -->
+<aside class="w-80 border-l border-slate-800 flex flex-col bg-[#1a1a1e]">
+<div class="p-4 border-b border-slate-800 flex justify-between items-center">
+<h3 class="font-label text-[11px] font-bold text-slate-400 uppercase tracking-widest">Node Properties</h3>
+<span class="font-label text-[9px] text-blue-500 px-1.5 py-0.5 border border-blue-500/30 bg-blue-500/10">ID: TUN_02</span>
+</div>
+<div class="p-5 flex-grow overflow-y-auto custom-scrollbar">
+<div class="space-y-6">
+<!-- Selected Node Controls -->
+<div class="space-y-4">
+<div>
+<div class="flex justify-between mb-2">
+<label class="font-label text-[10px] text-slate-400 uppercase">Exposure Compensation</label>
+<span class="font-label text-[10px] text-blue-500">+0.45 EV</span>
+</div>
+<div class="relative h-1 bg-slate-800 w-full">
+<div class="absolute top-0 left-0 h-full bg-blue-500" style="width: 65%;"></div>
+<div class="absolute top-1/2 left-[65%] -translate-y-1/2 w-1 h-3 bg-white"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<label class="font-label text-[10px] text-slate-400 uppercase">Contrast Level</label>
+<span class="font-label text-[10px] text-blue-500">12%</span>
+</div>
+<div class="relative h-1 bg-slate-800 w-full">
+<div class="absolute top-0 left-0 h-full bg-blue-500" style="width: 40%;"></div>
+<div class="absolute top-1/2 left-[40%] -translate-y-1/2 w-1 h-3 bg-white"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<label class="font-label text-[10px] text-slate-400 uppercase">Saturation Delta</label>
+<span class="font-label text-[10px] text-blue-500">-5%</span>
+</div>
+<div class="relative h-1 bg-slate-800 w-full">
+<div class="absolute top-0 left-0 h-full bg-blue-500" style="width: 45%;"></div>
+<div class="absolute top-1/2 left-[45%] -translate-y-1/2 w-1 h-3 bg-white"></div>
+</div>
+</div>
+</div>
+<!-- Preview Section -->
+<div class="pt-6 border-t border-slate-800">
+<label class="font-label text-[10px] text-slate-500 block mb-3 uppercase tracking-widest">Real-time Preview</label>
+<div class="relative aspect-square bg-black border border-slate-800 group cursor-zoom-in overflow-hidden">
+<img alt="Preview area" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="dramatic cinematic portrait of a classic film camera on a dark mahogany table with heavy moody shadows and sharp highlights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeBdkRQks7HjjEerG0nWzTNlJOGImRFRoXB24yPc8oiX9rgEdT86JP-eftuCqV9DiKMEZfZ2sjvoCSBUhv2QnK23-3t_MblysQqY5TbNZ3Q0SZiNy6xgY2jjXApzWFy8psrDW9EhnLKgikrnuMg5oD9VOcBRbTnfmJheDKOcIQLHa9HLwOa54nuE_ltsL8fZoKI2n6k3gANMdk_Q72GtdbfYQwvwyaPU2ukQZAPf1gB8qRzLfIxVRDkWDl39HxfGmoGv4Cenn61b4"/>
+<div class="absolute top-2 right-2 flex gap-1">
+<button class="p-1 bg-black/80 border border-slate-700 text-[9px] font-label text-slate-300 hover:text-white">A/B</button>
+<button class="p-1 bg-black/80 border border-slate-700 text-[9px] font-label text-slate-300 hover:text-white">
+<span class="material-symbols-outlined text-xs">fullscreen</span>
+</button>
+</div>
+<div class="absolute bottom-0 left-0 w-full bg-black/60 p-1.5 backdrop-blur-sm">
+<div class="flex justify-between text-[8px] font-label text-slate-400 uppercase">
+<span>ISO 400</span>
+<span>SHARP 92%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar Footer -->
+<div class="p-4 bg-[#121214] border-t border-slate-800">
+<button class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-label text-[11px] uppercase tracking-widest transition-colors mb-2">
+                            TEST ON PREVIEW
+                        </button>
+<div class="grid grid-cols-2 gap-2">
+<button class="py-2 border border-slate-800 hover:bg-slate-800 text-slate-400 font-label text-[11px] uppercase transition-colors">
+                                RESET
+                            </button>
+<button class="py-2 border border-slate-800 hover:bg-slate-800 text-slate-400 font-label text-[11px] uppercase transition-colors">
+                                UNDO
+                            </button>
+</div>
+</div>
+</aside>
+</div>
+<!-- Global Footer / Actions -->
+<footer class="h-16 bg-[#1a1a1e] border-t border-slate-800 px-8 flex justify-between items-center shrink-0">
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-green-500"></div>
+<span class="font-label text-[10px] text-slate-400 uppercase tracking-widest">Engine Ready</span>
+</div>
+<div class="text-slate-600 font-label text-[10px] px-4 border-l border-slate-800 py-1">
+                        EST. PROCESS TIME: <span class="text-slate-400">120ms/IMG</span>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 font-label text-xs uppercase transition-all">
+                        CANCEL
+                    </button>
+<button class="px-10 py-2 bg-blue-600 hover:bg-blue-500 text-white font-label text-xs font-bold uppercase tracking-widest transition-all">
+                        SAVE BLOCK
+                    </button>
+</div>
+</footer>
+</main>
+</div>
+</body></html>

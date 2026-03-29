@@ -1,0 +1,288 @@
+/**
+ * ImageChef — Geometric & Framing transforms
+ */
+
+import { registry } from '../registry.js';
+
+function parseVal(val, ref) {
+  const s = String(val);
+  return s.endsWith('%') ? (parseFloat(s) / 100) * ref : parseFloat(s);
+}
+
+function tempCopy(canvas) {
+  const t = document.createElement('canvas');
+  t.width = canvas.width; t.height = canvas.height;
+  t.getContext('2d').drawImage(canvas, 0, 0);
+  return t;
+}
+
+// ─── Resize ───────────────────────────────────────────────
+registry.register({
+  id: 'geo-resize', name: 'Resize', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'aspect_ratio',
+  description: 'Scale image to target dimensions.',
+  params: [
+    { name: 'width',         label: 'Width (px or %)',      type: 'text',    defaultValue: '100%' },
+    { name: 'height',        label: 'Height (px or %)',     type: 'text',    defaultValue: '' },
+    { name: 'maintainAspect',label: 'Maintain Aspect',      type: 'boolean', defaultValue: true },
+    { name: 'algo',          label: 'Algorithm',            type: 'select',
+      options: [{ label: 'Lanczos (quality)', value: 'Lanczos' }, { label: 'Bilinear', value: 'Bilinear' }],
+      defaultValue: 'Lanczos' },
+  ],
+  apply(ctx, p) {
+    let w = p.width  ? parseVal(p.width,  ctx.canvas.width)  : ctx.canvas.width;
+    let h = p.height ? parseVal(p.height, ctx.canvas.height) : ctx.canvas.height;
+    if (p.maintainAspect) {
+      const asp = ctx.canvas.width / ctx.canvas.height;
+      if (p.width && !p.height)  h = w / asp;
+      if (p.height && !p.width)  w = h * asp;
+    }
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    tmp.getContext('2d').drawImage(ctx.canvas, 0, 0, w, h);
+    ctx.canvas.width = w; ctx.canvas.height = h;
+    ctx.drawImage(tmp, 0, 0);
+  }
+});
+
+// ─── Crop ─────────────────────────────────────────────────
+registry.register({
+  id: 'geo-crop', name: 'Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'crop',
+  description: 'Trim to specified region.',
+  params: [
+    { name: 'x',      label: 'X (px or %)',      type: 'text', defaultValue: '0' },
+    { name: 'y',      label: 'Y (px or %)',      type: 'text', defaultValue: '0' },
+    { name: 'width',  label: 'Width (px or %)',  type: 'text', defaultValue: '100%' },
+    { name: 'height', label: 'Height (px or %)', type: 'text', defaultValue: '100%' },
+  ],
+  apply(ctx, p) {
+    const x = parseVal(p.x || 0, ctx.canvas.width);
+    const y = parseVal(p.y || 0, ctx.canvas.height);
+    const w = parseVal(p.width  || ctx.canvas.width,  ctx.canvas.width);
+    const h = parseVal(p.height || ctx.canvas.height, ctx.canvas.height);
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    tmp.getContext('2d').drawImage(ctx.canvas, x, y, w, h, 0, 0, w, h);
+    ctx.canvas.width = w; ctx.canvas.height = h;
+    ctx.drawImage(tmp, 0, 0);
+  }
+});
+
+// ─── Smart Crop ───────────────────────────────────────────
+registry.register({
+  id: 'geo-smart-crop', name: 'Smart Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'auto_fix_high',
+  description: 'Content-aware crop to a target aspect ratio.',
+  params: [
+    { name: 'aspectRatio', label: 'Aspect Ratio', type: 'select',
+      options: [{ label: '1:1', value: '1:1' }, { label: '4:5', value: '4:5' }, { label: '16:9', value: '16:9' }, { label: '4:3', value: '4:3' }, { label: '3:2', value: '3:2' }],
+      defaultValue: '1:1' },
+    { name: 'strategy', label: 'Strategy', type: 'select',
+      options: [{ label: 'Entropy (busy areas)', value: 'Entropy' }, { label: 'Attention (centre)', value: 'Attention' }],
+      defaultValue: 'Entropy' },
+  ],
+  async apply(ctx, p) {
+    const [rw, rh] = (p.aspectRatio || '1:1').split(':').map(Number);
+    const targetAspect = rw / rh;
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    let cw, ch;
+    if (W / H > targetAspect) { ch = H; cw = Math.round(ch * targetAspect); }
+    else { cw = W; ch = Math.round(cw / targetAspect); }
+
+    let cx = Math.round((W - cw) / 2), cy = Math.round((H - ch) / 2);
+
+    // Use smartcrop if available and strategy is Entropy
+    if (p.strategy === 'Entropy') {
+      try {
+        const smartcrop = (await import('smartcrop')).default;
+        const result = await smartcrop.crop(ctx.canvas, { width: cw, height: ch });
+        cx = result.topCrop.x; cy = result.topCrop.y;
+      } catch { /* fallback to centre */ }
+    }
+
+    const tmp = document.createElement('canvas');
+    tmp.width = cw; tmp.height = ch;
+    tmp.getContext('2d').drawImage(ctx.canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+    ctx.canvas.width = cw; ctx.canvas.height = ch;
+    ctx.drawImage(tmp, 0, 0);
+  }
+});
+
+// ─── Rotate / Flip ────────────────────────────────────────
+registry.register({
+  id: 'geo-rotate', name: 'Rotate/Flip', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'rotate_right',
+  description: 'Rotate 90/180/270° or flip the image.',
+  params: [
+    { name: 'angle', label: 'Rotate', type: 'select',
+      options: [{ label: 'None', value: 0 }, { label: '90° CW', value: 90 }, { label: '180°', value: 180 }, { label: '90° CCW', value: -90 }],
+      defaultValue: 0 },
+    { name: 'flip', label: 'Flip', type: 'select',
+      options: [{ label: 'None', value: 'none' }, { label: 'Horizontal', value: 'horizontal' }, { label: 'Vertical', value: 'vertical' }, { label: 'Both', value: 'both' }],
+      defaultValue: 'none' },
+  ],
+  apply(ctx, p) {
+    const angle = Number(p.angle) || 0;
+    const flip  = p.flip || 'none';
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const tmp = tempCopy(ctx.canvas);
+    const newW = Math.abs(angle) === 90 ? H : W;
+    const newH = Math.abs(angle) === 90 ? W : H;
+    ctx.canvas.width = newW; ctx.canvas.height = newH;
+    ctx.save();
+    ctx.translate(newW / 2, newH / 2);
+    if (angle) ctx.rotate((angle * Math.PI) / 180);
+    if (flip === 'horizontal' || flip === 'both') ctx.scale(-1, 1);
+    if (flip === 'vertical'   || flip === 'both') ctx.scale(1, -1);
+    ctx.drawImage(tmp, -W / 2, -H / 2);
+    ctx.restore();
+  }
+});
+
+// ─── Round Corners ────────────────────────────────────────
+registry.register({
+  id: 'geo-round', name: 'Round Corners', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'rounded_corner',
+  description: 'Round image corners or make circular.',
+  params: [
+    { name: 'radius',   label: 'Radius (px or %)', type: 'text',    defaultValue: '5%' },
+    { name: 'circular', label: 'Make Circular',     type: 'boolean', defaultValue: false },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const r = parseVal(p.radius || '5%', Math.min(W, H));
+    const tmp = tempCopy(ctx.canvas);
+    ctx.clearRect(0, 0, W, H);
+    ctx.save(); ctx.beginPath();
+    if (p.circular) {
+      ctx.arc(W / 2, H / 2, Math.min(W, H) / 2, 0, Math.PI * 2);
+    } else {
+      ctx.roundRect(0, 0, W, H, r);
+    }
+    ctx.clip(); ctx.drawImage(tmp, 0, 0); ctx.restore();
+  }
+});
+
+// ─── Canvas Padding ───────────────────────────────────────
+registry.register({
+  id: 'geo-padding', name: 'Canvas Padding', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'padding',
+  description: 'Add coloured margins around the image.',
+  params: [
+    { name: 'top',    label: 'Top (px or %)',    type: 'text',  defaultValue: '5%' },
+    { name: 'right',  label: 'Right (px or %)',  type: 'text',  defaultValue: '5%' },
+    { name: 'bottom', label: 'Bottom (px or %)', type: 'text',  defaultValue: '5%' },
+    { name: 'left',   label: 'Left (px or %)',   type: 'text',  defaultValue: '5%' },
+    { name: 'color',  label: 'Background Color', type: 'color', defaultValue: '#ffffff' },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const t = parseVal(p.top    || 0, H);
+    const r = parseVal(p.right  || 0, W);
+    const b = parseVal(p.bottom || 0, H);
+    const l = parseVal(p.left   || 0, W);
+    const tmp = tempCopy(ctx.canvas);
+    const nW = W + l + r, nH = H + t + b;
+    ctx.canvas.width = nW; ctx.canvas.height = nH;
+    ctx.fillStyle = p.color || '#ffffff';
+    ctx.fillRect(0, 0, nW, nH);
+    ctx.drawImage(tmp, l, t);
+  }
+});
+
+// ─── Trim ─────────────────────────────────────────────────
+registry.register({
+  id: 'geo-trim', name: 'Trim', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'content_cut',
+  description: 'Remove solid-colour edges.',
+  params: [
+    { name: 'tolerance', label: 'Tolerance (0-100)', type: 'range', min: 0, max: 100, defaultValue: 15 },
+    { name: 'bgSource',  label: 'Background Source', type: 'select',
+      options: [{ label: 'Top-Left Pixel', value: 'Pixel' }, { label: 'Transparent (Alpha)', value: 'Alpha' }],
+      defaultValue: 'Pixel' },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const data = ctx.getImageData(0, 0, W, H).data;
+    const tol = (p.tolerance || 15) * 2.55;
+    const useAlpha = p.bgSource === 'Alpha';
+
+    const bgR = data[0], bgG = data[1], bgB = data[2];
+
+    const isBg = (i) => {
+      if (useAlpha) return data[i + 3] < 10;
+      return Math.abs(data[i] - bgR) + Math.abs(data[i + 1] - bgG) + Math.abs(data[i + 2] - bgB) <= tol;
+    };
+
+    let top = 0, bottom = H, left = 0, right = W;
+
+    outer: for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) { if (!isBg((y * W + x) * 4)) { top = y; break outer; } }
+    }
+    outer: for (let y = H - 1; y >= top; y--) {
+      for (let x = 0; x < W; x++) { if (!isBg((y * W + x) * 4)) { bottom = y + 1; break outer; } }
+    }
+    outer: for (let x = 0; x < W; x++) {
+      for (let y = top; y < bottom; y++) { if (!isBg((y * W + x) * 4)) { left = x; break outer; } }
+    }
+    outer: for (let x = W - 1; x >= left; x--) {
+      for (let y = top; y < bottom; y++) { if (!isBg((y * W + x) * 4)) { right = x + 1; break outer; } }
+    }
+
+    const cw = right - left, ch = bottom - top;
+    if (cw <= 0 || ch <= 0) return;
+    const tmp = document.createElement('canvas');
+    tmp.width = cw; tmp.height = ch;
+    tmp.getContext('2d').drawImage(ctx.canvas, left, top, cw, ch, 0, 0, cw, ch);
+    ctx.canvas.width = cw; ctx.canvas.height = ch;
+    ctx.drawImage(tmp, 0, 0);
+  }
+});
+
+// ─── Face Crop ────────────────────────────────────────────
+registry.register({
+  id: 'geo-face-crop', name: 'Face Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'face',
+  description: 'Centre-crop around detected faces. Works best with portrait/close-up shots; lower confidence for group shots or full-body images.',
+  params: [
+    { name: 'padding',    label: 'Padding (%)',        type: 'range',  min: 0, max: 100, defaultValue: 20 },
+    { name: 'faceIndex',  label: 'Face Index',          type: 'number', min: 0, defaultValue: 0 },
+    { name: 'confidence', label: 'Min confidence (%)',  type: 'range',  min: 10, max: 90, defaultValue: 30 },
+  ],
+  async apply(ctx, p, context) {
+    const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision');
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
+    );
+    const detector = await FaceDetector.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+        delegate: 'CPU',
+      },
+      runningMode: 'IMAGE',
+      minDetectionConfidence: (p.confidence ?? 30) / 100,
+    });
+    const result = detector.detect(ctx.canvas);
+    detector.close();
+
+    const faces = result.detections;
+    if (!faces.length) throw new Error('No faces detected in the image.');
+    const fi = Math.min(p.faceIndex || 0, faces.length - 1);
+    const bb = faces[fi].boundingBox;
+
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const padX = bb.width  * (p.padding || 20) / 100;
+    const padY = bb.height * (p.padding || 20) / 100;
+    const cx = Math.max(0, bb.originX - padX);
+    const cy = Math.max(0, bb.originY - padY);
+    const cw = Math.min(W - cx, bb.width  + padX * 2);
+    const ch = Math.min(H - cy, bb.height + padY * 2);
+
+    const tmp = document.createElement('canvas');
+    tmp.width = cw; tmp.height = ch;
+    tmp.getContext('2d').drawImage(ctx.canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+    ctx.canvas.width = cw; ctx.canvas.height = ch;
+    ctx.drawImage(tmp, 0, 0);
+  }
+});

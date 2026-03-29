@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pro Studio Batch Processor - Recipe Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#00FF66",
+                        "accent-blue": "#00FFFF",
+                        "background": "#0F0F11",
+                        "surface": "#1E1E22",
+                        "surface-light": "#2A2A30",
+                        "border-custom": "#2A2A30",
+                        "text-main": "#FFFFFF",
+                        "muted": "#8A8A93",
+                        "block-geo": "#00FFFF",
+                        "block-color": "#FF00FF",
+                        "block-overlay": "#FFFF00",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px",
+                        "chip": "4px",
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0F0F11;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .recipe-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .recipe-card:hover {
+            transform: translateY(-4px);
+            border-color: #00FFFF;
+            box-shadow: 0 10px 30px -10px rgba(0, 255, 255, 0.2);
+        }
+        .recipe-card:active {
+            transform: scale(0.98);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .sidebar-link.active {
+            color: #00FFFF;
+            background: rgba(0, 255, 255, 0.05);
+            border-right: 2px solid #00FFFF;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0F0F11;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A2A30;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3A3A40;
+        }
+    </style>
+</head>
+<body class="bg-background text-text-main flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-border-custom flex flex-col bg-background shrink-0">
+<div class="h-16 flex items-center px-6 border-b border-border-custom">
+<h1 class="text-xl font-display font-bold tracking-tighter text-primary">PRO STUDIO</h1>
+</div>
+<nav class="flex-1 py-6">
+<div class="px-4 mb-4 text-[10px] font-mono text-muted uppercase tracking-widest">Main Menu</div>
+<a class="sidebar-link active flex items-center gap-3 px-6 py-3 text-sm font-medium transition-colors hover:bg-surface" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+            Recipe Library
+        </a>
+<a class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-text-main" href="#">
+<span class="material-symbols-outlined text-xl">account_tree</span>
+            Node Builder
+        </a>
+<a class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-text-main" href="#">
+<span class="material-symbols-outlined text-xl">terminal</span>
+            Processing Queue
+        </a>
+<div class="px-4 mt-8 mb-4 text-[10px] font-mono text-muted uppercase tracking-widest">Workspace</div>
+<a class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-text-main" href="#">
+<span class="material-symbols-outlined text-xl">folder</span>
+            Assets
+        </a>
+<a class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-text-main" href="#">
+<span class="material-symbols-outlined text-xl">history</span>
+            History
+        </a>
+</nav>
+<div class="p-4 border-t border-border-custom">
+<div class="flex items-center gap-3 p-3 rounded-lg bg-surface">
+<div class="w-8 h-8 bg-accent-blue/20 flex items-center justify-center text-accent-blue font-bold text-xs">JD</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-semibold truncate">John Doe</p>
+<p class="text-[10px] text-muted truncate">Pro Plan</p>
+</div>
+<button class="text-muted hover:text-text-main">
+<span class="material-symbols-outlined text-lg">settings</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+<!-- Desktop Header -->
+<header class="h-16 flex items-center justify-between px-8 bg-background border-b border-border-custom shrink-0">
+<div class="flex items-center gap-8 flex-1">
+<h2 class="text-lg font-display font-bold uppercase tracking-wider whitespace-nowrap">Recipes</h2>
+<div class="relative max-w-md w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted text-xl">search</span>
+<input class="w-full bg-surface border-none text-sm pl-10 pr-4 py-2 focus:ring-1 focus:ring-accent-blue placeholder:text-muted transition-all" placeholder="Search recipes, tags, or nodes..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface border border-border-custom p-1">
+<button class="px-3 py-1 text-xs font-mono bg-surface-light text-text-main">ALL</button>
+<button class="px-3 py-1 text-xs font-mono text-muted hover:text-text-main transition-colors">FAVORITES</button>
+<button class="px-3 py-1 text-xs font-mono text-muted hover:text-text-main transition-colors">SHARED</button>
+</div>
+<button class="flex items-center gap-2 bg-primary text-background px-4 py-2 font-bold text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+                New Recipe
+            </button>
+</div>
+</header>
+<!-- Scrollable Grid Content -->
+<main class="flex-1 overflow-y-auto p-8">
+<div class="max-w-[1200px] mx-auto">
+<!-- Filter Bar -->
+<div class="flex items-center justify-between mb-8">
+<p class="text-xs font-mono text-muted uppercase">Showing 24 of 142 recipes</p>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 text-xs text-muted hover:text-text-main transition-colors">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+                        Sort by: Date Modified
+                    </button>
+</div>
+</div>
+<!-- Recipe Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Recipe Card 1 -->
+<div class="recipe-card flex flex-col bg-surface border border-border-custom group overflow-hidden">
+<div class="aspect-[4/5] relative bg-cover bg-center overflow-hidden" data-alt="Moody cinematic cityscape" style='background-image: linear-gradient(to bottom, rgba(18,18,20,0) 50%, rgba(18,18,20,0.95) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBm7kLCdcgPORfcsKw3D0dv88jgAhvpvao2fuRGZ-vM4CElBUBw9JkGcCi5w9vQOm8CzT5fPorepQDcOS2_C6CrPPe-hysKoEEvhMrO20Z1Qc5aPlPUZWFBlT3srriw1azyP5-yMBinY028_5XJl1fjjKA-Fik6KTSmrF48qhbIhMj5Q7a2WCtQri_2tUja-n2Kt3lw5HOyI6386mrSlAazS0JF94DcYD2XECZC_zrvvZa1x_bkCvRSeBZmvBCze5Y89rIudT4Vpw0");'>
+<div class="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+<button class="w-8 h-8 bg-background/80 flex items-center justify-center hover:text-accent-blue"><span class="material-symbols-outlined text-lg">star</span></button>
+<button class="w-8 h-8 bg-background/80 flex items-center justify-center hover:text-accent-blue"><span class="material-symbols-outlined text-lg">more_horiz</span></button>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-4">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-mono text-primary uppercase tracking-widest bg-background/80 w-fit px-1.5 py-0.5 border-l-2 border-primary">4 NODES</span>
+<h3 class="font-display font-bold text-lg leading-tight group-hover:text-accent-blue transition-colors">Moody Film</h3>
+<p class="text-[10px] text-muted uppercase font-mono mt-1">Updated 2h ago</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recipe Card 2 -->
+<div class="recipe-card flex flex-col bg-surface border border-border-custom group overflow-hidden">
+<div class="aspect-[4/5] relative bg-cover bg-center overflow-hidden" data-alt="Modern brutalist architecture" style='background-image: linear-gradient(to bottom, rgba(18,18,20,0) 50%, rgba(18,18,20,0.95) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuAUuIxGrfkJQR0CW-h-n16Rq3Xz_bRVoow-Z2tqBwdk122tmq0NufrUz4D5BAoLq48e5LvookfDY3Kx8zXM02R_htqvkI1PJN8D-NGCoSTNHZWuG0gaEtdk84B-PJXbQsd8wt0gciphEdxPL45nwKDWTPa6BqrpzTHr4-7L-eA1MZre7cm74JobXMVqRXpYnpeHTS4GxL7iJ5vnENga6-OINJ62r0p_iYY-pvJp1MBsjMBEfaHsscm7pFxt8Gj4oDEUVcgciXvGmcc");'>
+<div class="absolute bottom-0 left-0 right-0 p-4">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-mono text-block-geo uppercase tracking-widest bg-background/80 w-fit px-1.5 py-0.5 border-l-2 border-block-geo">2 NODES</span>
+<h3 class="font-display font-bold text-lg leading-tight group-hover:text-accent-blue transition-colors">Urban Geometry</h3>
+<p class="text-[10px] text-muted uppercase font-mono mt-1">Updated 1d ago</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recipe Card 3 -->
+<div class="recipe-card flex flex-col bg-surface border border-border-custom group overflow-hidden">
+<div class="aspect-[4/5] relative bg-cover bg-center overflow-hidden" data-alt="Close-up of crashing ocean wave" style='background-image: linear-gradient(to bottom, rgba(18,18,20,0) 50%, rgba(18,18,20,0.95) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBsELrMysIgNPowHHW8tE3RuyHnqzbuggyq3AyUMm1GAR-yMEev0nW9DMjvAuiTbcvvedScuGX3eqN-U6vHAQy4pcPDVgYgSUJ1A8uQVn2Hecpv4FaHi6Vtvm71TXnc4A2_hdYugcjEOhXZ8mEGP_rAByDlMko5Bt9lFLho4shQQCU2jkOpZMzaNO1qxPNHKWG7vXwUoDIjSnPYnlCF1qNyQYYEmmKQg2809PAm1WOC0n8c4y8u6WNK5iJuJrQQ93Fh0ynfiHLxdyQ");'>
+<div class="absolute bottom-0 left-0 right-0 p-4">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-mono text-block-color uppercase tracking-widest bg-background/80 w-fit px-1.5 py-0.5 border-l-2 border-block-color">6 NODES</span>
+<h3 class="font-display font-bold text-lg leading-tight group-hover:text-accent-blue transition-colors">Aqua Clarity</h3>
+<p class="text-[10px] text-muted uppercase font-mono mt-1">Updated 3d ago</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recipe Card 4 -->
+<div class="recipe-card flex flex-col bg-surface border border-border-custom group overflow-hidden">
+<div class="aspect-[4/5] relative bg-cover bg-center overflow-hidden" data-alt="Abstract macro shot of orange volcanic rock" style='background-image: linear-gradient(to bottom, rgba(18,18,20,0) 50%, rgba(18,18,20,0.95) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuCmi5HPZmdbOJ-Ow1GMxwQNU649f_TT0uGSgUN7_GIVBqtPLf83ecbzjEyFCRHWgdDSBcg3RI5m_rj5KE3LYty92wVnJ_WwV4oG0ufcc0OK46aSOIVP1PACLN0tyHCl7u2oE9gOpVxeo17Z6_ai_M9EcebwBk5jvqX6yVaGWEmFkpAQ5pt6LxoBMcpGrrEhMto7VGMtqsj6DYetbt8QYmNIrsou40vrAspdNjRDibACsC69pDemWwbWfQomfrEiZBLStcH7c3gnEC4");'>
+<div class="absolute bottom-0 left-0 right-0 p-4">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-mono text-block-overlay uppercase tracking-widest bg-background/80 w-fit px-1.5 py-0.5 border-l-2 border-block-overlay">3 NODES</span>
+<h3 class="font-display font-bold text-lg leading-tight group-hover:text-accent-blue transition-colors">Volcanic Texture</h3>
+<p class="text-[10px] text-muted uppercase font-mono mt-1">Updated Oct 24</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recipe Card 5 (Repeated for density) -->
+<div class="recipe-card flex flex-col bg-surface border border-border-custom group overflow-hidden">
+<div class="aspect-[4/5] relative bg-cover bg-center overflow-hidden" style='background-image: linear-gradient(to bottom, rgba(18,18,20,0) 50%, rgba(18,18,20,0.95) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuAbc8076Eays7z5klOoJ7neK0Ad8HuClrWKIuqJQ7JJCFsSx0KvTnB4lcFnDMfkj23K6AOXJpcJDaM1wIvlx70c8PzbIrAXoTXqOyv5dtZC-9mcpF0YKtg7K6KlyPkAQ7k6RpUXWtGMaVNJHmNV2T82kObq8YvQPzBoyQVXZ_cvriBCkApOZwwIaeeWy_gd5pLN_mkk8PM76yjQNn2Z3vt-2gic_jGC18yXlGnnD9nHvB_oVzIsvy8b5gD1OACYGQwr1Hb7xNjCMrM");'>
+<div class="absolute bottom-0 left-0 right-0 p-4">
+<div class="flex flex-col gap-1">
+<span class="text-[10px] font-mono text-accent-blue uppercase tracking-widest bg-background/80 w-fit px-1.5 py-0.5 border-l-2 border-accent-blue">8 NODES</span>
+<h3 class="font-display font-bold text-lg leading-tight group-hover:text-accent-blue transition-colors">Cyber Contrast</h3>
+<p class="text-[10px] text-muted uppercase font-mono mt-1">Updated Oct 22</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty/Placeholder Slot -->
+<div class="flex flex-col items-center justify-center border-2 border-dashed border-border-custom hover:border-accent-blue/40 transition-colors group">
+<button class="flex flex-col items-center gap-3">
+<div class="w-12 h-12 bg-surface flex items-center justify-center rounded-full group-hover:bg-accent-blue group-hover:text-background transition-all">
+<span class="material-symbols-outlined text-3xl">add</span>
+</div>
+<span class="text-xs font-mono text-muted group-hover:text-text-main transition-colors uppercase tracking-widest">Create New</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Status Bar (Desktop specific) -->
+<footer class="h-8 bg-surface border-t border-border-custom flex items-center justify-between px-6 shrink-0">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-[10px] font-mono text-muted uppercase">System Ready</span>
+</div>
+<div class="h-4 w-[1px] bg-border-custom"></div>
+<span class="text-[10px] font-mono text-muted uppercase">GPU Acceleration Active</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[10px] font-mono text-muted uppercase">v2.4.0-stable</span>
+<div class="h-4 w-[1px] bg-border-custom"></div>
+<button class="text-[10px] font-mono text-muted hover:text-text-main uppercase">Help &amp; Docs</button>
+</div>
+</footer>
+</div>
+</body></html>

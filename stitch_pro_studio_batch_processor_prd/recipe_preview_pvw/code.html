@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recipe Preview - Pro Studio Batch</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;700;900&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "slate": {
+                            900: "#1E1E22",
+                            950: "#121214"
+                        },
+                        "blue": {
+                            400: "#3B82F6",
+                            500: "#0055FF",
+                            600: "#0044CC",
+                            900: "#1E3A8A",
+                            950: "#0F172A"
+                        }
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans", "sans-serif"],
+                        "body": ["Public Sans", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for the technical vibe */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #121214; }
+        ::-webkit-scrollbar-thumb { background: #0055FF; }
+        
+        .split-slider-handle {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-body selection:bg-blue-500 selection:text-white">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar (from JSON) -->
+<aside class="flex flex-col h-full border-r border-blue-900 bg-slate-950 dark:bg-black w-64 shrink-0 z-50">
+<div class="p-6 border-b border-blue-900">
+<div class="font-black text-blue-500 font-mono text-lg italic tracking-widest">PRO STUDIO</div>
+<div class="font-mono text-xs uppercase text-slate-500 tracking-tighter mt-1">Batch Processor v1.0</div>
+</div>
+<nav class="flex-1 py-4">
+<!-- Recipes is Active -->
+<a class="flex items-center gap-3 text-slate-400 px-4 py-3 w-full hover:bg-slate-900 hover:text-blue-400 font-mono text-xs uppercase transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+<span>Library</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 px-4 py-3 w-full hover:bg-slate-900 hover:text-blue-400 font-mono text-xs uppercase transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 bg-blue-600 text-black font-bold px-4 py-3 w-full font-mono text-xs uppercase translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="auto_fix_high" style="font-variation-settings: 'FILL' 1;">auto_fix_high</span>
+<span>Recipes</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 px-4 py-3 w-full hover:bg-slate-900 hover:text-blue-400 font-mono text-xs uppercase transition-colors duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="p-4 mt-auto border-t border-blue-900">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-blue-900 border border-blue-500 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-400 text-sm" data-icon="person">person</span>
+</div>
+<div class="overflow-hidden">
+<p class="text-[10px] font-mono text-slate-500 uppercase">System Operator</p>
+<p class="text-xs font-bold text-blue-400 truncate">ADMIN_01</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col relative bg-slate-900 overflow-hidden">
+<!-- TopNavBar (from JSON) -->
+<header class="flex justify-between items-center w-full px-6 h-14 bg-slate-950 dark:bg-black border-b-2 border-blue-900 z-40">
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-blue-400 transition-colors">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<span class="font-mono uppercase tracking-tighter text-blue-500 dark:text-blue-400 font-bold">Preview: Cinematic Film Grain</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 border-r border-blue-900 pr-6">
+<span class="text-slate-500 hover:text-blue-300 font-mono text-xs uppercase tracking-tighter">View Source</span>
+<span class="text-blue-400 border-b-2 border-blue-400 pb-1 font-mono text-xs uppercase tracking-tighter">Visualizer</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-500 cursor-pointer hover:bg-blue-950/30 p-1" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-slate-500 cursor-pointer hover:bg-blue-950/30 p-1" data-icon="help">help</span>
+</div>
+</div>
+</header>
+<!-- Recipe Preview Canvas -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Central Hero: Before/After Slider -->
+<section class="flex-1 relative group bg-black overflow-hidden flex items-center justify-center p-8">
+<div class="relative w-full h-full max-w-5xl aspect-video overflow-hidden border border-slate-800 shadow-2xl">
+<!-- After Image (Background) -->
+<img alt="Processed Result" class="absolute inset-0 w-full h-full object-cover filter contrast-125 saturate-50 sepia-[.1] brightness-90" data-alt="cinematic landscape photography of misty mountains at twilight with heavy film grain and deep blue shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdqMpxxAeMHKmoX2RteF7R7AJzQvlbuhKb2PlF6xEia1M6lIp1zV4opAYwef2aS8dRqHTOZ-KfM3WBi02ZW1hQn33BkLDLfOHgj26P9045O_Pf1bi8B3f-HNFF2SuAPakFHuwfosQLmYil_67P7TVOzWYnAOOTv2OLliYMeIPUL_6fNf-GOd3dQiu1veNUTepxB-oi2C2gV-cYzmlNlQofukI3N5Yk5-lRjoU3b1W-wOFH0QGZPYaG-J7LamooHvWbQ4aAN7S-EgY"/>
+<!-- Before Image (Clipped) -->
+<div class="absolute inset-0 w-1/2 overflow-hidden border-r border-blue-500/50 z-10">
+<img alt="Original Source" class="absolute inset-0 w-[200%] h-full object-cover" data-alt="raw unedited landscape photography of misty mountains at twilight with natural lighting and colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNFLO5I6UbJiP51fntKv8eWBbcTWm88D0Hdn4lAwvjktCChXXYHxX7TZUBnx0GIv-epRH9mHq1_UjcnrntQiGK3KeuCSRl42TE_zXs-IKjOGo6uyzurpSpJ42wkL6QbZQVUzXzqc9jZo_dhZJOF_TMKjzKQg7Vg5RZ6VXnANiAVJU-T4h8lZGE9du6vPWumQn2HlqxiqC1txxrtqE12_2q0CPHIuxNZzILY0DJ4oUlvJyYkgbi4f5ZVBRBDjeMXV0GvDXohEtn5fg"/>
+</div>
+<!-- Labels -->
+<div class="absolute top-4 left-4 z-20 px-2 py-1 bg-black/80 text-white font-mono text-[10px] border border-white/20 uppercase tracking-widest">Original</div>
+<div class="absolute top-4 right-4 z-20 px-2 py-1 bg-blue-600/80 text-white font-mono text-[10px] border border-blue-400/20 uppercase tracking-widest">Processed</div>
+<!-- Slider Handle -->
+<div class="absolute top-0 bottom-0 left-1/2 w-0.5 bg-blue-500 z-30 flex items-center justify-center">
+<div class="w-8 h-8 bg-blue-500 text-black flex items-center justify-center shadow-lg cursor-ew-resize">
+<span class="material-symbols-outlined text-sm font-bold" data-icon="unfold_more">unfold_more</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Recipe Info Panel (Right Sidebar) -->
+<aside class="w-80 bg-slate-950 border-l border-blue-900 flex flex-col shrink-0">
+<div class="p-6 space-y-6">
+<!-- Header -->
+<div>
+<h2 class="font-headline font-black text-2xl text-white leading-tight">CINEMATIC FILM GRAIN</h2>
+<div class="flex items-center gap-2 mt-2">
+<span class="bg-blue-500/10 text-blue-400 text-[10px] font-mono px-2 py-0.5 border border-blue-500/30">CORE.LIB</span>
+<span class="text-slate-500 text-[10px] font-mono uppercase">V.2.4.0</span>
+</div>
+</div>
+<!-- Node List -->
+<div class="space-y-4">
+<h3 class="font-mono text-[10px] uppercase text-slate-500 tracking-widest border-b border-slate-800 pb-2">Transformation Stack</h3>
+<div class="space-y-2">
+<!-- Node 01 -->
+<div class="flex items-center gap-3 bg-slate-900 p-3 border-l-4 border-cyan-400">
+<div class="w-8 h-8 bg-cyan-400/10 flex items-center justify-center text-cyan-400">
+<span class="material-symbols-outlined text-sm" data-icon="aspect_ratio">aspect_ratio</span>
+</div>
+<div class="flex-1">
+<p class="text-[10px] font-mono text-cyan-400 leading-none mb-1">GEO</p>
+<p class="text-xs font-bold text-white uppercase tracking-tight">Resize Canvas</p>
+</div>
+<span class="material-symbols-outlined text-slate-600 text-xs" data-icon="drag_indicator">drag_indicator</span>
+</div>
+<!-- Node 02 -->
+<div class="flex items-center gap-3 bg-slate-900 p-3 border-l-4 border-magenta-500" style="border-color: #d946ef;">
+<div class="w-8 h-8 flex items-center justify-center text-magenta-500" style="background: rgba(217, 70, 239, 0.1); color: #d946ef;">
+<span class="material-symbols-outlined text-sm" data-icon="tune">tune</span>
+</div>
+<div class="flex-1">
+<p class="text-[10px] font-mono leading-none mb-1" style="color: #d946ef;">CLR</p>
+<p class="text-xs font-bold text-white uppercase tracking-tight">Standard Tuning</p>
+</div>
+<span class="material-symbols-outlined text-slate-600 text-xs" data-icon="drag_indicator">drag_indicator</span>
+</div>
+<!-- Node 03 -->
+<div class="flex items-center gap-3 bg-slate-900 p-3 border-l-4 border-yellow-400">
+<div class="w-8 h-8 bg-yellow-400/10 flex items-center justify-center text-yellow-400">
+<span class="material-symbols-outlined text-sm" data-icon="texture">texture</span>
+</div>
+<div class="flex-1">
+<p class="text-[10px] font-mono text-yellow-400 leading-none mb-1">OVL</p>
+<p class="text-xs font-bold text-white uppercase tracking-tight">35mm Film Grain</p>
+</div>
+<span class="material-symbols-outlined text-slate-600 text-xs" data-icon="drag_indicator">drag_indicator</span>
+</div>
+<!-- Node 04 -->
+<div class="flex items-center gap-3 bg-slate-900 p-3 border-l-4 border-blue-500">
+<div class="w-8 h-8 bg-blue-500/10 flex items-center justify-center text-blue-500">
+<span class="material-symbols-outlined text-sm" data-icon="save">save</span>
+</div>
+<div class="flex-1">
+<p class="text-[10px] font-mono text-blue-500 leading-none mb-1">IO</p>
+<p class="text-xs font-bold text-white uppercase tracking-tight">Export Manifest</p>
+</div>
+<span class="material-symbols-outlined text-slate-600 text-xs" data-icon="drag_indicator">drag_indicator</span>
+</div>
+</div>
+</div>
+<!-- Metadata -->
+<div class="space-y-4 border-t border-slate-800 pt-6">
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Author</p>
+<p class="text-xs text-white mt-1">System Architecture</p>
+</div>
+<div>
+<p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Created</p>
+<p class="text-xs text-white mt-1">OCT 12, 2023</p>
+</div>
+</div>
+<div>
+<p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Description</p>
+<p class="text-xs text-slate-400 mt-2 leading-relaxed italic">A high-fidelity film emulation recipe designed for architectural and landscape photography. Simulates Kodak 5219 grain structure with cool shadow bias.</p>
+</div>
+</div>
+</div>
+<!-- Action Bar (Sticky at bottom of sidebar) -->
+<div class="mt-auto p-4 bg-slate-900 border-t border-blue-900 flex flex-col gap-2">
+<div class="flex gap-2">
+<button class="flex-1 bg-slate-800 text-slate-300 font-mono text-xs font-bold py-3 hover:bg-slate-700 transition-colors uppercase flex items-center justify-center gap-2 border border-slate-700">
+<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span>
+                                CLONE
+                            </button>
+<button class="flex-1 bg-slate-800 text-slate-300 font-mono text-xs font-bold py-3 hover:bg-slate-700 transition-colors uppercase flex items-center justify-center gap-2 border border-slate-700">
+<span class="material-symbols-outlined text-sm" data-icon="share">share</span>
+                                EXPORT
+                            </button>
+</div>
+<button class="w-full bg-blue-500 text-black font-black text-sm py-4 hover:bg-blue-400 transition-colors uppercase flex items-center justify-center gap-3">
+<span class="material-symbols-outlined font-black" data-icon="bolt" style="font-variation-settings: 'FILL' 1;">bolt</span>
+                            USE RECIPE
+                        </button>
+</div>
+</aside>
+</div>
+<!-- Footer Meta Info -->
+<footer class="h-8 bg-slate-950 border-t border-blue-900 flex items-center px-6 justify-between">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-full bg-green-500"></div>
+<span class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">GPU Accelerate: Active</span>
+</div>
+<div class="w-px h-3 bg-slate-800"></div>
+<span class="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Memory: 4.2GB / 12GB</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[9px] font-mono text-slate-500 uppercase">Process Sequence ID: BATCH_4492_REC_01</span>
+</div>
+</footer>
+</main>
+</div>
+</body></html>

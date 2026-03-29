@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recipe Builder | Sequencing Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6", // Electric Blue accent
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#0f172a", // Deeper dark for high contrast
+                        "surface-dark": "#1e293b",
+                        "border-dark": "#334155",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .timeline-line {
+            background: linear-gradient(180deg, #3b82f6 0%, #1e293b 100%);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-200 font-display">
+<!-- Header Section (Based on Shared Component Logic) -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-border-dark px-8 py-4 bg-background-dark sticky top-0 z-50">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 flex items-center justify-center bg-primary rounded-lg">
+<svg class="w-6 h-6 text-background-dark" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
+</svg>
+</div>
+<div class="flex flex-col">
+<h2 class="text-white text-lg font-bold leading-tight tracking-tight">Recipe Builder</h2>
+<span class="text-xs font-mono text-primary uppercase tracking-widest">v2.4.0-pro-dark</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-6 text-sm font-medium text-slate-400">
+<a class="text-primary border-b-2 border-primary pb-1" href="#">Sequence Editor</a>
+<a class="hover:text-white transition-colors" href="#">Saved Blocks</a>
+<a class="hover:text-white transition-colors" href="#">Analytics</a>
+</nav>
+<div class="flex gap-3">
+<button class="flex min-w-[100px] cursor-pointer items-center justify-center rounded-xl h-10 px-5 bg-primary text-background-dark text-sm font-black tracking-wide hover:brightness-110 transition-all">
+<span>RUN BATCH</span>
+</button>
+<button class="flex min-w-[100px] cursor-pointer items-center justify-center rounded-xl h-10 px-5 border border-border-dark bg-surface-dark text-white text-sm font-bold hover:bg-slate-700 transition-all">
+<span>TEST</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="Professional headshot of a lab technician in a modern workspace, clean composition" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD4JtPz1cylwz9Ow85mkf99a8rldlGzEiIuf-AOYP7xOVjuHXrK6u_hghNv4_QM9thtLJV63x4lbzANk4lQ1IVKUcI8wXM0i8C9n9glQNsldP5HEn-NzXBxszNH58Z-mkvc3rQdG5BTf5MbchJ0MhzZ_YM2zVIEJZiwEME8OX8pzbPqHz5eQvM7uXQqwYRZc8taU89LVoXpnMNsR3HjwNBOBlFJ4hi1jp9IE_5yCa_fZXbEQvu8fVMQrHiGyjVJsrcgY-0_z71tkOY");'></div>
+</div>
+</header>
+<main class="max-w-6xl mx-auto p-8">
+<!-- Title & Stats -->
+<div class="mb-10 flex flex-wrap items-end justify-between gap-6">
+<div class="flex flex-col gap-2">
+<h1 class="text-white text-4xl font-black leading-tight tracking-tight">Active Sequence: <span class="text-primary">Polymer_v4_Alpha</span></h1>
+<p class="text-slate-400 text-lg">Orchestrate automated transformations and logical triggers.</p>
+</div>
+<div class="flex gap-4 font-mono text-xs">
+<div class="bg-surface-dark p-3 rounded-lg border border-border-dark">
+<span class="text-slate-500 block mb-1">TOTAL DURATION</span>
+<span class="text-primary text-lg">02:45:12</span>
+</div>
+<div class="bg-surface-dark p-3 rounded-lg border border-border-dark">
+<span class="text-slate-500 block mb-1">BLOCK COUNT</span>
+<span class="text-primary text-lg">07 UNITS</span>
+</div>
+</div>
+</div>
+<!-- Recipe Sequence Container -->
+<div class="relative">
+<!-- Timeline Path -->
+<div class="absolute left-[31px] top-8 bottom-8 w-1 timeline-line opacity-30 rounded-full"></div>
+<div class="space-y-8 relative">
+<!-- Block 1: Input -->
+<div class="grid grid-cols-[64px_1fr] gap-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-16 items-center justify-center rounded-full bg-surface-dark border-4 border-background-dark shadow-xl ring-2 ring-primary">
+<span class="material-symbols-outlined text-primary text-3xl">input</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl p-6 border border-border-dark shadow-2xl flex items-center justify-between hover:border-primary/50 transition-colors">
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-blue-500/10 text-primary text-[10px] font-bold font-mono border border-primary/20">SOURCE</span>
+<h3 class="text-white text-xl font-bold">Initial Feedstock Loading</h3>
+</div>
+<div class="flex gap-6 text-sm font-mono text-slate-400">
+<span>FLOW_RATE: <span class="text-white">450ml/s</span></span>
+<span>PRESSURE: <span class="text-white">2.4 bar</span></span>
+</div>
+</div>
+<button class="flex items-center gap-2 px-6 py-3 rounded-lg bg-background-dark border border-border-dark text-white text-sm font-bold hover:bg-primary hover:text-background-dark transition-all">
+<span class="material-symbols-outlined text-sm">app_settings_alt</span>
+                            CHANGE
+                        </button>
+</div>
+</div>
+<!-- Block 2: Transformation -->
+<div class="grid grid-cols-[64px_1fr] gap-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-16 items-center justify-center rounded-full bg-surface-dark border-4 border-background-dark shadow-xl group-hover:ring-2 ring-slate-600 transition-all">
+<span class="material-symbols-outlined text-slate-300 text-3xl">thermometer</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl p-6 border border-border-dark shadow-2xl flex items-center justify-between">
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 text-[10px] font-bold font-mono border border-orange-500/20">TRANSFORM</span>
+<h3 class="text-white text-xl font-bold">Thermal Homogenization</h3>
+</div>
+<div class="flex gap-6 text-sm font-mono text-slate-400">
+<span>TARGET_TEMP: <span class="text-orange-400">185°C</span></span>
+<span>DWELL_TIME: <span class="text-white">15:00m</span></span>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-32 h-20 rounded-lg overflow-hidden border border-border-dark hidden md:block">
+<div class="w-full h-full bg-cover bg-center" data-alt="High speed camera shot of liquid chemicals mixing in a glass beaker with dramatic blue lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB4sI_i-SGY6aP1iCoD9UO_Xc4C0OAt-Re2NIcXJMq-YaMNRbETxkbtOQZITnu7BWyHW_G2vAQdq8nf1a-hjlglQgWHPiW-NCo2tCDELB-mHtcYVd7yAyyLTj4oQT4I1wIL_Ekl7JY1EYWGXJrp9K_MufGFtQJ3qeTy9EaDdlOblwLf74ItNlPx24oRJ_KAeeSnNbeunrQcG5Avx3wl2J2F1Hj5xb3KMehmcBdMprDGbGSP6vNlV9H9-QGyfl_gVkhguFH6MebjBP4')"></div>
+</div>
+<button class="flex self-center items-center gap-2 px-6 py-3 rounded-lg bg-background-dark border border-border-dark text-white text-sm font-bold hover:border-primary transition-all">
+<span class="material-symbols-outlined text-sm">swap_horiz</span>
+                                CHANGE
+                            </button>
+</div>
+</div>
+</div>
+<!-- Block 3: Saved Block -->
+<div class="grid grid-cols-[64px_1fr] gap-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-16 items-center justify-center rounded-full bg-surface-dark border-4 border-background-dark shadow-xl group-hover:ring-2 ring-primary/50 transition-all">
+<span class="material-symbols-outlined text-primary text-3xl">auto_fix</span>
+</div>
+</div>
+<div class="bg-primary/5 rounded-xl p-6 border border-primary/30 shadow-2xl flex items-center justify-between border-dashed">
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-bold font-mono border border-primary/40">SAVED BLOCK</span>
+<h3 class="text-white text-xl font-bold">Standard pH Adjustment Loop</h3>
+</div>
+<div class="flex gap-6 text-sm font-mono text-slate-400">
+<span>REAGENT_ID: <span class="text-primary">#A-42</span></span>
+<span>PRECISION: <span class="text-white">±0.02 pH</span></span>
+</div>
+</div>
+<button class="flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-background-dark text-sm font-black hover:brightness-110 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">folder_open</span>
+                            CHANGE
+                        </button>
+</div>
+</div>
+<!-- Block 4: Final Stage -->
+<div class="grid grid-cols-[64px_1fr] gap-6 group">
+<div class="flex flex-col items-center">
+<div class="z-10 flex size-16 items-center justify-center rounded-full bg-surface-dark border-4 border-background-dark shadow-xl">
+<span class="material-symbols-outlined text-slate-500 text-3xl">inventory_2</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl p-6 border border-border-dark shadow-2xl flex items-center justify-between">
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-slate-500/10 text-slate-400 text-[10px] font-bold font-mono border border-slate-500/20">OUTPUT</span>
+<h3 class="text-white text-xl font-bold">Curing &amp; Extrusion</h3>
+</div>
+<div class="flex gap-6 text-sm font-mono text-slate-400">
+<span>STATE: <span class="text-white">Ready</span></span>
+<span>TIMESTAMP: <span class="text-white">T+02:45:00</span></span>
+</div>
+</div>
+<button class="flex items-center gap-2 px-6 py-3 rounded-lg bg-background-dark border border-border-dark text-white text-sm font-bold hover:border-primary transition-all">
+<span class="material-symbols-outlined text-sm">tune</span>
+                            CHANGE
+                        </button>
+</div>
+</div>
+<!-- Add Step Button -->
+<div class="grid grid-cols-[64px_1fr] gap-6">
+<div class="flex flex-col items-center">
+<button class="flex size-12 items-center justify-center rounded-full bg-background-dark border-2 border-dashed border-border-dark text-slate-500 hover:text-primary hover:border-primary transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="h-12 flex items-center italic text-slate-500 text-sm">
+                        Click plus to insert a transformation or logical gate between steps
+                    </div>
+</div>
+</div>
+</div>
+<!-- Sidebar / Details Overlay Style Footer -->
+<div class="mt-16 bg-surface-dark border border-border-dark rounded-2xl p-8 flex flex-wrap gap-12 items-start">
+<div class="flex-1 min-w-[300px]">
+<h4 class="text-white font-bold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                    Simulation Preview
+                </h4>
+<div class="w-full h-32 bg-background-dark rounded-lg relative overflow-hidden flex items-end px-2 gap-1">
+<!-- Placeholder Sparkline -->
+<div class="flex-1 bg-primary/20 h-[20%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/30 h-[45%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[65%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/60 h-[85%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[95%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/80 h-[75%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/60 h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/40 h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary/20 h-[10%] rounded-t-sm"></div>
+</div>
+</div>
+<div class="w-full md:w-64 space-y-4">
+<h4 class="text-white font-bold mb-4">Sequence Integrity</h4>
+<div class="flex items-center justify-between text-sm">
+<span class="text-slate-400">Logic Check</span>
+<span class="text-green-500 font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">check_circle</span>
+                        Passed
+                    </span>
+</div>
+<div class="flex items-center justify-between text-sm">
+<span class="text-slate-400">Yield Est.</span>
+<span class="text-white font-mono">98.4%</span>
+</div>
+<div class="flex items-center justify-between text-sm">
+<span class="text-slate-400">Energy Req.</span>
+<span class="text-white font-mono">14.2 kWh</span>
+</div>
+</div>
+</div>
+</main>
+</body></html>

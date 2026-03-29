@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Batch Setup - Pro Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@400;500&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#00FF66",
+          "background-light": "#f5f8f7",
+          "background-dark": "#121214",
+          "surface": "#1E1E22",
+          "border-dark": "#2A2A30",
+          "muted": "#8A8A93",
+        },
+        fontFamily: {
+          "display": ["Space Grotesk", "sans-serif"],
+          "body": ["Inter", "sans-serif"],
+          "mono": ["JetBrains Mono", "monospace"],
+        },
+        borderRadius: {"DEFAULT": "0px", "sm": "4px", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #121214;
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, .font-display {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  
+  /* Custom Scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #121214;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2A2A30;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #8A8A93;
+  }
+
+  /* Image Grid Selection Styles */
+  .image-checkbox:checked + div {
+    box-shadow: inset 0 0 0 2px #00FF66;
+  }
+  .image-checkbox:checked ~ .check-icon {
+    display: flex;
+  }
+</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col h-screen overflow-hidden antialiased selection:bg-primary selection:text-black">
+<!-- Minimal Header (Focused View) -->
+<header class="flex-none bg-background-dark border-b border-border-dark px-4 py-4 flex items-center justify-between z-20 relative">
+<button class="text-white hover:text-primary transition-colors flex items-center justify-center w-10 h-10 -ml-2">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-display font-bold text-lg tracking-wide text-center flex-1 pr-8">BATCH SETUP</h1>
+</header>
+<!-- Sticky Selection Tracker -->
+<div class="flex-none bg-background-dark/90 backdrop-blur-sm z-10 px-4 py-3 border-b border-border-dark flex justify-between items-center sticky top-0">
+<div class="bg-surface border border-border-dark rounded-sm px-3 py-1.5 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-mono text-[13px] font-medium text-white tracking-wider">[42 SELECTED]</span>
+</div>
+<button class="text-[13px] font-medium text-muted hover:text-white transition-colors uppercase tracking-wider">Select All</button>
+</div>
+<!-- Scrollable Image Grid -->
+<main class="flex-1 overflow-y-auto p-4 pb-32">
+<div class="grid grid-cols-4 gap-1 auto-rows-[minmax(0,_1fr)] aspect-square">
+<!-- Selected Image Example -->
+<label class="relative block cursor-pointer aspect-square group">
+<input checked="" class="image-checkbox peer sr-only" type="checkbox"/>
+<div class="absolute inset-0 bg-surface">
+<img alt="" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="moody portrait of a woman in neon lighting with dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCiSs7z89bjbz4mlEA_ejY-npF7uDPogKnu1sALS5mBUsjHZbdBt8rLQRtUbc339nDIMci7RsQnGE5dEho7f9zXCgWbWRGZssaYAejU816TVWjfhfy6Tofdkn-40mqbFQQjA8SV1GxMWcXTIn5dsRfCKFP2l14_ZXDm2T1AStewH7L7-qN_a3uRbhtWC4JmrCoXrMw_BdcH6Jkh_z5bA3k4IOSnkAwuGL8F1rpwS9BoWpr5wOYp0ygDnxIEXiF1VX7N4XhUmWVO6P0"/>
+</div>
+<!-- Active Selection Border & Icon -->
+<div class="absolute inset-0 border-2 border-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10"></div>
+<div class="absolute top-1 right-1 w-5 h-5 bg-primary rounded-sm hidden peer-checked:flex items-center justify-center z-20">
+<span class="material-symbols-outlined text-black text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="absolute bottom-1 left-1 bg-black/60 px-1 py-0.5 rounded-sm z-10">
+<span class="font-mono text-[9px] text-white">IMG_4091.RAW</span>
+</div>
+</label>
+<!-- Selected Image Example 2 -->
+<label class="relative block cursor-pointer aspect-square group">
+<input checked="" class="image-checkbox peer sr-only" type="checkbox"/>
+<div class="absolute inset-0 bg-surface">
+<img alt="" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="macro shot of geometric architecture with strong shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDc9qGpdltt-siOINEDo8OPrqRiZFUyS6MJt5Apis5of8MMFZXw7lhvT21FPR-mdILSTyTeZeN9a_KVk6CK_8vqiW-1fZPpeQ-DI1LJgHZgjDqEcr0Jtx176X6m9W9lXGCfVBoakCnAQqI9922AipQg9MCUeJIhp3xv4734I4EWC8t0SUnIlqutGPu7tUzVDuH0FDvCBCYe2rn-xECFVj0mU4M27WVdW6GeWlz2hASCUxbkxWdpMaTwipolBt08ml-GhvEVIp4TVII"/>
+</div>
+<div class="absolute inset-0 border-2 border-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10"></div>
+<div class="absolute top-1 right-1 w-5 h-5 bg-primary rounded-sm hidden peer-checked:flex items-center justify-center z-20">
+<span class="material-symbols-outlined text-black text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="absolute bottom-1 left-1 bg-black/60 px-1 py-0.5 rounded-sm z-10">
+<span class="font-mono text-[9px] text-white">IMG_4092.RAW</span>
+</div>
+</label>
+<!-- Unselected Image Example -->
+<label class="relative block cursor-pointer aspect-square group">
+<input class="image-checkbox peer sr-only" type="checkbox"/>
+<div class="absolute inset-0 bg-surface">
+<img alt="" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity grayscale peer-checked:grayscale-0" data-alt="abstract fluid simulation in dark space with pink and cyan accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRQjtics3CKiFtVxRsuhWQkH0UwJZ5-kOGJzGSe2UUDACXj7tfYAhwnay08Y8hYfxOiLSgf6suFud2yKuN09o9I6WfGNiRYm8sm9-tQcyj1cpGAzalJWyVKqYyAlzG2wPr6lr6xrlkYM5XY_dVPz4Xv25CCjIPd8v3-o_wrxPjOlgq2fmC8SoMrNcVHTO8ro35uQbmUmnUU4pZP1Z0OHnYXI3sor4hNJB5JKFn6oRzzp7mqOtwAVDEgjlxisxpSBeRVRCZRk3LixU"/>
+</div>
+<div class="absolute inset-0 border-2 border-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10"></div>
+<div class="absolute top-1 right-1 w-5 h-5 bg-primary rounded-sm hidden peer-checked:flex items-center justify-center z-20">
+<span class="material-symbols-outlined text-black text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="absolute bottom-1 left-1 bg-black/60 px-1 py-0.5 rounded-sm z-10">
+<span class="font-mono text-[9px] text-muted peer-checked:text-white">IMG_4093.RAW</span>
+</div>
+</label>
+<!-- Unselected Image Example 2 -->
+<label class="relative block cursor-pointer aspect-square group">
+<input class="image-checkbox peer sr-only" type="checkbox"/>
+<div class="absolute inset-0 bg-surface">
+<img alt="" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity grayscale peer-checked:grayscale-0" data-alt="minimalist landscape black and white high contrast mountains" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_leQsfZ157AX-xbVhQlDfk19TBMhvDbAtIRWs60O3sQHqzp7VG07XUinDBiex5ISjeqFyO-8o956p7qbZOx-M5mKkQZmJ2XTFdrLdiVQbvrNKivdvtJUDFgRwxab4TsCFgKg531kI3eNBPmgztVs5-wPhzZDmD_CtuRUI0iO3SoBsAebycz28Tk8ldmFLJjA7CmoLsl6MW7-E0taBl1iU4VFYBZJ3nrDgHejVtbLJ4iToQG9L8bpJjMOAcBf13bPoDJzyW0HVY24"/>
+</div>
+<div class="absolute inset-0 border-2 border-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10"></div>
+<div class="absolute top-1 right-1 w-5 h-5 bg-primary rounded-sm hidden peer-checked:flex items-center justify-center z-20">
+<span class="material-symbols-outlined text-black text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="absolute bottom-1 left-1 bg-black/60 px-1 py-0.5 rounded-sm z-10">
+<span class="font-mono text-[9px] text-muted peer-checked:text-white">IMG_4094.RAW</span>
+</div>
+</label>
+<!-- Selected Image Example 3 -->
+<label class="relative block cursor-pointer aspect-square group">
+<input checked="" class="image-checkbox peer sr-only" type="checkbox"/>
+<div class="absolute inset-0 bg-surface">
+<img alt="" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="neon sign reflecting in puddle at night cyberpunk aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxId5Z5sw9SvSITRrT2WE-XpMQPL2_VShOAarIUVNpzWD1qjOwopmU5RqWvcwPI34Kzd4R2SWWJ96Xx1e9AVi8asMzSLlBeVQnfoGCZdjbhl4tZfWL-KSlQCVSNTZWIHwWm9Uyb3j-_E7sfaD9sh0Y-a4qJrkH8NYj5IAOV2Dq-MwXI8-34uVMzLQ4pHsSrHhERK8klIEl8F8H0_127qXmD6FhGnbLSv_6DZtcFgqlLPKaKLbTYUrM7J992PdMkoACfWL6nfCB828"/>
+</div>
+<div class="absolute inset-0 border-2 border-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10"></div>
+<div class="absolute top-1 right-1 w-5 h-5 bg-primary rounded-sm hidden peer-checked:flex items-center justify-center z-20">
+<span class="material-symbols-outlined text-black text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<div class="absolute bottom-1 left-1 bg-black/60 px-1 py-0.5 rounded-sm z-10">
+<span class="font-mono text-[9px] text-white">IMG_4095.RAW</span>
+</div>
+</label>
+<!-- Generating more grid items for scroll demonstration -->
+<script>
+        for(let i=6; i<=24; i++) {
+            let isChecked = i % 3 === 0 ? 'checked' : '';
+            let opacity = isChecked ? 'opacity-80' : 'opacity-60 grayscale';
+            let textColor = isChecked ? 'text-white' : 'text-muted';
+            document.write(`
+            <label class="relative block cursor-pointer aspect-square group">
+                <input type="checkbox" class="image-checkbox peer sr-only" ${isChecked}>
+                <div class="absolute inset-0 bg-surface flex items-center justify-center border border-border-dark">
+                  <span class="material-symbols-outlined text-muted text-opacity-20 text-[32px]">image</span>
+                </div>
+                <div class="absolute inset-0 border-2 border-primary opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none z-10"></div>
+                <div class="absolute top-1 right-1 w-5 h-5 bg-primary rounded-sm hidden peer-checked:flex items-center justify-center z-20">
+                <span class="material-symbols-outlined text-black text-[14px]" style="font-variation-settings: 'FILL' 1;">check</span>
+                </div>
+                <div class="absolute bottom-1 left-1 bg-black/60 px-1 py-0.5 rounded-sm z-10">
+                <span class="font-mono text-[9px] ${textColor}">IMG_40${90+i}.RAW</span>
+                </div>
+            </label>
+            `);
+        }
+       </script>
+</div>
+</main>
+<!-- Bottom Output Settings Sheet -->
+<div class="flex-none bg-surface border-t border-border-dark absolute bottom-0 left-0 right-0 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+<div class="p-4 space-y-4 max-w-3xl mx-auto">
+<!-- Output Path Selector -->
+<div class="space-y-2">
+<label class="text-[11px] font-mono text-muted uppercase tracking-wider block">Output Destination</label>
+<div class="flex items-center bg-background-dark border border-border-dark rounded-sm focus-within:border-primary transition-colors">
+<div class="pl-3 pr-2 py-2 flex items-center text-muted">
+<span class="material-symbols-outlined text-[18px]">folder_open</span>
+</div>
+<input class="flex-1 bg-transparent border-none text-white font-mono text-[13px] py-3 focus:ring-0 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap" readonly="" type="text" value="~/Desktop/ProStudio/Exports/Batch_01"/>
+<button class="px-3 py-2 text-primary hover:text-white transition-colors border-l border-border-dark flex items-center">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Execute Button -->
+<!-- Note: Using opacity-100 to show active state as per requirements "[42 SELECTED]" -->
+<button class="w-full h-[56px] bg-primary text-black font-display font-bold text-[15px] tracking-wide flex items-center justify-center gap-2 hover:bg-[#00FF66]/90 transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+        EXECUTE BATCH
+      </button>
+<!-- Safety Area for Mobile -->
+<div class="h-2"></div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pro Studio Batch Processor - Comparison View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0055FF",
+            "background-light": "#f8f6f6",
+            "background-dark": "#121214",
+            "border-dark": "#2A2A30",
+            "accent-blue": "#0055FF"
+          },
+          fontFamily: {
+            "display": ["Public Sans", "sans-serif"],
+            "mono": ["JetBrains Mono", "monospace"]
+          },
+          borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #121214;
+      color: #ffffff;
+      font-family: 'Public Sans', sans-serif;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .monospace-tech {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body class="bg-background-dark text-white overflow-hidden h-screen flex flex-col">
+<!-- Header Section (As per focus: Process Screen, minimal header) -->
+<header class="flex items-center justify-between border-b border-border-dark px-6 py-3 bg-[#18181B]">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="size-6 text-accent-blue">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" fill="currentColor"></path></svg>
+</div>
+<h2 class="text-white text-sm font-bold tracking-tight uppercase monospace-tech">Pro Studio [CMP]</h2>
+</div>
+<div class="h-4 w-[1px] bg-border-dark"></div>
+<nav class="flex items-center gap-2 monospace-tech text-[#88888F]">
+<span class="hover:text-white cursor-pointer transition-colors">Output</span>
+<span class="text-border-dark">/</span>
+<span class="hover:text-white cursor-pointer transition-colors">batch_2026_01_20</span>
+<span class="text-border-dark">/</span>
+<span class="text-accent-blue font-medium">IMG_0244_processed.exr</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center gap-2 rounded bg-border-dark px-4 py-1.5 text-xs font-bold text-white hover:bg-[#3F3F46] transition-all">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+<span>Back to Browser</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-cover bg-center border border-border-dark" data-alt="professional male portrait avatar with neutral background" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC0OKyl7mJUa_CykSxuAVih2HRTcy2Yl65v8-FILe3g9SV9U9CB6Snk4g91FlHz10q2KRonk2g8Cxmi0IojMqXICkGufCDqTah1-NrnwT-J4Dj4NFmbYPruLuEu_7psNY8xJp0qtTrvX6N_G6V70Kg4RVaPPP_8JyAONVVBDixuBv5cwO2W_7-sbHdy8zoHNsBcEZgtbyKNaDpI5N8GU0UvwgTxBQjPo146BkXZInBYofZxU9eendEB_BcX6u_KJ81l__5XEj6_KpI')"></div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<!-- Main Workspace: Image Comparison -->
+<div class="relative flex-1 bg-[#0A0A0B] flex items-center justify-center overflow-hidden group">
+<!-- Image Container -->
+<div class="relative w-full h-full">
+<!-- Processed Image (Right Side / Background) -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center" data-alt="vibrant high-contrast studio shot of a red sneaker with sharp details and professional lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBZmrO34s77kTn-6cIJEbNJsjNdpvX3v5hIpctICg7Md0eEjtZszGH6HZFYSPFg-TnuA3rdZc4PwG5X0pJmHS4VBBx84WG2GGHTtswPNlnxdVsovM52CmPZOY70-5RVyTGAjJAjPAx1bXbHolDWn9nUOgjMRownUfTA7AarZ90lEtJZHBPDkFN6hbdh5BsmkVorbL3SNGlaNi6cF4Nq9UZ7aSNbgmTxAAErG5-xjmNjZhqXckMnWyyj1NcPxsNwDSBWk9ATcq6RJik')">
+<div class="absolute bottom-4 right-4 bg-black/60 backdrop-blur px-3 py-1 rounded text-[10px] monospace-tech border border-white/10 uppercase">Processed</div>
+</div>
+<!-- RAW Image (Left Side / Overlay) -->
+<div class="absolute inset-0 h-full w-[50%] bg-cover bg-center border-r-2 border-accent-blue z-10" data-alt="flat low-contrast raw unedited photo of a sneaker with muted colors and neutral lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAKZ6Y11bKwxztggm8YFjHwxiGm1Id7u6HLCt4KH1M9FvcpL_6TV1s2WmrD6qKQ_8apAO2rSQ6wE9etfB7hHUYZl6amV-XuGach45d028tKnjjJ6FpU-nmFwm27br5Nnc7-x52pWJkGWvNOomUpqu_QUXJ8DDrvwBMRqbw2dGEaYkJM68yYcUa3PRjLKAg66ngQU2QsTMsLXfcZMs2YLnBgDy79aF50DJsby5hLzqO4xDHQIKqDu1W-dIdETDF_OBhd7PBVMaEeUzo')">
+<div class="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded text-[10px] monospace-tech border border-white/10 uppercase">RAW (Original)</div>
+</div>
+<!-- Draggable Handle -->
+<div class="absolute left-[50%] top-0 bottom-0 w-0.5 bg-accent-blue z-20 flex items-center justify-center">
+<div class="size-8 bg-accent-blue rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20 cursor-ew-resize">
+<span class="material-symbols-outlined text-white text-xl">unfold_more</span>
+</div>
+</div>
+</div>
+<!-- Floating Zoom Controls -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#18181B]/90 backdrop-blur-md p-1.5 rounded-lg border border-border-dark shadow-2xl z-30">
+<button class="p-2 hover:bg-[#2A2A30] rounded transition-colors" title="Zoom Out">
+<span class="material-symbols-outlined text-[20px]">remove</span>
+</button>
+<div class="px-3 border-x border-border-dark">
+<span class="monospace-tech text-[11px]">84.2%</span>
+</div>
+<button class="p-2 hover:bg-[#2A2A30] rounded transition-colors" title="Zoom In">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+<div class="w-[1px] h-4 bg-border-dark mx-1"></div>
+<button class="px-3 py-1.5 hover:bg-[#2A2A30] rounded text-[11px] font-bold monospace-tech uppercase transition-colors">Fit</button>
+<button class="px-3 py-1.5 hover:bg-[#2A2A30] rounded text-[11px] font-bold monospace-tech uppercase transition-colors">1:1</button>
+<div class="w-[1px] h-4 bg-border-dark mx-1"></div>
+<div class="flex bg-[#0A0A0B] rounded p-0.5">
+<button class="px-3 py-1 bg-accent-blue text-white rounded text-[10px] font-bold uppercase transition-all">Split</button>
+<button class="px-3 py-1 text-[#88888F] hover:text-white rounded text-[10px] font-bold uppercase transition-all">Side-by-Side</button>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Details -->
+<aside class="w-80 border-l border-border-dark bg-[#18181B] flex flex-col">
+<div class="p-4 border-b border-border-dark flex items-center justify-between">
+<h3 class="text-[11px] font-bold uppercase tracking-widest monospace-tech text-[#88888F]">Inspector</h3>
+<span class="material-symbols-outlined text-[#88888F] cursor-pointer hover:text-white text-[18px]">settings</span>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<!-- Histogram -->
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-blue text-[18px]" data-weight="fill">bar_chart</span>
+<h4 class="text-xs font-bold uppercase monospace-tech">Histogram</h4>
+</div>
+<div class="h-32 w-full bg-[#0A0A0B] rounded border border-border-dark relative overflow-hidden">
+<!-- Simulated Histogram -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none">
+<path d="M0 128 L10 110 L30 120 L50 80 L80 95 L110 40 L150 70 L190 20 L240 85 L280 110 L320 128 Z" fill="rgba(0, 85, 255, 0.3)" stroke="#0055FF" stroke-width="1"></path>
+<path d="M0 128 L20 115 L60 100 L100 110 L140 80 L180 90 L220 60 L260 95 L320 128 Z" fill="rgba(255, 255, 255, 0.1)" stroke="rgba(255, 255, 255, 0.4)" stroke-width="1"></path>
+</svg>
+<div class="absolute inset-0 flex justify-between px-2 pt-2 opacity-30 text-[8px] monospace-tech">
+<span>0</span>
+<span>128</span>
+<span>255</span>
+</div>
+</div>
+</div>
+<!-- Image Info -->
+<div class="p-4 border-t border-border-dark space-y-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-blue text-[18px]">info</span>
+<h4 class="text-xs font-bold uppercase monospace-tech">Image Info</h4>
+</div>
+<div class="grid grid-cols-2 gap-y-3 text-[11px] monospace-tech">
+<div class="text-[#88888F]">Resolution</div>
+<div class="text-right">7680 x 4320 (8K)</div>
+<div class="text-[#88888F]">Color Space</div>
+<div class="text-right">ACEScg / Linear</div>
+<div class="text-[#88888F]">Bit Depth</div>
+<div class="text-right">32-bit Float</div>
+<div class="text-[#88888F]">Format</div>
+<div class="text-right text-accent-blue">OpenEXR (.exr)</div>
+<div class="text-[#88888F]">File Size</div>
+<div class="text-right">142.4 MB</div>
+</div>
+</div>
+<!-- Applied Recipe -->
+<div class="p-4 border-t border-border-dark space-y-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-blue text-[18px]">account_tree</span>
+<h4 class="text-xs font-bold uppercase monospace-tech">Applied Recipe</h4>
+</div>
+<div class="space-y-2">
+<!-- Node Item -->
+<div class="flex items-center gap-3 p-2 bg-[#0A0A0B] border border-border-dark rounded hover:border-accent-blue/50 cursor-default transition-colors">
+<span class="material-symbols-outlined text-[16px] text-[#88888F]">aspect_ratio</span>
+<div class="flex-1">
+<div class="text-[10px] font-bold uppercase monospace-tech">Resize</div>
+<div class="text-[9px] text-[#88888F] monospace-tech">Lanczos4 Filter</div>
+</div>
+<span class="material-symbols-outlined text-[14px] text-green-500">check_circle</span>
+</div>
+<!-- Node Item -->
+<div class="flex items-center gap-3 p-2 bg-[#0A0A0B] border border-border-dark rounded hover:border-accent-blue/50 cursor-default transition-colors">
+<span class="material-symbols-outlined text-[16px] text-[#88888F]">crop_free</span>
+<div class="flex-1">
+<div class="text-[10px] font-bold uppercase monospace-tech">Smart Crop</div>
+<div class="text-[9px] text-[#88888F] monospace-tech">AI-Subject Centered</div>
+</div>
+<span class="material-symbols-outlined text-[14px] text-green-500">check_circle</span>
+</div>
+<!-- Node Item -->
+<div class="flex items-center gap-3 p-2 bg-[#0A0A0B] border border-border-dark rounded hover:border-accent-blue/50 cursor-default transition-colors">
+<span class="material-symbols-outlined text-[16px] text-[#88888F]">tune</span>
+<div class="flex-1">
+<div class="text-[10px] font-bold uppercase monospace-tech">Standard Tuning</div>
+<div class="text-[9px] text-[#88888F] monospace-tech">LUT: Cine_04_High_Pass</div>
+</div>
+<span class="material-symbols-outlined text-[14px] text-green-500">check_circle</span>
+</div>
+<!-- Node Item -->
+<div class="flex items-center gap-3 p-2 bg-[#0A0A0B] border border-border-dark rounded hover:border-accent-blue/50 cursor-default transition-colors">
+<span class="material-symbols-outlined text-[16px] text-[#88888F]">grain</span>
+<div class="flex-1">
+<div class="text-[10px] font-bold uppercase monospace-tech">Film Grain</div>
+<div class="text-[9px] text-[#88888F] monospace-tech">35mm / Intensity 0.15</div>
+</div>
+<span class="material-symbols-outlined text-[14px] text-green-500">check_circle</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="p-4 border-t border-border-dark bg-[#121214] grid grid-cols-2 gap-2">
+<button class="flex items-center justify-center gap-2 rounded border border-border-dark px-3 py-2 text-[10px] font-bold uppercase monospace-tech hover:bg-[#2A2A30] transition-colors">
+          Dismiss
+        </button>
+<button class="flex items-center justify-center gap-2 rounded bg-accent-blue px-3 py-2 text-[10px] font-bold uppercase monospace-tech text-white hover:bg-blue-600 transition-colors">
+<span class="material-symbols-outlined text-[14px]">download</span>
+          Export
+        </button>
+</div>
+</aside>
+</main>
+<!-- Status Bar -->
+<footer class="h-6 border-t border-border-dark bg-[#0A0A0B] px-4 flex items-center justify-between text-[9px] monospace-tech text-[#5A5A62]">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<div class="size-2 rounded-full bg-green-500"></div>
+<span>GPU ACCELERATION: ACTIVE</span>
+</div>
+<div class="w-[1px] h-3 bg-border-dark"></div>
+<span>RENDER TIME: 420ms</span>
+</div>
+<div class="flex items-center gap-4">
+<span>DISK SPACE: 4.2TB FREE</span>
+<span>API v2.4.0-stable</span>
+</div>
+</footer>
+</body></html>

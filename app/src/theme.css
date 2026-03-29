@@ -1,0 +1,154 @@
+/**
+ * ImageChef — Pro Studio Dark Theme
+ * Overrides Aurora design tokens for the professional dark-mode aesthetic.
+ *
+ * Accent: Electric Blue  #0077ff
+ * Bg App:                #0f0f11
+ * Surface:               #1a1a1e
+ * Surface raised:        #222228
+ * Border:                #2a2a32
+ * Text primary:          #f0f0f5
+ * Text muted:            #8a8a9a
+ * Danger:                #ff3d3d
+ * Success:               #22c55e
+ * Warning:               #f59e0b
+ */
+
+/* ─── Typography ──────────────────────────────────────────── */
+:root {
+  --font-primary:  'Inter', system-ui, sans-serif;
+  --font-mono:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-body:     var(--font-primary);
+  --font-heading:  var(--font-primary);
+  --font-hero:     var(--font-primary);
+  --font-nav:      var(--font-primary);
+}
+
+/* ─── Pro Studio palette ─────────────────────────────────── */
+[data-mode="dark"],
+[data-theme="pro-studio"] {
+  color-scheme: dark;
+
+  /* Core palette */
+  --ps-bg-app:          #0f0f11;
+  --ps-bg-surface:      #1a1a1e;
+  --ps-bg-raised:       #222228;
+  --ps-bg-overlay:      #2a2a32;
+  --ps-border:          #2a2a32;
+  --ps-border-subtle:   #1e1e24;
+
+  /* Text */
+  --ps-text:            #f0f0f5;
+  --ps-text-muted:      #8a8a9a;
+  --ps-text-faint:      #55556a;
+
+  /* Accent */
+  --ps-blue:            #0077ff;
+  --ps-blue-hover:      #0066dd;
+  --ps-blue-dim:        rgba(0, 119, 255, 0.15);
+  --ps-blue-glow:       0 0 0 2px rgba(0, 119, 255, 0.4);
+
+  /* Status */
+  --ps-success:         #22c55e;
+  --ps-success-dim:     rgba(34, 197, 94, 0.12);
+  --ps-warning:         #f59e0b;
+  --ps-warning-dim:     rgba(245, 158, 11, 0.12);
+  --ps-danger:          #ff3d3d;
+  --ps-danger-dim:      rgba(255, 61, 61, 0.12);
+
+  /* Node category colours (for transform sidebar colour-coding) */
+  --cat-geo:            #38bdf8;   /* Geometric — sky blue */
+  --cat-color:          #a78bfa;   /* Color & Tone — violet */
+  --cat-overlay:        #fb923c;   /* Overlays — orange */
+  --cat-ai:             #34d399;   /* AI — emerald */
+  --cat-flow:           #0077ff;   /* Flow Control — electric blue */
+  --cat-meta:           #f472b6;   /* Metadata — pink */
+
+  /* ─── Aurora token overrides ───────────────────────────── */
+  --ds-sys-color-primary:          var(--ps-blue);
+  --ds-sys-color-surface:          var(--ps-bg-surface);
+  --ds-sys-color-bg-app:           var(--ps-bg-app);
+  --ds-sys-color-on-surface:       var(--ps-text);
+  --ds-sys-color-on-surface-muted: var(--ps-text-muted);
+  --ds-sys-color-outline:          var(--ps-border);
+  --ds-sys-color-outline-variant:  var(--ps-border-subtle);
+
+  /* Buttons */
+  --ds-comp-button-bg-primary:           var(--ps-blue);
+  --ds-comp-button-bg-primary-hover:     var(--ps-blue-hover);
+  --ds-comp-button-text-primary:         #ffffff;
+
+  /* Inputs */
+  --ds-comp-input-bg:              var(--ps-bg-overlay);
+  --ds-comp-input-border:          var(--ps-border);
+  --ds-comp-input-border-focus:    var(--ps-blue);
+  --ds-comp-input-text:            var(--ps-text);
+  --ds-comp-input-placeholder:     var(--ps-text-faint);
+
+  /* Cards */
+  --ds-comp-card-bg:               var(--ps-bg-surface);
+  --ds-comp-card-border:           var(--ps-border);
+
+  /* Tabs */
+  --ds-comp-tab-active-color:      var(--ps-blue);
+  --ds-comp-tab-active-indicator:  var(--ps-blue);
+
+  /* Accordion */
+  --ds-comp-accordion-bg:          var(--ps-bg-surface);
+  --ds-comp-accordion-border:      var(--ps-border);
+
+  /* Drawer */
+  --ds-comp-drawer-bg:             var(--ps-bg-surface);
+  --ds-comp-drawer-border:         var(--ps-border);
+
+  /* Progress */
+  --ds-comp-progress-fill:         var(--ps-blue);
+  --ds-comp-progress-bg:           var(--ps-bg-overlay);
+
+  /* Spinner */
+  --ds-comp-spinner-color:         var(--ps-blue);
+
+  /* Toast */
+  --ds-comp-toast-bg:              var(--ps-bg-raised);
+  --ds-comp-toast-border:          var(--ps-border);
+}
+
+/* ─── Global base overrides ─────────────────────────────── */
+body {
+  background-color: var(--ps-bg-app);
+  color: var(--ps-text);
+  font-family: var(--font-primary);
+}
+
+/* Monospace utility class */
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Focus ring — Pro Studio style */
+:focus-visible {
+  outline: 2px solid var(--ps-blue);
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ps-bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ps-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ps-text-faint);
+}
+
+/* Selection */
+::selection {
+  background: var(--ps-blue-dim);
+  color: var(--ps-text);
+}

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "accent-blue": "#00d4ff",
+                        "accent-magenta": "#ff00ff",
+                        "accent-yellow": "#ffff00",
+                        "accent-purple": "#a855f7",
+                        "accent-cyan": "#00ffff",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#121214",
+                        "node-bg": "#1e1e22",
+                        "node-border": "#2d2d32",
+                        "sidebar-bg": "#18181b",
+                        "text-muted": "#a1a1aa",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .canvas-grid {
+            background-image: radial-gradient(#2d2d32 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .node-connector {
+            position: absolute;
+            stroke: #3f3f46;
+            stroke-width: 2;
+            fill: none;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #18181b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d2d32;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+    </style>
+</head>
+<body class="bg-background-dark font-display text-white overflow-hidden">
+<div class="flex h-screen w-full flex-col">
+<!-- Shared Header -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-node-border bg-sidebar-bg px-6 py-3 shrink-0">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-white">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V44" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">NED Node Editor</h2>
+</div>
+<div class="flex items-center gap-6">
+<a class="text-white text-sm font-medium hover:text-primary transition-colors" href="#">File</a>
+<a class="text-white text-sm font-medium hover:text-primary transition-colors" href="#">Edit</a>
+<a class="text-white text-sm font-medium hover:text-primary transition-colors" href="#">View</a>
+<a class="text-white text-sm font-medium hover:text-primary transition-colors" href="#">Assets</a>
+<a class="text-white text-sm font-medium hover:text-primary transition-colors" href="#">Settings</a>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-4">
+<label class="flex flex-col min-w-40 h-9 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full overflow-hidden border border-node-border">
+<div class="text-text-muted flex items-center justify-center bg-node-bg px-3" data-icon="search">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="w-full border-none bg-node-bg text-white focus:ring-0 text-sm placeholder:text-text-muted px-2" placeholder="Search components..." value=""/>
+</div>
+</label>
+<div class="flex gap-2">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-lg h-9 px-4 bg-primary text-white text-sm font-bold tracking-[0.015em] hover:opacity-90 transition-opacity">
+<span class="truncate">Export</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-node-bg border border-node-border text-white hover:bg-node-border" data-icon="notifications">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-node-bg border border-node-border text-white hover:bg-node-border" data-icon="account_circle">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<!-- Sidebar / Chooser Panel -->
+<aside class="w-72 bg-sidebar-bg border-r border-node-border flex flex-col shrink-0">
+<div class="p-4 flex flex-col gap-1 border-b border-node-border">
+<h1 class="text-white text-xs font-bold tracking-widest uppercase">Chooser</h1>
+<p class="text-text-muted text-[10px] font-mono">Build operation trees</p>
+</div>
+<!-- Tabs -->
+<div class="flex border-b border-node-border">
+<button class="flex-1 py-3 text-[10px] font-bold border-b-2 border-accent-blue text-white uppercase tracking-tighter">Transformations</button>
+<button class="flex-1 py-3 text-[10px] font-bold border-b-2 border-transparent text-text-muted uppercase tracking-tighter hover:text-white">Blocks</button>
+</div>
+<div class="flex-1 overflow-y-auto">
+<!-- Geometric Category -->
+<details class="group border-b border-node-border/50" open="">
+<summary class="flex items-center justify-between p-3 cursor-pointer hover:bg-node-bg/30 transition-colors">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-accent-cyan"></div>
+<span class="text-[10px] font-bold text-white uppercase tracking-wider">Geometric</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-sm group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-2 grid grid-cols-2 gap-2">
+<div class="flex flex-col gap-2 rounded border border-node-border bg-node-bg p-2.5 cursor-grab hover:border-accent-cyan transition-colors group/item">
+<span class="material-symbols-outlined text-sm text-text-muted group-hover/item:text-accent-cyan">crop</span>
+<div class="flex flex-col">
+<span class="text-white text-[10px] font-bold leading-tight">Smart Crop</span>
+<span class="text-text-muted text-[9px] font-mono">IMG_GEO</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded border border-node-border bg-node-bg p-2.5 cursor-grab hover:border-accent-cyan transition-colors group/item">
+<span class="material-symbols-outlined text-sm text-text-muted group-hover/item:text-accent-cyan">aspect_ratio</span>
+<div class="flex flex-col">
+<span class="text-white text-[10px] font-bold leading-tight">Resize</span>
+<span class="text-text-muted text-[9px] font-mono">SCALER</span>
+</div>
+</div>
+</div>
+</details>
+<!-- Color & Tone Category -->
+<details class="group border-b border-node-border/50" open="">
+<summary class="flex items-center justify-between p-3 cursor-pointer hover:bg-node-bg/30 transition-colors">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-accent-magenta"></div>
+<span class="text-[10px] font-bold text-white uppercase tracking-wider">Color &amp; Tone</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-sm group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-2 grid grid-cols-2 gap-2">
+<div class="flex flex-col gap-2 rounded border border-node-border bg-node-bg p-2.5 cursor-grab hover:border-accent-magenta transition-colors group/item">
+<span class="material-symbols-outlined text-sm text-text-muted group-hover/item:text-accent-magenta">palette</span>
+<div class="flex flex-col">
+<span class="text-white text-[10px] font-bold leading-tight">Balance</span>
+<span class="text-text-muted text-[9px] font-mono">CLR_ADJ</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded border border-node-border bg-node-bg p-2.5 cursor-grab hover:border-accent-magenta transition-colors group/item">
+<span class="material-symbols-outlined text-sm text-text-muted group-hover/item:text-accent-magenta">exposure</span>
+<div class="flex flex-col">
+<span class="text-white text-[10px] font-bold leading-tight">Exposure</span>
+<span class="text-text-muted text-[9px] font-mono">LUMA</span>
+</div>
+</div>
+</div>
+</details>
+<!-- AI & Composition -->
+<details class="group border-b border-node-border/50">
+<summary class="flex items-center justify-between p-3 cursor-pointer hover:bg-node-bg/30 transition-colors">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-accent-purple"></div>
+<span class="text-[10px] font-bold text-white uppercase tracking-wider">AI &amp; Composition</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-sm group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-2 grid grid-cols-2 gap-2">
+<div class="flex flex-col gap-2 rounded border border-node-border bg-node-bg p-2.5 cursor-grab hover:border-accent-purple transition-colors group/item">
+<span class="material-symbols-outlined text-sm text-text-muted group-hover/item:text-accent-purple">auto_fix_high</span>
+<div class="flex flex-col">
+<span class="text-white text-[10px] font-bold leading-tight">AI Upscale</span>
+<span class="text-text-muted text-[9px] font-mono">ML_RES</span>
+</div>
+</div>
+</div>
+</details>
+<!-- Creative Overlays -->
+<details class="group border-b border-node-border/50">
+<summary class="flex items-center justify-between p-3 cursor-pointer hover:bg-node-bg/30 transition-colors">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-accent-yellow"></div>
+<span class="text-[10px] font-bold text-white uppercase tracking-wider">Creative Overlays</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-sm group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-2 grid grid-cols-2 gap-2">
+<div class="flex flex-col gap-2 rounded border border-node-border bg-node-bg p-2.5 cursor-grab hover:border-accent-yellow transition-colors group/item">
+<span class="material-symbols-outlined text-sm text-text-muted group-hover/item:text-accent-yellow">blur_on</span>
+<div class="flex flex-col">
+<span class="text-white text-[10px] font-bold leading-tight">Gaussian</span>
+<span class="text-text-muted text-[9px] font-mono">FLTR</span>
+</div>
+</div>
+</div>
+</details>
+<!-- Flow Control -->
+<details class="group border-b border-node-border/50">
+<summary class="flex items-center justify-between p-3 cursor-pointer hover:bg-node-bg/30 transition-colors">
+<div class="flex items-center gap-2">
+<div class="w-1.5 h-1.5 rounded-full bg-accent-blue"></div>
+<span class="text-[10px] font-bold text-white uppercase tracking-wider">Flow Control</span>
+</div>
+<span class="material-symbols-outlined text-text-muted text-sm group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-2 grid grid-cols-2 gap-2">
+<div class="flex flex-col gap-2 rounded border border-node-border bg-node-bg p-2.5 cursor-grab hover:border-accent-blue transition-colors group/item">
+<span class="material-symbols-outlined text-sm text-text-muted group-hover/item:text-accent-blue">call_split</span>
+<div class="flex flex-col">
+<span class="text-white text-[10px] font-bold leading-tight">Switch</span>
+<span class="text-text-muted text-[9px] font-mono">LOGIC</span>
+</div>
+</div>
+</div>
+</details>
+</div>
+<div class="p-4 border-t border-node-border">
+<button class="w-full flex items-center justify-center gap-2 rounded-lg h-10 bg-node-bg border border-node-border text-white text-[10px] font-bold uppercase tracking-wider hover:bg-accent-blue/10 hover:border-accent-blue transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>Add Node</span>
+</button>
+</div>
+</aside>
+<!-- Main Canvas -->
+<section class="flex-1 bg-background-dark relative overflow-hidden canvas-grid">
+<!-- Project Breadcrumbs Overlay -->
+<div class="absolute top-4 left-6 flex items-center gap-2 px-3 py-1.5 bg-sidebar-bg/90 backdrop-blur rounded-full border border-node-border z-10 shadow-xl">
+<span class="text-text-muted text-[10px] font-mono">Project Alpha</span>
+<span class="text-node-border">/</span>
+<span class="text-white text-[10px] font-bold uppercase tracking-tighter">Main Graph</span>
+</div>
+<!-- Canvas Controls Overlay -->
+<div class="absolute bottom-6 right-6 flex flex-col gap-2 z-10">
+<div class="flex flex-col bg-sidebar-bg rounded-lg border border-node-border overflow-hidden shadow-2xl">
+<button class="p-2 hover:bg-node-border text-text-muted hover:text-white" data-icon="add"><span class="material-symbols-outlined">add</span></button>
+<div class="h-px bg-node-border mx-2"></div>
+<button class="p-2 hover:bg-node-border text-text-muted hover:text-white" data-icon="remove"><span class="material-symbols-outlined">remove</span></button>
+</div>
+<button class="p-2 bg-sidebar-bg rounded-lg border border-node-border text-text-muted hover:text-white shadow-2xl" data-icon="fullscreen"><span class="material-symbols-outlined">fullscreen</span></button>
+</div>
+<!-- SVG Layer for Connectors -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-0">
+<path class="node-connector" d="M280 200 C350 200, 350 200, 420 200"></path>
+<path class="node-connector" d="M640 200 C710 200, 710 320, 780 320" style="stroke: #00d4ff; stroke-width: 2;"></path>
+<path class="node-connector" d="M640 200 C710 200, 710 120, 780 120"></path>
+</svg>
+<!-- Nodes -->
+<!-- Input Node -->
+<div class="absolute top-32 left-20 w-52 bg-node-bg border border-node-border rounded-lg shadow-2xl z-1">
+<div class="flex items-center gap-2 p-2 border-b border-node-border bg-black/20 rounded-t-lg">
+<span class="material-symbols-outlined text-primary text-sm">image</span>
+<span class="text-[10px] font-bold tracking-tight font-mono">SOURCE_IMAGE</span>
+</div>
+<div class="p-3 flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<span class="text-[9px] text-text-muted uppercase font-mono">Format</span>
+<span class="text-[9px] font-mono text-accent-cyan bg-accent-cyan/10 px-1 rounded">RAW_DNG</span>
+</div>
+<img class="w-full h-20 object-cover rounded border border-node-border" data-alt="high resolution landscape photo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2_JwmOCKi6keooqaHK9FMql9FCA9--el5WMLNTTPAMInCitlNCsIDfJ3Ck5rx9z7Y9Dz-Wx1i0Fh2aFLvfgtcprx0WL1lFvUsbYeV2CZSSY7hau1uokZoB0MFFb32FVRcXUd9giTJR60DDUL0RKTGB3RGTdhcHPyXE4RYVbB4CRSWRUR5kqAkcHYe752kre9r4HzTA-jKIJnS4vl9VWlW3Pophtn8huzgBKpAwZNbFfDMzjue8NnEjSzeGjyZI4F4Yut8v5LEdXM"/>
+</div>
+<div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-sidebar-bg border-2 border-primary flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+</div>
+</div>
+<!-- Smart Crop Node (Selected) -->
+<div class="absolute top-28 left-[420px] w-56 bg-node-bg border-2 border-accent-blue rounded-lg shadow-[0_0_20px_rgba(0,212,255,0.15)] z-2 ring-1 ring-accent-blue/30">
+<div class="flex items-center justify-between p-2 border-b border-node-border bg-accent-blue/5 rounded-t-lg">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-accent-blue text-sm">crop</span>
+<span class="text-[10px] font-bold tracking-tight font-mono">SMART_CROP</span>
+</div>
+<span class="material-symbols-outlined text-xs text-text-muted">settings</span>
+</div>
+<div class="p-3 flex flex-col gap-3">
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[9px] text-text-muted uppercase font-mono">Aspect Ratio</label>
+<span class="text-[9px] font-mono text-white">16:9</span>
+</div>
+<div class="h-1 bg-node-border rounded-full overflow-hidden">
+<div class="w-3/4 h-full bg-accent-blue"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[9px] text-text-muted uppercase font-mono">Center Bias</label>
+<span class="text-[9px] font-mono text-white">0.85</span>
+</div>
+<div class="h-1 bg-node-border rounded-full overflow-hidden">
+<div class="w-[85%] h-full bg-accent-blue"></div>
+</div>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+<span class="text-[8px] text-text-muted uppercase font-bold font-mono">Auto-Detect Active</span>
+</div>
+</div>
+<div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-sidebar-bg border-2 border-accent-blue flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-accent-blue"></div>
+</div>
+<div class="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-sidebar-bg border-2 border-accent-blue flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-accent-blue"></div>
+</div>
+</div>
+<!-- Resize Node -->
+<div class="absolute top-[280px] left-[780px] w-52 bg-node-bg border border-node-border rounded-lg shadow-2xl z-1">
+<div class="flex items-center gap-2 p-2 border-b border-node-border bg-black/20 rounded-t-lg">
+<span class="material-symbols-outlined text-text-muted text-sm">aspect_ratio</span>
+<span class="text-[10px] font-bold tracking-tight text-white font-mono">RESIZE_UP</span>
+</div>
+<div class="p-3 flex flex-col gap-2">
+<div class="flex justify-between">
+<span class="text-[9px] text-text-muted font-mono uppercase">Width</span>
+<span class="text-[9px] font-mono text-white">3840px</span>
+</div>
+<div class="flex justify-between">
+<span class="text-[9px] text-text-muted font-mono uppercase">Height</span>
+<span class="text-[9px] font-mono text-white">2160px</span>
+</div>
+<div class="flex justify-between">
+<span class="text-[9px] text-text-muted font-mono uppercase">Algo</span>
+<span class="text-[9px] font-mono text-primary">Lanczos3</span>
+</div>
+</div>
+<div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-sidebar-bg border-2 border-node-border flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-node-border"></div>
+</div>
+</div>
+<!-- Output Node -->
+<div class="absolute top-16 left-[780px] w-44 bg-node-bg border border-node-border rounded-lg shadow-2xl z-1 border-dashed">
+<div class="flex items-center gap-2 p-2 border-b border-node-border bg-black/10 rounded-t-lg">
+<span class="material-symbols-outlined text-text-muted text-sm" data-weight="fill">save</span>
+<span class="text-[10px] font-bold tracking-tight font-mono">EXPORT_PNG</span>
+</div>
+<div class="p-4 flex items-center justify-center">
+<div class="text-[9px] text-text-muted font-mono italic">Waiting for signal...</div>
+</div>
+<div class="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-sidebar-bg border-2 border-node-border flex items-center justify-center">
+<div class="w-1.5 h-1.5 rounded-full bg-node-border"></div>
+</div>
+</div>
+</section>
+<!-- Properties Sidebar (Contextual) -->
+<aside class="w-64 bg-sidebar-bg border-l border-node-border flex flex-col shrink-0">
+<div class="p-4 border-b border-node-border">
+<h3 class="text-[10px] font-bold uppercase tracking-widest text-accent-blue">Node Properties</h3>
+<p class="text-[9px] text-text-muted font-mono mt-1">UUID: 8f2-x91-crop</p>
+</div>
+<div class="flex-1 p-4 space-y-6">
+<div class="space-y-2">
+<label class="text-[9px] text-text-muted font-bold uppercase font-mono">Detection Mode</label>
+<select class="w-full bg-node-bg border border-node-border rounded text-[10px] text-white p-2 focus:ring-accent-blue focus:ring-1">
+<option>Saliency Map</option>
+<option>Face Detection</option>
+<option>Rule of Thirds</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-[9px] text-text-muted font-bold uppercase font-mono">Padding</label>
+<div class="grid grid-cols-2 gap-2">
+<input class="bg-node-bg border border-node-border rounded text-[10px] text-white p-2 font-mono" placeholder="X" type="number" value="10"/>
+<input class="bg-node-bg border border-node-border rounded text-[10px] text-white p-2 font-mono" placeholder="Y" type="number" value="10"/>
+</div>
+</div>
+<div class="space-y-3">
+<label class="text-[9px] text-text-muted font-bold uppercase font-mono">Output Preview</label>
+<div class="aspect-video bg-black rounded border border-node-border flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover opacity-80" data-alt="tight crop preview" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiB4NrMtCcEgtrbLyQPYJr5w8j4MyvBNVU12rNRaQgfAMk_wVSuTG52XYefLxM6vhY1mQaFAK-Mm4iYXWvJEDQnzjHke1it2vQmrWHbHfBRSOgr4VregDuKjLMpVLpvmE3qrdVDzTzqM1gN-QVvrRy6ptEUGO0TxaxZEwxkysSAQmEvGevrZA6owe5rfcUAiqRx9QjmT3TILLUukfJHk5Qdr7gvbKeWKMA2EquCWocunamDbxr6b9-kWG0Nb2rYc8YrgbTKe0OI9g"/>
+</div>
+<p class="text-[9px] text-text-muted text-center italic font-mono">1920 x 1080 (Preview)</p>
+</div>
+</div>
+<div class="p-4 border-t border-node-border bg-black/10">
+<button class="w-full py-2 bg-node-bg hover:bg-red-900/20 text-red-400 text-[9px] font-bold uppercase rounded border border-node-border hover:border-red-900/40 transition-colors tracking-widest font-mono">
+                    Delete Node
+                </button>
+</div>
+</aside>
+</main>
+<!-- Status Bar -->
+<footer class="h-8 bg-sidebar-bg border-t border-node-border px-4 flex items-center justify-between text-[9px] text-text-muted shrink-0">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+<span class="font-mono">ENGINE: READY</span>
+</div>
+<div class="h-3 w-px bg-node-border"></div>
+<span class="font-mono">FPS: 60.0</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-mono">X: 1042.34 Y: 442.11</span>
+<span class="font-mono text-white">ZOOM: 100%</span>
+</div>
+</footer>
+</div>
+</body></html>

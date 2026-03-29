@@ -1,0 +1,12 @@
+Claude AI : :wq
+In this folder we have a number of things.  1. a product-requirements.md 2. transformations.md 3. a proof-of-concept that was        
+previously built which incorporates some of the features, mainly the transitions and batch grouping.  4.a subdirectory                 
+stitch_pro_studio_batch_processor_prd which has the exports from Google Stitch UI design for each screen.  I want you to review ALL of 
+ the attached and tell me what you need further to be able to build the application.  Some Guidance 1. We should ensure that           
+everything is processed client side. 2. we can use client side image processing is done using wasm based libraries for performance if  
+needed. We should use vanilla js.  We should use the aurora design system https://amithc-projects.github.io/aurora-docs/ for our       
+components.  4. we only need to do desktop mode for our application it is too complex to work on smaller screens.  Our overall design  
+theme should be themeable using the css variables as specified in the aurora design system.  we can take a cut of the aurora ui public 
+ css and js.  the components are described https://amithc-projects.github.io/aurora-docs/components-context.md  
+
+

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pro Studio Batch - Block Builder</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700;900&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: "#3b82f6",
+                            container: "#1e3a8a",
+                        },
+                        zinc: {
+                            950: "#09090b",
+                            900: "#18181b",
+                            800: "#27272a",
+                        }
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans", "sans-serif"],
+                        "body": ["Public Sans", "sans-serif"],
+                        "label": ["Public Sans", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #09090b;
+            color: #e4e4e7;
+            font-family: 'Public Sans', sans-serif;
+        }
+        .node-connector {
+            background-image: linear-gradient(to bottom, #3b82f6 50%, transparent 50%);
+            background-size: 2px 8px;
+            width: 2px;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-zinc-950 dark:bg-black text-blue-500 dark:text-blue-400 font-mono text-sm tracking-tight docked full-width top-0 border-b border-zinc-800 dark:border-zinc-900 flat no shadows flex justify-between items-center h-14 px-6 w-full z-50">
+<div class="flex items-center gap-6">
+<span class="text-lg font-black tracking-tighter text-white uppercase">Pro Studio Batch</span>
+<div class="hidden md:flex items-center gap-4 border-l border-zinc-800 pl-6">
+<span class="text-zinc-500">BLOCK BUILDER:</span>
+<span class="text-white font-bold uppercase">NEW BLOCK</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-3 py-1 hover:bg-zinc-900 transition-all text-zinc-400">
+<span class="material-symbols-outlined text-sm">cloud_upload</span>
+<span>SAVE</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1 hover:bg-zinc-900 transition-all text-zinc-400">
+<span class="material-symbols-outlined text-sm">notifications</span>
+</button>
+<div class="h-8 w-8 bg-zinc-800 border border-zinc-700">
+<img alt="User profile avatar" class="h-full w-full object-cover" data-alt="professional male headshot against a neutral grey background with studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDw_5eKfk1yoAbPhmZk3flI1WU83WLOSG1r6vsgtPs1Gq23gv0w5XOWlyhdPekygCmiS7OlfWXbAMk0aFPIiLr2HO3fS1KHu-A2g62XfnYebwhKI53iCr-u_PNvQbifBT1oN0ZP5oZ7aYkm0A4BA6ErpC5V3wZvJJJru0ieUmwVqzwEMVac5p5JFNY1xeIGgGNIuafX7wSWL5wveOz8OThJ6VnofjUTzB19X7oajtM_2DO17sW1X6tdTAbKW2SJFubHmpcQZ3SMVaY"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar (Shared Component - Hidden on focused Task screen per mandate, but keeping structural space for Layout) -->
+<!-- Note: Suppression logic applied for task-focused journey -->
+<!-- Node Library (Left Sidebar) -->
+<aside class="w-64 bg-zinc-950 border-r border-zinc-900 flex flex-col font-mono">
+<div class="p-4 border-b border-zinc-900 bg-zinc-900/30">
+<span class="text-[10px] uppercase tracking-widest text-zinc-500">Node Library</span>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-4">
+<!-- Category: Geometric -->
+<div>
+<div class="px-2 py-1 text-[9px] text-zinc-500 uppercase tracking-tighter">Geometric</div>
+<div class="space-y-1 mt-1">
+<div class="flex items-center justify-between p-2 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 cursor-grab">
+<span class="text-xs">CROP_RESIZE</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">drag_indicator</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 cursor-grab">
+<span class="text-xs">LENS_DISTORT</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">drag_indicator</span>
+</div>
+</div>
+</div>
+<!-- Category: Color -->
+<div>
+<div class="px-2 py-1 text-[9px] text-blue-500/70 uppercase tracking-tighter">Color &amp; Tone</div>
+<div class="space-y-1 mt-1">
+<div class="flex items-center justify-between p-2 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 cursor-grab">
+<span class="text-xs">EXPOSURE_ADJ</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">drag_indicator</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 cursor-grab">
+<span class="text-xs">CURVES_V2</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">drag_indicator</span>
+</div>
+</div>
+</div>
+<!-- Category: AI -->
+<div>
+<div class="px-2 py-1 text-[9px] text-purple-500/70 uppercase tracking-tighter">AI &amp; Composition</div>
+<div class="space-y-1 mt-1">
+<div class="flex items-center justify-between p-2 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 cursor-grab">
+<span class="text-xs">AI_DENOISE</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">drag_indicator</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 cursor-grab">
+<span class="text-xs">GEN_FILL_EXT</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">drag_indicator</span>
+</div>
+</div>
+</div>
+<!-- Category: Workflow -->
+<div>
+<div class="px-2 py-1 text-[9px] text-orange-500/70 uppercase tracking-tighter">Workflow Controls</div>
+<div class="space-y-1 mt-1">
+<div class="flex items-center justify-between p-2 bg-blue-500/10 border border-blue-500/50 cursor-grab">
+<span class="text-xs text-blue-400 font-bold italic">LOOP_NODE</span>
+<span class="material-symbols-outlined text-xs text-blue-500">sync</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 cursor-grab">
+<span class="text-xs">CONDITION_IF</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">alt_route</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 bg-zinc-900/50 border-t border-zinc-900">
+<div class="flex items-center justify-between text-[10px] text-zinc-400">
+<span>ENGINE STATUS</span>
+<span class="text-green-500">● READY</span>
+</div>
+</div>
+</aside>
+<!-- Central Canvas -->
+<main class="flex-1 bg-zinc-900 relative overflow-y-auto scrollbar-hide flex flex-col items-center py-12">
+<!-- Timeline Grid Background -->
+<div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: radial-gradient(circle, #3b82f6 1px, transparent 1px); background-size: 24px 24px;"></div>
+<!-- Root Node -->
+<div class="z-10 bg-zinc-950 border border-zinc-800 p-3 w-48 text-center font-mono text-xs mb-8">
+<span class="text-zinc-500 uppercase">Input Stream</span>
+<div class="mt-2 text-white">RAW_BATCH_001</div>
+</div>
+<div class="node-connector h-12"></div>
+<!-- Loop Node Container -->
+<div class="z-10 w-[450px] border-2 border-blue-600 bg-black relative p-6">
+<div class="absolute -top-3 left-6 bg-blue-600 px-3 py-1 text-[10px] font-mono font-bold text-white tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">sync</span>
+                    LOOP_BLOCK [FOR_EACH_ITERATION]
+                </div>
+<div class="mt-4 flex flex-col items-center">
+<!-- Child Node 1 -->
+<div class="bg-zinc-900 border border-zinc-800 p-4 w-64 shadow-2xl relative">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-mono text-blue-400 font-bold">01. EXPOSURE_ADJ</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">settings</span>
+</div>
+<div class="space-y-2">
+<div class="h-1 bg-blue-500/20 w-full overflow-hidden">
+<div class="h-full bg-blue-500 w-3/4"></div>
+</div>
+<div class="flex justify-between text-[9px] font-mono text-zinc-500">
+<span>VAL: {{exposure_step}}</span>
+<span>+0.25 EV</span>
+</div>
+</div>
+</div>
+<div class="node-connector h-8"></div>
+<!-- Child Node 2 -->
+<div class="bg-zinc-900 border border-zinc-800 p-4 w-64 shadow-2xl relative">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-mono text-purple-400 font-bold">02. AI_DENOISE</span>
+<span class="material-symbols-outlined text-xs text-zinc-600">psychology</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-zinc-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-zinc-600">waves</span>
+</div>
+<div class="text-[10px] font-mono text-zinc-400 uppercase leading-tight">
+                                Quality: High<br/>
+                                Model: BATCH_V4
+                            </div>
+</div>
+</div>
+<!-- Loop Settings Overlay (Inside Node) -->
+<div class="mt-6 w-full border-t border-blue-900/50 pt-4 flex justify-between font-mono">
+<div class="space-y-1">
+<span class="text-[8px] text-blue-500 block uppercase">Iterations</span>
+<div class="text-xl font-bold text-white">05</div>
+</div>
+<div class="space-y-1 text-right">
+<span class="text-[8px] text-blue-500 block uppercase">Variable</span>
+<div class="text-xs text-white bg-zinc-800 px-2 py-1">loop.index</div>
+</div>
+<div class="space-y-1 text-right">
+<span class="text-[8px] text-blue-500 block uppercase">Increment</span>
+<div class="text-xs text-white">+0.1</div>
+</div>
+</div>
+</div>
+</div>
+<div class="node-connector h-12"></div>
+<!-- Output Node -->
+<div class="z-10 bg-zinc-950 border border-zinc-800 p-3 w-48 text-center font-mono text-xs">
+<span class="text-zinc-500 uppercase">Terminal Output</span>
+<div class="mt-2 text-white">RENDER_QUEUE_01</div>
+</div>
+</main>
+<!-- Node Properties (Right Sidebar) -->
+<aside class="w-80 bg-zinc-950 border-l border-zinc-900 flex flex-col">
+<!-- Property Header -->
+<div class="p-4 border-b border-zinc-900 bg-zinc-900/30 flex justify-between items-center">
+<div>
+<span class="text-[10px] uppercase tracking-widest text-zinc-500 block">Active Node</span>
+<span class="text-xs font-mono font-bold text-blue-400">LOOP_NODE_#429</span>
+</div>
+<button class="material-symbols-outlined text-zinc-500 hover:text-white">help</button>
+</div>
+<!-- Real-time Preview Panel -->
+<div class="p-4 border-b border-zinc-900 bg-black">
+<span class="text-[9px] font-mono text-zinc-500 uppercase mb-2 block">Iteration Preview (03/05)</span>
+<div class="aspect-video relative bg-zinc-800 overflow-hidden border border-zinc-700">
+<img alt="Sample image preview" class="w-full h-full object-cover grayscale-0 opacity-90" data-alt="vibrant landscape at twilight with intense color grading and sharp details" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWr3gxryc_f3QEoxrYWWIv_tazMtRYCkdYRkpHNcfRaEOi-KHUYJDVNMxuY3_XShHZlllGwF2bH_U2KoklR-om8Qo2ruJ6gU5HiLLGwPfyrXh6grFgpELdBBX3lEnVtiC_ZAHuau2QBvfQiuoaLhDJ4eWWt6EHbvbvCeoNz6q-eaXqXMRoB5DS_VQvRSKxSifedaAg5ri6KEQcLCg5uKWSkrvglYI92T2bb9r_GwnVixXGIBsr6uQMVmmoWyqzo0emVi3XAy6hVvk"/>
+<div class="absolute inset-0 border-[8px] border-blue-500/20 pointer-events-none"></div>
+<div class="absolute bottom-1 right-1 bg-black/80 px-1 text-[8px] font-mono text-blue-400">EV: +0.30</div>
+</div>
+</div>
+<!-- Detailed Settings -->
+<div class="flex-1 overflow-y-auto p-4 space-y-6">
+<div class="space-y-4">
+<div class="space-y-2">
+<label class="text-[10px] font-mono text-zinc-500 uppercase block">Iteration Logic</label>
+<select class="w-full bg-zinc-900 border-zinc-800 text-xs text-white font-mono focus:ring-blue-500 focus:border-blue-500">
+<option>Sequential (Linear)</option>
+<option>Parallel (Compute-Heavy)</option>
+<option>Recursive (Self-Referential)</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-mono text-zinc-500 uppercase block">Total Iterations</label>
+<div class="flex gap-2">
+<input class="flex-1 accent-blue-500" max="50" min="1" type="range" value="5"/>
+<span class="text-xs font-mono text-white w-6">05</span>
+</div>
+</div><div class="pt-4 space-y-2 border-t border-zinc-900">
+<label class="text-[10px] font-mono text-zinc-500 uppercase block">Break Condition</label>
+<div class="flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2">
+<code class="text-[11px] font-mono text-blue-400">IF Metadata: Noise_Level &lt; 5.0</code>
+<button class="material-symbols-outlined text-xs text-zinc-500 hover:text-white">edit</button>
+</div>
+<p class="text-[9px] font-mono text-zinc-600 italic">Optional: Early exit strategy based on signal detection.</p>
+</div>
+<div class="pt-4 border-t border-zinc-900">
+<label class="text-[10px] font-mono text-zinc-500 uppercase block mb-3">Terminal Execution Log</label>
+<div class="bg-black p-3 font-mono text-[10px] text-green-500 space-y-1 h-48 overflow-y-auto border border-zinc-800"><p class="opacity-50">[INIT] Initializing loop thread...</p>
+<p class="opacity-80">Pass 1/5: Exposure +0.1 | Denoise [OK]</p>
+<p class="opacity-80">Pass 2/5: Exposure +0.2 | Denoise [OK]</p>
+<p class="text-orange-400 font-bold uppercase tracking-tighter">[SIGNAL] Noise_Level: 4.8</p>
+<p class="text-orange-500 font-bold underline bg-orange-500/10 px-1">Loop Broken: Condition Met (Noise_Level &lt; 5.0)</p>
+<p class="text-zinc-600 italic mt-1 text-[9px]">... Finalizing output buffer</p>
+<div class="inline-block w-1 h-3 bg-green-500 animate-pulse ml-1 align-middle"></div></div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-4 grid grid-cols-2 gap-2 border-t border-zinc-900 font-mono">
+<button class="bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] py-2 uppercase font-bold tracking-widest">Discard</button>
+<button class="bg-blue-600 hover:bg-blue-500 text-white text-[10px] py-2 uppercase font-bold tracking-widest">Commit Block</button>
+</div>
+</aside>
+</div>
+</body></html>

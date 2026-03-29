@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Block Inspector</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#06f967",
+                        "background-light": "#f5f8f7",
+                        "background-dark": "#0f2317",
+                        "surface": "#1E1E22",
+                        "border-color": "#2A2A30",
+                        "muted": "#8A8A93",
+                        "block-color": "#FF00FF",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"],
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "sm": "0.25rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #121214; }
+        
+        /* Custom Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 12px;
+            background: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: -11px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            cursor: pointer;
+            background: #2A2A30;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        /* Active track part for custom styling if needed, usually requires JS or complex CSS tricks, keeping it simple as per instructions */
+        
+        /* Scrollbar styling for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121214; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A2A30; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8A8A93; 
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-white h-screen flex justify-end font-body overflow-hidden">
+<!-- Block Inspector Sidebar -->
+<aside class="w-[400px] h-full bg-[#121214] border-l border-border-color flex flex-col shrink-0 relative z-10">
+<!-- Shared Component: TopAppBar / Header (Modified for context as per instructions) -->
+<div class="relative flex h-auto w-full flex-col bg-[#121214] shrink-0 border-b border-border-color">
+<div class="flex items-center p-4 pb-2 justify-between">
+<h2 class="text-white text-[24px] font-bold leading-tight tracking-[-0.015em] flex-1 font-display uppercase">Color Grade</h2>
+<div class="flex items-center justify-end">
+<button class="flex items-center justify-center overflow-hidden rounded h-8 w-8 bg-transparent text-muted hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<div class="flex gap-3 p-3 flex-wrap pr-4 pb-4">
+<div class="flex h-6 shrink-0 items-center justify-center rounded-sm bg-[#FF00FF]/20 border border-[#FF00FF]/50 px-2">
+<p class="text-[#FF00FF] text-[13px] font-mono leading-normal uppercase tracking-wider font-bold">Color</p>
+</div>
+</div>
+</div>
+<!-- Sticky Preview Area -->
+<div class="p-4 shrink-0 border-b border-border-color bg-[#121214] z-20">
+<div class="w-full aspect-square relative rounded-sm overflow-hidden bg-black border border-border-color group">
+<!-- After Image (Bottom Layer) -->
+<div class="absolute inset-0 bg-cover bg-center" data-alt="vibrant cinematic color graded portrait of a person with neon rim lighting in a dark cyberpunk environment" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBsL1hj8DVeplBDkICT281XD7tlRKOsOlpDYB6l6tEf3j7TVbSOkSXIotupw2ceWPQyBDzDuGJK5wt1JsA_Ylg2lWZehiopDva-DtarDYZZqXaSIBWTKvuHY0Ph-3zzL5kt-WGK0r2jHeSVmIWSYAMo6LAO-2Vj3RGPGSC5KNXDOhn7aZy_IvPPpickDLA0_YVy9x5SOHrhPacw5m2_Tt4dPDtiCh2Gy0SfB2L4jTJEzfDGKj01wcAWSKo6r0Q7sZokr3PJpZX3hEU');"></div>
+<!-- Before Image (Top Layer with Clip Path) -->
+<div class="absolute inset-0 bg-cover bg-center border-r border-white/50" data-alt="flat desaturated unedited raw portrait of a person in a dark environment" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDVpNm8plTz5yvx5hZNBDkE1vKqBL2_PyPtgELr6ouN13BxRoSfxDzTFhiGbviIfIcp9xQSywAR50ciVXuphAal8lxVky6_WfpxXIk_id3Y6v7vUgp4tisEUt7gOKAWEcaRMOvFrcziEbmVM9AlR4qk7dOGdNNy5-H3tNp7CbGkyiw233WfDhqOtXFND-0XU9AYjthSLCLIssWw31vOR3UA5K3Sb9398yPEwBJ_yLyCy5mn2pXhNr3IpEBnKUuafejXPP_LFnk0di8'); clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);"></div>
+<!-- Interactive Slider Line -->
+<div class="absolute top-0 bottom-0 left-1/2 w-[2px] bg-white -translate-x-1/2 cursor-ew-resize flex items-center justify-center z-10 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+<div class="w-6 h-6 rounded-full bg-white border border-border-color shadow-md flex items-center justify-center">
+<span class="material-symbols-outlined text-black text-[16px]" data-icon="swap_horiz">swap_horiz</span>
+</div>
+</div>
+<!-- Labels -->
+<div class="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-sm text-[10px] font-mono text-white tracking-widest uppercase">Before</div>
+<div class="absolute top-2 right-2 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-sm text-[10px] font-mono text-white tracking-widest uppercase">After</div>
+</div>
+</div>
+<!-- Scrollable Parameters -->
+<div class="flex-1 overflow-y-auto p-4 space-y-6">
+<!-- Parameter Group 1: Basic -->
+<div class="space-y-4">
+<h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="tune">tune</span> Basic Adjustments
+                </h3>
+<!-- Slider Item: Contrast -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[13px] font-medium text-white">Contrast</label>
+<span class="text-[12px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm border border-primary/20">+42</span>
+</div>
+<div class="relative pt-2 pb-1">
+<!-- Custom track highlight mimicking active state -->
+<div class="absolute top-[13px] left-0 h-[2px] bg-primary rounded-l-full pointer-events-none z-0" style="width: 71%;"></div>
+<input class="relative z-10" max="100" min="-100" type="range" value="42"/>
+</div>
+</div>
+<!-- Slider Item: Saturation -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[13px] font-medium text-white">Saturation</label>
+<span class="text-[12px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm border border-primary/20">+15</span>
+</div>
+<div class="relative pt-2 pb-1">
+<div class="absolute top-[13px] left-0 h-[2px] bg-primary rounded-l-full pointer-events-none z-0" style="width: 57.5%;"></div>
+<input class="relative z-10" max="100" min="-100" type="range" value="15"/>
+</div>
+</div>
+<!-- Slider Item: Brightness -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[13px] font-medium text-white">Brightness</label>
+<span class="text-[12px] font-mono text-muted">-08</span>
+</div>
+<div class="relative pt-2 pb-1">
+<div class="absolute top-[13px] left-[46%] h-[2px] bg-white/40 rounded-full pointer-events-none z-0" style="width: 4%;"></div>
+<input class="relative z-10" max="100" min="-100" type="range" value="-8"/>
+</div>
+</div>
+</div>
+<div class="h-px w-full bg-border-color"></div>
+<!-- Parameter Group 2: Color Wheels (Simplified as sliders for this specific UI constraint) -->
+<div class="space-y-4">
+<h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="palette">palette</span> Color Grading
+                </h3>
+<!-- Slider Item: Shadows Tint -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[13px] font-medium text-white">Shadows Tint</label>
+<span class="text-[12px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm border border-primary/20">210°</span>
+</div>
+<div class="relative pt-2 pb-1">
+<!-- Hue gradient track -->
+<div class="absolute top-[13px] left-0 w-full h-[2px] pointer-events-none z-0 rounded-full" style="background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);"></div>
+<input class="relative z-10 [&amp;::-webkit-slider-runnable-track]:bg-transparent" max="360" min="0" type="range" value="210"/>
+</div>
+</div>
+<!-- Slider Item: Highlights Tint -->
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[13px] font-medium text-white">Highlights Tint</label>
+<span class="text-[12px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-sm border border-primary/20">45°</span>
+</div>
+<div class="relative pt-2 pb-1">
+<div class="absolute top-[13px] left-0 w-full h-[2px] pointer-events-none z-0 rounded-full" style="background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);"></div>
+<input class="relative z-10 [&amp;::-webkit-slider-runnable-track]:bg-transparent" max="360" min="0" type="range" value="45"/>
+</div>
+</div>
+</div>
+<div class="h-px w-full bg-border-color"></div>
+<!-- Parameter Group 3: Toggles -->
+<div class="space-y-4 pb-8">
+<h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]" data-icon="settings">settings</span> Options
+                </h3>
+<!-- Toggle: Preserve Luminance -->
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex flex-col">
+<span class="text-[13px] font-medium text-white">Preserve Luminance</span>
+<span class="text-[11px] text-muted">Maintain original brightness values</span>
+</div>
+<!-- Active Square Toggle -->
+<div class="w-8 h-5 bg-surface border border-border-color rounded-sm relative flex items-center p-0.5">
+<div class="w-full h-full bg-primary/20 absolute inset-0 rounded-sm"></div>
+<div class="w-3.5 h-3.5 bg-primary rounded-[2px] transform translate-x-3 shadow-sm"></div>
+</div>
+</div>
+<!-- Toggle: Invert Mask -->
+<div class="flex items-center justify-between group cursor-pointer mt-4">
+<div class="flex flex-col">
+<span class="text-[13px] font-medium text-white">Invert Mask</span>
+<span class="text-[11px] text-muted">Apply effects outside selection</span>
+</div>
+<!-- Inactive Square Toggle -->
+<div class="w-8 h-5 bg-[#121214] border border-border-color rounded-sm relative flex items-center p-0.5">
+<div class="w-3.5 h-3.5 bg-muted rounded-[2px] transform translate-x-0 shadow-sm"></div>
+</div>
+</div>
+<!-- Dropdown (Simulated with button for this UI) -->
+<div class="mt-4 space-y-2">
+<label class="text-[13px] font-medium text-white">LUT Profile</label>
+<button class="w-full h-10 bg-surface border border-border-color rounded-sm flex items-center justify-between px-3 hover:border-muted transition-colors">
+<span class="text-[13px] font-mono text-white">Teal_Orange_Cinematic.cube</span>
+<span class="material-symbols-outlined text-muted text-[18px]" data-icon="unfold_more">unfold_more</span>
+</button>
+</div>
+</div>
+</div>
+</aside>
+</body></html>
