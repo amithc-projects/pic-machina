@@ -86,7 +86,7 @@ export async function render(container, hash) {
 
   injectCmpStyles();
 
-  let mode         = 'slider';
+  let mode         = localStorage.getItem('ic-cmp-mode') || 'slider';
   let beforeUrl    = null;
   let afterUrl     = null;
   let afterCanvas  = null;
@@ -101,8 +101,10 @@ export async function render(container, hash) {
 
   // ── Mode toggle ───────────────────────────────────────────
   container.querySelectorAll('.cmp-mode-btn').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.mode === mode);
     btn.addEventListener('click', () => {
       mode = btn.dataset.mode;
+      localStorage.setItem('ic-cmp-mode', mode);
       container.querySelectorAll('.cmp-mode-btn').forEach(b => b.classList.toggle('is-active', b === btn));
       if (beforeUrl && afterUrl) renderComparison();
     });

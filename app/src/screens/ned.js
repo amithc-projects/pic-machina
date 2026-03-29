@@ -8,6 +8,7 @@
 
 import { getRecipe, saveRecipe }               from '../data/recipes.js';
 import { navigate }                            from '../main.js';
+import { uuid, now, deepClone }                 from '../utils/misc.js';
 import { registry }                            from '../engine/index.js';
 import { ImageProcessor }                      from '../engine/index.js';
 import { extractExif }                         from '../engine/exif-reader.js';
@@ -125,8 +126,14 @@ function findNode(nodes, nodeId) {
         if (found) return found;
       }
     }
-    if (n.thenNodes) { const f = findNode(n.thenNodes, nodeId); if (f) return f; }
-    if (n.elseNodes) { const f = findNode(n.elseNodes, nodeId); if (f) return f; }
+    if (n.thenNodes) {
+      const f = findNode(n.thenNodes, nodeId);
+      if (f) return f;
+    }
+    if (n.elseNodes) {
+      const f = findNode(n.elseNodes, nodeId);
+      if (f) return f;
+    }
   }
   return null;
 }
@@ -203,7 +210,9 @@ export async function render(container, hash) {
             </div>` : ''}
 
           ${conditionHtml}
-          ${branchHtml}
+          <div id="ned-branches-wrapper">
+            ${branchHtml}
+          </div>
 
           <!-- Label override -->
           <div class="ned-section-title" style="margin-top:16px">
@@ -258,7 +267,7 @@ export async function render(container, hash) {
   let testFile   = null;
   let beforeUrl  = null;
   let afterUrl   = null;
-  let nedMode    = 'slider';
+  let nedMode    = localStorage.getItem('ic-cmp-mode') || 'slider';
   let sliderPct  = 50;
   let isDragging = false;
 
@@ -276,8 +285,10 @@ export async function render(container, hash) {
 
   // ── Mode toggle ───────────────────────────────────────────
   container.querySelectorAll('[data-ned-mode]').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.nedMode === nedMode);
     btn.addEventListener('click', () => {
       nedMode = btn.dataset.nedMode;
+      localStorage.setItem('ic-cmp-mode', nedMode);
       container.querySelectorAll('[data-ned-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
       if (beforeUrl && afterUrl) renderComparison();
     });
@@ -319,9 +330,48 @@ export async function render(container, hash) {
   });
 
   // ── Wire all other inputs ─────────────────────────────────
-  container.querySelectorAll('.ic-input, input[type=checkbox]').forEach(input => {
+  container.querySelectorAll('.ic-input:not(.ned-branch-label), input[type=checkbox]').forEach(input => {
     if (input.type !== 'color') input.addEventListener('change', schedulePreview);
   });
+
+  // ── Branch actions ────────────────────────────────────────
+  if (isBranch) {
+    const bindBranchActions = () => {
+      container.querySelector('#ned-btn-add-branch')?.addEventListener('click', () => {
+        const nextLetter = String.fromCharCode(65 + (node.branches || []).length);
+        node.branches.push({ id: uuid(), label: `Variant ${nextLetter}`, nodes: [] });
+        refreshBranchEditor();
+      });
+
+      container.querySelectorAll('.ned-btn-del-branch').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx);
+          if (node.branches.length <= 1) return;
+          if (!confirm('Remove this variant and all steps within it?')) return;
+          node.branches.splice(idx, 1);
+          refreshBranchEditor();
+        });
+      });
+
+      container.querySelectorAll('.ned-branch-label').forEach(input => {
+        input.addEventListener('input', () => {
+          const idx = parseInt(input.dataset.branchIdx);
+          node.branches[idx].label = input.value;
+        });
+      });
+    };
+
+    const refreshBranchEditor = () => {
+      const containerEl = container.querySelector('#ned-branches-wrapper');
+      if (containerEl) {
+        containerEl.innerHTML = buildBranchEditor(node);
+        bindBranchActions();
+        schedulePreview();
+      }
+    };
+
+    bindBranchActions();
+  }
 
   // ── Image info modal ──────────────────────────────────────
   container.querySelector('#ned-btn-info')?.addEventListener('click', () => {
@@ -542,10 +592,21 @@ function buildBranchEditor(node) {
     <div class="ned-fields">
       ${(node.branches || []).map((b, i) => `
         <div class="ned-field">
-          <label class="ned-field-label">Variant ${i + 1} Label</label>
-          <input type="text" class="ic-input ned-branch-label" data-branch-idx="${i}" value="${escHtml(b.label || '')}">
+          <div class="flex items-center gap-2">
+            <div style="flex:1">
+              <label class="ned-field-label">Variant ${i + 1} Label</label>
+              <input type="text" class="ic-input ned-branch-label" data-branch-idx="${i}" value="${escHtml(b.label || '')}" placeholder="Variant label…">
+            </div>
+            ${node.branches.length > 1 ? `
+              <button class="btn-icon ned-btn-del-branch" data-idx="${i}" title="Remove variant" style="margin-top:18px">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-red)">delete</span>
+              </button>` : ''}
+          </div>
         </div>`).join('')}
-      <div class="text-sm text-muted">Edit branch nodes in the Recipe Builder.</div>
+      <button class="btn-secondary" id="ned-btn-add-branch" style="margin-top:4px">
+        <span class="material-symbols-outlined" style="font-size:14px">add</span>
+        Add Variant
+      </button>
     </div>`;
 }
 

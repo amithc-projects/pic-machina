@@ -140,6 +140,14 @@ export function render(container) {
     statusBadge.className = 'ic-badge ic-badge--green';
     appendLog('ok', 'Batch complete — ' + run.successCount + ' succeeded, ' + run.failCount + ' failed');
     currentFile.textContent = 'All done';
+    const cancelBtn = container.querySelector('#btn-cancel-batch');
+    if (cancelBtn) {
+      cancelBtn.innerHTML = '<span class="material-symbols-outlined">library_books</span> Library';
+      cancelBtn.className = 'btn-secondary';
+      cancelBtn.id = 'btn-que-library';
+      cancelBtn.addEventListener('click', () => navigate('#lib'));
+    }
+
     const browseBtn = document.createElement('button');
     browseBtn.className = 'btn-primary';
     browseBtn.style.cssText = 'width:100%;justify-content:center;margin-bottom:8px';

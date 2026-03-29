@@ -9,6 +9,7 @@ import { getAllRecipes, deleteRecipe, cloneRecipe, saveRecipe } from '../data/re
 import { navigate } from '../main.js';
 import { formatDate, uuid, now } from '../utils/misc.js';
 import { initTabs } from '../aurora/tabs.js';
+import { countNodes } from '../utils/nodes.js';
 
 // Category colours for cover gradients
 const COVER_GRADIENTS = {
@@ -29,16 +30,6 @@ function getCoverStyle(recipe) {
   return 'background: linear-gradient(135deg, #111318 0%, #1e293b 100%);';
 }
 
-function countNodes(nodes = []) {
-  let count = 0;
-  for (const n of nodes) {
-    count++;
-    if (n.branches) n.branches.forEach(b => { count += countNodes(b.nodes); });
-    if (n.thenNodes) count += countNodes(n.thenNodes);
-    if (n.elseNodes) count += countNodes(n.elseNodes);
-  }
-  return count;
-}
 
 function recipeCardHTML(recipe) {
   const nodeCount = countNodes(recipe.nodes);

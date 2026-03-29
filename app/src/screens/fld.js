@@ -31,17 +31,17 @@ function fileType(name) {
   return 'other';
 }
 
-/** Read ALL media files (images + video) from a directory handle. */
+/** Read ALL media files (images + video) from a directory handle. Stores handles for deletion. */
 async function listAllMedia(dirHandle) {
-  const files = [];
+  const entries = [];
   for await (const [name, entry] of dirHandle.entries()) {
     if (entry.kind !== 'file') continue;
     const ext = extOf(name);
     if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) {
-      files.push(await entry.getFile());
+      entries.push({ file: await entry.getFile(), handle: entry });
     }
   }
-  return files.sort((a, b) => a.name.localeCompare(b.name));
+  return entries.sort((a, b) => a.file.name.localeCompare(b.file.name));
 }
 
 export async function render(container, hash) {
@@ -88,7 +88,23 @@ export async function render(container, hash) {
           <span class="material-symbols-outlined fld-crumb-sep">chevron_right</span>
           <span class="fld-crumb-folder">${escHtml(run?.outputFolder || 'output')}/</span>
         </div>
+
         <div style="flex:1"></div>
+
+        <div id="fld-selection-actions" class="flex items-center gap-1" style="display:none;margin-right:8px">
+          <button class="btn-secondary btn-sm" id="fld-btn-select-all" title="Select all visible items">
+            <span class="material-symbols-outlined" style="font-size:16px">done_all</span>
+            Select All
+          </button>
+          <button class="btn-secondary btn-sm" id="fld-btn-deselect-all" title="Deselect all">
+            Deselect
+          </button>
+          <button class="btn-secondary btn-sm" id="fld-btn-delete-sel" title="Delete selected items from disk">
+            <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-red)">delete</span>
+          </button>
+          <div style="width:1px;height:20px;background:var(--ps-border);margin:0 4px"></div>
+        </div>
+
         <div class="fld-view-toggle" role="group">
           <button class="fld-view-btn is-active" data-fld-view="grid" title="Grid view">
             <span class="material-symbols-outlined">grid_view</span>
@@ -138,15 +154,23 @@ export async function render(container, hash) {
   container.querySelector('#fld-back')?.addEventListener('click', () => navigate(`#${fromRoute}`));
 
   // ── State ───────────────────────────────────────────────────
-  let allFiles   = [];   // File[]
+  let allEntries = [];   // { file: File, handle: FileSystemFileHandle }[]
   let inputFiles = [];   // File[] from input folder for comparison
   let inputByBase = new Map();
-  let filtered   = [];   // current filtered+sorted list
+  let filtered   = [];   // MediaEntry[] current filtered+sorted list
   let viewMode   = 'grid';
   let filterType = 'all';
   let sortKey    = 'name';
-  let selected   = null; // File | null
+  let selected   = null; // MediaEntry | null
+  let selectedSet = new Set(); // Set<string> filenames (primary selection)
+  let lastIdx    = -1;   // for shift-select
+  let cmpMode    = localStorage.getItem('ic-cmp-mode') || 'slider';
   let blobUrls   = [];   // track for cleanup
+
+  function revokeBlobUrls() {
+    blobUrls.forEach(url => URL.revokeObjectURL(url));
+    blobUrls = [];
+  }
 
   // ── View toggle ─────────────────────────────────────────────
   container.querySelectorAll('[data-fld-view]').forEach(btn => {
@@ -172,6 +196,19 @@ export async function render(container, hash) {
     applyFilter();
   });
 
+  // ── Selection actions ──────────────────────────────────────
+  container.querySelector('#fld-btn-select-all')?.addEventListener('click', () => {
+    filtered.forEach(ent => selectedSet.add(ent.file.name));
+    updateSelectionUI();
+  });
+
+  container.querySelector('#fld-btn-deselect-all')?.addEventListener('click', () => {
+    selectedSet.clear();
+    updateSelectionUI();
+  });
+
+  container.querySelector('#fld-btn-delete-sel')?.addEventListener('click', deleteSelected);
+
   // ── Load files ──────────────────────────────────────────────
   try {
     const outputHandle = await getFolder('output');
@@ -189,7 +226,7 @@ export async function render(container, hash) {
       return;
     }
 
-    allFiles = await listAllMedia(subHandle);
+    allEntries = await listAllMedia(subHandle);
 
     // Try to load input files for comparison
     const inputHandle = await getFolder('input').catch(() => null);
@@ -209,7 +246,7 @@ export async function render(container, hash) {
 
     // Update filter chip counts
     const counts = { image: 0, video: 0, other: 0 };
-    allFiles.forEach(f => { counts[fileType(f.name)] = (counts[fileType(f.name)] || 0) + 1; });
+    allEntries.forEach(ent => { const t = fileType(ent.file.name); counts[t] = (counts[t] || 0) + 1; });
     container.querySelectorAll('[data-filter]').forEach(chip => {
       const t = chip.dataset.filter;
       if (t !== 'all') {
@@ -242,16 +279,15 @@ export async function render(container, hash) {
   }
 
   function applyFilter() {
-    filtered = allFiles.filter(f => filterType === 'all' || fileType(f.name) === filterType);
+    filtered = allEntries.filter(ent => filterType === 'all' || fileType(ent.file.name) === filterType);
     // Sort
     filtered.sort((a, b) => {
-      if (sortKey === 'type') return fileType(a.name).localeCompare(fileType(b.name)) || a.name.localeCompare(b.name);
-      if (sortKey === 'size') return b.size - a.size;
-      return a.name.localeCompare(b.name);
+      if (sortKey === 'type') return fileType(a.file.name).localeCompare(fileType(b.file.name)) || a.file.name.compare(b.file.name);
+      if (sortKey === 'size') return b.file.size - a.file.size;
+      return a.file.name.localeCompare(b.file.name);
     });
     renderMain();
   }
-
   // ── Render main area ────────────────────────────────────────
   function renderMain() {
     revokeBlobUrls();
@@ -263,12 +299,126 @@ export async function render(container, hash) {
         <span class="material-symbols-outlined">filter_none</span>
         <div class="empty-state-title">No files match</div>
       </div>`;
+      updateSelectionUI();
       return;
     }
 
     if (viewMode === 'grid')       renderGrid(main);
     else if (viewMode === 'filmstrip') renderFilmstrip(main);
     else                           renderList(main);
+
+    updateSelectionUI();
+  }
+
+  function handleFileClick(ent, index, e) {
+    const isCmd = e.metaKey || e.ctrlKey;
+    const isShift = e.shiftKey;
+
+    if (isShift && lastIdx >= 0) {
+      const start = Math.min(lastIdx, index);
+      const end = Math.max(lastIdx, index);
+      for (let i = start; i <= end; i++) {
+        selectedSet.add(filtered[i].file.name);
+      }
+    } else if (isCmd) {
+      if (selectedSet.has(ent.file.name)) selectedSet.delete(ent.file.name);
+      else selectedSet.add(ent.file.name);
+      lastIdx = index;
+    } else {
+      selectedSet.clear();
+      selectedSet.add(ent.file.name);
+      lastIdx = index;
+      selectFile(ent); // Open in preview
+    }
+    updateSelectionUI();
+  }
+
+  async function deleteSelected() {
+    const names = Array.from(selectedSet);
+    if (!names.length) return;
+
+    const confirmed = await showDeletePrompt(names.length);
+    if (!confirmed) return;
+
+    try {
+      const outputHandle = await getFolder('output');
+      const subfolder = run?.outputFolder || 'output';
+      const subHandle = await outputHandle.getDirectoryHandle(subfolder);
+
+      for (const name of names) {
+        const ent = allEntries.find(e => e.file.name === name);
+        if (ent) {
+          // Use parentHandle.removeEntry for better reliability
+          await subHandle.removeEntry(name);
+        }
+      }
+
+      // Refresh data
+      allEntries = await listAllMedia(subHandle);
+      selectedSet.clear();
+      lastIdx = -1;
+      selected = null;
+      applyFilter();
+
+      if (window.AuroraToast) {
+        window.AuroraToast.show({
+          variant: 'success',
+          title: 'Files deleted',
+          description: `Successfully removed ${names.length} item${names.length !== 1 ? 's' : ''}.`
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      if (window.AuroraToast) {
+        window.AuroraToast.show({
+          variant: 'danger',
+          title: 'Deletion failed',
+          description: err.message
+        });
+      }
+    }
+  }
+
+  function showDeletePrompt(count) {
+    return new Promise(res => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'fld-modal';
+      dialog.innerHTML = `
+        <div class="fld-modal-content">
+          <div class="fld-modal-icon fld-modal-icon--danger">
+            <span class="material-symbols-outlined">delete_forever</span>
+          </div>
+          <div class="fld-modal-title">Delete ${count} item${count !== 1 ? 's' : ''}?</div>
+          <div class="fld-modal-body">
+            This will permanently remove these files from your computer. This action cannot be undone.
+          </div>
+          <div class="fld-modal-footer">
+            <button class="btn-secondary" id="fld-delete-cancel">Cancel</button>
+            <button class="btn-danger" id="fld-delete-confirm">Delete</button>
+          </div>
+        </div>`;
+      document.body.appendChild(dialog);
+      dialog.showModal();
+
+      dialog.querySelector('#fld-delete-cancel').onclick = () => { dialog.close(); res(false); dialog.remove(); };
+      dialog.querySelector('#fld-delete-confirm').onclick = () => { dialog.close(); res(true); dialog.remove(); };
+      dialog.addEventListener('cancel', () => { res(false); dialog.remove(); });
+    });
+  }
+
+  function updateSelectionUI() {
+    const selCount = selectedSet.size;
+    const actions = container.querySelector('#fld-selection-actions');
+    if (actions) actions.style.display = selCount > 0 ? 'flex' : 'none';
+
+    const delBtn = container.querySelector('#fld-btn-delete-sel');
+    if (delBtn) delBtn.disabled = selCount === 0;
+
+    container.querySelectorAll('[data-fld-ent-name]').forEach(el => {
+      const name = el.dataset.fldEntName;
+      const isSelected = selectedSet.has(name);
+      el.classList.toggle('is-multiselected', isSelected);
+    });
   }
 
   // ── Grid view ───────────────────────────────────────────────
@@ -279,32 +429,29 @@ export async function render(container, hash) {
     grid.className = 'fld-grid';
     main.appendChild(grid);
 
-    filtered.forEach((file, i) => {
-      const type = fileType(file.name);
+    filtered.forEach((ent, i) => {
+      const type = fileType(ent.file.name);
       const cell = document.createElement('div');
-      cell.className = `fld-cell${selected?.name === file.name ? ' is-selected' : ''}`;
+      cell.className = `fld-cell${selected?.file.name === ent.file.name ? ' is-selected' : ''}`;
       cell.dataset.idx = i;
+      cell.dataset.fldEntName = ent.file.name;
 
-      if (type === 'video') {
-        const url = URL.createObjectURL(file);
-        blobUrls.push(url);
-        cell.innerHTML = `
-          <div class="fld-thumb fld-thumb--video">
-            <video src="${url}" class="fld-thumb-vid" preload="metadata" muted></video>
-            <div class="fld-thumb-video-badge"><span class="material-symbols-outlined">play_circle</span></div>
-          </div>
-          <div class="fld-cell-name">${escHtml(file.name)}</div>`;
-      } else {
-        const url = URL.createObjectURL(file);
-        blobUrls.push(url);
-        cell.innerHTML = `
-          <div class="fld-thumb">
-            <img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">
-          </div>
-          <div class="fld-cell-name">${escHtml(file.name)}</div>`;
-      }
+      const url = URL.createObjectURL(ent.file);
+      blobUrls.push(url);
 
-      cell.addEventListener('click', () => selectFile(file));
+      cell.innerHTML = `
+        <div class="fld-thumb ${type === 'video' ? 'fld-thumb--video' : ''}">
+          ${type === 'video'
+            ? `<video src="${url}" class="fld-thumb-vid" preload="metadata" muted></video>
+               <div class="fld-thumb-video-badge"><span class="material-symbols-outlined">play_circle</span></div>`
+            : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
+          }
+        </div>
+        <div class="fld-cell-name">${escHtml(ent.file.name)}</div>`;
+
+      cell.addEventListener('click', e => {
+        handleFileClick(ent, i, e);
+      });
       grid.appendChild(cell);
     });
   }
@@ -322,25 +469,26 @@ export async function render(container, hash) {
       <div class="fld-fs-strip" id="fld-fs-strip"></div>`;
 
     const strip = main.querySelector('#fld-fs-strip');
-    filtered.forEach((file, i) => {
-      const type = fileType(file.name);
+    filtered.forEach((ent, i) => {
+      const type = fileType(ent.file.name);
       const thumb = document.createElement('div');
-      thumb.className = `fld-fs-thumb${selected?.name === file.name ? ' is-selected' : ''}`;
+      thumb.className = `fld-fs-thumb${selected?.file.name === ent.file.name ? ' is-selected' : ''}`;
       thumb.dataset.idx = i;
+      thumb.dataset.fldEntName = ent.file.name;
 
-      if (type === 'video') {
-        const url = URL.createObjectURL(file);
-        blobUrls.push(url);
-        thumb.innerHTML = `
-          <video src="${url}" class="fld-fs-thumb-img" preload="metadata" muted></video>
-          <span class="fld-fs-video-badge material-symbols-outlined">play_circle</span>`;
-      } else {
-        const url = URL.createObjectURL(file);
-        blobUrls.push(url);
-        thumb.innerHTML = `<img src="${url}" class="fld-fs-thumb-img" loading="lazy" draggable="false">`;
-      }
+      const url = URL.createObjectURL(ent.file);
+      blobUrls.push(url);
 
-      thumb.addEventListener('click', () => selectFile(file));
+      thumb.innerHTML = `
+        ${type === 'video'
+          ? `<video src="${url}" class="fld-fs-thumb-img" preload="metadata" muted></video>
+             <span class="fld-fs-video-badge material-symbols-outlined">play_circle</span>`
+          : `<img src="${url}" class="fld-fs-thumb-img" loading="lazy" draggable="false">`
+        }`;
+
+      thumb.addEventListener('click', e => {
+        handleFileClick(ent, i, e);
+      });
       strip.appendChild(thumb);
     });
 
@@ -348,10 +496,10 @@ export async function render(container, hash) {
     if (selected) renderFilmstripPreview(selected);
   }
 
-  function renderFilmstripPreview(file) {
+  function renderFilmstripPreview(ent) {
     const preview = container.querySelector('#fld-fs-preview');
     if (!preview) return;
-    renderDetailContent(preview, file, true);
+    renderDetailContent(preview, ent, true);
     // Scroll selected thumb into view
     const strip = container.querySelector('#fld-fs-strip');
     const sel = strip?.querySelector('.fld-fs-thumb.is-selected');
@@ -376,20 +524,17 @@ export async function render(container, hash) {
       </table>`;
 
     const tbody = main.querySelector('#fld-list-body');
-    filtered.forEach((file, i) => {
-      const type = fileType(file.name);
+    filtered.forEach((ent, i) => {
+      const type = fileType(ent.file.name);
       const tr = document.createElement('tr');
-      tr.className = `fld-list-row${selected?.name === file.name ? ' is-selected' : ''}`;
+      tr.className = `fld-list-row${selected?.file.name === ent.file.name ? ' is-selected' : ''}`;
       tr.dataset.idx = i;
+      tr.dataset.fldEntName = ent.file.name;
 
-      const icon = type === 'video' ? 'movie' : 'image';
-      const badge = type === 'video'
-        ? '<span class="ic-badge" style="background:rgba(0,119,255,.15);color:var(--ps-blue)">MP4</span>'
-        : `<span class="ic-badge">${extOf(file.name).slice(1).toUpperCase()}</span>`;
-
-      const thumbUrl = URL.createObjectURL(file);
+      const thumbUrl = URL.createObjectURL(ent.file);
       blobUrls.push(thumbUrl);
 
+      const isSel = selectedSet.has(ent.file.name);
       tr.innerHTML = `
         <td class="fld-list-td">
           ${type === 'video'
@@ -397,20 +542,22 @@ export async function render(container, hash) {
             : `<img src="${thumbUrl}" class="fld-list-thumb" loading="lazy" draggable="false">`}
         </td>
         <td class="fld-list-td">
-          <span class="fld-list-name">${escHtml(file.name)}</span>
+          <span class="fld-list-name">${escHtml(ent.file.name)}</span>
         </td>
-        <td class="fld-list-td">${badge}</td>
-        <td class="fld-list-td mono text-sm text-muted">${formatBytes(file.size)}</td>
+        <td class="fld-list-td">${type === 'video' ? '<span class="ic-badge ic-badge--blue">MP4</span>' : `<span class="ic-badge">${extOf(ent.file.name).slice(1).toUpperCase()}</span>`}</td>
+        <td class="fld-list-td mono text-sm text-muted">${formatBytes(ent.file.size)}</td>
         <td class="fld-list-td" style="text-align:right">
           <button class="btn-icon fld-list-dl" data-idx="${i}" title="Download">
             <span class="material-symbols-outlined" style="font-size:15px">download</span>
           </button>
         </td>`;
 
-      tr.addEventListener('click', e => { if (!e.target.closest('.fld-list-dl')) selectFile(file); });
+      tr.addEventListener('click', e => {
+        if (!e.target.closest('.fld-list-dl')) handleFileClick(ent, i, e);
+      });
       tr.querySelector('.fld-list-dl')?.addEventListener('click', e => {
         e.stopPropagation();
-        downloadFile(file);
+        downloadFile(ent.file);
       });
       tbody.appendChild(tr);
     });
@@ -438,7 +585,8 @@ export async function render(container, hash) {
   }
 
   /** Render file preview into an element (used by both detail panel + filmstrip preview). */
-  function renderDetailContent(el, file, fullSize) {
+  function renderDetailContent(el, ent, fullSize) {
+    const file = ent.file;
     const type = fileType(file.name);
     const fileUrl = URL.createObjectURL(file);
     blobUrls.push(fileUrl);
@@ -490,7 +638,7 @@ export async function render(container, hash) {
           </div>` : ''}
           <div class="fld-detail-cmp-toolbar">
             <div class="fld-cmp-toggle" role="group">
-              <button class="fld-cmp-btn is-active" data-cmp-mode="slider">
+              <button class="fld-cmp-btn" data-cmp-mode="slider">
                 <span class="material-symbols-outlined" style="font-size:13px">swap_horiz</span> Slider
               </button>
               <button class="fld-cmp-btn" data-cmp-mode="side">
@@ -512,10 +660,14 @@ export async function render(container, hash) {
         </div>`;
 
       el.querySelectorAll('.fld-cmp-btn[data-cmp-mode]').forEach(btn => {
+        if (btn.dataset.cmpMode === cmpMode) btn.classList.add('is-active');
         btn.addEventListener('click', () => {
-          cmpMode = btn.dataset.cmpMode;
+          if (btn.dataset.cmpMode !== 'info') {
+            cmpMode = btn.dataset.cmpMode;
+            localStorage.setItem('ic-cmp-mode', cmpMode);
+          }
           el.querySelectorAll('.fld-cmp-btn[data-cmp-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
-          if (cmpMode === 'info') renderInfo();
+          if (btn.dataset.cmpMode === 'info') renderInfo();
           else renderCmp();
         });
       });
@@ -595,7 +747,7 @@ export async function render(container, hash) {
           </div>` : ''}
           <div class="fld-detail-cmp-toolbar">
             <div class="fld-cmp-toggle" role="group">
-              <button class="fld-cmp-btn is-active" data-nosrc-mode="preview">
+              <button class="fld-cmp-btn" data-nosrc-mode="preview">
                 <span class="material-symbols-outlined" style="font-size:13px">image</span> Preview
               </button>
               <button class="fld-cmp-btn" data-nosrc-mode="info">
@@ -702,6 +854,9 @@ function injectFldStyles() {
     }
     .fld-cell:hover { background:var(--ps-bg-hover); }
     .fld-cell.is-selected { border-color:var(--ps-blue); background:rgba(0,119,255,0.06); }
+    .fld-cell.is-multiselected, .fld-fs-thumb.is-multiselected, .fld-list-row.is-multiselected { background:rgba(0,119,255,0.12) !important; color:var(--ps-text) !important; }
+    .fld-cell.is-multiselected { border-color:var(--ps-blue); }
+
     .fld-thumb {
       aspect-ratio:1; border-radius:8px; overflow:hidden;
       background:var(--ps-bg-surface); border:1px solid var(--ps-border);
@@ -790,8 +945,28 @@ function injectFldStyles() {
     .fld-cmp-handle-line { position:absolute; top:0; left:50%; width:2px; height:100%; background:rgba(255,255,255,0.9); transform:translateX(-50%); box-shadow:0 0 8px rgba(0,0,0,0.4); }
     .fld-cmp-handle-grip { position:relative; z-index:1; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.95); box-shadow:0 2px 10px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; cursor:col-resize; pointer-events:all; color:#111; }
     .fld-cmp-badge { position:absolute; top:10px; z-index:5; background:rgba(0,0,0,0.72); color:#fff; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; font-family:var(--font-mono); pointer-events:none; }
+    /* Lightbox slider vs Side logic */
     .fld-cmp-badge--before { left:10px; }
     .fld-cmp-badge--after { right:10px; background:rgba(0,119,255,0.85); }
+
+    /* Modals */
+    .fld-modal {
+      border:none; border-radius:16px; padding:0; background:var(--ps-bg-surface);
+      box-shadow:0 24px 80px rgba(0,0,0,0.5); color:var(--ps-text);
+      width:360px; max-width:90vw; outline:none;
+    }
+    .fld-modal::backdrop { background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); }
+    .fld-modal-content { padding:24px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+    .fld-modal-icon {
+      width:56px; height:56px; border-radius:28px; display:flex; align-items:center; justify-content:center;
+      margin-bottom:16px;
+    }
+    .fld-modal-icon--danger { background:rgba(239,68,68,0.1); color:#ef4444; }
+    .fld-modal-icon .material-symbols-outlined { font-size:32px; }
+    .fld-modal-title { font-size:18px; font-weight:700; margin-bottom:8px; }
+    .fld-modal-body { font-size:14px; color:var(--ps-text-muted); line-height:1.5; margin-bottom:24px; }
+    .fld-modal-footer { display:flex; gap:12px; width:100%; }
+    .fld-modal-footer button { flex:1; justify-content:center; padding:10px; }
   `;
   document.head.appendChild(s);
 }

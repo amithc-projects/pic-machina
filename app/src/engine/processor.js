@@ -117,25 +117,26 @@ export class ImageProcessor {
    * @param {HTMLImageElement} image
    * @param {RecipeNode[]}     nodes
    * @param {TransformContext} context
-   * @param {number}           [stopAfterIndex]  — for preview mode
+   * @param {string}           [targetNodeId]  — for preview mode
    * @returns {Promise<ProcessResult[]>}
    */
-  async process(image, nodes, context, stopAfterIndex) {
+  async process(image, nodes, context, targetNodeId) {
     // Accept both HTMLImageElement (.naturalWidth) and ImageBitmap (.width)
     this.canvas.width  = image.naturalWidth  ?? image.width;
     this.canvas.height = image.naturalHeight ?? image.height;
     this.ctx.drawImage(image, 0, 0);
 
     if (!context.variables) context.variables = new Map();
+    context._isFinished = false;
 
     const results = [];
-    await this._runNodes(nodes, this.ctx, context, results, stopAfterIndex);
+    await this._runNodes(nodes, this.ctx, context, results, targetNodeId);
 
     // If recipe has no explicit export nodes, auto-export at end
     const hasExports = nodes.some(n => n.type === 'transform' && n.transformId === 'flow-export')
       || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => bn.transformId === 'flow-export')));
 
-    if (!hasExports && stopAfterIndex === undefined) {
+    if (!hasExports && targetNodeId === undefined) {
       const blob = await this._exportCanvas(this.ctx, 'image/jpeg', 0.92);
       const injected = await injectExif(blob, context);
       results.push({ blob: injected, filename: context.filename, subfolder: context.outputSubfolder });
@@ -145,9 +146,9 @@ export class ImageProcessor {
   }
 
   /** Run nodes sequentially, mutating the canvas. */
-  async _runNodes(nodes, ctx, context, results, stopAfterIndex) {
+  async _runNodes(nodes, ctx, context, results, targetNodeId) {
     for (let i = 0; i < nodes.length; i++) {
-      if (stopAfterIndex !== undefined && i > stopAfterIndex) break;
+      if (context._isFinished) break;
 
       const node = nodes[i];
       if (node.disabled) continue;
@@ -157,11 +158,15 @@ export class ImageProcessor {
       if (node.type === 'transform') {
         await this._runTransformNode(node, ctx, context, results);
       } else if (node.type === 'branch') {
-        await this._runBranchNode(node, ctx, context, results);
+        await this._runBranchNode(node, ctx, context, results, targetNodeId);
       } else if (node.type === 'conditional') {
-        await this._runConditionalNode(node, ctx, context, results);
+        await this._runConditionalNode(node, ctx, context, results, targetNodeId);
       }
-      // block-ref nodes should be resolved to their inline nodes before calling process()
+
+      if (node.id === targetNodeId) {
+        context._isFinished = true;
+        break;
+      }
     }
   }
 
@@ -203,10 +208,12 @@ export class ImageProcessor {
    * Branch node: run each variant on a COPY of the current canvas state.
    * Results from all branches are collected.
    */
-  async _runBranchNode(node, ctx, context, results) {
+  async _runBranchNode(node, ctx, context, results, targetNodeId) {
     const snapshot = snapshotCanvas(ctx.canvas);
 
     for (const branch of node.branches || []) {
+      if (context._isFinished) break;
+
       // Work on a fresh canvas copy for each branch
       const branchCanvas = document.createElement('canvas');
       branchCanvas.width  = snapshot.width;
@@ -220,7 +227,8 @@ export class ImageProcessor {
         outputSubfolder: context.outputSubfolder,
       };
 
-      await this._runNodes(branch.nodes || [], branchCtx, branchContext, results);
+      await this._runNodes(branch.nodes || [], branchCtx, branchContext, results, targetNodeId);
+      if (branchContext._isFinished) { context._isFinished = true; break; }
     }
 
     // Restore original canvas state (branch nodes don't mutate the main path)
@@ -228,11 +236,11 @@ export class ImageProcessor {
   }
 
   /** Conditional node: if condition is met run thenNodes, else elseNodes. */
-  async _runConditionalNode(node, ctx, context, results) {
+  async _runConditionalNode(node, ctx, context, results, targetNodeId) {
     const cond = node.condition;
     const pass = cond ? evalCondition(cond, context, ctx.canvas) : true;
     const targetNodes = pass ? (node.thenNodes || []) : (node.elseNodes || []);
-    await this._runNodes(targetNodes, ctx, context, results);
+    await this._runNodes(targetNodes, ctx, context, results, targetNodeId);
   }
 
   /** Canvas → Blob helper. */
@@ -243,8 +251,8 @@ export class ImageProcessor {
   }
 
   /** Process to data URL (for preview). */
-  async previewDataUrl(image, nodes, context, stopAfterIndex) {
-    await this.process(image, nodes, context, stopAfterIndex);
+  async previewDataUrl(image, nodes, context, targetNodeId) {
+    await this.process(image, nodes, context, targetNodeId);
     return new Promise(resolve => {
       this.canvas.toBlob(b => resolve(b ? URL.createObjectURL(b) : ''), 'image/jpeg', 0.9);
     });

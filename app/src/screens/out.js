@@ -88,7 +88,7 @@ export async function render(container, hash) {
   // ── Lightbox state ────────────────────────────────────────
   let lbImages   = [];  // { outputFile, inputFile|null, name }
   let lbIdx      = 0;
-  let lbMode     = 'slider';
+  let lbMode     = localStorage.getItem('ic-cmp-mode') || 'slider';
   let lbSliderPct = 50;
   let lbDragging  = false;
 
@@ -111,8 +111,10 @@ export async function render(container, hash) {
   document.addEventListener('keydown', handleKeydown);
 
   container.querySelectorAll('[data-lb-mode]').forEach(btn => {
+    btn.classList.toggle('is-active', btn.dataset.lbMode === lbMode);
     btn.addEventListener('click', () => {
       lbMode = btn.dataset.lbMode;
+      localStorage.setItem('ic-cmp-mode', lbMode);
       container.querySelectorAll('[data-lb-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
       renderLb();
     });

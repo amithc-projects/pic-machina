@@ -11,6 +11,7 @@ import { ImageProcessor }                          from '../engine/index.js';
 import { extractExif }                             from '../engine/exif-reader.js';
 import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }                   from '../utils/image-info.js';
+import { flattenNodes, countNodes }               from '../utils/nodes.js';
 
 // Node category accent colours (match app.css node-category-tag vars)
 const CAT_COLORS = {
@@ -30,45 +31,28 @@ function nodeTypeLabel(node) {
   return { icon: 'help_outline', label: node.label || node.type, cat: 'other' };
 }
 
-function flattenNodes(nodes = [], depth = 0) {
-  const items = [];
-  for (const n of nodes) {
-    items.push({ node: n, depth });
-    if (n.branches) {
-      for (const b of n.branches) {
-        items.push({ node: { type: '_branch_header', label: b.label || 'Variant' }, depth: depth + 1, isBranchHeader: true });
-        items.push(...flattenNodes(b.nodes, depth + 2));
-      }
-    }
-    if (n.thenNodes?.length) {
-      items.push({ node: { type: '_branch_header', label: 'Then' }, depth: depth + 1, isBranchHeader: true });
-      items.push(...flattenNodes(n.thenNodes, depth + 2));
-    }
-    if (n.elseNodes?.length) {
-      items.push({ node: { type: '_branch_header', label: 'Else' }, depth: depth + 1, isBranchHeader: true });
-      items.push(...flattenNodes(n.elseNodes, depth + 2));
-    }
-  }
-  return items;
-}
 
-function renderNodeList(nodes) {
+function renderNodeList(nodes, previewNodeId) {
   const items = flattenNodes(nodes);
   if (!items.length) return '<div class="empty-state" style="padding:24px"><div class="empty-state-title">No nodes</div></div>';
   return items.map(({ node, depth, isBranchHeader }) => {
     if (isBranchHeader) {
       return `<div class="pvw-node-row pvw-node-row--header" style="padding-left:${16 + depth * 16}px">
         <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-text-faint)">subdirectory_arrow_right</span>
-        <span class="pvw-node-variant-label">${node.label}</span>
+        <span class="pvw-node-variant-label" style="font-style:italic;font-size:11px">${node.label}</span>
       </div>`;
     }
     const { icon, label, cat } = nodeTypeLabel(node);
     const accent = CAT_COLORS[cat] || '#6b7280';
-    return `<div class="pvw-node-row" style="padding-left:${16 + depth * 16}px">
-      <span class="pvw-node-dot" style="background:${accent}"></span>
-      <span class="material-symbols-outlined" style="font-size:14px;color:${accent};flex-shrink:0">${icon}</span>
+    const isCurrent = node.id === previewNodeId;
+    return `<div class="pvw-node-row${isCurrent ? ' is-active' : ''}" style="padding-left:${16 + depth * 16}px" data-node-id="${node.id}" title="Click eye to preview up to this step">
+      <span class="pvw-node-dot" style="background:${isCurrent ? 'var(--ps-blue)' : accent}"></span>
+      <span class="material-symbols-outlined" style="font-size:14px;color:${isCurrent ? 'var(--ps-blue)' : accent};flex-shrink:0">${icon}</span>
       <span class="pvw-node-label">${label}</span>
-      ${node.disabled ? '<span class="ic-badge" style="margin-left:auto;font-size:10px">disabled</span>' : ''}
+      <button class="pvw-node-eye btn-icon" data-eye-id="${node.id}">
+        <span class="material-symbols-outlined">${isCurrent ? 'visibility' : 'visibility_off'}</span>
+      </button>
+      ${node.disabled ? '<span class="ic-badge" style="margin-left:auto;font-size:10px">off</span>' : ''}
     </div>`;
   }).join('');
 }
@@ -97,7 +81,7 @@ export async function render(container, hash) {
     return;
   }
 
-  const nodeCount = flattenNodes(recipe.nodes).filter(i => !i.isBranchHeader).length;
+  const nodeCount = countNodes(recipe.nodes);
 
   container.innerHTML = `
     <div class="screen pvw-screen">
@@ -154,8 +138,8 @@ export async function render(container, hash) {
           </div>
 
           <div class="pvw-section-title">Steps</div>
-          <div class="pvw-node-list">
-            ${renderNodeList(recipe.nodes)}
+          <div class="pvw-node-list" id="pvw-node-list">
+            ${renderNodeList(recipe.nodes, null)}
           </div>
         </div>
 
@@ -183,10 +167,9 @@ export async function render(container, hash) {
             </div>
           </div>
 
-          <div id="pvw-step-scrubber" class="pvw-step-scrubber" style="display:none">
-            <span class="text-sm text-muted" style="flex-shrink:0">Step:</span>
-            <input type="range" id="pvw-step-slider" class="ic-range" min="0" value="0" style="flex:1">
-            <span id="pvw-step-label" class="mono text-sm" style="min-width:80px;text-align:right">Original</span>
+          <div id="pvw-step-info" class="pvw-step-info" style="display:none">
+            <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">info</span>
+            <span id="pvw-step-detail-label" class="text-xs text-muted"></span>
           </div>
         </div>
       </div>
@@ -196,9 +179,9 @@ export async function render(container, hash) {
   injectImageInfoStyles();
 
   // ── State ─────────────────────────────────────────────────
-  let testFile    = null;
-  let testImage   = null;
-  let stepResults = [];   // { canvas url, step label }
+  let testFile     = null;
+  let testImage    = null;
+  let previewNodeId = null; // node ID currently selected for preview
 
   // Restore persisted test image
   if (window._icTestImage?.file) {
@@ -283,46 +266,58 @@ export async function render(container, hash) {
     if (file && file.type.startsWith('image/')) { testFile = file; window._icTestImage = { file }; container.querySelector('#pvw-btn-info').style.display = ''; await runPreview(file); }
   });
 
-  // ── Step slider ───────────────────────────────────────────
-  container.querySelector('#pvw-step-slider')?.addEventListener('input', e => {
-    showStep(parseInt(e.target.value));
+  // ── Step interaction ──────────────────────────────────────
+  container.querySelector('#pvw-node-list')?.addEventListener('click', e => {
+    const row = e.target.closest('.pvw-node-row');
+    if (!row) return;
+    const nodeId = row.dataset.nodeId;
+    if (!nodeId) return;
+
+    previewNodeId = nodeId;
+    // Update active row
+    container.querySelectorAll('.pvw-node-row').forEach(r => {
+      const isAct = r.dataset.nodeId === nodeId;
+      r.classList.toggle('is-active', isAct);
+      const dot = r.querySelector('.pvw-node-dot');
+      const icon = r.querySelector('.material-symbols-outlined[style*="color"]'); // fix this selector
+      const eye = r.querySelector('.pvw-node-eye .material-symbols-outlined');
+      if (eye) eye.textContent = isAct ? 'visibility' : 'visibility_off';
+    });
+
+    if (testFile) runPreview(testFile);
   });
 
   async function runPreview(file) {
     previewArea.innerHTML = `<div class="pvw-processing"><div class="spinner spinner--lg"></div><div class="text-sm text-muted" style="margin-top:12px">Processing…</div></div>`;
-
     try {
       const url   = URL.createObjectURL(file);
       testImage   = new Image();
       await new Promise((res, rej) => { testImage.onload = res; testImage.onerror = rej; testImage.src = url; });
 
       const exif    = await extractExif(file);
-      const context = { filename: file.name, exif, meta: {} };
+      const context = { filename: file.name, exif, meta: {}, variables: new Map() };
 
-      // Build step snapshots: index -1 = original, then 0..N-1 nodes
-      const allNodes    = recipe.nodes;
-      const flatSteps   = flattenNodes(allNodes).filter(i => !i.isBranchHeader);
+      const proc = new ImageProcessor();
+      const finalUrl = await proc.previewDataUrl(testImage, recipe.nodes, context, previewNodeId);
 
-      stepResults = [{ label: 'Original', dataUrl: url }];
+      // Find node label
+      const flat = flattenNodes(recipe.nodes);
+      const nodeEnt = flat.find(f => f.node.id === previewNodeId);
+      const label = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
 
-      // Run processor with stopAfterIndex for each top-level step
-      for (let i = 0; i < allNodes.length; i++) {
-        const proc = new ImageProcessor();
-        await proc.process(testImage, allNodes, { ...context, variables: new Map() }, i);
-        const stepUrl = proc.canvas.toDataURL('image/jpeg', 0.85);
-        const stepLabel = allNodes[i].label || allNodes[i].transformId || allNodes[i].type;
-        stepResults.push({ label: stepLabel, dataUrl: stepUrl });
-      }
+      container.querySelector('#pvw-step-info').style.display = 'flex';
+      const detailLabel = container.querySelector('#pvw-step-detail-label');
+      if (detailLabel) detailLabel.textContent = `Showing preview up to: ${label}`;
 
-      const slider = container.querySelector('#pvw-step-slider');
-      if (slider) {
-        slider.max   = stepResults.length - 1;
-        slider.value = stepResults.length - 1;
-      }
-
-      container.querySelector('#pvw-step-scrubber').style.display = 'flex';
       container.querySelector('#pvw-btn-compare').disabled = false;
-      showStep(stepResults.length - 1);
+
+      previewArea.innerHTML = `
+        <div class="pvw-img-wrapper">
+          <img src="${finalUrl}" class="pvw-result-img" draggable="false">
+          ${!previewNodeId
+            ? `<div class="pvw-img-badge">Original</div>`
+            : `<div class="pvw-img-badge pvw-img-badge--blue">After step: ${label}</div>`}
+        </div>`;
 
     } catch (err) {
       console.error('[pvw] Preview error:', err);
@@ -332,21 +327,6 @@ export async function render(container, hash) {
         <div class="empty-state-desc">${err.message}</div>
       </div>`;
     }
-  }
-
-  function showStep(idx) {
-    const step = stepResults[idx];
-    if (!step) return;
-    const label = container.querySelector('#pvw-step-label');
-    if (label) label.textContent = idx === 0 ? 'Original' : `Step ${idx}: ${step.label}`;
-
-    previewArea.innerHTML = `
-      <div class="pvw-img-wrapper">
-        <img src="${step.dataUrl}" class="pvw-result-img" draggable="false">
-        ${idx === 0
-          ? `<div class="pvw-img-badge">Original</div>`
-          : `<div class="pvw-img-badge pvw-img-badge--blue">After step ${idx}</div>`}
-      </div>`;
   }
 }
 
@@ -395,12 +375,19 @@ function injectPvwStyles() {
     .pvw-node-row {
       display:flex; align-items:center; gap:7px; padding:6px 14px;
       font-size:12px; color:var(--ps-text-muted); transition:background 100ms;
+      cursor:pointer; position:relative;
     }
     .pvw-node-row:hover { background:var(--ps-bg-hover); color:var(--ps-text); }
-    .pvw-node-row--header { color:var(--ps-text-faint); font-size:11px; gap:4px; }
+    .pvw-node-row.is-active { background:rgba(0,119,255,0.08); color:var(--ps-text); }
+    .pvw-node-row--header { color:var(--ps-text-faint); font-size:11px; gap:4px; cursor:default; }
+    .pvw-node-row--header:hover { background:transparent; }
     .pvw-node-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
     .pvw-node-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .pvw-node-variant-label { font-style:italic; }
+
+    .pvw-node-eye { opacity:0; padding:2px; margin-left:auto; }
+    .pvw-node-row:hover .pvw-node-eye, .pvw-node-row.is-active .pvw-node-eye { opacity:1; }
+    .pvw-node-eye .material-symbols-outlined { font-size:16px; }
 
     /* Preview panel */
     .pvw-preview-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
@@ -422,8 +409,8 @@ function injectPvwStyles() {
     }
     .pvw-img-badge--blue { background:rgba(0,119,255,0.8); }
 
-    .pvw-step-scrubber {
-      display:flex; align-items:center; gap:10px;
+    .pvw-step-info {
+      display:flex; align-items:center; gap:8px;
       padding:10px 16px; border-top:1px solid var(--ps-border); flex-shrink:0;
       background:var(--ps-bg-surface);
     }

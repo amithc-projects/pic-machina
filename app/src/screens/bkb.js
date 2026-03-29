@@ -10,6 +10,7 @@ import { getAllBlocks, getBlock, saveBlock, deleteBlock, cloneBlock } from '../d
 import { navigate } from '../main.js';
 import { uuid, now, deepClone, formatDate } from '../utils/misc.js';
 import { registry } from '../engine/index.js';
+import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -100,7 +101,7 @@ function blockCardHTML(block) {
         <div class="bkb-card-desc">${block.description || ''}</div>
         <div class="bkb-card-meta">
           <span class="ic-badge">${block.category || 'General'}</span>
-          <span class="text-sm text-muted">${block.nodes.length} step${block.nodes.length !== 1 ? 's' : ''}</span>
+          <span class="text-sm text-muted">${countNodes(block.nodes)} step${countNodes(block.nodes) !== 1 ? 's' : ''}</span>
           <span class="text-sm text-muted" style="margin-left:auto">${updated}</span>
         </div>
       </div>
@@ -138,7 +139,7 @@ async function renderEditor(container, blockId) {
             <span class="material-symbols-outlined">widgets</span>
             ${draft.name}
           </div>
-          <span id="bkb-save-status" class="text-sm text-muted"></span>
+          <span id="bkb-save-status" class="text-sm text-muted" style="margin-left:4px"></span>
         </div>
         <button class="btn-primary" id="bkb-save-btn">
           <span class="material-symbols-outlined">save</span>
@@ -244,17 +245,22 @@ async function renderEditor(container, blockId) {
     const listEl  = container.querySelector('#bkb-node-list');
     const countEl = container.querySelector('#bkb-count');
     if (listEl) { listEl.innerHTML = renderNodeList(draft.nodes); bindNodeActions(); }
-    if (countEl) countEl.textContent = `${draft.nodes.length} step${draft.nodes.length !== 1 ? 's' : ''}`;
+    const realCount = countNodes(draft.nodes);
+    if (countEl) countEl.textContent = `${realCount} step${realCount !== 1 ? 's' : ''}`;
   }
 
   function bindNodeActions() {
     container.querySelectorAll('.bkb-del-node').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
-        const idx = parseInt(btn.dataset.idx);
-        draft.nodes.splice(idx, 1);
-        refreshNodes();
-        markDirty();
+        const id = btn.dataset.id;
+        if (!confirm('Remove this step?')) return;
+        const info = findNodeAndParent(draft.nodes, id);
+        if (info) {
+          info.parent.splice(info.index, 1);
+          refreshNodes();
+          markDirty();
+        }
       });
     });
   }
@@ -263,19 +269,31 @@ async function renderEditor(container, blockId) {
 }
 
 function renderNodeList(nodes) {
-  if (!nodes.length) return `<div class="empty-state" style="padding:32px">
+  const items = flattenNodes(nodes);
+  if (!items.length) return `<div class="empty-state" style="padding:32px">
     <span class="material-symbols-outlined">account_tree</span>
     <div class="empty-state-title">No steps yet</div></div>`;
-  return nodes.map((n, i) => {
-    const def = registry.get(n.transformId);
-    const label = n.label || def?.name || n.type;
-    return `<div class="bld-node-row">
-      <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">${def?.icon || 'tune'}</span>
-      <span style="flex:1;font-size:13px">${label}</span>
-      <button class="btn-icon bkb-del-node" data-idx="${i}" title="Remove">
-        <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-red)">delete</span>
-      </button>
-    </div>`;
+
+  return items.map(item => {
+    const { node, depth, isBranchHeader } = item;
+    if (isBranchHeader) {
+      return `
+        <div class="bld-node-row bld-node-row--header" style="padding-left:${12 + depth * 16}px">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-text-faint)">subdirectory_arrow_right</span>
+          <span class="bld-node-label" style="font-style:italic;font-size:11px;color:var(--ps-text-faint)">${node.label}</span>
+        </div>`;
+    }
+
+    const def = registry.get(node.transformId);
+    const label = node.label || def?.name || node.type;
+    return `
+      <div class="bld-node-row" style="padding-left:${8 + depth * 16}px">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">${def?.icon || 'tune'}</span>
+        <span style="flex:1;font-size:13px">${label}</span>
+        <button class="btn-icon bkb-del-node" data-id="${node.id}" title="Remove">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-red)">delete</span>
+        </button>
+      </div>`;
   }).join('');
 }
 

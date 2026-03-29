@@ -10,6 +10,7 @@ import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave } from '../data/
 import { navigate } from '../main.js';
 import { uuid, now, deepClone } from '../utils/misc.js';
 import { registry } from '../engine/index.js';
+import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -66,11 +67,23 @@ function nodeIconAndColor(node) {
   return { icon: def?.icon || 'tune', color: info.color };
 }
 
-function buildNodeRow(node, idx) {
+function buildNodeRow(item, isSelected) {
+  const { node, depth, isBranchHeader } = item;
   const { icon, color } = nodeIconAndColor(node);
   const label = node.label || node.transformId || node.type;
+
+  if (isBranchHeader) {
+    return `
+      <div class="bld-node-row bld-node-row--header ${isSelected ? 'is-selected' : ''}"
+           data-id="${node.id}" style="padding-left:${12 + depth * 16}px">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-text-faint)">subdirectory_arrow_right</span>
+        <span class="bld-node-label" style="font-style:italic;font-size:11px;color:var(--ps-text-faint)">${label}</span>
+      </div>`;
+  }
+
   return `
-    <div class="bld-node-row" data-idx="${idx}" draggable="true">
+    <div class="bld-node-row ${isSelected ? 'is-selected' : ''} ${node.disabled ? 'is-disabled' : ''}"
+         data-id="${node.id}" draggable="true" style="padding-left:${8 + depth * 16}px">
       <button class="btn-icon bld-drag-handle" title="Drag to reorder" tabindex="-1">
         <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-faint)">drag_indicator</span>
       </button>
@@ -79,13 +92,13 @@ function buildNodeRow(node, idx) {
       <span class="bld-node-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>
       ${node.disabled ? '<span class="ic-badge" style="font-size:10px">off</span>' : ''}
       <div class="bld-node-actions">
-        <button class="btn-icon bld-btn-toggle" data-idx="${idx}" title="${node.disabled ? 'Enable' : 'Disable'}">
+        <button class="btn-icon bld-btn-toggle" data-id="${node.id}" title="${node.disabled ? 'Enable' : 'Disable'}">
           <span class="material-symbols-outlined" style="font-size:14px">${node.disabled ? 'visibility_off' : 'visibility'}</span>
         </button>
-        <button class="btn-icon bld-btn-edit" data-idx="${idx}" title="Edit node">
+        <button class="btn-icon bld-btn-edit" data-id="${node.id}" title="Edit node">
           <span class="material-symbols-outlined" style="font-size:14px">edit</span>
         </button>
-        <button class="btn-icon bld-btn-delete" data-idx="${idx}" title="Delete node">
+        <button class="btn-icon bld-btn-delete" data-id="${node.id}" title="Delete node">
           <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-red)">delete</span>
         </button>
       </div>
@@ -163,6 +176,11 @@ export async function render(container, hash) {
 
   // Make a working copy
   let draft = deepClone(recipe);
+  let selectedId = null;
+
+  function getFlatItems() {
+    return flattenNodes(draft.nodes);
+  }
 
   // Get grouped transforms for modal
   import('../../src/engine/index.js').catch(() => {});
@@ -234,8 +252,8 @@ export async function render(container, hash) {
           </div>
 
           <div id="bld-node-list" class="bld-node-list">
-            ${draft.nodes.length
-              ? draft.nodes.map((n, i) => buildNodeRow(n, i)).join('')
+            ${getFlatItems().length
+              ? getFlatItems().map(item => buildNodeRow(item, selectedId === item.node.id)).join('')
               : `<div class="empty-state" style="padding:32px">
                    <span class="material-symbols-outlined">account_tree</span>
                    <div class="empty-state-title">No steps yet</div>
@@ -260,9 +278,10 @@ export async function render(container, hash) {
   function refreshNodeList() {
     const listEl = container.querySelector('#bld-node-list');
     const countEl = container.querySelector('#bld-node-count');
+    const items = getFlatItems();
     if (listEl) {
-      listEl.innerHTML = draft.nodes.length
-        ? draft.nodes.map((n, i) => buildNodeRow(n, i)).join('')
+      listEl.innerHTML = items.length
+        ? items.map(item => buildNodeRow(item, selectedId === item.node.id)).join('')
         : `<div class="empty-state" style="padding:32px">
              <span class="material-symbols-outlined">account_tree</span>
              <div class="empty-state-title">No steps yet</div>
@@ -270,7 +289,8 @@ export async function render(container, hash) {
            </div>`;
       bindNodeActions();
     }
-    if (countEl) countEl.textContent = `${draft.nodes.length} step${draft.nodes.length !== 1 ? 's' : ''}`;
+    const realCount = countNodes(draft.nodes);
+    if (countEl) countEl.textContent = `${realCount} step${realCount !== 1 ? 's' : ''}`;
   }
 
   // ── Back ──────────────────────────────────────────────────
@@ -357,7 +377,9 @@ export async function render(container, hash) {
       const params = {};
       (def?.params || []).forEach(p => { params[p.name] = p.defaultValue ?? ''; });
       const node = { id: uuid(), type: 'transform', transformId: tid, label: def?.name || tid, params };
-      draft.nodes.push(node);
+
+      insertAtSelection(node);
+
       refreshNodeList();
       markDirty();
       addModal.style.display = 'none';
@@ -366,25 +388,60 @@ export async function render(container, hash) {
     });
   });
 
+  function insertAtSelection(node) {
+    if (!selectedId) {
+      draft.nodes.push(node);
+      return;
+    }
+
+    const items = getFlatItems();
+    const item = items.find(i => i.node.id === selectedId);
+    if (!item) {
+      draft.nodes.push(node);
+      return;
+    }
+
+    const { parentId, branchIdx, type } = item.node;
+    if (type === '_branch_header') {
+      // Find the actual branch node
+      const parentInfo = findNodeAndParent(draft.nodes, parentId);
+      if (parentInfo && parentInfo.node.branches) {
+        const branchNodes = parentInfo.node.branches[branchIdx].nodes;
+        branchNodes.unshift(node);
+      }
+    } else {
+      // It's a normal node, insert after it
+      const parentInfo = findNodeAndParent(draft.nodes, selectedId);
+      if (parentInfo) {
+        parentInfo.parent.splice(parentInfo.index + 1, 0, node);
+      }
+    }
+    selectedId = node.id; // Auto-select the new node
+  }
+
   // Add branch / conditional
   container.querySelectorAll('.bld-add-branch-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const type = btn.dataset.type;
+      let newNode;
       if (type === 'branch') {
-        draft.nodes.push({
+        newNode = {
           id: uuid(), type: 'branch', label: 'Branch',
           branches: [
             { id: uuid(), label: 'Variant A', nodes: [] },
             { id: uuid(), label: 'Variant B', nodes: [] },
           ]
-        });
+        };
       } else {
-        draft.nodes.push({
+        newNode = {
           id: uuid(), type: 'conditional', label: 'Conditional',
           condition: { field: 'width', operator: 'gt', value: 1000 },
           thenNodes: [], elseNodes: []
-        });
+        };
       }
+
+      insertAtSelection(newNode);
+
       refreshNodeList();
       markDirty();
       addModal.style.display = 'none';
@@ -397,10 +454,13 @@ export async function render(container, hash) {
     container.querySelectorAll('.bld-btn-toggle').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
-        const idx = parseInt(btn.dataset.idx);
-        draft.nodes[idx].disabled = !draft.nodes[idx].disabled;
-        refreshNodeList();
-        markDirty();
+        const id = btn.dataset.id;
+        const info = findNodeAndParent(draft.nodes, id);
+        if (info) {
+          info.node.disabled = !info.node.disabled;
+          refreshNodeList();
+          markDirty();
+        }
       });
     });
 
@@ -408,9 +468,8 @@ export async function render(container, hash) {
     container.querySelectorAll('.bld-btn-edit').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
-        const idx = parseInt(btn.dataset.idx);
-        const node = draft.nodes[idx];
-        navigate(`#ned?recipe=${draft.id}&node=${node.id}`);
+        const id = btn.dataset.id;
+        navigate(`#ned?recipe=${draft.id}&node=${id}`);
       });
     });
 
@@ -418,20 +477,34 @@ export async function render(container, hash) {
     container.querySelectorAll('.bld-btn-delete').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
-        const idx = parseInt(btn.dataset.idx);
+        const id = btn.dataset.id;
         if (!confirm('Remove this step?')) return;
-        draft.nodes.splice(idx, 1);
-        refreshNodeList();
-        markDirty();
+        const info = findNodeAndParent(draft.nodes, id);
+        if (info) {
+          info.parent.splice(info.index, 1);
+          if (selectedId === id) selectedId = null;
+          refreshNodeList();
+          markDirty();
+        }
       });
     });
 
-    // Click row = edit
+    // Click row = select
     container.querySelectorAll('.bld-node-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        // Don't select if clicking an action button
+        if (e.target.closest('.bld-node-actions, .btn-icon')) return;
+        const id = row.dataset.id;
+        selectedId = (selectedId === id) ? null : id;
+        refreshNodeList();
+      });
+
       row.addEventListener('dblclick', () => {
-        const idx = parseInt(row.dataset.idx);
-        const node = draft.nodes[idx];
-        if (node && node.type === 'transform') navigate(`#ned?recipe=${draft.id}&node=${node.id}`);
+        const id = row.dataset.id;
+        const info = findNodeAndParent(draft.nodes, id);
+        if (info && info.node.type === 'transform') {
+          navigate(`#ned?recipe=${draft.id}&node=${id}`);
+        }
       });
     });
 
@@ -440,27 +513,42 @@ export async function render(container, hash) {
   }
 
   // ── Drag-and-drop ─────────────────────────────────────────
-  let dragIdx = null;
+  let dragId = null;
   function bindDragDrop() {
-    const rows = container.querySelectorAll('.bld-node-row');
+    const rows = container.querySelectorAll('.bld-node-row[draggable="true"]');
     rows.forEach(row => {
       row.addEventListener('dragstart', e => {
-        dragIdx = parseInt(row.dataset.idx);
+        dragId = row.dataset.id;
         row.classList.add('bld-node-dragging');
         e.dataTransfer.effectAllowed = 'move';
       });
-      row.addEventListener('dragend', () => { row.classList.remove('bld-node-dragging'); dragIdx = null; });
-      row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('bld-node-drag-over'); });
+      row.addEventListener('dragend', () => { row.classList.remove('bld-node-dragging'); dragId = null; });
+      row.addEventListener('dragover', e => {
+        e.preventDefault();
+        const overId = row.dataset.id;
+        if (overId !== dragId) row.classList.add('bld-node-drag-over');
+      });
       row.addEventListener('dragleave', () => row.classList.remove('bld-node-drag-over'));
       row.addEventListener('drop', e => {
         e.preventDefault();
         row.classList.remove('bld-node-drag-over');
-        const toIdx = parseInt(row.dataset.idx);
-        if (dragIdx === null || dragIdx === toIdx) return;
-        const [moved] = draft.nodes.splice(dragIdx, 1);
-        draft.nodes.splice(toIdx, 0, moved);
-        refreshNodeList();
-        markDirty();
+        const toId = row.dataset.id;
+        if (!dragId || dragId === toId) return;
+
+        const fromInfo = findNodeAndParent(draft.nodes, dragId);
+        const toInfo   = findNodeAndParent(draft.nodes, toId);
+
+        if (fromInfo && toInfo) {
+          const [moved] = fromInfo.parent.splice(fromInfo.index, 1);
+          // If moving within same parent and fromIndex was before toIndex, adjust toIndex
+          let targetIndex = toInfo.index;
+          if (fromInfo.parent === toInfo.parent && fromInfo.index < toInfo.index) {
+            // targetIndex is already correct because we spliced from before it
+          }
+          toInfo.parent.splice(targetIndex, 0, moved);
+          refreshNodeList();
+          markDirty();
+        }
       });
     });
   }
@@ -507,12 +595,15 @@ function injectBldStyles() {
 
     .bld-node-row {
       display:flex; align-items:center; gap:8px; padding:8px 12px 8px 8px;
-      border-bottom:1px solid transparent; cursor:default; transition:background 100ms;
-      user-select:none;
+      border-bottom:1px solid transparent; cursor:default; transition:all 100ms;
+      user-select:none; border-left:3px solid transparent;
     }
     .bld-node-row:hover { background:var(--ps-bg-hover); }
+    .bld-node-row.is-selected { background:var(--ps-blue-10); border-left-color:var(--ps-blue); }
+    .bld-node-row.is-disabled { opacity:0.5; }
+    .bld-node-row--header { border-bottom:none; margin-top:4px; }
     .bld-node-row:hover .bld-node-actions { opacity:1; }
-    .bld-drag-handle { cursor:grab; }
+    .bld-drag-handle { cursor:grab; padding:0; }
     .bld-drag-handle:active { cursor:grabbing; }
     .bld-node-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
     .bld-node-actions { display:flex; gap:2px; opacity:0; transition:opacity 120ms; margin-left:auto; flex-shrink:0; }
