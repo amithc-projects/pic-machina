@@ -180,6 +180,10 @@ export async function render(container, hash) {
   let draft = deepClone(recipe);
   let selectedId = null;
 
+  // Auto-expand config panel for brand-new recipes
+  const isNew = draft.name === 'Untitled Recipe' && !draft.description && !draft.nodes?.length;
+  let configOpen = isNew;
+
   function getFlatItems() {
     return flattenNodes(draft.nodes);
   }
@@ -190,8 +194,8 @@ export async function render(container, hash) {
 
   container.innerHTML = `
     <div class="screen bld-screen">
-      <div class="screen-header">
-        <div class="flex items-center gap-2">
+      <div class="screen-header bld-header-3col">
+        <div class="bld-header-left flex items-center gap-2">
           <button class="btn-icon" id="bld-back">
             <span class="material-symbols-outlined">arrow_back</span>
           </button>
@@ -199,9 +203,15 @@ export async function render(container, hash) {
             <span class="material-symbols-outlined">format_list_numbered</span>
             Recipe Builder
           </div>
+          <button class="btn-icon bld-config-toggle" id="bld-config-toggle" title="Toggle recipe details">
+            <span class="material-symbols-outlined">tune</span>
+          </button>
           <span id="bld-save-status" class="text-sm text-muted" style="margin-left:4px"></span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="bld-header-center">
+          <span id="bld-header-name" class="bld-header-name">${escHtml(draft.name)}</span>
+        </div>
+        <div class="bld-header-right flex items-center gap-2">
           <button class="btn-secondary" id="bld-btn-preview">
             <span class="material-symbols-outlined">preview</span>
             Preview
@@ -268,11 +278,21 @@ export async function render(container, hash) {
         <div class="bld-inline-preview">
           <div class="bld-inline-preview-header">
             <span class="text-sm font-medium">Preview</span>
-            <label class="btn-secondary bld-upload-label" style="cursor:pointer">
-              <span class="material-symbols-outlined" style="font-size:14px">upload</span>
-              Image
-              <input type="file" id="bld-preview-file" accept="image/*" style="display:none">
-            </label>
+            <div class="flex items-center gap-2">
+              <button class="btn-secondary bld-cmp-toggle" id="bld-cmp-toggle" style="display:none;font-size:12px;padding:4px 10px">
+                <span class="material-symbols-outlined" style="font-size:14px">compare</span>
+                Compare
+              </button>
+              <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:none">
+                <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
+                <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
+              </div>
+              <label class="btn-secondary bld-upload-label" style="cursor:pointer">
+                <span class="material-symbols-outlined" style="font-size:14px">upload</span>
+                Image
+                <input type="file" id="bld-preview-file" accept="image/*" style="display:none">
+              </label>
+            </div>
           </div>
           <div id="bld-preview-area" class="bld-preview-area">
             <div class="empty-state" style="padding:24px;text-align:center">
@@ -293,12 +313,28 @@ export async function render(container, hash) {
 
   injectBldStyles();
 
+  // ── Config panel collapse ─────────────────────────────────
+  const configPanel = container.querySelector('.bld-config');
+  function applyConfigOpen() {
+    configPanel?.classList.toggle('is-collapsed', !configOpen);
+    const toggleBtn = container.querySelector('#bld-config-toggle');
+    if (toggleBtn) toggleBtn.classList.toggle('is-active', configOpen);
+  }
+  applyConfigOpen();
+
+  container.querySelector('#bld-config-toggle')?.addEventListener('click', () => {
+    configOpen = !configOpen;
+    applyConfigOpen();
+  });
+
   const saveStatus = container.querySelector('#bld-save-status');
 
   // ── Inline preview state ──────────────────────────────────
-  let bldTestFile     = null;
+  let bldTestFile      = null;
   let bldPreviewNodeId = null;
   let bldPreviewTimer  = null;
+  let bldCompareMode   = false;
+  let bldCompareRef    = 'original'; // 'original' | 'prev'
 
   // Restore persisted test image
   if (window._icTestImage?.file) {
@@ -308,6 +344,51 @@ export async function render(container, hash) {
   function scheduleBldPreview(delay = 400) {
     clearTimeout(bldPreviewTimer);
     bldPreviewTimer = setTimeout(() => runBldPreview(), delay);
+  }
+
+  function getPrevNodeId() {
+    const nodes = flattenNodes(draft.nodes).filter(i => !i.isBranchHeader);
+    if (!bldPreviewNodeId) return nodes.length >= 2 ? nodes[nodes.length - 2].node.id : null;
+    const idx = nodes.findIndex(i => i.node.id === bldPreviewNodeId);
+    return idx > 0 ? nodes[idx - 1].node.id : null;
+  }
+
+  function renderCompareSlider(area, beforeUrl, afterUrl, beforeLabel, afterLabel) {
+    area.innerHTML = `
+      <div class="bld-cmp-wrap" id="bld-cmp-wrap">
+        <img class="bld-cmp-img" id="bld-cmp-before-img" src="${beforeUrl}" draggable="false" style="clip-path:inset(0 50% 0 0)">
+        <img class="bld-cmp-img" id="bld-cmp-after-img"  src="${afterUrl}"  draggable="false" style="clip-path:inset(0 0 0 50%)">
+        <div class="bld-cmp-handle" id="bld-cmp-handle" style="left:50%">
+          <div class="bld-cmp-handle-line"></div>
+          <div class="bld-cmp-handle-knob">
+            <span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span>
+          </div>
+        </div>
+        <span class="bld-cmp-label bld-cmp-label--l">${beforeLabel}</span>
+        <span class="bld-cmp-label bld-cmp-label--r">${afterLabel}</span>
+      </div>`;
+
+    const wrap      = area.querySelector('#bld-cmp-wrap');
+    const handle    = area.querySelector('#bld-cmp-handle');
+    const beforeImg = area.querySelector('#bld-cmp-before-img');
+    const afterImg  = area.querySelector('#bld-cmp-after-img');
+    let dragging = false;
+
+    const setPos = clientX => {
+      const rect = wrap.getBoundingClientRect();
+      const pos  = Math.max(0.01, Math.min(0.99, (clientX - rect.left) / rect.width));
+      const pct  = (pos * 100).toFixed(1);
+      handle.style.left         = `${pct}%`;
+      beforeImg.style.clipPath  = `inset(0 ${(100 - pos * 100).toFixed(1)}% 0 0)`;
+      afterImg.style.clipPath   = `inset(0 0 0 ${pct}%)`;
+    };
+
+    handle.addEventListener('mousedown', e => { dragging = true; e.preventDefault(); });
+    window.addEventListener('mousemove', e => { if (dragging) setPos(e.clientX); });
+    window.addEventListener('mouseup',   () => { dragging = false; });
+    handle.addEventListener('touchstart', e => { dragging = true; e.preventDefault(); }, { passive: false });
+    window.addEventListener('touchmove',  e => { if (dragging) setPos(e.touches[0].clientX); }, { passive: true });
+    window.addEventListener('touchend',   () => { dragging = false; });
   }
 
   async function runBldPreview() {
@@ -329,7 +410,7 @@ export async function render(container, hash) {
       const context = { filename: bldTestFile.name, exif, meta: {}, variables: new Map() };
 
       const proc     = new ImageProcessor();
-      const finalUrl = await proc.previewDataUrl(img, draft.nodes, context, bldPreviewNodeId);
+      const afterUrl = await proc.previewDataUrl(img, draft.nodes, context, bldPreviewNodeId);
 
       // Step label
       const flat    = flattenNodes(draft.nodes);
@@ -339,19 +420,44 @@ export async function render(container, hash) {
       const stepInfo  = container.querySelector('#bld-preview-step-info');
       const stepLabel = container.querySelector('#bld-preview-step-label');
       if (stepInfo)  stepInfo.style.display = 'flex';
-      if (stepLabel) stepLabel.textContent   = bldPreviewNodeId ? `Up to: ${label}` : 'All steps applied';
+      if (stepLabel) stepLabel.textContent  = bldPreviewNodeId ? `Up to: ${label}` : 'All steps applied';
 
-      previewArea.innerHTML = `
-        <div class="bld-preview-img-wrapper">
-          <img src="${finalUrl}" class="bld-preview-result-img" draggable="false">
-          <div class="bld-preview-img-badge${bldPreviewNodeId ? ' bld-preview-img-badge--blue' : ''}">
-            ${bldPreviewNodeId ? label : 'All Steps'}
-          </div>
-        </div>`;
+      // Show compare button now that we have an image
+      const cmpToggle = container.querySelector('#bld-cmp-toggle');
+      if (cmpToggle) cmpToggle.style.display = '';
+
+      if (bldCompareMode) {
+        let beforeUrl, beforeLabel;
+        if (bldCompareRef === 'original') {
+          beforeUrl   = URL.createObjectURL(bldTestFile);
+          beforeLabel = 'Original';
+        } else {
+          const prevId = getPrevNodeId();
+          if (prevId) {
+            const proc2 = new ImageProcessor();
+            const ctx2  = { filename: bldTestFile.name, exif, meta: {}, variables: new Map() };
+            beforeUrl   = await proc2.previewDataUrl(img, draft.nodes, ctx2, prevId);
+            const prevEnt = flat.find(f => f.node.id === prevId);
+            beforeLabel   = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : 'Prev Step';
+          } else {
+            beforeUrl   = URL.createObjectURL(bldTestFile);
+            beforeLabel = 'Original';
+          }
+        }
+        renderCompareSlider(previewArea, beforeUrl, afterUrl, beforeLabel, label || 'All Steps');
+      } else {
+        previewArea.innerHTML = `
+          <div class="bld-preview-img-wrapper">
+            <img src="${afterUrl}" class="bld-preview-result-img" draggable="false">
+            <div class="bld-preview-img-badge${bldPreviewNodeId ? ' bld-preview-img-badge--blue' : ''}">
+              ${bldPreviewNodeId ? label : 'All Steps'}
+            </div>
+          </div>`;
+      }
     } catch (err) {
       console.error('[bld] Preview error:', err);
-      const previewArea2 = container.querySelector('#bld-preview-area');
-      if (previewArea2) previewArea2.innerHTML = `<div class="empty-state" style="padding:24px">
+      const area2 = container.querySelector('#bld-preview-area');
+      if (area2) area2.innerHTML = `<div class="empty-state" style="padding:24px">
         <span class="material-symbols-outlined">error</span>
         <div class="empty-state-title" style="font-size:12px">Preview failed</div>
         <div class="empty-state-desc" style="font-size:11px">${err.message}</div>
@@ -425,6 +531,8 @@ export async function render(container, hash) {
     draft.name = e.target.value;
     const cn = container.querySelector('#bld-cover-name');
     if (cn) cn.textContent = draft.name || 'Untitled';
+    const hn = container.querySelector('#bld-header-name');
+    if (hn) hn.textContent = draft.name || 'Untitled Recipe';
     markDirty();
   });
 
@@ -680,6 +788,24 @@ export async function render(container, hash) {
     });
   }
 
+  // ── Compare toggle ────────────────────────────────────────
+  container.querySelector('#bld-cmp-toggle')?.addEventListener('click', () => {
+    bldCompareMode = !bldCompareMode;
+    const btn    = container.querySelector('#bld-cmp-toggle');
+    const refRow = container.querySelector('#bld-cmp-ref-row');
+    btn?.classList.toggle('is-active', bldCompareMode);
+    if (refRow) refRow.style.display = bldCompareMode ? 'flex' : 'none';
+    scheduleBldPreview(0);
+  });
+
+  container.querySelectorAll('.bld-cmp-ref-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      bldCompareRef = btn.dataset.ref;
+      container.querySelectorAll('.bld-cmp-ref-btn').forEach(b => b.classList.toggle('is-active', b.dataset.ref === bldCompareRef));
+      if (bldCompareMode) scheduleBldPreview(0);
+    });
+  });
+
   bindNodeActions();
 
   // ── Cleanup: flush autosave ───────────────────────────────
@@ -699,8 +825,70 @@ function injectBldStyles() {
     .bld-screen { display:flex; flex-direction:column; height:100%; }
     .bld-body { display:flex; flex:1; overflow:hidden; }
 
+    /* 3-column header */
+    .bld-header-3col { display:grid !important; grid-template-columns:1fr auto 1fr; }
+    .bld-header-left { justify-self:start; }
+    .bld-header-center { justify-self:center; overflow:hidden; max-width:320px; }
+    .bld-header-right { justify-self:end; }
+    .bld-header-name {
+      font-size:14px; font-weight:600; color:var(--ps-text);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      display:block;
+    }
+
+    /* Compare slider */
+    .bld-cmp-wrap {
+      display:grid; position:relative; cursor:col-resize; user-select:none;
+      max-width:100%; max-height:calc(100vh - 200px);
+    }
+    .bld-cmp-img {
+      grid-area:1/1; display:block;
+      max-width:100%; max-height:calc(100vh - 200px); object-fit:contain;
+    }
+    .bld-cmp-handle {
+      position:absolute; top:0; bottom:0; width:0;
+      transform:translateX(-50%); cursor:col-resize; z-index:10;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+    }
+    .bld-cmp-handle-line {
+      position:absolute; top:0; bottom:0; width:2px;
+      background:rgba(255,255,255,0.85); box-shadow:0 0 4px rgba(0,0,0,0.5);
+    }
+    .bld-cmp-handle-knob {
+      position:relative; background:#fff; border-radius:50%;
+      width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 8px rgba(0,0,0,0.4); color:#111; z-index:2;
+    }
+    .bld-cmp-label {
+      position:absolute; top:8px; background:rgba(0,0,0,0.7); color:#fff;
+      font-size:10px; padding:3px 7px; border-radius:4px; font-family:var(--font-mono);
+      pointer-events:none;
+    }
+    .bld-cmp-label--l { left:8px; }
+    .bld-cmp-label--r { right:8px; }
+
+    /* Compare toggle button */
+    .bld-cmp-toggle.is-active { background:var(--ps-blue-10); color:var(--ps-blue); border-color:var(--ps-blue); }
+    .bld-cmp-ref-row {
+      display:flex; background:var(--ps-bg-app);
+      border:1px solid var(--ps-border); border-radius:6px; overflow:hidden;
+    }
+    .bld-cmp-ref-btn {
+      padding:4px 10px; font-size:11px; color:var(--ps-text-muted); border:none;
+      background:transparent; cursor:pointer; font-family:var(--font-primary); transition:color 100ms, background 100ms;
+    }
+    .bld-cmp-ref-btn.is-active { background:var(--ps-blue); color:#fff; }
+    .bld-cmp-ref-btn:not(.is-active):hover { background:var(--ps-bg-hover); }
+
     /* Config panel */
-    .bld-config { width:260px; flex-shrink:0; border-right:1px solid var(--ps-border); overflow-y:auto; display:flex; flex-direction:column; }
+    .bld-config {
+      width:260px; flex-shrink:0; border-right:1px solid var(--ps-border);
+      overflow-y:auto; display:flex; flex-direction:column;
+      transition:width 200ms ease, border-color 200ms ease;
+      min-width:0;
+    }
+    .bld-config.is-collapsed { width:0; border-right-color:transparent; overflow:hidden; }
+    .bld-config-toggle.is-active { background:var(--ps-blue-10); color:var(--ps-blue); }
     .bld-cover-preview {
       height:90px; display:flex; align-items:flex-end; padding:10px 12px; flex-shrink:0;
       transition:background 300ms;

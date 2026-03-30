@@ -120,9 +120,23 @@ export async function render(container) {
             <button role="tab" aria-selected="true"  aria-controls="lib-panel-all"    id="lib-tab-all"    tabindex="0">All</button>
             <button role="tab" aria-selected="false" aria-controls="lib-panel-system" id="lib-tab-system" tabindex="-1">System</button>
             <button role="tab" aria-selected="false" aria-controls="lib-panel-user"   id="lib-tab-user"   tabindex="-1">My Recipes</button>
+            <button role="tab" aria-selected="false" aria-controls="lib-panel-recent" id="lib-tab-recent" tabindex="-1">Recent</button>
           </div>
         </div>
-        <span id="lib-count" class="text-sm text-muted" style="margin-left:auto;padding-right:4px;"></span>
+        <div class="flex items-center gap-2" style="margin-left:auto">
+          <select id="lib-sort" class="ic-input" style="width:auto;min-width:160px;font-size:12px;padding:5px 8px">
+            <option value="updated">Recently Updated</option>
+            <option value="name-asc">Name A–Z</option>
+            <option value="name-desc">Name Z–A</option>
+          </select>
+          <span id="lib-count" class="text-sm text-muted" style="padding-right:4px;white-space:nowrap"></span>
+        </div>
+      </div>
+
+      <div id="lib-tag-filter-row" class="lib-tag-filter-row" style="display:none">
+        <span class="text-xs text-muted" style="flex-shrink:0">Filter by tag:</span>
+        <div id="lib-tag-chips" class="lib-tag-chips"></div>
+        <button id="lib-tag-clear" class="btn-ghost" style="font-size:11px;padding:2px 8px;display:none">Clear</button>
       </div>
 
       <div class="lib-body overflow-y-auto flex-1">
@@ -135,6 +149,9 @@ export async function render(container) {
         <div id="lib-panel-user"   role="tabpanel" aria-labelledby="lib-tab-user"   hidden>
           <div id="lib-grid-user"   class="lib-grid"></div>
         </div>
+        <div id="lib-panel-recent" role="tabpanel" aria-labelledby="lib-tab-recent" hidden>
+          <div id="lib-grid-recent" class="lib-grid"></div>
+        </div>
       </div>
     </div>`;
 
@@ -143,10 +160,14 @@ export async function render(container) {
 
   // ── Load recipes ──────────────────────────────────────
   let recipes = await getAllRecipes();
-  recipes.sort((a, b) => {
-    if (a.isSystem !== b.isSystem) return a.isSystem ? -1 : 1; // system first
-    return (b.updatedAt || 0) - (a.updatedAt || 0);
-  });
+  let activeTags = new Set();
+  let sortBy     = 'updated';
+
+  function sortRecipes(list) {
+    if (sortBy === 'name-asc')  return [...list].sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === 'name-desc') return [...list].sort((a, b) => b.name.localeCompare(a.name));
+    return [...list].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  }
 
   // ── Render grids ──────────────────────────────────────
   function renderGrid(containerId, items) {
@@ -163,21 +184,68 @@ export async function render(container) {
     el.innerHTML = items.map(recipeCardHTML).join('');
   }
 
+  function renderTagChips() {
+    const allTags = [...new Set(recipes.flatMap(r => r.tags || []))].sort();
+    const row  = container.querySelector('#lib-tag-filter-row');
+    const chips = container.querySelector('#lib-tag-chips');
+    const clear = container.querySelector('#lib-tag-clear');
+    if (!row || !chips) return;
+    if (!allTags.length) { row.style.display = 'none'; return; }
+    row.style.display = 'flex';
+    chips.innerHTML = allTags.map(t =>
+      `<button class="lib-tag-chip ${activeTags.has(t) ? 'is-active' : ''}" data-tag="${t}">${t}</button>`
+    ).join('');
+    if (clear) clear.style.display = activeTags.size ? '' : 'none';
+    chips.querySelectorAll('.lib-tag-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.tag;
+        if (activeTags.has(t)) activeTags.delete(t); else activeTags.add(t);
+        renderTagChips();
+        applyFilter(container.querySelector('#lib-search')?.value || '');
+      });
+    });
+    clear?.addEventListener('click', () => {
+      activeTags.clear();
+      renderTagChips();
+      applyFilter(container.querySelector('#lib-search')?.value || '');
+    });
+  }
+
   function applyFilter(query = '') {
     const q = query.toLowerCase();
-    const filtered = q ? recipes.filter(r => r.name.toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q) || (r.tags || []).some(t => t.toLowerCase().includes(q))) : recipes;
+    let filtered = recipes.filter(r => {
+      if (q && !r.name.toLowerCase().includes(q) && !(r.description || '').toLowerCase().includes(q) && !(r.tags || []).some(t => t.toLowerCase().includes(q))) return false;
+      if (activeTags.size > 0 && ![...activeTags].some(t => (r.tags || []).includes(t))) return false;
+      return true;
+    });
+    filtered = sortRecipes(filtered);
+
     renderGrid('lib-grid-all',    filtered);
     renderGrid('lib-grid-system', filtered.filter(r =>  r.isSystem));
     renderGrid('lib-grid-user',   filtered.filter(r => !r.isSystem));
+
+    // Recent: recipes with lastUsedAt, sorted by most recent usage
+    const recent = [...recipes]
+      .filter(r => r.lastUsedAt)
+      .sort((a, b) => (b.lastUsedAt || 0) - (a.lastUsedAt || 0));
+    renderGrid('lib-grid-recent', recent);
+
     const count = container.querySelector('#lib-count');
     if (count) count.textContent = `${filtered.length} recipe${filtered.length !== 1 ? 's' : ''}`;
     bindCardActions();
   }
 
   applyFilter();
+  renderTagChips();
 
   // ── Tabs ──────────────────────────────────────────────
   initTabs(container);
+
+  // ── Sort ──────────────────────────────────────────────
+  container.querySelector('#lib-sort')?.addEventListener('change', e => {
+    sortBy = e.target.value;
+    applyFilter(container.querySelector('#lib-search')?.value || '');
+  });
 
   // ── Search ────────────────────────────────────────────
   container.querySelector('#lib-search')?.addEventListener('input', e => applyFilter(e.target.value));
@@ -239,8 +307,8 @@ export async function render(container) {
         
         // Refresh library
         recipes = await getAllRecipes();
-        recipes.sort((a, b) => a.isSystem !== b.isSystem ? (a.isSystem ? -1 : 1) : (b.updatedAt - a.updatedAt));
         applyFilter(container.querySelector('#lib-search')?.value || '');
+        renderTagChips();
         
         window.AuroraToast?.show({ 
           variant: 'success', 
@@ -261,8 +329,10 @@ export async function render(container) {
   // ── Card action binding ───────────────────────────────
   function bindCardActions() {
     container.querySelectorAll('.lib-action-use').forEach(btn => {
-      btn.addEventListener('click', e => {
+      btn.addEventListener('click', async e => {
         e.stopPropagation();
+        const recipe = recipes.find(r => r.id === btn.dataset.id);
+        if (recipe) { recipe.lastUsedAt = Date.now(); await saveRecipe(recipe); }
         navigate(`#set?recipe=${btn.dataset.id}`);
       });
     });
@@ -279,8 +349,8 @@ export async function render(container) {
         e.stopPropagation();
         const cloned = await cloneRecipe(btn.dataset.id);
         recipes = await getAllRecipes();
-        recipes.sort((a, b) => a.isSystem !== b.isSystem ? (a.isSystem ? -1 : 1) : (b.updatedAt - a.updatedAt));
         applyFilter(container.querySelector('#lib-search')?.value || '');
+        renderTagChips();
         window.AuroraToast?.show({ variant: 'success', title: `"${cloned.name}" cloned`, description: 'You can now edit it.' });
         navigate(`#bld?id=${cloned.id}`);
       });
@@ -310,6 +380,7 @@ export async function render(container) {
         await deleteRecipe(btn.dataset.id);
         recipes = recipes.filter(r => r.id !== btn.dataset.id);
         applyFilter(container.querySelector('#lib-search')?.value || '');
+        renderTagChips();
         window.AuroraToast?.show({ variant: 'success', title: 'Recipe deleted' });
       });
     });
@@ -363,6 +434,7 @@ function injectStyles() {
       border-bottom: 1px solid var(--ps-border);
       background: var(--ps-bg-surface);
       flex-shrink: 0;
+      gap: 8px;
     }
     .lib-tabs-row .tabs { flex: 1; border: none; background: transparent; }
     .lib-tabs-row [role="tablist"] { display: flex; gap: 0; border: none; }
@@ -375,6 +447,21 @@ function injectStyles() {
       color: var(--ps-blue); border-bottom-color: var(--ps-blue);
     }
     .lib-tabs-row [role="tab"]:hover { color: var(--ps-text); }
+
+    .lib-tag-filter-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 20px; border-bottom: 1px solid var(--ps-border);
+      background: var(--ps-bg-surface); flex-shrink: 0;
+    }
+    .lib-tag-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+    .lib-tag-chip {
+      padding: 3px 10px; font-size: 11px; border-radius: 12px;
+      border: 1px solid var(--ps-border); background: var(--ps-bg-raised);
+      color: var(--ps-text-muted); cursor: pointer; font-family: var(--font-primary);
+      transition: all 100ms;
+    }
+    .lib-tag-chip.is-active { background: var(--ps-blue); border-color: var(--ps-blue); color: #fff; }
+    .lib-tag-chip:not(.is-active):hover { border-color: var(--ps-blue); color: var(--ps-text); }
 
     .lib-body { flex: 1; overflow-y: auto; padding: 20px; }
 

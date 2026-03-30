@@ -23,6 +23,7 @@ export async function render(container, hash) {
   let currentRecipe  = null;
   let allRecipes     = [];
   let batchControl   = null;     // { cancel, runId }
+  let lastClickedIdx = -1;       // for shift+click range
 
   container.innerHTML = `
     <div class="screen set-screen">
@@ -153,19 +154,18 @@ export async function render(container, hash) {
     } catch (e) { if (e.name !== 'AbortError') console.error(e); }
   });
 
-  // ── Select all ────────────────────────────────────────
+  // ── Select all / none ────────────────────────────────
   container.querySelector('#btn-select-all').addEventListener('click', () => {
-    const allSelected = selectedIds.size === selectedFiles.length;
+    const allSelected = selectedIds.size === selectedFiles.length && selectedFiles.length > 0;
     selectedIds = allSelected ? new Set() : new Set(selectedFiles.map(f => f.name));
+    lastClickedIdx = -1;
     renderSelectionState();
   });
 
   // ── Run batch ─────────────────────────────────────────
   container.querySelector('#btn-run').addEventListener('click', async () => {
     if (!currentRecipe || !inputHandle || !outputHandle) return;
-    const files = selectedIds.size > 0
-      ? selectedFiles.filter(f => selectedIds.has(f.name))
-      : selectedFiles;
+    const files = selectedFiles.filter(f => selectedIds.has(f.name));
     if (!files.length) return;
 
     const subfolder = container.querySelector('#set-subfolder').value.trim() || 'output';
@@ -244,11 +244,22 @@ export async function render(container, hash) {
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     });
 
-    // Toggle selection
-    grid.querySelectorAll('.set-img-cell').forEach(cell => {
-      cell.addEventListener('click', () => {
+    // Selection — click, ctrl+click, shift+click
+    grid.querySelectorAll('.set-img-cell').forEach((cell, idx) => {
+      cell.addEventListener('click', e => {
         const name = cell.dataset.name;
-        if (selectedIds.has(name)) selectedIds.delete(name); else selectedIds.add(name);
+
+        if (e.shiftKey && lastClickedIdx !== -1) {
+          // Extend range from last click to here
+          const from = Math.min(lastClickedIdx, idx);
+          const to   = Math.max(lastClickedIdx, idx);
+          for (let i = from; i <= to; i++) selectedIds.add(selectedFiles[i].name);
+        } else {
+          // Plain click or ctrl+click: toggle this item
+          if (selectedIds.has(name)) selectedIds.delete(name); else selectedIds.add(name);
+          lastClickedIdx = idx;
+        }
+
         renderSelectionState();
       });
     });
@@ -268,14 +279,19 @@ export async function render(container, hash) {
     const c = container.querySelector('#set-sel-count');
     if (!c) return;
     const n = selectedIds.size;
-    c.textContent = n ? `${n} selected` : 'None selected';
+    const total = selectedFiles.length;
+    c.textContent = n ? `${n} / ${total} selected` : 'None selected';
     c.className = `ic-badge ${n ? 'ic-badge--blue' : ''}`;
+
+    // Update Select All button label
+    const selAllBtn = container.querySelector('#btn-select-all');
+    if (selAllBtn) selAllBtn.textContent = (n === total && total > 0) ? 'Select None' : 'Select All';
   }
 
   function updateRunButton() {
     const btn = container.querySelector('#btn-run');
     if (!btn) return;
-    const ready = currentRecipe && inputHandle && outputHandle && selectedFiles.length > 0;
+    const ready = currentRecipe && inputHandle && outputHandle && selectedIds.size > 0;
     btn.disabled = !ready;
   }
 
