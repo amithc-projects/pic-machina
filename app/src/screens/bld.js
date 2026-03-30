@@ -9,9 +9,10 @@
 import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave } from '../data/recipes.js';
 import { navigate } from '../main.js';
 import { uuid, now, deepClone } from '../utils/misc.js';
-import { registry } from '../engine/index.js';
+import { registry, ImageProcessor } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 import { showConfirm } from '../utils/dialogs.js';
+import { extractExif } from '../engine/exif-reader.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -241,7 +242,7 @@ export async function render(container, hash) {
           </div>
         </div>
 
-        <!-- Right: node list -->
+        <!-- Middle: node list -->
         <div class="bld-nodes-panel">
           <div class="bld-nodes-header">
             <span class="text-sm font-medium">Steps</span>
@@ -262,6 +263,29 @@ export async function render(container, hash) {
                  </div>`}
           </div>
         </div>
+
+        <!-- Right: inline preview -->
+        <div class="bld-inline-preview">
+          <div class="bld-inline-preview-header">
+            <span class="text-sm font-medium">Preview</span>
+            <label class="btn-secondary bld-upload-label" style="cursor:pointer">
+              <span class="material-symbols-outlined" style="font-size:14px">upload</span>
+              Image
+              <input type="file" id="bld-preview-file" accept="image/*" style="display:none">
+            </label>
+          </div>
+          <div id="bld-preview-area" class="bld-preview-area">
+            <div class="empty-state" style="padding:24px;text-align:center">
+              <span class="material-symbols-outlined" style="font-size:36px">image</span>
+              <div class="empty-state-title" style="font-size:12px">Upload a test image</div>
+              <div class="empty-state-desc" style="font-size:11px">Preview updates automatically.</div>
+            </div>
+          </div>
+          <div id="bld-preview-step-info" class="bld-preview-step-info" style="display:none">
+            <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">info</span>
+            <span id="bld-preview-step-label" class="text-xs text-muted"></span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -271,9 +295,101 @@ export async function render(container, hash) {
 
   const saveStatus = container.querySelector('#bld-save-status');
 
+  // ── Inline preview state ──────────────────────────────────
+  let bldTestFile     = null;
+  let bldPreviewNodeId = null;
+  let bldPreviewTimer  = null;
+
+  // Restore persisted test image
+  if (window._icTestImage?.file) {
+    bldTestFile = window._icTestImage.file;
+  }
+
+  function scheduleBldPreview(delay = 400) {
+    clearTimeout(bldPreviewTimer);
+    bldPreviewTimer = setTimeout(() => runBldPreview(), delay);
+  }
+
+  async function runBldPreview() {
+    if (!bldTestFile) return;
+    const previewArea = container.querySelector('#bld-preview-area');
+    if (!previewArea) return;
+
+    previewArea.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;padding:32px">
+      <div class="spinner"></div>
+      <div class="text-sm text-muted" style="margin-top:10px">Processing…</div>
+    </div>`;
+
+    try {
+      const url = URL.createObjectURL(bldTestFile);
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+
+      const exif    = await extractExif(bldTestFile);
+      const context = { filename: bldTestFile.name, exif, meta: {}, variables: new Map() };
+
+      const proc     = new ImageProcessor();
+      const finalUrl = await proc.previewDataUrl(img, draft.nodes, context, bldPreviewNodeId);
+
+      // Step label
+      const flat    = flattenNodes(draft.nodes);
+      const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
+      const label   = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
+
+      const stepInfo  = container.querySelector('#bld-preview-step-info');
+      const stepLabel = container.querySelector('#bld-preview-step-label');
+      if (stepInfo)  stepInfo.style.display = 'flex';
+      if (stepLabel) stepLabel.textContent   = bldPreviewNodeId ? `Up to: ${label}` : 'All steps applied';
+
+      previewArea.innerHTML = `
+        <div class="bld-preview-img-wrapper">
+          <img src="${finalUrl}" class="bld-preview-result-img" draggable="false">
+          <div class="bld-preview-img-badge${bldPreviewNodeId ? ' bld-preview-img-badge--blue' : ''}">
+            ${bldPreviewNodeId ? label : 'All Steps'}
+          </div>
+        </div>`;
+    } catch (err) {
+      console.error('[bld] Preview error:', err);
+      const previewArea2 = container.querySelector('#bld-preview-area');
+      if (previewArea2) previewArea2.innerHTML = `<div class="empty-state" style="padding:24px">
+        <span class="material-symbols-outlined">error</span>
+        <div class="empty-state-title" style="font-size:12px">Preview failed</div>
+        <div class="empty-state-desc" style="font-size:11px">${err.message}</div>
+      </div>`;
+    }
+  }
+
+  // File upload for inline preview
+  container.querySelector('#bld-preview-file')?.addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    bldTestFile = file;
+    window._icTestImage = { file };
+    runBldPreview();
+  });
+
+  // Drag & drop on preview area
+  const bldPreviewArea = container.querySelector('#bld-preview-area');
+  bldPreviewArea?.addEventListener('dragover', e => { e.preventDefault(); bldPreviewArea.classList.add('bld-preview-dragover'); });
+  bldPreviewArea?.addEventListener('dragleave', () => bldPreviewArea.classList.remove('bld-preview-dragover'));
+  bldPreviewArea?.addEventListener('drop', async e => {
+    e.preventDefault();
+    bldPreviewArea.classList.remove('bld-preview-dragover');
+    const file = e.dataTransfer?.files?.[0];
+    if (file?.type.startsWith('image/')) {
+      bldTestFile = file;
+      window._icTestImage = { file };
+      runBldPreview();
+    }
+  });
+
+  // Kick off preview if we already have a test image
+  if (bldTestFile) scheduleBldPreview(100);
+
   function markDirty() {
     if (saveStatus) saveStatus.textContent = 'Unsaved…';
     scheduleAutosave(draft, () => { if (saveStatus) saveStatus.textContent = 'Saved'; });
+    scheduleBldPreview();
   }
 
   function refreshNodeList() {
@@ -491,7 +607,7 @@ export async function render(container, hash) {
         const info = findNodeAndParent(draft.nodes, id);
         if (info) {
           info.parent.splice(info.index, 1);
-          if (selectedId === id) selectedId = null;
+          if (selectedId === id) { selectedId = null; bldPreviewNodeId = null; }
           refreshNodeList();
           markDirty();
         }
@@ -505,7 +621,9 @@ export async function render(container, hash) {
         if (e.target.closest('.bld-node-actions, .btn-icon')) return;
         const id = row.dataset.id;
         selectedId = (selectedId === id) ? null : id;
+        bldPreviewNodeId = selectedId;
         refreshNodeList();
+        scheduleBldPreview(0);
       });
 
       row.addEventListener('dblclick', () => {
@@ -598,9 +716,31 @@ function injectBldStyles() {
     .bld-color-swatch:hover { transform:scale(1.1); }
 
     /* Nodes panel */
-    .bld-nodes-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .bld-nodes-panel { width:340px; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--ps-border); }
     .bld-nodes-header { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--ps-border); flex-shrink:0; }
     .bld-node-list { flex:1; overflow-y:auto; padding:8px 0; }
+
+    /* Inline preview panel */
+    .bld-inline-preview { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+    .bld-inline-preview-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--ps-border); flex-shrink:0; }
+    .bld-upload-label { font-size:12px; padding:4px 10px; display:inline-flex; align-items:center; gap:5px; }
+    .bld-preview-area {
+      flex:1; overflow:auto; display:flex; align-items:center; justify-content:center;
+      background:repeating-conic-gradient(var(--ps-bg-surface) 0% 25%, var(--ps-bg-app) 0% 50%) 0 0/24px 24px;
+    }
+    .bld-preview-area.bld-preview-dragover { outline:2px dashed var(--ps-blue); outline-offset:-4px; }
+    .bld-preview-img-wrapper { position:relative; max-width:100%; max-height:100%; }
+    .bld-preview-result-img { display:block; max-width:100%; max-height:calc(100vh - 200px); object-fit:contain; }
+    .bld-preview-img-badge {
+      position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.7);
+      color:#fff; font-size:10px; padding:3px 7px; border-radius:4px; font-family:var(--font-mono);
+    }
+    .bld-preview-img-badge--blue { background:rgba(0,119,255,0.8); }
+    .bld-preview-step-info {
+      display:flex; align-items:center; gap:8px;
+      padding:8px 14px; border-top:1px solid var(--ps-border); flex-shrink:0;
+      background:var(--ps-bg-surface);
+    }
 
     .bld-node-row {
       display:flex; align-items:center; gap:8px; padding:8px 12px 8px 8px;

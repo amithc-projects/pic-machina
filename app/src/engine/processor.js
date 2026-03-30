@@ -210,6 +210,7 @@ export class ImageProcessor {
    */
   async _runBranchNode(node, ctx, context, results, targetNodeId) {
     const snapshot = snapshotCanvas(ctx.canvas);
+    let targetFoundInBranch = false;
 
     for (const branch of node.branches || []) {
       if (context._isFinished) break;
@@ -228,11 +229,21 @@ export class ImageProcessor {
       };
 
       await this._runNodes(branch.nodes || [], branchCtx, branchContext, results, targetNodeId);
-      if (branchContext._isFinished) { context._isFinished = true; break; }
+      if (branchContext._isFinished) {
+        // Target was inside this branch — promote its canvas to the main canvas for preview
+        ctx.canvas.width  = branchCtx.canvas.width;
+        ctx.canvas.height = branchCtx.canvas.height;
+        ctx.drawImage(branchCtx.canvas, 0, 0);
+        context._isFinished = true;
+        targetFoundInBranch = true;
+        break;
+      }
     }
 
-    // Restore original canvas state (branch nodes don't mutate the main path)
-    restoreSnapshot(ctx, snapshot);
+    // Restore original canvas state only when the target was NOT inside a branch
+    if (!targetFoundInBranch) {
+      restoreSnapshot(ctx, snapshot);
+    }
   }
 
   /** Conditional node: if condition is met run thenNodes, else elseNodes. */
