@@ -5,11 +5,12 @@
  * Users can browse, preview, create, or clone recipes.
  */
 
-import { getAllRecipes, deleteRecipe, cloneRecipe, saveRecipe } from '../data/recipes.js';
+import { getAllRecipes, deleteRecipe, cloneRecipe, saveRecipe, getRecipeBundle, saveRecipeBundle } from '../data/recipes.js';
 import { navigate } from '../main.js';
 import { formatDate, uuid, now } from '../utils/misc.js';
 import { initTabs } from '../aurora/tabs.js';
 import { countNodes } from '../utils/nodes.js';
+import { showConfirm } from '../utils/dialogs.js';
 
 // Category colours for cover gradients
 const COVER_GRADIENTS = {
@@ -56,8 +57,11 @@ function recipeCardHTML(recipe) {
               : `<button class="btn-icon lib-action-edit" data-id="${recipe.id}" title="Edit recipe">
                    <span class="material-symbols-outlined">edit</span>
                  </button>
+                 <button class="btn-icon lib-action-export" data-id="${recipe.id}" title="Export to JSON">
+                   <span class="material-symbols-outlined">download</span>
+                 </button>
                  <button class="btn-icon lib-action-delete" data-id="${recipe.id}" title="Delete recipe">
-                   <span class="material-symbols-outlined">delete</span>
+                   <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
                  </button>`
             }
           </div>
@@ -99,6 +103,10 @@ export async function render(container) {
             <span class="material-symbols-outlined" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--ps-text-faint);pointer-events:none">search</span>
             <input id="lib-search" class="ic-input" placeholder="Search recipes…" style="padding-left:32px;width:220px;" autocomplete="off">
           </div>
+          <button class="btn-secondary" id="btn-import-recipe">
+            <span class="material-symbols-outlined">upload</span>
+            Import JSON
+          </button>
           <button class="btn-primary" id="btn-new-recipe">
             <span class="material-symbols-outlined">add</span>
             New Recipe
@@ -191,6 +199,65 @@ export async function render(container) {
     navigate(`#bld?id=${recipe.id}`);
   });
 
+  // ── Import recipe ─────────────────────────────────────
+  container.querySelector('#btn-import-recipe')?.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.json';
+    inp.onchange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        
+        // Validation check
+        if (data.type !== 'PicMachinaRecipeBundle') {
+          throw new Error('This file does not appear to be a PicMachina recipe bundle.');
+        }
+
+        // Before saving, see if recipe ID already exists
+        const existing = await getAllRecipes();
+        const exists   = existing.find(r => r.id === data.recipe.id);
+        if (exists) {
+          const overwrite = await showConfirm({
+            title: 'Recipe Already Exists',
+            body: `A recipe named "${exists.name}" already exists. Do you want to overwrite it?`,
+            confirmText: 'Overwrite',
+            cancelText: 'Keep Both',
+            variant: 'warning',
+            icon: 'warning'
+          });
+
+          if (!overwrite) {
+            // Rename to avoid collision
+            data.recipe.id = uuid();
+            data.recipe.name = `${data.recipe.name} (Imported)`;
+          }
+        }
+
+        await saveRecipeBundle(data);
+        
+        // Refresh library
+        recipes = await getAllRecipes();
+        recipes.sort((a, b) => a.isSystem !== b.isSystem ? (a.isSystem ? -1 : 1) : (b.updatedAt - a.updatedAt));
+        applyFilter(container.querySelector('#lib-search')?.value || '');
+        
+        window.AuroraToast?.show({ 
+          variant: 'success', 
+          title: 'Recipe imported', 
+          description: `Successfully loaded "${data.recipe.name}".` 
+        });
+      } catch (err) {
+        window.AuroraToast?.show({ 
+          variant: 'danger', 
+          title: 'Import failed', 
+          description: err.message 
+        });
+      }
+    };
+    inp.click();
+  });
+
   // ── Card action binding ───────────────────────────────
   function bindCardActions() {
     container.querySelectorAll('.lib-action-use').forEach(btn => {
@@ -229,11 +296,41 @@ export async function render(container) {
     container.querySelectorAll('.lib-action-delete').forEach(btn => {
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        if (!confirm('Delete this recipe? This cannot be undone.')) return;
+        
+        const confirmed = await showConfirm({
+          title: 'Delete Recipe?',
+          body: 'This will permanently delete this recipe from your library. This action cannot be undone.',
+          confirmText: 'Delete',
+          variant: 'danger',
+          icon: 'delete_forever'
+        });
+
+        if (!confirmed) return;
+
         await deleteRecipe(btn.dataset.id);
         recipes = recipes.filter(r => r.id !== btn.dataset.id);
         applyFilter(container.querySelector('#lib-search')?.value || '');
         window.AuroraToast?.show({ variant: 'success', title: 'Recipe deleted' });
+      });
+    });
+
+    container.querySelectorAll('.lib-action-export').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        try {
+          const bundle = await getRecipeBundle(btn.dataset.id);
+          const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${bundle.recipe.name.replace(/[^a-z0-9]/gi, '_')}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          window.AuroraToast?.show({ variant: 'success', title: 'Recipe exported', description: 'JSON file downloaded.' });
+        } catch (err) {
+          console.error(err);
+          window.AuroraToast?.show({ variant: 'danger', title: 'Export failed' });
+        }
       });
     });
 

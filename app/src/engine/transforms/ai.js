@@ -92,28 +92,90 @@ registry.register({
   icon: 'layers_clear',
   description: 'AI-powered background removal.',
   params: [
+    { name: 'mode', label: 'Mode', type: 'select',
+      options: [{ label: 'Transparent BG', value: 'Transparent' }, { label: 'Silhouette (Black Subject)', value: 'Silhouette' }],
+      defaultValue: 'Transparent' },
     { name: 'edgeSmoothing', label: 'Edge Smoothing (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
   ],
   async apply(ctx, p) {
     try {
-      const { removeBackground } = await import('@imgly/background-removal');
-      // Convert canvas to blob
-      const blob = await new Promise(res => ctx.canvas.toBlob(res, 'image/png'));
-      const resultBlob = await removeBackground(blob);
-      const url = URL.createObjectURL(resultBlob);
-      await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-          ctx.drawImage(img, 0, 0);
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(); };
-        img.src = url;
+      const { ImageSegmenter, FilesetResolver } = await import('@mediapipe/tasks-vision');
+      const vision = await FilesetResolver.forVisionTasks(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
+      );
+      
+      const segmenter = await ImageSegmenter.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
+          delegate: 'CPU'
+        },
+        runningMode: 'IMAGE',
+        outputConfidenceMasks: true,
+        outputCategoryMask: false
       });
+
+      const result = segmenter.segment(ctx.canvas);
+      const mask = result.confidenceMasks[0].getAsFloat32Array();
+      const { width, height } = result.confidenceMasks[0];
+
+      const mode = p.mode || 'Transparent';
+      const smoothing = (p.edgeSmoothing || 50) / 100;
+      
+      // We'll work on a temporary buffer to avoid mid-drawing artifacts
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+
+      for (let i = 0; i < mask.length; i++) {
+        const conf = mask[i]; // 0.0 (bg) to 1.0 (subject)
+        
+        if (mode === 'Transparent') {
+          // Adjust alpha based on confidence
+          // We can apply a threshold or a smooth ramp
+          const alpha = conf < (0.5 - smoothing * 0.4) ? 0 : 
+                        conf > (0.5 + smoothing * 0.4) ? 255 :
+                        Math.round(((conf - (0.5 - smoothing * 0.4)) / (smoothing * 0.8)) * 255);
+          data[i * 4 + 3] = alpha;
+        } else if (mode === 'Silhouette') {
+          // Keep original pixels, but if it's the subject, make it black
+          if (conf > 0.5) {
+            data[i * 4] = 0;
+            data[i * 4 + 1] = 0;
+            data[i * 4 + 2] = 0;
+            // Optionally apply smoothing to the silhouette edge
+            if (conf < (0.5 + smoothing * 0.2)) {
+               const mix = (conf - 0.5) / (smoothing * 0.2);
+               data[i*4] = Math.round(data[i*4] * mix);
+               data[i*4+1] = Math.round(data[i*4+1] * mix);
+               data[i*4+2] = Math.round(data[i*4+2] * mix);
+            }
+          }
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      segmenter.close();
     } catch (err) {
       console.warn('[ai-remove-bg] failed:', err);
+    }
+  }
+});
+
+// ─── Silhouette ───────────────────────────────────────────
+registry.register({
+  id: 'ai-silhouette', name: 'Silhouette', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'person_off',
+  description: 'Black out subjects while keeping background.',
+  params: [
+    { name: 'color', label: 'Color', type: 'color', defaultValue: '#000000' },
+    { name: 'opacity', label: 'Opacity', type: 'range', min: 0, max: 100, defaultValue: 100 },
+  ],
+  async apply(ctx, p) {
+    // Re-use remove-bg logic but forced to Silhouette mode
+    const node = registry.get('ai-remove-bg');
+    await node.apply(ctx, { mode: 'Silhouette', edgeSmoothing: 20 });
+    
+    if (p.color !== '#000000') {
+       // Optional: tint the silhouette if needed, but for now simple black is requested
     }
   }
 });

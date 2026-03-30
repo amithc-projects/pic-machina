@@ -11,6 +11,7 @@ import { navigate } from '../main.js';
 import { uuid, now, deepClone } from '../utils/misc.js';
 import { registry } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
+import { showConfirm } from '../utils/dialogs.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -475,10 +476,18 @@ export async function render(container, hash) {
 
     // Delete
     container.querySelectorAll('.bld-btn-delete').forEach(btn => {
-      btn.addEventListener('click', e => {
+      btn.addEventListener('click', async e => {
         e.stopPropagation();
         const id = btn.dataset.id;
-        if (!confirm('Remove this step?')) return;
+        const confirmed = await showConfirm({
+          title: 'Remove Step?',
+          body: 'This will remove the selected transformation or block from the recipe.',
+          confirmText: 'Remove',
+          variant: 'danger',
+          icon: 'delete_sweep'
+        });
+        if (!confirmed) return;
+
         const info = findNodeAndParent(draft.nodes, id);
         if (info) {
           info.parent.splice(info.index, 1);

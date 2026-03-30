@@ -84,3 +84,58 @@ export function flushAutosave(recipe) {
   clearTimeout(_autosaveTimer);
   return saveRecipe(recipe);
 }
+
+// ─── Bundling (Export/Import) ───────────────────────────
+
+/**
+ * Creates a self-contained bundle for a recipe, including all nested blocks.
+ */
+export async function getRecipeBundle(recipeId) {
+  const recipe = await getRecipe(recipeId);
+  if (!recipe) return null;
+
+  const blockIds = new Set();
+  const collectBlocks = (nodes) => {
+    if (!nodes) return;
+    nodes.forEach(n => {
+      if (n.type === 'block-ref' && n.blockId) blockIds.add(n.blockId);
+      if (n.branches) n.branches.forEach(b => collectBlocks(b.nodes));
+      if (n.thenNodes) collectBlocks(n.thenNodes);
+      if (n.elseNodes) collectBlocks(n.elseNodes);
+    });
+  };
+  collectBlocks(recipe.nodes);
+
+  const { getBlock } = await import('./blocks.js');
+  const blocks = {};
+  for (const id of blockIds) {
+    const b = await getBlock(id);
+    if (b) blocks[id] = b;
+  }
+
+  return {
+    type: 'PicMachinaRecipeBundle',
+    version: 1,
+    recipe,
+    blocks
+  };
+}
+
+/**
+ * Imports a recipe bundle, saving blocks first then the recipe.
+ */
+export async function saveRecipeBundle(bundle) {
+  if (bundle.type !== 'PicMachinaRecipeBundle') throw new Error('Invalid recipe bundle format');
+
+  const { saveBlock } = await import('./blocks.js');
+
+  // Save blocks first
+  if (bundle.blocks) {
+    for (const id in bundle.blocks) {
+      await saveBlock(bundle.blocks[id]);
+    }
+  }
+
+  // Save recipe
+  return saveRecipe(bundle.recipe);
+}

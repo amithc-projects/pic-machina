@@ -10,6 +10,7 @@ import { getFolder, listImages,
          getOrCreateOutputSubfolder }          from '../data/folders.js';
 import { navigate }                            from '../main.js';
 import { formatDateTime, formatBytes }         from '../utils/misc.js';
+import { showConfirm }                         from '../utils/dialogs.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -538,7 +539,14 @@ export async function render(container, hash) {
     container.querySelectorAll('.out-btn-delete').forEach(btn => {
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        if (!confirm('Delete this run record?')) return;
+        const confirmed = await showConfirm({
+          title: 'Delete Run Record?',
+          body: 'This will remove the execution record and its history. This action cannot be undone.',
+          confirmText: 'Delete',
+          variant: 'danger',
+          icon: 'delete_forever'
+        });
+        if (!confirmed) return;
         await deleteRun(btn.dataset.id);
         await loadRuns();
       });
@@ -549,7 +557,14 @@ export async function render(container, hash) {
   container.querySelector('#out-btn-clear-all')?.addEventListener('click', async () => {
     const runs = await getAllRuns();
     if (!runs.length) return;
-    if (!confirm(`Delete all ${runs.length} run record${runs.length !== 1 ? 's' : ''}?`)) return;
+    const confirmed = await showConfirm({
+      title: 'Clear All History?',
+      body: `Are you sure you want to delete all ${runs.length} execution records? This cannot be undone.`,
+      confirmText: 'Clear All',
+      variant: 'danger',
+      icon: 'delete_sweep'
+    });
+    if (!confirmed) return;
     await Promise.all(runs.map(r => deleteRun(r.id)));
     window.AuroraToast?.show({ variant: 'success', title: 'All run records cleared' });
     await loadRuns();

@@ -251,10 +251,12 @@ registry.register({
     { name: 'confidence', label: 'Min confidence (%)',  type: 'range',  min: 10, max: 90, defaultValue: 30 },
   ],
   async apply(ctx, p, context) {
-    const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision');
+    const { FaceDetector, PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
     const vision = await FilesetResolver.forVisionTasks(
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
     );
+    
+    // 1. Try Face Detector
     const detector = await FaceDetector.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
@@ -266,10 +268,35 @@ registry.register({
     const result = detector.detect(ctx.canvas);
     detector.close();
 
-    const faces = result.detections;
-    if (!faces.length) throw new Error('No faces detected in the image.');
-    const fi = Math.min(p.faceIndex || 0, faces.length - 1);
-    const bb = faces[fi].boundingBox;
+    let bb = null;
+
+    if (result.detections.length > 0) {
+      const fi = Math.min(p.faceIndex || 0, result.detections.length - 1);
+      bb = result.detections[fi].boundingBox;
+    } else {
+      // 2. Fallback to Pose Detection
+      const pose = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
+          delegate: 'CPU',
+        },
+        runningMode: 'IMAGE'
+      });
+      const poseResult = pose.detect(ctx.canvas);
+      pose.close();
+
+      if (poseResult.landmarks && poseResult.landmarks.length > 0) {
+        // Use landmarks 0-10 (nose, eyes, ears) for head bounding box
+        const headPoints = poseResult.landmarks[0].slice(0, 11);
+        const xs = headPoints.map(l => l.x * ctx.canvas.width);
+        const ys = headPoints.map(l => l.y * ctx.canvas.height);
+        const xmin = Math.min(...xs), xmax = Math.max(...xs);
+        const ymin = Math.min(...ys), ymax = Math.max(...ys);
+        bb = { originX: xmin, originY: ymin, width: xmax - xmin, height: ymax - ymin };
+      }
+    }
+
+    if (!bb) throw new Error('No faces or people detected in the image.');
 
     const W = ctx.canvas.width, H = ctx.canvas.height;
     const padX = bb.width  * (p.padding || 20) / 100;
@@ -284,5 +311,126 @@ registry.register({
     tmp.getContext('2d').drawImage(ctx.canvas, cx, cy, cw, ch, 0, 0, cw, ch);
     ctx.canvas.width = cw; ctx.canvas.height = ch;
     ctx.drawImage(tmp, 0, 0);
+  }
+});
+
+// ─── Body Crop ─────────────────────────────────────────────
+registry.register({
+  id: 'geo-body-crop', name: 'Body Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'accessibility_new',
+  description: 'Logic-based framing for full body or portraits using Pose detection.',
+  params: [
+    { name: 'mode', label: 'Mode', type: 'select',
+      options: [{ label: 'Full Body', value: 'Full' }, { label: 'Head and Shoulders', value: 'Portrait' }],
+      defaultValue: 'Full' },
+    { name: 'padding', label: 'Padding (%)', type: 'range', min: 0, max: 100, defaultValue: 15 },
+  ],
+  async apply(ctx, p) {
+    const { PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
+    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
+    const pose = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task' },
+      runningMode: 'IMAGE'
+    });
+    const result = pose.detect(ctx.canvas);
+    pose.close();
+
+    if (!result.landmarks?.length) throw new Error('No people detected.');
+    const lm = result.landmarks[0];
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const pad = (p.padding || 15) / 100;
+
+    let cx, cy, cw, ch;
+
+    if (p.mode === 'Portrait') {
+      // Head and Shoulders logic:
+      // Width is 2x shoulder distance
+      // Top is Nose - offset, Bottom is Chest level
+      const nose = lm[0], sl = lm[11], sr = lm[12];
+      const sDist = Math.abs(sl.x - sr.x) * W;
+      cw = sDist * 2.2;
+      ch = cw * 1.25; // 4:5 aspect roughly
+      cx = (nose.x * W) - (cw / 2);
+      cy = (nose.y * H) - (ch * 0.4);
+    } else {
+      // Full Body logic: Bounding box of all landmarks
+      const xs = lm.map(l => l.x * W), ys = lm.map(l => l.y * H);
+      const xmin = Math.min(...xs), xmax = Math.max(...xs);
+      const ymin = Math.min(...ys), ymax = Math.max(...ys);
+      const bw = xmax - xmin, bh = ymax - ymin;
+      cw = bw * (1 + pad * 2);
+      ch = bh * (1 + pad * 2);
+      cx = xmin - (bw * pad);
+      cy = ymin - (bh * pad);
+    }
+
+    cx = Math.max(0, cx); cy = Math.max(0, cy);
+    cw = Math.min(W - cx, cw); ch = Math.min(H - cy, ch);
+
+    const tmp = document.createElement('canvas');
+    tmp.width = cw; tmp.height = ch;
+    tmp.getContext('2d').drawImage(ctx.canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+    ctx.canvas.width = cw; ctx.canvas.height = ch;
+    ctx.drawImage(tmp, 0, 0);
+  }
+});
+
+// ─── Face Align ────────────────────────────────────────────
+registry.register({
+  id: 'geo-face-align', name: 'Face Align', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'face_retouching_natural',
+  description: 'Normalize face position by leveling eyes and centering on nose.',
+  params: [
+    { name: 'eyeLevel',   label: 'Horizontalize Eyes', type: 'boolean', defaultValue: true },
+    { name: 'centerNose', label: 'Center on Nose',    type: 'boolean', defaultValue: true },
+    { name: 'targetScale',label: 'Face Scale (%)',     type: 'range',   min: 10, max: 200, defaultValue: 100 },
+  ],
+  async apply(ctx, p) {
+    const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
+    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
+    const fl = await FaceLandmarker.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task' },
+      runningMode: 'IMAGE', outputFaceBlendshapes: false, outputFacialTransformationMatrixes: false
+    });
+    const result = fl.detect(ctx.canvas);
+    fl.close();
+
+    if (!result.faceLandmarks?.length) throw new Error('No faces detected.');
+    const lm = result.faceLandmarks[0];
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+
+    // Landmarks 468/473 are irises (requires iris model, but we use geometric centers of eyes)
+    // Left eye center: avg of 33, 133, 159, 145
+    const le = { 
+      x: (lm[33].x + lm[133].x + lm[159].x + lm[145].x) / 4,
+      y: (lm[33].y + lm[133].y + lm[159].y + lm[145].y) / 4
+    };
+    const re = {
+      x: (lm[362].x + lm[263].x + lm[386].x + lm[374].x) / 4,
+      y: (lm[362].y + lm[263].y + lm[386].y + lm[374].y) / 4
+    };
+    const nose = lm[4]; // nose tip
+
+    const tmp = tempCopy(ctx.canvas);
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    
+    let tx = W/2, ty = H/2;
+    if (p.centerNose) {
+      tx = nose.x * W; ty = nose.y * H;
+    }
+
+    ctx.translate(W/2, H/2);
+
+    if (p.eyeLevel) {
+      const angle = Math.atan2((re.y - le.y) * H, (re.x - le.x) * W);
+      ctx.rotate(-angle);
+    }
+
+    const scale = (p.targetScale || 100) / 100;
+    if (scale !== 1) ctx.scale(scale, scale);
+
+    ctx.drawImage(tmp, -(tx), -(ty));
+    ctx.restore();
   }
 });

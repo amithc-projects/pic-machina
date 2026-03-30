@@ -14,6 +14,7 @@ import { navigate }                                  from '../main.js';
 import { formatBytes }                               from '../utils/misc.js';
 import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }                     from '../utils/image-info.js';
+import { showConfirm }                               from '../utils/dialogs.js';
 
 const IMAGE_EXTS = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS = new Set(['.mp4','.mov','.webm']);
@@ -116,6 +117,11 @@ export async function render(container, hash) {
             <span class="material-symbols-outlined">view_list</span>
           </button>
         </div>
+
+        <button class="btn-secondary btn-sm" id="fld-btn-slideshow" title="Play Slideshow" style="margin-left:8px">
+          <span class="material-symbols-outlined" style="font-size:18px">play_circle</span>
+          Slideshow
+        </button>
         <div class="fld-sort-row">
           <select id="fld-sort" class="ic-input" style="font-size:12px;padding:5px 8px;height:32px">
             <option value="name">Name</option>
@@ -166,6 +172,10 @@ export async function render(container, hash) {
   let lastIdx    = -1;   // for shift-select
   let cmpMode    = localStorage.getItem('ic-cmp-mode') || 'slider';
   let blobUrls   = [];   // track for cleanup
+  let slideshowTimer = null;
+  let slideshowIdx   = 0;
+  let slideshowSpeed = 3000;
+  let slideshowIsPlaying = false;
 
   function revokeBlobUrls() {
     blobUrls.forEach(url => URL.revokeObjectURL(url));
@@ -208,6 +218,15 @@ export async function render(container, hash) {
   });
 
   container.querySelector('#fld-btn-delete-sel')?.addEventListener('click', deleteSelected);
+
+  container.querySelector('#fld-btn-slideshow')?.addEventListener('click', () => {
+    const images = filtered.filter(ent => fileType(ent.file.name) === 'image');
+    if (!images.length) {
+      window.AuroraToast?.show({ variant: 'warning', title: 'No images to show' });
+      return;
+    }
+    startSlideshow(images);
+  });
 
   // ── Load files ──────────────────────────────────────────────
   try {
@@ -337,7 +356,13 @@ export async function render(container, hash) {
     const names = Array.from(selectedSet);
     if (!names.length) return;
 
-    const confirmed = await showDeletePrompt(names.length);
+    const confirmed = await showConfirm({
+      title: `Delete ${names.length} Item${names.length !== 1 ? 's' : ''}?`,
+      body: 'This will permanently remove these files from your computer. This action cannot be undone.',
+      confirmText: 'Delete Forever',
+      variant: 'danger',
+      icon: 'delete_forever'
+    });
     if (!confirmed) return;
 
     try {
@@ -377,33 +402,6 @@ export async function render(container, hash) {
         });
       }
     }
-  }
-
-  function showDeletePrompt(count) {
-    return new Promise(res => {
-      const dialog = document.createElement('dialog');
-      dialog.className = 'fld-modal';
-      dialog.innerHTML = `
-        <div class="fld-modal-content">
-          <div class="fld-modal-icon fld-modal-icon--danger">
-            <span class="material-symbols-outlined">delete_forever</span>
-          </div>
-          <div class="fld-modal-title">Delete ${count} item${count !== 1 ? 's' : ''}?</div>
-          <div class="fld-modal-body">
-            This will permanently remove these files from your computer. This action cannot be undone.
-          </div>
-          <div class="fld-modal-footer">
-            <button class="btn-secondary" id="fld-delete-cancel">Cancel</button>
-            <button class="btn-danger" id="fld-delete-confirm">Delete</button>
-          </div>
-        </div>`;
-      document.body.appendChild(dialog);
-      dialog.showModal();
-
-      dialog.querySelector('#fld-delete-cancel').onclick = () => { dialog.close(); res(false); dialog.remove(); };
-      dialog.querySelector('#fld-delete-confirm').onclick = () => { dialog.close(); res(true); dialog.remove(); };
-      dialog.addEventListener('cancel', () => { res(false); dialog.remove(); });
-    });
   }
 
   function updateSelectionUI() {
@@ -797,7 +795,105 @@ export async function render(container, hash) {
     blobUrls = [];
   }
 
-  return () => revokeBlobUrls();
+  // ── Slideshow ──────────────────────────────────────────────
+  function startSlideshow(images) {
+    slideshowIdx = 0;
+    slideshowIsPlaying = true;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'fld-ss-overlay';
+    overlay.innerHTML = `
+      <div class="fld-ss-header">
+        <div class="fld-ss-title">Slideshow</div>
+        <div class="fld-ss-counter">1 / ${images.length}</div>
+        <div style="flex:1"></div>
+        <div class="fld-ss-controls">
+          <button class="fld-ss-btn" id="fld-ss-prev" title="Previous (Left Arrow)">
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button class="fld-ss-btn" id="fld-ss-play" title="Play/Pause (Space)">
+            <span class="material-symbols-outlined" id="fld-ss-play-icon">pause</span>
+          </button>
+          <button class="fld-ss-btn" id="fld-ss-next" title="Next (Right Arrow)">
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+          <div class="fld-ss-sep"></div>
+          <select class="fld-ss-speed" id="fld-ss-speed">
+            <option value="2000">2s</option>
+            <option value="3000" selected>3s</option>
+            <option value="5000">5s</option>
+            <option value="10000">10s</option>
+          </select>
+        </div>
+        <button class="fld-ss-close" id="fld-ss-close" title="Close (Esc)">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="fld-ss-main" id="fld-ss-main"></div>
+    `;
+    document.body.appendChild(overlay);
+
+    const main    = overlay.querySelector('#fld-ss-main');
+    const counter = overlay.querySelector('.fld-ss-counter');
+    const playIcon = overlay.querySelector('#fld-ss-play-icon');
+
+    function showItem(idx) {
+      slideshowIdx = (idx + images.length) % images.length;
+      const ent = images[slideshowIdx];
+      const url = URL.createObjectURL(ent.file);
+      main.innerHTML = `<img src="${url}" class="fld-ss-img">`;
+      counter.textContent = `${slideshowIdx + 1} / ${images.length}`;
+      
+      // Auto-revoke after some time or on next show
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+
+    function togglePlay() {
+      slideshowIsPlaying = !slideshowIsPlaying;
+      playIcon.textContent = slideshowIsPlaying ? 'pause' : 'play_arrow';
+      if (slideshowIsPlaying) startTimer();
+      else stopTimer();
+    }
+
+    function startTimer() {
+      stopTimer();
+      slideshowTimer = setInterval(() => {
+        showItem(slideshowIdx + 1);
+      }, slideshowSpeed);
+    }
+
+    function stopTimer() {
+      clearInterval(slideshowTimer);
+    }
+
+    function close() {
+      stopTimer();
+      overlay.remove();
+      document.removeEventListener('keydown', handleKey);
+    }
+
+    function handleKey(e) {
+      if (e.key === 'Escape') close();
+      if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+      if (e.key === 'ArrowLeft') { showItem(slideshowIdx - 1); if (slideshowIsPlaying) startTimer(); }
+      if (e.key === 'ArrowRight') { showItem(slideshowIdx + 1); if (slideshowIsPlaying) startTimer(); }
+    }
+
+    overlay.querySelector('#fld-ss-prev').onclick = () => { showItem(slideshowIdx - 1); if (slideshowIsPlaying) startTimer(); };
+    overlay.querySelector('#fld-ss-next').onclick = () => { showItem(slideshowIdx + 1); if (slideshowIsPlaying) startTimer(); };
+    overlay.querySelector('#fld-ss-play').onclick = togglePlay;
+    overlay.querySelector('#fld-ss-close').onclick = close;
+    overlay.querySelector('#fld-ss-speed').onchange = (e) => {
+      slideshowSpeed = parseInt(e.target.value);
+      if (slideshowIsPlaying) startTimer();
+    };
+
+    document.addEventListener('keydown', handleKey);
+    showItem(0);
+    if (slideshowIsPlaying) startTimer();
+  }
+
+  return () => { revokeBlobUrls(); clearInterval(slideshowTimer); };
 }
 
 // ── Styles ──────────────────────────────────────────────────
@@ -898,6 +994,44 @@ function injectFldStyles() {
     .fld-list-table { width:100%; border-collapse:collapse; }
     .fld-list-th { padding:8px 12px; text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ps-text-faint); border-bottom:1px solid var(--ps-border); position:sticky; top:0; background:var(--ps-bg-surface); z-index:2; }
     .fld-list-row { cursor:pointer; transition:background 80ms; border-bottom:1px solid var(--ps-border); }
+
+    /* Slideshow Overlay */
+    .fld-ss-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:9999;
+      display:flex; flex-direction:column; color:#fff; font-family:var(--font-primary);
+      backdrop-filter:blur(10px);
+    }
+    .fld-ss-header {
+      display:flex; align-items:center; padding:12px 20px; background:rgba(20,20,20,0.8);
+      border-bottom:1px solid rgba(255,255,255,0.1);
+    }
+    .fld-ss-title { font-weight:600; font-size:14px; margin-right:15px; color:var(--ps-blue); }
+    .fld-ss-counter { font-family:var(--font-mono); font-size:12px; color:rgba(255,255,255,0.5); }
+    .fld-ss-controls { display:flex; align-items:center; gap:10px; }
+    .fld-ss-btn {
+      background:transparent; border:none; color:#fff; cursor:pointer;
+      width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+      border-radius:50%; transition:background 150ms;
+    }
+    .fld-ss-btn:hover { background:rgba(255,255,255,0.1); }
+    .fld-ss-btn .material-symbols-outlined { font-size:24px; }
+    .fld-ss-sep { width:1px; height:20px; background:rgba(255,255,255,0.15); margin:0 5px; }
+    .fld-ss-speed {
+      background:transparent; border:1px solid rgba(255,255,255,0.2); color:#fff;
+      font-size:11px; border-radius:5px; padding:2px 4px; outline:none;
+    }
+    .fld-ss-speed option { background:#222; }
+    .fld-ss-close {
+      background:transparent; border:none; color:rgba(255,255,255,0.6); cursor:pointer;
+      margin-left:20px; transition:color 150ms;
+    }
+    .fld-ss-close:hover { color:#fff; }
+    .fld-ss-main { flex:1; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+    .fld-ss-img { max-width:100%; max-height:100%; object-fit:contain; animation:ss-fade 400ms ease-out; }
+    @keyframes ss-fade {
+      from { opacity:0; transform:scale(0.98); }
+      to { opacity:1; transform:scale(1); }
+    }
     .fld-list-row:hover { background:var(--ps-bg-hover); }
     .fld-list-row.is-selected { background:rgba(0,119,255,0.07); }
     .fld-list-td { padding:6px 12px; vertical-align:middle; }

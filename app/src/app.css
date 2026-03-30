@@ -497,3 +497,72 @@
 .text-xs    { font-size: 11px; }
 .font-mono  { font-family: var(--font-mono); }
 .truncate   { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ─── Aurora Dialogs ────────────────────────────────────── */
+.ic-dialog {
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: var(--ps-bg-surface);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--ps-border);
+  max-width: 400px;
+  width: calc(100% - 40px);
+  color: var(--ps-text);
+  overflow: hidden;
+  animation: ic-dialog-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes ic-dialog-in {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ic-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.ic-dialog__content {
+  padding: 30px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  text-align: center;
+}
+
+.ic-dialog__icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.ic-dialog--danger .ic-dialog__icon-wrap { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.ic-dialog--warning .ic-dialog__icon-wrap { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.ic-dialog--primary .ic-dialog__icon-wrap { background: rgba(0, 119, 255, 0.1); color: #0077ff; }
+
+.ic-dialog__icon { font-size: 36px; }
+
+.ic-dialog__title { font-size: 19px; font-weight: 600; margin: 0; color: var(--ps-text); }
+.ic-dialog__body { font-size: 14px; color: var(--ps-text-muted); line-height: 1.6; margin: 0; padding: 0 10px; }
+
+.ic-dialog__actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: stretch;
+  margin-top: 12px;
+}
+
+.ic-dialog__actions button {
+  flex: 1;
+  justify-content: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+}

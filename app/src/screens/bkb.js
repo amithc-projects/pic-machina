@@ -9,6 +9,7 @@
 import { getAllBlocks, getBlock, saveBlock, deleteBlock, cloneBlock } from '../data/blocks.js';
 import { navigate } from '../main.js';
 import { uuid, now, deepClone, formatDate } from '../utils/misc.js';
+import { showConfirm } from '../utils/dialogs.js';
 import { registry } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 
@@ -69,7 +70,14 @@ async function renderList(container) {
   container.querySelectorAll('.bkb-card-delete').forEach(btn => {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
-      if (!confirm('Delete this block? It will be removed from any recipes that reference it.')) return;
+      const confirmed = await showConfirm({
+        title: 'Delete Block?',
+        body: 'This will permanently remove this reusable block. It will be removed from any recipes that currently reference it.',
+        confirmText: 'Delete',
+        variant: 'danger',
+        icon: 'delete_forever'
+      });
+      if (!confirmed) return;
       await deleteBlock(btn.dataset.id);
       window.AuroraToast?.show({ variant: 'success', title: 'Block deleted' });
       renderList(container); // re-render
@@ -251,10 +259,17 @@ async function renderEditor(container, blockId) {
 
   function bindNodeActions() {
     container.querySelectorAll('.bkb-del-node').forEach(btn => {
-      btn.addEventListener('click', e => {
+      btn.addEventListener('click', async e => {
         e.stopPropagation();
         const id = btn.dataset.id;
-        if (!confirm('Remove this step?')) return;
+        const confirmed = await showConfirm({
+          title: 'Remove Step?',
+          body: 'This will remove the selected transformation from the block.',
+          confirmText: 'Remove',
+          variant: 'danger',
+          icon: 'delete_sweep'
+        });
+        if (!confirmed) return;
         const info = findNodeAndParent(draft.nodes, id);
         if (info) {
           info.parent.splice(info.index, 1);

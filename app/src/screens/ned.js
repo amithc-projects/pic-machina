@@ -9,6 +9,7 @@
 import { getRecipe, saveRecipe }               from '../data/recipes.js';
 import { navigate }                            from '../main.js';
 import { uuid, now, deepClone }                 from '../utils/misc.js';
+import { showConfirm }                         from '../utils/dialogs.js';
 import { registry }                            from '../engine/index.js';
 import { ImageProcessor }                      from '../engine/index.js';
 import { extractExif }                         from '../engine/exif-reader.js';
@@ -185,7 +186,7 @@ export async function render(container, hash) {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button class="btn-secondary" id="ned-reset-btn">
+          <button class="btn-secondary" id="ned-btn-reset">
             <span class="material-symbols-outlined">restart_alt</span>
             Reset
           </button>
@@ -304,8 +305,15 @@ export async function render(container, hash) {
   });
 
   // ── Reset ─────────────────────────────────────────────────
-  container.querySelector('#ned-reset-btn')?.addEventListener('click', () => {
-    if (!confirm('Reset all parameters to defaults?')) return;
+  container.querySelector('#ned-btn-reset')?.addEventListener('click', async () => {
+    const confirmed = await showConfirm({
+      title: 'Reset Parameters?',
+      body: 'This will restore all settings in this step to their factory defaults. This action cannot be undone.',
+      confirmText: 'Reset',
+      variant: 'warning',
+      icon: 'restart_alt'
+    });
+    if (!confirmed) return;
     const defaults = {};
     (def?.params || []).forEach(p => { defaults[p.name] = p.defaultValue ?? ''; });
     node.params = defaults;
@@ -344,10 +352,17 @@ export async function render(container, hash) {
       });
 
       container.querySelectorAll('.ned-btn-del-branch').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async e => {
           const idx = parseInt(btn.dataset.idx);
           if (node.branches.length <= 1) return;
-          if (!confirm('Remove this variant and all steps within it?')) return;
+          const confirmed = await showConfirm({
+            title: 'Remove Variant?',
+            body: 'This will delete the selected branch and every transformation step within it.',
+            confirmText: 'Remove Variant',
+            variant: 'danger',
+            icon: 'delete_sweep'
+          });
+          if (!confirmed) return;
           node.branches.splice(idx, 1);
           refreshBranchEditor();
         });
