@@ -178,6 +178,9 @@ export function render(container) {
       appendLog('warn', 'Cancelled by user.');
       statusBadge.textContent = 'Cancelled';
       statusBadge.className = 'ic-badge ic-badge--amber';
+    } else {
+      // No active batch (error state or batch never started) — go back to setup
+      navigate('#set');
     }
   });
 

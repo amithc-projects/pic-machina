@@ -1,14 +1,63 @@
 /**
  * ImageChef — Batch runner (main thread side)
  *
- * Spawns the Web Worker, coordinates file writes via File System Access API,
- * and routes progress/log messages to the run record.
+ * Spawns the Web Worker for standard recipes.
+ * Falls back to running on the main thread for recipes that contain AI transforms
+ * (MediaPipe / Tesseract) which require DOM APIs unavailable in Web Workers.
+ *
+ * Coordinates file writes via File System Access API and routes progress/log
+ * messages to the run record.
  */
 
 import { writeFile, getOrCreateOutputSubfolder } from '../data/folders.js';
 import { createRun, updateRun, appendLog }        from '../data/runs.js';
 import { getAllBlocks }                            from '../data/blocks.js';
+import { ImageProcessor }                         from './processor.js';
+import { extractExif }                            from './exif-reader.js';
+import { createGIF, createVideo, createContactSheet } from './compositor.js';
 
+// ─── AI transform IDs that require the main thread ───────
+const MAIN_THREAD_TRANSFORMS = new Set([
+  'ai-remove-bg',
+  'ai-face-privacy',
+  'ai-silhouette',
+  'ai-smart-redact',
+]);
+
+function flattenNodes(nodes) {
+  const out = [];
+  for (const n of nodes) {
+    if (n.type === 'transform') out.push(n);
+    if (n.type === 'branch') for (const b of n.branches || []) out.push(...flattenNodes(b.nodes || []));
+    if (n.type === 'conditional') { out.push(...flattenNodes(n.thenNodes || [])); out.push(...flattenNodes(n.elseNodes || [])); }
+  }
+  return out;
+}
+
+function resolveBlocks(nodes, blocks) {
+  const resolved = [];
+  for (const node of nodes) {
+    if (node.type === 'block-ref') {
+      const block = blocks[node.blockId];
+      if (block) resolved.push(...resolveBlocks(block.nodes || [], blocks));
+      else console.warn(`[batch] Block "${node.blockId}" not found — skipping`);
+    } else if (node.type === 'branch') {
+      resolved.push({
+        ...node,
+        branches: (node.branches || []).map(b => ({ ...b, nodes: resolveBlocks(b.nodes || [], blocks) }))
+      });
+    } else {
+      resolved.push(node);
+    }
+  }
+  return resolved;
+}
+
+function recipeNeedsMainThread(recipe) {
+  return flattenNodes(recipe.nodes || []).some(n => MAIN_THREAD_TRANSFORMS.has(n.transformId));
+}
+
+// ─── Worker path ──────────────────────────────────────────
 let _worker = null;
 
 function getWorker() {
@@ -17,6 +66,112 @@ function getWorker() {
   }
   return _worker;
 }
+
+// ─── Main-thread batch runner ─────────────────────────────
+async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, blocksById, run, onProgress, onLog, onComplete }) {
+  const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
+  const processor = new ImageProcessor();
+  const total = files.length;
+
+  const resolvedNodes = resolveBlocks(recipe.nodes || [], blocksById);
+
+  // Aggregation collector (GIF / video / contact sheet)
+  const aggregations = {};
+  for (const node of flattenNodes(resolvedNodes)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet'].includes(node.transformId)) {
+      aggregations[node.id] = { node, blobs: [] };
+    }
+  }
+
+  onLog('info', `Starting batch: ${total} file(s) — recipe "${recipe.name}"`);
+
+  let successCount = 0, failCount = 0;
+
+  for (let i = 0; i < files.length; i++) {
+    if (run._cancelled) {
+      onLog('warn', 'Batch cancelled by user.');
+      break;
+    }
+
+    const file = files[i];
+    onLog('info', `[${i + 1}/${total}] Processing: ${file.name}`);
+
+    try {
+      const image = await createImageBitmap(file);
+      const exif  = await extractExif(file);
+      const ext   = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+
+      const context = {
+        originalImage: image,
+        filename: file.name,
+        ext,
+        exif,
+        meta:      {},
+        variables: new Map(),
+        outputSubfolder: subfolder || 'output',
+      };
+
+      const results = await processor.process(image, resolvedNodes, context);
+
+      for (const result of results) {
+        if (result.aggregationId && aggregations[result.aggregationId]) {
+          aggregations[result.aggregationId].blobs.push(result.blob);
+        } else {
+          try {
+            const folder = result.subfolder
+              ? await getOrCreateOutputSubfolder(outputHandle, result.subfolder)
+              : subHandle;
+            await writeFile(folder, result.filename, result.blob);
+          } catch (err) {
+            onLog('error', `Write failed: ${result.filename} — ${err.message}`);
+          }
+        }
+      }
+
+      successCount++;
+    } catch (err) {
+      onLog('error', `FAILED: ${file.name} — ${err.message}`);
+      failCount++;
+    }
+
+    onProgress(i + 1, total, file.name);
+
+    // Yield to keep the UI responsive between files
+    await new Promise(res => setTimeout(res, 0));
+  }
+
+  // Post-process aggregations
+  for (const [, agg] of Object.entries(aggregations)) {
+    if (!agg.blobs.length) continue;
+    try {
+      onLog('info', `Rendering aggregation: ${agg.node.transformId} (${agg.blobs.length} frames)`);
+      const p = agg.node.params || {};
+      if (agg.node.transformId === 'flow-create-gif') {
+        const blob = await createGIF(agg.blobs, { delay: p.delay || 200, loop: p.loop !== false });
+        await writeFile(subHandle, p.filename || 'animation.gif', blob);
+      } else if (agg.node.transformId === 'flow-create-video') {
+        const blob = await createVideo(agg.blobs, { durationPerSlide: p.durationPerSlide || 2, fps: p.fps || 30 });
+        await writeFile(subHandle, p.filename || 'slideshow.mp4', blob);
+      } else if (agg.node.transformId === 'flow-contact-sheet') {
+        const blob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
+        await writeFile(subHandle, p.filename || 'contact-sheet.jpg', blob);
+      }
+    } catch (err) {
+      onLog('error', `Aggregation failed (${agg.node.transformId}): ${err.message}`);
+    }
+  }
+
+  onLog('ok', `Batch complete. ✓ ${successCount} succeeded  ✗ ${failCount} failed`);
+
+  run.finishedAt   = Date.now();
+  run.status       = 'completed';
+  run.successCount = successCount;
+  run.failCount    = failCount;
+  await updateRun(run);
+  onComplete(run);
+}
+
+// ─── Public API ───────────────────────────────────────────
 
 /**
  * Start a batch job.
@@ -33,14 +188,9 @@ function getWorker() {
  * @returns {{ cancel: function, runId: string }}
  */
 export async function startBatch({ recipe, files, outputHandle, subfolder = 'output', onProgress, onLog, onComplete, onError }) {
-  // Resolve output subfolder
-  const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
+  const allBlocks  = await getAllBlocks();
+  const blocksById = Object.fromEntries(allBlocks.map(b => [b.id, b]));
 
-  // Resolve all block definitions for inlining in the worker
-  const allBlocks   = await getAllBlocks();
-  const blocksById  = Object.fromEntries(allBlocks.map(b => [b.id, b]));
-
-  // Create run record
   const run = await createRun({
     recipeId:     recipe.id,
     recipeName:   recipe.name,
@@ -49,6 +199,40 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
     imageCount:   files.length,
   });
 
+  // Wrap callbacks to also persist log entries to the run record
+  const wrappedLog = async (level, msg) => {
+    await appendLog(run, level, msg);
+    onLog?.(level, msg);
+  };
+  const wrappedProgress = (p, t, fn) => onProgress?.(p, t, fn);
+  const wrappedComplete  = (r) => onComplete?.(r);
+
+  // ── Route: AI transforms need the main thread ────────────
+  if (recipeNeedsMainThread(recipe)) {
+    // Fire the batch as an async task so we can return { runId, cancel } immediately
+    runMainThreadBatch({
+      recipe, files, outputHandle, subfolder, blocksById, run,
+      onProgress: wrappedProgress,
+      onLog:      wrappedLog,
+      onComplete: wrappedComplete,
+    }).catch(err => {
+      console.error('[batch] Main-thread batch crashed:', err);
+      onError?.(err.message);
+    });
+
+    return {
+      runId: run.id,
+      cancel: async () => {
+        run._cancelled   = true;
+        run.status       = 'cancelled';
+        run.finishedAt   = Date.now();
+        await updateRun(run);
+      }
+    };
+  }
+
+  // ── Route: standard worker path ──────────────────────────
+  const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
   const worker = getWorker();
 
   worker.onmessage = async (e) => {
@@ -57,8 +241,8 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
     if (payload.runId !== run.id) return;
 
     if (type === 'PROGRESS') {
-      run.successCount = payload.processed; // approximate
-      onProgress?.(payload.processed, payload.total, payload.filename);
+      run.successCount = payload.processed;
+      wrappedProgress(payload.processed, payload.total, payload.filename);
     }
 
     if (type === 'LOG') {
@@ -67,7 +251,6 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
     }
 
     if (type === 'FILE_DONE') {
-      // Write blob to output folder
       try {
         const folder = payload.subfolder ? await getOrCreateOutputSubfolder(outputHandle, payload.subfolder) : subHandle;
         await writeFile(folder, payload.filename, payload.blob);
@@ -82,7 +265,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
       run.successCount  = payload.successCount;
       run.failCount     = payload.failCount;
       await updateRun(run);
-      onComplete?.(run);
+      wrappedComplete(run);
     }
 
     if (type === 'ERROR') {

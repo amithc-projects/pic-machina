@@ -510,6 +510,10 @@
   color: var(--ps-text);
   overflow: hidden;
   animation: ic-dialog-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Centering */
+  position: fixed;
+  inset: 0;
+  margin: auto;
 }
 
 @keyframes ic-dialog-in {

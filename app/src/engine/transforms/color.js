@@ -266,3 +266,80 @@ registry.register({
     }
   }
 });
+
+// ─── Posterize ────────────────────────────────────────────
+registry.register({
+  id: 'color-posterize', name: 'Posterize', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'gradient',
+  description: 'Quantise each colour channel to a fixed number of levels for a flat, silkscreen look.',
+  params: [
+    { name: 'levels', label: 'Levels', type: 'range', min: 2, max: 8, defaultValue: 4 },
+  ],
+  apply(ctx, p) {
+    const levels = Math.max(2, Math.min(8, Math.round(p.levels ?? 4)));
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const id = ctx.getImageData(0, 0, W, H);
+    const d  = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = Math.round(Math.round(d[i]   / 255 * (levels - 1)) / (levels - 1) * 255);
+      d[i+1] = Math.round(Math.round(d[i+1] / 255 * (levels - 1)) / (levels - 1) * 255);
+      d[i+2] = Math.round(Math.round(d[i+2] / 255 * (levels - 1)) / (levels - 1) * 255);
+      // alpha untouched
+    }
+    ctx.putImageData(id, 0, 0);
+  }
+});
+
+// ─── Halftone ─────────────────────────────────────────────
+registry.register({
+  id: 'filter-halftone', name: 'Halftone', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'blur_on',
+  description: 'Overlay a halftone dot screen — dot size varies with image brightness.',
+  params: [
+    { name: 'dotSpacing', label: 'Dot Spacing (px)', type: 'range',   min: 4, max: 40, defaultValue: 10 },
+    { name: 'dotColor',   label: 'Dot Color',        type: 'color',   defaultValue: '#000000' },
+    { name: 'opacity',    label: 'Opacity (%)',       type: 'range',   min: 5, max: 100, defaultValue: 40 },
+    { name: 'invert',     label: 'Invert (bright = big dots)', type: 'boolean', defaultValue: false },
+  ],
+  apply(ctx, p) {
+    const spacing = Math.max(4, Math.round(p.dotSpacing ?? 10));
+    const opacity = (p.opacity ?? 40) / 100;
+    const invert  = p.invert || false;
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+
+    // Sample brightness of the current image
+    const imageData = ctx.getImageData(0, 0, W, H);
+    const d = imageData.data;
+
+    // Draw dots on an overlay canvas
+    const overlay = document.createElement('canvas');
+    overlay.width = W; overlay.height = H;
+    const octx = overlay.getContext('2d');
+    octx.fillStyle = p.dotColor || '#000000';
+
+    const maxRadius = spacing * 0.5 * 0.95; // dot just fits inside its grid cell
+
+    for (let cy = spacing / 2; cy < H + spacing; cy += spacing) {
+      for (let cx = spacing / 2; cx < W + spacing; cx += spacing) {
+        const px = clamp(Math.round(cx), 0, W - 1);
+        const py = clamp(Math.round(cy), 0, H - 1);
+        const i  = (py * W + px) * 4;
+        const brightness = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) / 255;
+        const t      = invert ? brightness : (1 - brightness);
+        const radius = t * maxRadius;
+        if (radius > 0.5) {
+          octx.beginPath();
+          octx.arc(cx, cy, radius, 0, Math.PI * 2);
+          octx.fill();
+        }
+      }
+    }
+
+    // Multiply-blend the dot layer so the duotone colour shows through
+    ctx.globalAlpha = opacity;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(overlay, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+});

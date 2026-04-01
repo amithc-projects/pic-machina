@@ -48,7 +48,9 @@ async function listAllMedia(dirHandle) {
 export async function render(container, hash) {
   const params    = new URLSearchParams((hash || '').split('?')[1] || '');
   const runId     = params.get('run');
-  const fromRoute = params.get('from') || 'out'; // back nav target
+  // 'que' → 'out': going back to a completed/stale queue screen is a dead end
+  const rawFrom   = params.get('from') || 'out';
+  const fromRoute = rawFrom === 'que' ? 'out' : rawFrom;
 
   // Load run metadata
   const run = runId ? await getRun(runId) : null;

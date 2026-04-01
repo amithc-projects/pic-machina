@@ -60,6 +60,8 @@ function getCatInfo(transformId) {
   return { key: transformId?.split('-')[0] || 'other', color: '#6b7280' };
 }
 
+let bldCompareLayout = localStorage.getItem('ic-bld-cmp-mode') || 'slider';
+
 function nodeIconAndColor(node) {
   if (node.type === 'branch')      return { icon: 'device_hub',  color: '#0077ff' };
   if (node.type === 'conditional') return { icon: 'alt_route',   color: '#0077ff' };
@@ -180,6 +182,9 @@ export async function render(container, hash) {
   let draft = deepClone(recipe);
   let selectedId = null;
 
+  // Sync state from storage
+  bldCompareLayout = localStorage.getItem('ic-bld-cmp-mode') || 'slider';
+
   // Auto-expand config panel for brand-new recipes
   const isNew = draft.name === 'Untitled Recipe' && !draft.description && !draft.nodes?.length;
   let configOpen = isNew;
@@ -203,13 +208,13 @@ export async function render(container, hash) {
             <span class="material-symbols-outlined">format_list_numbered</span>
             Recipe Builder
           </div>
-          <button class="btn-icon bld-config-toggle" id="bld-config-toggle" title="Toggle recipe details">
-            <span class="material-symbols-outlined">tune</span>
-          </button>
           <span id="bld-save-status" class="text-sm text-muted" style="margin-left:4px"></span>
         </div>
         <div class="bld-header-center">
           <span id="bld-header-name" class="bld-header-name">${escHtml(draft.name)}</span>
+          <button class="btn-icon bld-config-toggle" id="bld-config-toggle" title="Edit recipe details" style="margin-left:4px">
+            <span class="material-symbols-outlined" style="font-size:15px">edit</span>
+          </button>
         </div>
         <div class="bld-header-right flex items-center gap-2">
           <button class="btn-secondary" id="bld-btn-preview">
@@ -283,9 +288,19 @@ export async function render(container, hash) {
                 <span class="material-symbols-outlined" style="font-size:14px">compare</span>
                 Compare
               </button>
-              <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:none">
-                <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
-                <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
+              <div id="bld-cmp-controls" class="flex items-center gap-2" style="display:none">
+                <div class="bld-cmp-mode-toggle">
+                  <button class="bld-cmp-mode-btn ${bldCompareLayout === 'slider' ? 'is-active' : ''}" data-layout="slider" title="Slider">
+                    <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
+                  </button>
+                  <button class="bld-cmp-mode-btn ${bldCompareLayout === 'side' ? 'is-active' : ''}" data-layout="side" title="Side by side">
+                    <span class="material-symbols-outlined" style="font-size:16px">view_column</span>
+                  </button>
+                </div>
+                <div id="bld-cmp-ref-row" class="bld-cmp-ref-row">
+                  <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
+                  <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
+                </div>
               </div>
               <label class="btn-secondary bld-upload-label" style="cursor:pointer">
                 <span class="material-symbols-outlined" style="font-size:14px">upload</span>
@@ -391,6 +406,21 @@ export async function render(container, hash) {
     window.addEventListener('touchend',   () => { dragging = false; });
   }
 
+  function renderSideBySide(area, beforeUrl, afterUrl, beforeLabel, afterLabel) {
+    area.innerHTML = `
+      <div class="bld-cmp-side-view" id="bld-cmp-side-view">
+        <div class="bld-cmp-side">
+          <div class="bld-cmp-side-label">${beforeLabel}</div>
+          <img src="${beforeUrl}" class="bld-cmp-side-img" draggable="false">
+        </div>
+        <div class="bld-cmp-divider"></div>
+        <div class="bld-cmp-side">
+          <div class="bld-cmp-side-label bld-cmp-side-label--blue">${afterLabel}</div>
+          <img src="${afterUrl}" class="bld-cmp-side-img" draggable="false">
+        </div>
+      </div>`;
+  }
+
   async function runBldPreview() {
     if (!bldTestFile) return;
     const previewArea = container.querySelector('#bld-preview-area');
@@ -444,7 +474,11 @@ export async function render(container, hash) {
             beforeLabel = 'Original';
           }
         }
-        renderCompareSlider(previewArea, beforeUrl, afterUrl, beforeLabel, label || 'All Steps');
+        if (bldCompareLayout === 'side') {
+          renderSideBySide(previewArea, beforeUrl, afterUrl, beforeLabel, label || 'All Steps');
+        } else {
+          renderCompareSlider(previewArea, beforeUrl, afterUrl, beforeLabel, label || 'All Steps');
+        }
       } else {
         previewArea.innerHTML = `
           <div class="bld-preview-img-wrapper">
@@ -792,10 +826,20 @@ export async function render(container, hash) {
   container.querySelector('#bld-cmp-toggle')?.addEventListener('click', () => {
     bldCompareMode = !bldCompareMode;
     const btn    = container.querySelector('#bld-cmp-toggle');
-    const refRow = container.querySelector('#bld-cmp-ref-row');
+    const controls = container.querySelector('#bld-cmp-controls');
     btn?.classList.toggle('is-active', bldCompareMode);
-    if (refRow) refRow.style.display = bldCompareMode ? 'flex' : 'none';
+    if (controls) controls.style.display = bldCompareMode ? 'flex' : 'none';
     scheduleBldPreview(0);
+  });
+
+  // Layout toggle buttons
+  container.querySelectorAll('.bld-cmp-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      bldCompareLayout = btn.dataset.layout;
+      localStorage.setItem('ic-bld-cmp-mode', bldCompareLayout);
+      container.querySelectorAll('.bld-cmp-mode-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+      if (bldCompareMode) scheduleBldPreview(0);
+    });
   });
 
   container.querySelectorAll('.bld-cmp-ref-btn').forEach(btn => {
@@ -828,7 +872,7 @@ function injectBldStyles() {
     /* 3-column header */
     .bld-header-3col { display:grid !important; grid-template-columns:1fr auto 1fr; }
     .bld-header-left { justify-self:start; }
-    .bld-header-center { justify-self:center; overflow:hidden; max-width:320px; }
+    .bld-header-center { justify-self:center; display:flex; align-items:center; gap:2px; overflow:hidden; max-width:360px; }
     .bld-header-right { justify-self:end; }
     .bld-header-name {
       font-size:14px; font-weight:600; color:var(--ps-text);
@@ -869,6 +913,15 @@ function injectBldStyles() {
 
     /* Compare toggle button */
     .bld-cmp-toggle.is-active { background:var(--ps-blue-10); color:var(--ps-blue); border-color:var(--ps-blue); }
+    .bld-cmp-mode-toggle { display:flex; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:6px; overflow:hidden; }
+    .bld-cmp-mode-btn {
+      padding:4px 8px; font-size:11px; color:var(--ps-text-muted); border:none;
+      background:transparent; cursor:pointer; font-family:var(--font-primary); transition:color 100ms, background 100ms;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .bld-cmp-mode-btn.is-active { background:var(--ps-bg-surface); color:var(--ps-blue); }
+    .bld-cmp-mode-btn:not(.is-active):hover { background:var(--ps-bg-hover); }
+
     .bld-cmp-ref-row {
       display:flex; background:var(--ps-bg-app);
       border:1px solid var(--ps-border); border-radius:6px; overflow:hidden;
@@ -879,6 +932,17 @@ function injectBldStyles() {
     }
     .bld-cmp-ref-btn.is-active { background:var(--ps-blue); color:#fff; }
     .bld-cmp-ref-btn:not(.is-active):hover { background:var(--ps-bg-hover); }
+
+    /* Side by side view */
+    .bld-cmp-side-view { display:flex; width:100%; height:100%; background:var(--ps-bg-app); }
+    .bld-cmp-side { flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+    .bld-cmp-side-img { width:100%; height:100%; object-fit:contain; display:block; }
+    .bld-cmp-divider { width:1px; background:var(--ps-border); flex-shrink:0; }
+    .bld-cmp-side-label {
+      position:absolute; top:8px; left:8px; z-index:5;
+      background:rgba(0,0,0,0.7); color:#fff; font-size:10px; padding:3px 7px; border-radius:4px; font-family:var(--font-mono);
+    }
+    .bld-cmp-side-label--blue { background:rgba(0,119,255,0.8); }
 
     /* Config panel */
     .bld-config {

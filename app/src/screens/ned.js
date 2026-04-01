@@ -90,6 +90,21 @@ function renderParamField(param, value) {
           <textarea id="${id}" name="${param.name}" class="ic-input" rows="4">${escHtml(String(val))}</textarea>
         </div>`;
 
+    case 'file':
+      return `
+        <div class="ned-field">
+          <label class="ned-field-label" for="${id}">${param.label}</label>
+          <div class="ned-file-row">
+            <input type="text" id="${id}" name="${param.name}" class="ic-input ned-file-path"
+              value="${escHtml(String(val))}" placeholder="No file selected…" readonly>
+            <button type="button" class="btn-secondary ned-file-browse-btn" data-target="${id}">
+              <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
+              Browse
+            </button>
+            <input type="file" id="${id}-picker" accept="image/*" style="display:none">
+          </div>
+        </div>`;
+
     default: // 'text'
       return `
         <div class="ned-field">
@@ -340,6 +355,23 @@ export async function render(container, hash) {
   // ── Wire all other inputs ─────────────────────────────────
   container.querySelectorAll('.ic-input:not(.ned-branch-label), input[type=checkbox]').forEach(input => {
     if (input.type !== 'color') input.addEventListener('change', schedulePreview);
+  });
+
+  // ── Wire file-browse buttons ──────────────────────────────
+  container.querySelectorAll('.ned-file-browse-btn').forEach(btn => {
+    const targetId  = btn.dataset.target;
+    const picker    = container.querySelector(`#${targetId}-picker`);
+    const pathInput = container.querySelector(`#${targetId}`);
+    btn.addEventListener('click', () => picker?.click());
+    picker?.addEventListener('change', e => {
+      const file = e.target.files?.[0];
+      if (!file || !pathInput) return;
+      if (pathInput._objectUrl) URL.revokeObjectURL(pathInput._objectUrl);
+      const url = URL.createObjectURL(file);
+      pathInput._objectUrl = url;
+      pathInput.value = url;
+      schedulePreview();
+    });
   });
 
   // ── Branch actions ────────────────────────────────────────
@@ -664,6 +696,8 @@ function injectNedStyles() {
 
     .ned-color-row { display:flex; align-items:center; gap:6px; }
     .ned-color-input { width:36px; height:32px; padding:2px; border:1px solid var(--ps-border); border-radius:6px; background:var(--ps-bg-app); cursor:pointer; }
+    .ned-file-row { display:flex; align-items:center; gap:6px; }
+    .ned-file-path { flex:1; min-width:0; color:var(--ps-text-muted); font-size:11px; font-family:var(--font-mono); cursor:default; }
 
     .ned-preview-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
     .ned-preview-header { display:flex; align-items:center; gap:8px; padding:10px 16px; border-bottom:1px solid var(--ps-border); flex-shrink:0; flex-wrap:wrap; }

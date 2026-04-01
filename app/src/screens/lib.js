@@ -328,12 +328,19 @@ export async function render(container) {
 
   // ── Card action binding ───────────────────────────────
   function bindCardActions() {
+    async function useRecipe(id) {
+      const recipe = recipes.find(r => r.id === id);
+      if (recipe) { 
+        recipe.lastUsedAt = Date.now(); 
+        await saveRecipe(recipe); 
+      }
+      navigate(`#set?recipe=${id}`);
+    }
+
     container.querySelectorAll('.lib-action-use').forEach(btn => {
       btn.addEventListener('click', async e => {
         e.stopPropagation();
-        const recipe = recipes.find(r => r.id === btn.dataset.id);
-        if (recipe) { recipe.lastUsedAt = Date.now(); await saveRecipe(recipe); }
-        navigate(`#set?recipe=${btn.dataset.id}`);
+        await useRecipe(btn.dataset.id);
       });
     });
 
@@ -405,14 +412,17 @@ export async function render(container) {
       });
     });
 
-    // Card click = preview
+    // Card click = Use Recipe
     container.querySelectorAll('.lib-card').forEach(card => {
-      card.addEventListener('click', e => {
+      card.addEventListener('click', async e => {
         if (e.target.closest('button')) return;
-        navigate(`#pvw?id=${card.dataset.id}`);
+        await useRecipe(card.dataset.id);
       });
-      card.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`#pvw?id=${card.dataset.id}`); }
+      card.addEventListener('keydown', async e => {
+        if (e.key === 'Enter' || e.key === ' ') { 
+          e.preventDefault(); 
+          await useRecipe(card.dataset.id); 
+        }
       });
     });
   }

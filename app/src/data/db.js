@@ -117,7 +117,7 @@ export function dbDelete(storeName, key) {
 
 // ─── System recipe seeding ────────────────────────────────
 async function seedSystemRecipes(db) {
-  // Only seed if no system recipes exist yet
+  // Upsert all system recipes so new ones added to system-recipes.js appear automatically
   const existing = await new Promise((resolve, reject) => {
     const tx = db.transaction('recipes', 'readonly');
     const req = tx.objectStore('recipes').getAll();
@@ -125,12 +125,15 @@ async function seedSystemRecipes(db) {
     req.onerror = () => reject(req.error);
   });
 
-  if (existing.length > 0) return; // already seeded
+  const existingIds = new Set(existing.map(r => r.id));
 
   const { SYSTEM_RECIPES } = await import('./system-recipes.js');
+  const newRecipes = SYSTEM_RECIPES.filter(r => !existingIds.has(r.id));
+  if (!newRecipes.length) return; // nothing to add
+
   const tx = db.transaction('recipes', 'readwrite');
   const store = tx.objectStore('recipes');
-  SYSTEM_RECIPES.forEach(r => store.put(r));
+  newRecipes.forEach(r => store.put(r));
   return new Promise((resolve, reject) => {
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);

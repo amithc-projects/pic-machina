@@ -170,21 +170,35 @@ export async function render(container, hash) {
 
     const subfolder = container.querySelector('#set-subfolder').value.trim() || 'output';
 
+    // Verify output folder is still accessible before navigating away
+    try {
+      await outputHandle.getDirectoryHandle('.', { create: false }).catch(() => {});
+    } catch (_) { /* non-fatal — let startBatch surface the real error */ }
+
     // Navigate to QUE with run control
     navigate('#que');
     // Small delay to let QUE render, then start
     setTimeout(async () => {
-      batchControl = await startBatch({
-        recipe: currentRecipe,
-        files,
-        outputHandle,
-        subfolder,
-        onProgress: (p, t, fn) => window._queProgress?.(p, t, fn),
-        onLog:      (lvl, msg) => window._queLog?.(lvl, msg),
-        onComplete: (run)      => window._queComplete?.(run),
-        onError:    (msg)      => window._queError?.(msg),
-      });
-      window._queRunControl = batchControl;
+      try {
+        batchControl = await startBatch({
+          recipe: currentRecipe,
+          files,
+          outputHandle,
+          subfolder,
+          onProgress: (p, t, fn) => window._queProgress?.(p, t, fn),
+          onLog:      (lvl, msg) => window._queLog?.(lvl, msg),
+          onComplete: (run)      => window._queComplete?.(run),
+          onError:    (msg)      => window._queError?.(msg),
+        });
+        window._queRunControl = batchControl;
+      } catch (err) {
+        console.error('[SET] startBatch failed:', err);
+        const msg = err.name === 'NotFoundError'
+          ? 'Output folder not found — please re-select it on the Batch Setup screen.'
+          : err.message;
+        window._queError?.(msg);
+        window.AuroraToast?.show({ variant: 'danger', title: 'Batch failed to start', description: msg });
+      }
     }, 50);
   });
 
@@ -247,6 +261,10 @@ export async function render(container, hash) {
     // Selection — click, ctrl+click, shift+click
     grid.querySelectorAll('.set-img-cell').forEach((cell, idx) => {
       cell.addEventListener('click', e => {
+        // Prevent the label from triggering a synthetic checkbox click,
+        // which would bubble back here and double-fire the handler.
+        e.preventDefault();
+
         const name = cell.dataset.name;
 
         if (e.shiftKey && lastClickedIdx !== -1) {

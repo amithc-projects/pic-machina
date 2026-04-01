@@ -11,8 +11,14 @@ registry.register({
   icon: 'text_fields',
   description: 'Render styled text over the image. Supports {{variable}} injection.',
   params: [
-    { name: 'content',     label: 'Text ({{vars}} supported)', type: 'text',   defaultValue: '{{filename}}' },
-    { name: 'font',        label: 'Font Family',  type: 'text',   defaultValue: 'Inter' },
+    { name: 'content',     label: 'Text ({{vars}} supported)', type: 'text',    defaultValue: '{{filename}}' },
+    { name: 'font',        label: 'Font Family',  type: 'text',    defaultValue: 'Inter' },
+    { name: 'sizeMode',    label: 'Size Mode',    type: 'select',
+      options: [
+        { label: 'Fixed (px)',       value: 'px' },
+        { label: '% of image width', value: 'pct-width' },
+        { label: '% of image height',value: 'pct-height' },
+      ], defaultValue: 'px' },
     { name: 'size',        label: 'Font Size',    type: 'number', defaultValue: 32 },
     { name: 'color',       label: 'Text Color',   type: 'color',  defaultValue: '#ffffff' },
     { name: 'opacity',     label: 'Opacity (%)',  type: 'range',  min: 0, max: 100, defaultValue: 100 },
@@ -28,57 +34,99 @@ registry.register({
         { label: 'Bottom Centre', value: 'bottom-center' },
         { label: 'Bottom Right',  value: 'bottom-right' },
       ], defaultValue: 'bottom-right' },
-    { name: 'offsetX',     label: 'Offset X (px)', type: 'number', defaultValue: 20 },
-    { name: 'offsetY',     label: 'Offset Y (px)', type: 'number', defaultValue: 20 },
-    { name: 'shadow',      label: 'Text Shadow',   type: 'boolean', defaultValue: true },
-    { name: 'shadowColor', label: 'Shadow Color',  type: 'color',  defaultValue: '#000000' },
-    { name: 'weight',      label: 'Font Weight',   type: 'select',
+    { name: 'offsetX',     label: 'Offset X (px)',  type: 'number',  defaultValue: 20 },
+    { name: 'offsetY',     label: 'Offset Y (px)',  type: 'number',  defaultValue: 20 },
+    // ── Background box ────────────────────────────────────
+    { name: 'bgBox',       label: 'Background Box', type: 'select',
+      options: [
+        { label: 'None',       value: 'none' },
+        { label: 'Wrap text',  value: 'wrap' },
+        { label: 'Full width', value: 'full-width' },
+      ], defaultValue: 'none' },
+    { name: 'bgColor',     label: 'Box Color',      type: 'color',   defaultValue: '#000000' },
+    { name: 'bgOpacity',   label: 'Box Opacity (%)',type: 'range',   min: 0, max: 100, defaultValue: 60 },
+    { name: 'bgPadding',   label: 'Box Padding (px)',type: 'number', defaultValue: 8 },
+    // ── Text style ────────────────────────────────────────
+    { name: 'shadow',      label: 'Text Shadow',    type: 'boolean', defaultValue: true },
+    { name: 'shadowColor', label: 'Shadow Color',   type: 'color',   defaultValue: '#000000' },
+    { name: 'weight',      label: 'Font Weight',    type: 'select',
       options: [{ label: 'Normal', value: '400' }, { label: 'Bold', value: '700' }, { label: 'Light', value: '300' }],
       defaultValue: '400' },
-    { name: 'blendMode',   label: 'Blend Mode',   type: 'select',
+    { name: 'blendMode',   label: 'Blend Mode',     type: 'select',
       options: [{ label: 'Normal', value: 'source-over' }, { label: 'Multiply', value: 'multiply' }, { label: 'Screen', value: 'screen' }],
       defaultValue: 'source-over' },
   ],
   apply(ctx, p, context) {
     const text = interpolate(p.content || '{{filename}}', context);
     const W = ctx.canvas.width, H = ctx.canvas.height;
-    const size = p.size || 32;
+
+    // Resolve font size — fixed px or relative to image dimension
+    let size;
+    if (p.sizeMode === 'pct-width')  size = Math.max(1, Math.round(W * (p.size || 3) / 100));
+    else if (p.sizeMode === 'pct-height') size = Math.max(1, Math.round(H * (p.size || 3) / 100));
+    else size = p.size || 32;
 
     ctx.save();
     ctx.globalAlpha = (p.opacity ?? 100) / 100;
     ctx.globalCompositeOperation = p.blendMode || 'source-over';
     ctx.font = `${p.weight || 400} ${size}px ${p.font || 'Inter'}, sans-serif`;
-    ctx.fillStyle = p.color || '#ffffff';
     ctx.textBaseline = 'alphabetic';
 
+    // Measure text before positioning
+    const metrics = ctx.measureText(text);
+    const tw      = metrics.width;
+    const ascent  = metrics.actualBoundingBoxAscent  || size;
+    const descent = metrics.actualBoundingBoxDescent || size * 0.2;
+
+    const anchor = p.anchor || 'bottom-right';
+    const ox     = p.offsetX ?? 20;
+    const oy     = p.offsetY ?? 20;
+    const pad    = p.bgPadding ?? 8;
+
+    let x, y;
+    const [va, ha]   = anchor.split('-');
+    const hPart      = ha || va;
+
+    // Horizontal text origin
+    if (anchor === 'center' || hPart === 'center') x = (W - tw) / 2;
+    else if (hPart === 'right') x = W - tw - ox;
+    else x = ox;
+
+    // Vertical baseline
+    if (anchor === 'center' || va === 'center') y = (H + ascent) / 2;
+    else if (va === 'bottom') y = H - oy;
+    else y = ascent + oy;
+
+    // ── Background box ──────────────────────────────────
+    const bgBox = p.bgBox || 'none';
+    if (bgBox !== 'none' && p.bgColor) {
+      ctx.save();
+      ctx.globalAlpha    = (p.bgOpacity ?? 60) / 100;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.shadowColor    = 'transparent';
+      ctx.shadowBlur     = 0;
+      ctx.shadowOffsetX  = 0;
+      ctx.shadowOffsetY  = 0;
+      ctx.fillStyle      = p.bgColor;
+
+      const boxY = y - ascent - pad;
+      const boxH = ascent + descent + pad * 2;
+      if (bgBox === 'full-width') {
+        ctx.fillRect(0, boxY, W, boxH);
+      } else {
+        ctx.fillRect(x - pad, boxY, tw + pad * 2, boxH);
+      }
+      ctx.restore();
+    }
+
+    // ── Text ────────────────────────────────────────────
+    ctx.fillStyle = p.color || '#ffffff';
     if (p.shadow) {
       ctx.shadowColor   = p.shadowColor || 'rgba(0,0,0,0.6)';
       ctx.shadowBlur    = size * 0.3;
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
     }
-
-    const anchor = p.anchor || 'bottom-right';
-    const ox = p.offsetX ?? 20;
-    const oy = p.offsetY ?? 20;
-    const metrics = ctx.measureText(text);
-    const tw = metrics.width;
-    const th = size;
-
-    let x, y;
-    const [va, ha] = anchor.split('-');
-    const horizontalPart = ha || va; // handles single-word anchors like 'center'
-
-    // Horizontal
-    if (anchor === 'center' || horizontalPart === 'center') x = (W - tw) / 2;
-    else if (horizontalPart === 'right') x = W - tw - ox;
-    else x = ox; // left
-
-    // Vertical
-    if (anchor === 'center' || va === 'center') y = (H + th) / 2;
-    else if (va === 'bottom') y = H - oy;
-    else y = th + oy; // top
-
     ctx.fillText(text, x, y);
     ctx.restore();
   }

@@ -198,7 +198,11 @@ export class ImageProcessor {
     // ── Regular transform ──
     const def = registry.get(id);
     if (def) {
-      await def.apply(ctx, node.params || {}, context);
+      try {
+        await def.apply(ctx, node.params || {}, context);
+      } catch (err) {
+        console.warn(`[processor] Transform "${id}" failed — skipping step:`, err.message);
+      }
     } else {
       console.warn(`[processor] Unknown transform: ${id}`);
     }

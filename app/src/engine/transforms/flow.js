@@ -91,3 +91,61 @@ registry.register({
   ],
   apply() { /* handled by Processor as aggregation node */ }
 });
+
+// ─── Compose Grid ─────────────────────────────────────────
+registry.register({
+  id: 'flow-compose-grid', name: 'Compose Grid', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'grid_on',
+  description: 'Assemble saved canvas states into a grid. Works within a single image — not a batch aggregator.',
+  params: [
+    { name: 'panels',  label: 'Panel Labels (comma-separated)', type: 'text',   defaultValue: 'panel-1,panel-2,panel-3,panel-4' },
+    { name: 'columns', label: 'Columns',                        type: 'number', defaultValue: 2 },
+    { name: 'gap',     label: 'Gap (px)',                       type: 'number', defaultValue: 0 },
+    { name: 'bgColor', label: 'Background Color',               type: 'color',  defaultValue: '#000000' },
+  ],
+  apply(ctx, p, context) {
+    const labels  = (p.panels || 'panel-1,panel-2,panel-3,panel-4').split(',').map(s => s.trim()).filter(Boolean);
+    const columns = Math.max(1, Math.round(p.columns ?? 2));
+    const gap     = Math.max(0, Math.round(p.gap ?? 0));
+    const bgColor = p.bgColor || '#000000';
+
+    const frames = labels.map(lbl => context.variables.get(lbl)).filter(Boolean);
+    if (!frames.length) {
+      console.warn('[flow-compose-grid] No panels found in context.variables for labels:', labels);
+      return;
+    }
+
+    const cellW = frames[0].width;
+    const cellH = frames[0].height;
+    const rows   = Math.ceil(frames.length / columns);
+    const totalW = columns * cellW + (columns - 1) * gap;
+    const totalH = rows    * cellH + (rows    - 1) * gap;
+
+    const grid  = document.createElement('canvas');
+    grid.width  = totalW;
+    grid.height = totalH;
+    const gctx  = grid.getContext('2d');
+    gctx.fillStyle = bgColor;
+    gctx.fillRect(0, 0, totalW, totalH);
+
+    frames.forEach((imageData, idx) => {
+      const col = idx % columns;
+      const row = Math.floor(idx / columns);
+      const x   = col * (cellW + gap);
+      const y   = row * (cellH + gap);
+
+      if (imageData.width !== cellW || imageData.height !== cellH) {
+        const tmp = document.createElement('canvas');
+        tmp.width = imageData.width; tmp.height = imageData.height;
+        tmp.getContext('2d').putImageData(imageData, 0, 0);
+        gctx.drawImage(tmp, x, y, cellW, cellH);
+      } else {
+        gctx.putImageData(imageData, x, y);
+      }
+    });
+
+    ctx.canvas.width  = totalW;
+    ctx.canvas.height = totalH;
+    ctx.drawImage(grid, 0, 0);
+  }
+});

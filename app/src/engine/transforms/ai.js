@@ -19,6 +19,10 @@ registry.register({
     { name: 'padding', label: 'Face Padding (%)', type: 'range', min: 0, max: 100, defaultValue: 20 },
   ],
   async apply(ctx, p) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-face-privacy] Skipping — MediaPipe requires the main thread.');
+      return;
+    }
     try {
       const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision');
       const vision = await FilesetResolver.forVisionTasks(
@@ -81,7 +85,13 @@ registry.register({
         }
       }
     } catch (err) {
-      console.warn('[ai-face-privacy] failed:', err);
+      // MediaPipe requires dynamic WASM imports that are unavailable in the batch worker.
+      // AI transforms are skipped during batch processing but work in the builder preview.
+      if (err.message?.includes('self.import') || err.message?.includes('import is not a function')) {
+        console.warn('[ai-face-privacy] AI transforms are not supported in the batch worker — step skipped.');
+      } else {
+        console.warn('[ai-face-privacy] failed:', err);
+      }
     }
   }
 });
@@ -96,14 +106,30 @@ registry.register({
       options: [{ label: 'Transparent BG', value: 'Transparent' }, { label: 'Silhouette (Black Subject)', value: 'Silhouette' }],
       defaultValue: 'Transparent' },
     { name: 'edgeSmoothing', label: 'Edge Smoothing (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'bgFill', label: 'Background Fill', type: 'select',
+      options: [
+        { label: 'None (Transparent)', value: 'none' },
+        { label: 'Solid Colour',       value: 'color' },
+        { label: 'Image File',         value: 'image' },
+      ],
+      defaultValue: 'none' },
+    { name: 'bgColor', label: 'Fill Colour', type: 'color', defaultValue: '#ffffff' },
+    { name: 'bgImage', label: 'Background Image', type: 'file', defaultValue: '' },
   ],
   async apply(ctx, p) {
+    // batch.js routes AI recipes to the main thread, so this guard should never fire in normal
+    // use. It's kept as a safety net in case the transform is somehow called from a worker.
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-remove-bg] Skipping — MediaPipe requires the main thread.');
+      return;
+    }
+
     try {
       const { ImageSegmenter, FilesetResolver } = await import('@mediapipe/tasks-vision');
       const vision = await FilesetResolver.forVisionTasks(
         'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
       );
-      
+
       const segmenter = await ImageSegmenter.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
@@ -120,18 +146,18 @@ registry.register({
 
       const mode = p.mode || 'Transparent';
       const smoothing = (p.edgeSmoothing || 50) / 100;
-      
+
       // We'll work on a temporary buffer to avoid mid-drawing artifacts
       const imageData = ctx.getImageData(0, 0, width, height);
       const data = imageData.data;
 
       for (let i = 0; i < mask.length; i++) {
         const conf = mask[i]; // 0.0 (bg) to 1.0 (subject)
-        
+
         if (mode === 'Transparent') {
           // Adjust alpha based on confidence
           // We can apply a threshold or a smooth ramp
-          const alpha = conf < (0.5 - smoothing * 0.4) ? 0 : 
+          const alpha = conf < (0.5 - smoothing * 0.4) ? 0 :
                         conf > (0.5 + smoothing * 0.4) ? 255 :
                         Math.round(((conf - (0.5 - smoothing * 0.4)) / (smoothing * 0.8)) * 255);
           data[i * 4 + 3] = alpha;
@@ -154,6 +180,43 @@ registry.register({
 
       ctx.putImageData(imageData, 0, 0);
       segmenter.close();
+
+      // ── Background fill ──────────────────────────────────
+      const bgFill = p.bgFill || 'none';
+      if (bgFill !== 'none') {
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+
+        // Snapshot the masked subject so we can composite it over the new background
+        const subjectCanvas = document.createElement('canvas');
+        subjectCanvas.width = W; subjectCanvas.height = H;
+        const sc = subjectCanvas.getContext('2d');
+        sc.drawImage(ctx.canvas, 0, 0);
+
+        ctx.clearRect(0, 0, W, H);
+
+        if (bgFill === 'color') {
+          ctx.fillStyle = p.bgColor || '#ffffff';
+          ctx.fillRect(0, 0, W, H);
+        } else if (bgFill === 'image' && p.bgImage) {
+          try {
+            // Load via fetch + createImageBitmap so it works on both main thread and (future) workers
+            const resp = await fetch(p.bgImage);
+            const blob = await resp.blob();
+            const bitmap = await createImageBitmap(blob);
+            const scale = Math.max(W / bitmap.width, H / bitmap.height);
+            const dw = bitmap.width  * scale;
+            const dh = bitmap.height * scale;
+            ctx.drawImage(bitmap, (W - dw) / 2, (H - dh) / 2, dw, dh);
+            bitmap.close?.();
+          } catch (imgErr) {
+            console.warn('[ai-remove-bg] Could not load background image:', p.bgImage, imgErr);
+          }
+        }
+
+        // Draw the subject back on top
+        ctx.drawImage(subjectCanvas, 0, 0);
+      }
+
     } catch (err) {
       console.warn('[ai-remove-bg] failed:', err);
     }

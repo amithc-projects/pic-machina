@@ -292,5 +292,105 @@ export const SYSTEM_RECIPES = [
       }
     ]
   }
+,
+
+  // ─── 9. Pop Art Warhol ───────────────────────────────────
+  {
+    id:          'sys-popart-warhol',
+    name:        'Pop Art Warhol',
+    description: 'Transform a portrait into a 4-panel Andy Warhol-style silkscreen with four bold duotone colour schemes assembled into a 2×2 grid.',
+    isSystem:    true,
+    coverColor:  '#c8005c',
+    tags:        ['creative', 'popart', 'warhol', 'duotone', 'grid'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      // ── Prepare base panel ──
+      { id: 'warhol-crop',     type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' }, label: 'Square Crop' },
+      { id: 'warhol-resize',   type: 'transform', transformId: 'geo-resize',
+        params: { width: '1000', height: '', maintainAspect: true }, label: 'Resize to 1000px Panel' },
+      // ── Tonal base ──
+      { id: 'warhol-contrast', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 35, saturation: -20 }, label: 'Boost Contrast' },
+      { id: 'warhol-post',     type: 'transform', transformId: 'color-posterize',
+        params: { levels: 4 }, label: 'Posterize' },
+      { id: 'warhol-base',     type: 'transform', transformId: 'flow-save',
+        params: { label: 'warhol-base' }, label: 'Save Base State' },
+      // ── Panel 1: Hot Pink ──
+      { id: 'warhol-l1', type: 'transform', transformId: 'flow-load',     params: { label: 'warhol-base' }, label: 'Load Base' },
+      { id: 'warhol-d1', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#c8005c', lightColor: '#ffb3d4' }, label: 'Panel 1: Hot Pink' },
+      { id: 'warhol-s1', type: 'transform', transformId: 'flow-save',     params: { label: 'panel-1' }, label: 'Save Panel 1' },
+      // ── Panel 2: Teal ──
+      { id: 'warhol-l2', type: 'transform', transformId: 'flow-load',     params: { label: 'warhol-base' }, label: 'Load Base' },
+      { id: 'warhol-d2', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#006666', lightColor: '#b3ffff' }, label: 'Panel 2: Teal' },
+      { id: 'warhol-s2', type: 'transform', transformId: 'flow-save',     params: { label: 'panel-2' }, label: 'Save Panel 2' },
+      // ── Panel 3: Orange ──
+      { id: 'warhol-l3', type: 'transform', transformId: 'flow-load',     params: { label: 'warhol-base' }, label: 'Load Base' },
+      { id: 'warhol-d3', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#c84b00', lightColor: '#ffd4b3' }, label: 'Panel 3: Orange' },
+      { id: 'warhol-s3', type: 'transform', transformId: 'flow-save',     params: { label: 'panel-3' }, label: 'Save Panel 3' },
+      // ── Panel 4: Purple ──
+      { id: 'warhol-l4', type: 'transform', transformId: 'flow-load',     params: { label: 'warhol-base' }, label: 'Load Base' },
+      { id: 'warhol-d4', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#3300aa', lightColor: '#ffccff' }, label: 'Panel 4: Purple' },
+      { id: 'warhol-s4', type: 'transform', transformId: 'flow-save',     params: { label: 'panel-4' }, label: 'Save Panel 4' },
+      // ── Assemble & export ──
+      { id: 'warhol-grid',   type: 'transform', transformId: 'flow-compose-grid',
+        params: { panels: 'panel-1,panel-2,panel-3,panel-4', columns: 2, gap: 8, bgColor: '#000000' },
+        label: 'Assemble 2×2 Grid' },
+      { id: 'warhol-export', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_warhol', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ─── 10. Pop Art Warhol — Halftone ───────────────────────
+  {
+    id:          'sys-popart-warhol-halftone',
+    name:        'Pop Art Warhol — Halftone',
+    description: 'Warhol-style 2×2 silkscreen grid with a halftone dot overlay on each panel for a vintage print look.',
+    isSystem:    true,
+    coverColor:  '#c8005c',
+    tags:        ['creative', 'popart', 'warhol', 'halftone', 'duotone', 'grid'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      // ── Prepare base panel ──
+      { id: 'wht-crop',     type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' }, label: 'Square Crop' },
+      { id: 'wht-resize',   type: 'transform', transformId: 'geo-resize',
+        params: { width: '1000', height: '', maintainAspect: true }, label: 'Resize to 1000px Panel' },
+      { id: 'wht-contrast', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 35, saturation: -20 }, label: 'Boost Contrast' },
+      { id: 'wht-post',     type: 'transform', transformId: 'color-posterize',
+        params: { levels: 4 }, label: 'Posterize' },
+      { id: 'wht-base',     type: 'transform', transformId: 'flow-save',
+        params: { label: 'wht-base' }, label: 'Save Base State' },
+      // ── Panel 1: Hot Pink + Halftone ──
+      { id: 'wht-l1', type: 'transform', transformId: 'flow-load',     params: { label: 'wht-base' }, label: 'Load Base' },
+      { id: 'wht-d1', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#c8005c', lightColor: '#ffb3d4' }, label: 'Duotone: Hot Pink' },
+      { id: 'wht-h1', type: 'transform', transformId: 'filter-halftone', params: { dotSpacing: 10, dotColor: '#000000', opacity: 35 }, label: 'Halftone' },
+      { id: 'wht-s1', type: 'transform', transformId: 'flow-save',     params: { label: 'wht-panel-1' }, label: 'Save Panel 1' },
+      // ── Panel 2: Teal + Halftone ──
+      { id: 'wht-l2', type: 'transform', transformId: 'flow-load',     params: { label: 'wht-base' }, label: 'Load Base' },
+      { id: 'wht-d2', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#006666', lightColor: '#b3ffff' }, label: 'Duotone: Teal' },
+      { id: 'wht-h2', type: 'transform', transformId: 'filter-halftone', params: { dotSpacing: 10, dotColor: '#000000', opacity: 35 }, label: 'Halftone' },
+      { id: 'wht-s2', type: 'transform', transformId: 'flow-save',     params: { label: 'wht-panel-2' }, label: 'Save Panel 2' },
+      // ── Panel 3: Orange + Halftone ──
+      { id: 'wht-l3', type: 'transform', transformId: 'flow-load',     params: { label: 'wht-base' }, label: 'Load Base' },
+      { id: 'wht-d3', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#c84b00', lightColor: '#ffd4b3' }, label: 'Duotone: Orange' },
+      { id: 'wht-h3', type: 'transform', transformId: 'filter-halftone', params: { dotSpacing: 10, dotColor: '#000000', opacity: 35 }, label: 'Halftone' },
+      { id: 'wht-s3', type: 'transform', transformId: 'flow-save',     params: { label: 'wht-panel-3' }, label: 'Save Panel 3' },
+      // ── Panel 4: Purple + Halftone ──
+      { id: 'wht-l4', type: 'transform', transformId: 'flow-load',     params: { label: 'wht-base' }, label: 'Load Base' },
+      { id: 'wht-d4', type: 'transform', transformId: 'color-duotone', params: { darkColor: '#3300aa', lightColor: '#ffccff' }, label: 'Duotone: Purple' },
+      { id: 'wht-h4', type: 'transform', transformId: 'filter-halftone', params: { dotSpacing: 10, dotColor: '#000000', opacity: 35 }, label: 'Halftone' },
+      { id: 'wht-s4', type: 'transform', transformId: 'flow-save',     params: { label: 'wht-panel-4' }, label: 'Save Panel 4' },
+      // ── Assemble & export ──
+      { id: 'wht-grid',   type: 'transform', transformId: 'flow-compose-grid',
+        params: { panels: 'wht-panel-1,wht-panel-2,wht-panel-3,wht-panel-4', columns: 2, gap: 8, bgColor: '#000000' },
+        label: 'Assemble 2×2 Grid' },
+      { id: 'wht-export', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_warhol_halftone', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  }
 
 ];
