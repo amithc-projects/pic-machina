@@ -626,3 +626,57 @@ registry.register({
     }
   }
 });
+
+// ─── Tilt-Shift ───────────────────────────────────────────
+registry.register({
+  id: 'filter-tilt-shift', name: 'Tilt-Shift', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'filter_center_focus',
+  description: 'Miniature/tilt-shift effect — leaves a sharp horizontal band, blurs top and bottom.',
+  params: [
+    { name: 'centerY',    label: 'Focus Centre (%)',  type: 'range', min: 10, max: 90, defaultValue: 50 },
+    { name: 'bandWidth',  label: 'Sharp Band (%)',     type: 'range', min: 5,  max: 80, defaultValue: 25 },
+    { name: 'blurAmount', label: 'Blur Amount (px)',   type: 'range', min: 2,  max: 40, defaultValue: 12 },
+    { name: 'feather',    label: 'Feather (%)',         type: 'range', min: 0,  max: 50, defaultValue: 30 },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const centerY_px = ((p.centerY  ?? 50) / 100) * H;
+    const halfBand   = ((p.bandWidth ?? 25) / 100) * H / 2;
+    const blurAmt    = p.blurAmount ?? 12;
+    const featherPx  = ((p.feather  ?? 30) / 100) * H;
+
+    // Snapshot sharp original
+    const sharpCanvas = document.createElement('canvas');
+    sharpCanvas.width = W; sharpCanvas.height = H;
+    const sc = sharpCanvas.getContext('2d');
+    sc.drawImage(ctx.canvas, 0, 0);
+
+    // Create fully-blurred version of the original
+    const blurCanvas = document.createElement('canvas');
+    blurCanvas.width = W; blurCanvas.height = H;
+    const bc = blurCanvas.getContext('2d');
+    bc.filter = `blur(${blurAmt}px)`;
+    bc.drawImage(ctx.canvas, 0, 0);
+
+    // Carve a gradient-alpha mask into the sharp canvas so only the focus band is opaque
+    const sd = sc.getImageData(0, 0, W, H);
+    const d  = sd.data;
+    for (let y = 0; y < H; y++) {
+      const dist = Math.abs(y - centerY_px) - halfBand; // negative inside band
+      const alpha = dist <= 0
+        ? 255
+        : featherPx > 0
+          ? clamp(Math.round((1 - dist / featherPx) * 255), 0, 255)
+          : 0;
+      for (let x = 0; x < W; x++) {
+        d[(y * W + x) * 4 + 3] = alpha;
+      }
+    }
+    sc.putImageData(sd, 0, 0);
+
+    // Composite: blurred base, then sharp centre on top
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(blurCanvas, 0, 0);
+    ctx.drawImage(sharpCanvas, 0, 0);
+  }
+});

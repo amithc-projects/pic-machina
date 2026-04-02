@@ -475,6 +475,107 @@ export const SYSTEM_RECIPES = [
       { id: 'op-5', type: 'transform', transformId: 'flow-export',
         params: { suffix: '_oilpaint', format: 'image/jpeg', quality: 92 }, label: 'Export' }
     ]
+  },
+
+  // ── Film Noir ─────────────────────────────────────────────
+  {
+    id: 'sys-film-noir', name: 'Film Noir',
+    description: 'Classic black-and-white film look — punchy contrast, grain, and deep vignette.',
+    isSystem: true, coverColor: '#111111',
+    tags: ['creative', 'noir', 'film', 'black-and-white', 'moody'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'fn-1', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: -100, contrast: 60 }, label: 'Grayscale + Punch' },
+      { id: 'fn-2', type: 'transform', transformId: 'filter-advanced',
+        params: { noiseLevel: 12 }, label: 'Film Grain' },
+      { id: 'fn-3', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 60, radius: 50 }, label: 'Heavy Vignette' },
+      { id: 'fn-4', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_noir', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ── Retrowave / Synthwave ─────────────────────────────────
+  {
+    id: 'sys-retrowave', name: 'Retrowave',
+    description: 'Sunset duotone with a neon grid, chromatic fringe and bloom glow — 80s synthwave aesthetic.',
+    isSystem: true, coverColor: '#1a0033',
+    tags: ['creative', 'retrowave', 'synthwave', 'neon', '80s'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'rw-1', type: 'transform', transformId: 'color-duotone',
+        params: { darkColor: '#1a0033', lightColor: '#ff6b35' }, label: 'Retrowave Colours' },
+      { id: 'rw-2', type: 'transform', transformId: 'overlay-grid',
+        params: { spacing: 40, color: '#ff00ff', opacity: 30, lineWidth: 1 }, label: 'Neon Grid' },
+      { id: 'rw-3', type: 'transform', transformId: 'filter-chromatic-aberration',
+        params: { offset: 5, direction: 'horizontal' }, label: 'Fringe' },
+      { id: 'rw-4', type: 'transform', transformId: 'filter-bloom',
+        params: { threshold: 70, blurRadius: 15, strength: 60 }, label: 'Glow' },
+      { id: 'rw-5', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 40 }, label: 'Punch' },
+      { id: 'rw-6', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_retrowave', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ── Lomo Camera ───────────────────────────────────────────
+  {
+    id: 'sys-lomo', name: 'Lomo Camera',
+    description: 'Saturated, gritty lomo look — vivid colours, cool shadows, heavy vignette and a golden light leak.',
+    isSystem: true, coverColor: '#1a0d00',
+    tags: ['creative', 'lomo', 'film', 'vintage', 'analog'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'lo-1', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: 50, vibrance: 30 }, label: 'Vivid Colours' },
+      { id: 'lo-2', type: 'transform', transformId: 'filter-color-grade',
+        params: { lift: 0, shadowColor: '#0a2240', shadowStrength: 20, highlightColor: '#ffffff', highlightStrength: 0 }, label: 'Cool Shadows' },
+      { id: 'lo-3', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 55, radius: 55 }, label: 'Lomo Vignette' },
+      { id: 'lo-4', type: 'transform', transformId: 'filter-advanced',
+        params: { noiseLevel: 10 }, label: 'Grain' },
+      { id: 'lo-5', type: 'transform', transformId: 'overlay-light-leak',
+        params: { edge: 'top', color: '#ffaa00', opacity: 25, spread: 50, blendMode: 'screen' }, label: 'Light Leak' },
+      { id: 'lo-6', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_lomo', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ── Faded Matte ───────────────────────────────────────────
+  {
+    id: 'sys-faded-matte', name: 'Faded Matte',
+    description: 'Clean faded-film matte — lifted blacks, split-tone teal/cream and a barely-there vignette.',
+    isSystem: true, coverColor: '#c8b89a',
+    tags: ['creative', 'matte', 'faded', 'portrait', 'minimal'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'fm-1', type: 'transform', transformId: 'filter-color-grade',
+        params: { lift: 22, shadowColor: '#1a3040', shadowStrength: 15, highlightColor: '#fff5e0', highlightStrength: 20 }, label: 'Faded Tones' },
+      { id: 'fm-2', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: -20 }, label: 'Desaturate' },
+      { id: 'fm-3', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 20, radius: 70 }, label: 'Subtle Vignette' },
+      { id: 'fm-4', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_matte', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ── Tilt-Shift Miniature ──────────────────────────────────
+  {
+    id: 'sys-tilt-shift', name: 'Tilt-Shift Miniature',
+    description: 'Makes scenes look like tiny scale models — sharp horizontal band with blurred top and bottom.',
+    isSystem: true, coverColor: '#2a5f2a',
+    tags: ['creative', 'tilt-shift', 'miniature', 'landscape', 'blur'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'ts-1', type: 'transform', transformId: 'filter-tilt-shift',
+        params: { centerY: 50, bandWidth: 25, blurAmount: 12, feather: 30 }, label: 'Miniature Blur' },
+      { id: 'ts-2', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: 30, contrast: 20 }, label: 'Vivid & Punchy' },
+      { id: 'ts-3', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_miniature', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
   }
 
 ];
