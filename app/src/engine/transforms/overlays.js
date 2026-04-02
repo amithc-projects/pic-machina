@@ -258,6 +258,37 @@ registry.register({
   }
 });
 
+// ─── Grid Overlay ─────────────────────────────────────────
+registry.register({
+  id: 'overlay-grid', name: 'Grid Overlay', category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'grid_4x4',
+  description: 'Draw an evenly-spaced grid of lines over the image.',
+  params: [
+    { name: 'spacing',   label: 'Grid Spacing (px)', type: 'number', defaultValue: 50 },
+    { name: 'color',     label: 'Line Color',         type: 'color',  defaultValue: '#ffffff' },
+    { name: 'opacity',   label: 'Opacity (%)',         type: 'range',  min: 0, max: 100, defaultValue: 50 },
+    { name: 'lineWidth', label: 'Line Width (px)',      type: 'number', defaultValue: 1 },
+  ],
+  apply(ctx, p) {
+    const W       = ctx.canvas.width;
+    const H       = ctx.canvas.height;
+    const spacing = Math.max(1, Math.round(p.spacing ?? 50));
+
+    ctx.save();
+    ctx.globalAlpha              = (p.opacity ?? 50) / 100;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle              = p.color || '#ffffff';
+    ctx.lineWidth                = Math.max(0.5, p.lineWidth ?? 1);
+
+    ctx.beginPath();
+    for (let x = spacing; x < W; x += spacing) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+    for (let y = spacing; y < H; y += spacing) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+    ctx.stroke();
+
+    ctx.restore();
+  }
+});
+
 // ─── Map View ─────────────────────────────────────────────
 registry.register({
   id: 'overlay-map', name: 'Map View', category: 'Overlays & Typography', categoryKey: 'overlay',
@@ -313,5 +344,114 @@ registry.register({
     } catch (err) {
       console.warn('[overlay-map] tile fetch failed:', err);
     }
+  }
+});
+
+// ─── Light Leak ───────────────────────────────────────────
+registry.register({
+  id: 'overlay-light-leak', name: 'Light Leak', category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'light_mode',
+  description: 'Warm or cool light leak gradient from an edge — classic analog film effect.',
+  params: [
+    { name: 'edge',      label: 'Edge',         type: 'select',
+      options: [
+        { label: 'Left',   value: 'left' },
+        { label: 'Right',  value: 'right' },
+        { label: 'Top',    value: 'top' },
+        { label: 'Bottom', value: 'bottom' },
+      ], defaultValue: 'right' },
+    { name: 'color',     label: 'Color',        type: 'color',  defaultValue: '#ff6600' },
+    { name: 'opacity',   label: 'Opacity (%)',  type: 'range',  min: 0, max: 100, defaultValue: 35 },
+    { name: 'spread',    label: 'Spread (%)',   type: 'range',  min: 10, max: 100, defaultValue: 65 },
+    { name: 'blendMode', label: 'Blend Mode',   type: 'select',
+      options: [
+        { label: 'Screen',  value: 'screen' },
+        { label: 'Add',     value: 'lighter' },
+        { label: 'Overlay', value: 'overlay' },
+      ], defaultValue: 'screen' },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const edge    = p.edge    || 'right';
+    const spread  = (p.spread  ?? 65) / 100;
+    const opacity = (p.opacity ?? 35) / 100;
+    const color   = p.color   || '#ff6600';
+
+    // Gradient origin at the edge, fading inward by spread amount
+    let x0, y0, x1, y1;
+    if      (edge === 'right')  { x0 = W;   y0 = H / 2; x1 = W * (1 - spread); y1 = H / 2; }
+    else if (edge === 'left')   { x0 = 0;   y0 = H / 2; x1 = W * spread;       y1 = H / 2; }
+    else if (edge === 'top')    { x0 = W/2; y0 = 0;     x1 = W / 2; y1 = H * spread; }
+    else                        { x0 = W/2; y0 = H;     x1 = W / 2; y1 = H * (1 - spread); }
+
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+
+    const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+    grad.addColorStop(0, `rgba(${r},${g},${b},${opacity})`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+
+    ctx.save();
+    ctx.globalCompositeOperation = p.blendMode || 'screen';
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+});
+
+// ─── Canvas Texture ───────────────────────────────────────
+registry.register({
+  id: 'overlay-canvas-texture', name: 'Canvas Texture', category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'texture',
+  description: 'Procedural woven-fiber texture overlay — adds the look of painting on canvas or linen.',
+  params: [
+    { name: 'intensity', label: 'Intensity (%)',    type: 'range', min: 0, max: 100, defaultValue: 18 },
+    { name: 'scale',     label: 'Fiber Scale (px)', type: 'range', min: 1, max: 16,  defaultValue: 4 },
+    { name: 'blendMode', label: 'Blend Mode',       type: 'select',
+      options: [
+        { label: 'Overlay',    value: 'overlay' },
+        { label: 'Soft Light', value: 'soft-light' },
+        { label: 'Multiply',   value: 'multiply' },
+      ], defaultValue: 'overlay' },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const scale     = Math.max(1, Math.round(p.scale ?? 4));
+    const intensity = (p.intensity ?? 18) / 100;
+
+    // Build a small procedural weave tile
+    const tileSize = scale * 8;
+    const tile     = document.createElement('canvas');
+    tile.width = tileSize; tile.height = tileSize;
+    const tc  = tile.getContext('2d');
+    const tid = tc.createImageData(tileSize, tileSize);
+    const td  = tid.data;
+
+    for (let ty = 0; ty < tileSize; ty++) {
+      for (let tx = 0; tx < tileSize; tx++) {
+        const hFiber = Math.sin((tx / scale) * Math.PI) * 0.5 + 0.5;
+        const vFiber = Math.sin((ty / scale) * Math.PI) * 0.5 + 0.5;
+        // Alternating over/under weave pattern
+        const weave  = (Math.floor(tx / scale) + Math.floor(ty / scale)) % 2 === 0 ? hFiber : vFiber;
+        const val    = Math.round(weave * 255);
+        const ti     = (ty * tileSize + tx) * 4;
+        td[ti] = td[ti + 1] = td[ti + 2] = val; td[ti + 3] = 255;
+      }
+    }
+    tc.putImageData(tid, 0, 0);
+
+    // Tile across a full-size canvas
+    const texCanvas = document.createElement('canvas');
+    texCanvas.width = W; texCanvas.height = H;
+    const texCtx = texCanvas.getContext('2d');
+    texCtx.fillStyle = texCtx.createPattern(tile, 'repeat');
+    texCtx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.globalAlpha = intensity;
+    ctx.globalCompositeOperation = p.blendMode || 'overlay';
+    ctx.drawImage(texCanvas, 0, 0);
+    ctx.restore();
   }
 });

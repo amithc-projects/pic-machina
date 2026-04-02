@@ -391,6 +391,90 @@ export const SYSTEM_RECIPES = [
       { id: 'wht-export', type: 'transform', transformId: 'flow-export',
         params: { suffix: '_warhol_halftone', format: 'image/jpeg', quality: 92 }, label: 'Export' }
     ]
+  },
+
+  // ── Blueprint ─────────────────────────────────────────────
+  {
+    id: 'sys-blueprint', name: 'Blueprint',
+    description: 'Technical drawing effect — Sobel edge detection with Blueprint Blue duotone and a faint engineering grid overlay.',
+    isSystem: true, coverColor: '#003366',
+    tags: ['creative', 'blueprint', 'edges', 'technical'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'bp-1', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: -100 }, label: 'Grayscale' },
+      { id: 'bp-2', type: 'transform', transformId: 'filter-edge-detect',
+        params: { threshold: 15, softEdges: false, blurBefore: 0 }, label: 'Sobel Edge Detect' },
+      { id: 'bp-3', type: 'transform', transformId: 'color-duotone',
+        params: { darkColor: '#003366', lightColor: '#ffffff' }, label: 'Blueprint Colourize' },
+      { id: 'bp-4', type: 'transform', transformId: 'overlay-grid',
+        params: { spacing: 50, color: '#ffffff', opacity: 50, lineWidth: 1 }, label: 'Engineering Grid' },
+      { id: 'bp-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_blueprint', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ── Cyberpunk / Neon Night ────────────────────────────────
+  {
+    id: 'sys-cyberpunk', name: 'Cyberpunk / Neon Night',
+    description: 'Vivid neon duotone with bloom glow, chromatic aberration and crushed contrast for a cyberpunk aesthetic.',
+    isSystem: true, coverColor: '#0d0033',
+    tags: ['creative', 'cyberpunk', 'neon', 'glow', 'cinematic'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'cp-1', type: 'transform', transformId: 'color-duotone',
+        params: { darkColor: '#0d0033', lightColor: '#ff00cc' }, label: 'Neon Duotone' },
+      { id: 'cp-2', type: 'transform', transformId: 'filter-bloom',
+        params: { threshold: 75, blurRadius: 20, strength: 70 }, label: 'Neon Glow' },
+      { id: 'cp-3', type: 'transform', transformId: 'filter-chromatic-aberration',
+        params: { offset: 8, direction: 'horizontal' }, label: 'Chromatic Aberration' },
+      { id: 'cp-4', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 70 }, label: 'Crush Contrast' },
+      { id: 'cp-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_cyberpunk', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ── Classic Analog Film 1970s ──────────────────────────────
+  {
+    id: 'sys-analog-film', name: 'Classic Analog Film',
+    description: '1970s analog film look — warm colour grade with grain, vignette and an orange light leak.',
+    isSystem: true, coverColor: '#4a2800',
+    tags: ['creative', 'film', 'analog', 'vintage', '1970s'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'af-1', type: 'transform', transformId: 'filter-color-grade',
+        params: { lift: 18, shadowColor: '#1a5f5f', shadowStrength: 40, highlightColor: '#f5e842', highlightStrength: 30 }, label: 'Film Colour Grade' },
+      { id: 'af-2', type: 'transform', transformId: 'filter-advanced',
+        params: { noiseLevel: 15 }, label: 'Film Grain' },
+      { id: 'af-3', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 45, radius: 60 }, label: 'Vignette' },
+      { id: 'af-4', type: 'transform', transformId: 'overlay-light-leak',
+        params: { edge: 'right', color: '#ff6600', opacity: 35, spread: 65, blendMode: 'screen' }, label: 'Light Leak' },
+      { id: 'af-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_analog', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
+  },
+
+  // ── Impressionist Oil Painting ─────────────────────────────
+  {
+    id: 'sys-oil-painting', name: 'Impressionist Oil Painting',
+    description: 'Painterly effect — Kuwahara filter for oil-paint smoothing, edge overlay, canvas texture and rich colours.',
+    isSystem: true, coverColor: '#3d1a00',
+    tags: ['creative', 'painting', 'impressionist', 'art', 'oil'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'op-1', type: 'transform', transformId: 'filter-kuwahara',
+        params: { radius: 3, passes: 1 }, label: 'Oil Paint Smooth' },
+      { id: 'op-2', type: 'transform', transformId: 'filter-edge-detect',
+        params: { threshold: 8, softEdges: true, blurBefore: 1, blendMode: 'darken', edgeStrength: 35 }, label: 'Paint Edges' },
+      { id: 'op-3', type: 'transform', transformId: 'overlay-canvas-texture',
+        params: { intensity: 18, scale: 4, blendMode: 'overlay' }, label: 'Canvas Texture' },
+      { id: 'op-4', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: 40, vibrance: 25 }, label: 'Rich Colours' },
+      { id: 'op-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_oilpaint', format: 'image/jpeg', quality: 92 }, label: 'Export' }
+    ]
   }
 
 ];
