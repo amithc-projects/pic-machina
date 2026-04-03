@@ -455,3 +455,97 @@ registry.register({
     ctx.restore();
   }
 });
+
+// ─── Polaroid Frame ───────────────────────────────────────
+registry.register({
+  id: 'overlay-polaroid-frame', name: 'Polaroid Frame',
+  category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'photo_camera',
+  description: 'Adds a polaroid-style white border with optional handwritten caption in the bottom margin.',
+  params: [
+    { name: 'borderColor',  label: 'Border Color',       type: 'color',  defaultValue: '#f5f5f0' },
+    { name: 'borderSide',   label: 'Side Border (px)',   type: 'number', defaultValue: 20 },
+    { name: 'borderBottom', label: 'Bottom Border (px)', type: 'number', defaultValue: 60 },
+    { name: 'caption',      label: 'Caption ({{vars}} supported)', type: 'text', defaultValue: '{{filename | sanitized}}' },
+  ],
+  async apply(ctx, p, context) {
+    const W           = ctx.canvas.width, H = ctx.canvas.height;
+    const side        = Math.max(0, Math.round(p.borderSide   ?? 20));
+    const bottom      = Math.max(0, Math.round(p.borderBottom ?? 60));
+    const borderColor = p.borderColor || '#f5f5f0';
+    const captionText = interpolate(p.caption ?? '{{filename | sanitized}}', context);
+
+    // Snapshot original image
+    const orig = document.createElement('canvas');
+    orig.width = W; orig.height = H;
+    orig.getContext('2d').drawImage(ctx.canvas, 0, 0);
+
+    const newW = W + side * 2;
+    const newH = H + side + bottom;
+
+    ctx.canvas.width  = newW;
+    ctx.canvas.height = newH;
+    ctx.fillStyle = borderColor;
+    ctx.fillRect(0, 0, newW, newH);
+    ctx.drawImage(orig, side, side);
+
+    if (captionText) {
+      // Load Dancing Script (same guard as compositor.js)
+      let fontName = 'cursive';
+      if (typeof document !== 'undefined' && document.fonts) {
+        try {
+          if (!document.querySelector('link[data-gfont="dancing-script"]')) {
+            const link = document.createElement('link');
+            link.rel  = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap';
+            link.dataset.gfont = 'dancing-script';
+            document.head.appendChild(link);
+          }
+          await document.fonts.load('600 16px "Dancing Script"');
+          fontName = 'Dancing Script';
+        } catch { /* fall back to cursive */ }
+      }
+
+      const captionY = H + side + bottom / 2;
+      const maxW     = newW - side * 2;
+      let size       = Math.round(Math.min(bottom * 0.42, (bottom - 8) * 0.8));
+
+      ctx.save();
+      ctx.fillStyle    = '#2a2a2a';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      while (size >= 8) {
+        ctx.font = `600 ${size}px "${fontName}", cursive`;
+        if (ctx.measureText(captionText).width <= maxW) break;
+        size--;
+      }
+      ctx.fillText(captionText, newW / 2, captionY);
+      ctx.restore();
+    }
+  }
+});
+
+// ─── Scanlines ────────────────────────────────────────────
+registry.register({
+  id: 'overlay-scanlines', name: 'Scanlines',
+  category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'horizontal_rule',
+  description: 'Draw horizontal scanlines at regular intervals — CRT monitor / video effect.',
+  params: [
+    { name: 'spacing', label: 'Line Spacing (px)', type: 'number', defaultValue: 3 },
+    { name: 'opacity', label: 'Opacity (%)',        type: 'range',  min: 0, max: 100, defaultValue: 20 },
+    { name: 'color',   label: 'Line Color',         type: 'color',  defaultValue: '#000000' },
+  ],
+  apply(ctx, p) {
+    const W       = ctx.canvas.width, H = ctx.canvas.height;
+    const spacing = Math.max(1, Math.round(p.spacing ?? 3));
+    const opacity = (p.opacity ?? 20) / 100;
+
+    ctx.save();
+    ctx.globalAlpha              = opacity;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle                = p.color || '#000000';
+    for (let y = 0; y < H; y += spacing) ctx.fillRect(0, y, W, 1);
+    ctx.restore();
+  }
+});

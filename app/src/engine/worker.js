@@ -42,8 +42,9 @@ import './transforms/metadata.js';
 import './transforms/flow.js';
 
 import { ImageProcessor }   from './processor.js';
-import { createGIF, createVideo, createContactSheet } from './compositor.js';
+import { createGIF, createVideo, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
 import { extractExif }       from './exif-reader.js';
+import { applyRunParams }    from '../utils/nodes.js';
 
 let cancelled = false;
 
@@ -65,14 +66,16 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
   const processor = new ImageProcessor();
   let successCount = 0, failCount = 0;
   const total = files.length;
+  const runParams = outputConfig.runParams || {};
 
   // Resolve block-refs in recipe nodes
   const resolvedNodes = await resolveBlocks(recipe.nodes || [], outputConfig.blocks || {});
+  applyRunParams(resolvedNodes, runParams);
 
   // Aggregation collector: aggregationId → { nodeConfig, blobs[] }
   const aggregations = {};
   for (const node of flatNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
   }
@@ -100,6 +103,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         exif,
         meta:      {},
         variables: new Map(),
+        recipe:    runParams,
         outputSubfolder: outputConfig.subfolder || 'output',
       };
 
@@ -108,6 +112,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
       for (const result of results) {
         if (result.aggregationId && aggregations[result.aggregationId]) {
           aggregations[result.aggregationId].blobs.push(result.blob);
+          (aggregations[result.aggregationId].captions ??= []).push(result.caption ?? '');
         } else {
           self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: result.filename, blob: result.blob, subfolder: result.subfolder } });
         }
@@ -139,6 +144,35 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
       } else if (agg.node.transformId === 'flow-contact-sheet') {
         resultBlob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'contact-sheet.jpg', blob: resultBlob } });
+      } else if (agg.node.transformId === 'flow-photo-stack') {
+        const fmt = p.format || 'gif';
+        resultBlob = await createPhotoStack(agg.blobs, {
+          width:        p.width        || 1920,
+          height:       p.height       || 1080,
+          deskColor:    p.deskColor    || '#3d2b1a',
+          frameDelay:   p.frameDelay   || 800,
+          maxRotation:  p.maxRotation  ?? 35,
+          borderColor:  p.borderColor  || '#f5f5f0',
+          borderBottom: p.borderBottom || 60,
+          format:       fmt,
+          captions:     agg.captions   || [],
+          overlap:      p.overlap      ?? 0,
+        });
+        const base = (p.filename || 'photo-stack').replace(/\.(gif|mp4)$/i, '');
+        self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob: resultBlob } });
+      } else if (agg.node.transformId === 'flow-animate-stack') {
+        const fmt = p.format || 'gif';
+        resultBlob = await createAnimatedStack(agg.blobs, {
+          width:       p.width       || 1920,
+          height:      p.height      || 1080,
+          deskColor:   p.deskColor   || '#3d2b1a',
+          frameDelay:  p.frameDelay  || 800,
+          maxRotation: p.maxRotation ?? 35,
+          overlap:     p.overlap     ?? 0,
+          format:      fmt,
+        });
+        const base = (p.filename || 'stack').replace(/\.(gif|mp4)$/i, '');
+        self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob: resultBlob } });
       }
     } catch (err) {
       log(runId, 'error', `Aggregation failed (${agg.node.transformId}): ${err.message}`);

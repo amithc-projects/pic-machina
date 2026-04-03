@@ -20,7 +20,27 @@ function escHtml(s) {
 // ── Block list view ────────────────────────────────────────
 async function renderList(container) {
   const blocks = await getAllBlocks();
-  blocks.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const systemBlocks = blocks.filter(b => b.isSystem).sort((a, b) => a.name.localeCompare(b.name));
+  const userBlocks   = blocks.filter(b => !b.isSystem).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  const systemSection = systemBlocks.length > 0 ? `
+    <div class="bkb-section-header">System Blocks</div>
+    <div class="bkb-grid">${systemBlocks.map(b => blockCardHTML(b)).join('')}</div>` : '';
+
+  const userSection = userBlocks.length > 0 ? `
+    <div class="bkb-section-header" style="margin-top:${systemBlocks.length ? '24px' : '0'}">My Blocks</div>
+    <div class="bkb-grid">${userBlocks.map(b => blockCardHTML(b)).join('')}</div>` : '';
+
+  const emptyUser = userBlocks.length === 0 ? `
+    <div class="empty-state" style="padding-top:${systemBlocks.length ? '32px' : '60px'}">
+      <span class="material-symbols-outlined" style="font-size:${systemBlocks.length ? '32px' : '48px'}">add_box</span>
+      <div class="empty-state-title">No custom blocks yet</div>
+      <div class="empty-state-desc">Create a block to build reusable step sequences, or clone a system block to customise it.</div>
+      <button class="btn-primary" id="bkb-empty-new">
+        <span class="material-symbols-outlined">add</span>
+        Create Block
+      </button>
+    </div>` : '';
 
   container.innerHTML = `
     <div class="screen bkb-screen">
@@ -36,19 +56,9 @@ async function renderList(container) {
       </div>
 
       <div class="bkb-list-body">
-        ${blocks.length === 0
-          ? `<div class="empty-state" style="padding-top:60px">
-               <span class="material-symbols-outlined" style="font-size:48px">widgets</span>
-               <div class="empty-state-title">No blocks yet</div>
-               <div class="empty-state-desc">Blocks are reusable step sequences you can drop into any recipe.</div>
-               <button class="btn-primary" id="bkb-empty-new">
-                 <span class="material-symbols-outlined">add</span>
-                 Create First Block
-               </button>
-             </div>`
-          : `<div class="bkb-grid">
-               ${blocks.map(b => blockCardHTML(b)).join('')}
-             </div>`}
+        ${systemSection}
+        ${userSection}
+        ${emptyUser}
       </div>
     </div>`;
 
@@ -99,30 +109,34 @@ async function renderList(container) {
 
 function blockCardHTML(block) {
   const updated = block.updatedAt ? formatDate(block.updatedAt) : '—';
+  const iconColor = block.isSystem ? 'var(--ps-blue)' : '#a855f7';
   return `
     <article class="bkb-card" data-id="${block.id}" tabindex="0">
       <div class="bkb-card-icon">
-        <span class="material-symbols-outlined" style="font-size:28px;color:var(--ps-blue)">widgets</span>
+        <span class="material-symbols-outlined" style="font-size:28px;color:${iconColor}">widgets</span>
       </div>
       <div class="bkb-card-body">
-        <div class="bkb-card-name">${block.name}</div>
-        <div class="bkb-card-desc">${block.description || ''}</div>
+        <div class="bkb-card-name">
+          ${escHtml(block.name)}
+          ${block.isSystem ? `<span class="ic-badge ic-badge--blue" style="font-size:10px;margin-left:6px;vertical-align:middle">System</span>` : ''}
+        </div>
+        <div class="bkb-card-desc">${escHtml(block.description || '')}</div>
         <div class="bkb-card-meta">
-          <span class="ic-badge">${block.category || 'General'}</span>
+          <span class="ic-badge">${escHtml(block.category || 'General')}</span>
           <span class="text-sm text-muted">${countNodes(block.nodes)} step${countNodes(block.nodes) !== 1 ? 's' : ''}</span>
           <span class="text-sm text-muted" style="margin-left:auto">${updated}</span>
         </div>
       </div>
       <div class="bkb-card-actions">
-        <button class="btn-icon bkb-card-edit" data-id="${block.id}" title="Edit">
-          <span class="material-symbols-outlined">edit</span>
+        <button class="btn-icon bkb-card-edit" data-id="${block.id}" title="${block.isSystem ? 'View' : 'Edit'}">
+          <span class="material-symbols-outlined">${block.isSystem ? 'visibility' : 'edit'}</span>
         </button>
         <button class="btn-icon bkb-card-clone" data-id="${block.id}" title="Clone">
           <span class="material-symbols-outlined">content_copy</span>
         </button>
-        <button class="btn-icon bkb-card-delete" data-id="${block.id}" title="Delete">
+        ${!block.isSystem ? `<button class="btn-icon bkb-card-delete" data-id="${block.id}" title="Delete">
           <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
-        </button>
+        </button>` : ''}
       </div>
     </article>`;
 }
@@ -131,6 +145,54 @@ function blockCardHTML(block) {
 async function renderEditor(container, blockId) {
   const block = await getBlock(blockId);
   if (!block) { navigate('#bkb'); return; }
+
+  // System blocks are read-only — show a summary and offer clone
+  if (block.isSystem) {
+    container.innerHTML = `
+      <div class="screen bkb-screen">
+        <div class="screen-header">
+          <div class="flex items-center gap-2">
+            <button class="btn-icon" id="bkb-back">
+              <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <div class="screen-title">
+              <span class="material-symbols-outlined">widgets</span>
+              ${escHtml(block.name)}
+            </div>
+            <span class="ic-badge ic-badge--blue" style="font-size:11px">System</span>
+          </div>
+          <button class="btn-primary" id="bkb-clone-system">
+            <span class="material-symbols-outlined">content_copy</span>
+            Clone to Edit
+          </button>
+        </div>
+        <div class="bkb-readonly-body">
+          <div class="bkb-readonly-info">
+            <div class="text-sm text-muted" style="margin-bottom:8px">${escHtml(block.description || '')}</div>
+            <div class="flex items-center gap-2" style="margin-bottom:16px">
+              <span class="ic-badge">${escHtml(block.category || 'General')}</span>
+              <span class="text-sm text-muted">${countNodes(block.nodes)} step${countNodes(block.nodes) !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="bkb-readonly-notice">
+              <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-blue)">lock</span>
+              System blocks are read-only. Clone this block to create your own editable copy.
+            </div>
+          </div>
+          <div class="bld-node-list bkb-readonly-nodes">
+            ${renderNodeList(block.nodes)}
+          </div>
+        </div>
+      </div>`;
+
+    injectBkbStyles();
+    container.querySelector('#bkb-back')?.addEventListener('click', () => navigate('#bkb'));
+    container.querySelector('#bkb-clone-system')?.addEventListener('click', async () => {
+      const clone = await cloneBlock(block.id);
+      window.AuroraToast?.show({ variant: 'success', title: `"${clone.name}" created`, description: 'You can now edit this block.' });
+      navigate(`#bkb?id=${clone.id}`);
+    });
+    return;
+  }
 
   let draft = deepClone(block);
 
@@ -344,6 +406,15 @@ function injectBkbStyles() {
     .bkb-card-desc { font-size:12px; color:var(--ps-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:6px; }
     .bkb-card-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .bkb-card-actions { display:flex; gap:4px; flex-shrink:0; }
+
+    /* Section headers */
+    .bkb-section-header { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--ps-text-muted); padding:4px 0 8px; }
+
+    /* Read-only system block view */
+    .bkb-readonly-body { display:flex; flex-direction:column; gap:16px; padding:20px 24px; overflow:auto; flex:1; }
+    .bkb-readonly-info { max-width:600px; }
+    .bkb-readonly-notice { display:flex; align-items:center; gap:8px; background:rgba(0,119,255,0.08); border:1px solid rgba(0,119,255,0.2); border-radius:8px; padding:10px 14px; font-size:12px; color:var(--ps-text-muted); }
+    .bkb-readonly-nodes { max-width:600px; pointer-events:none; opacity:0.75; }
   `;
   document.head.appendChild(s);
 }

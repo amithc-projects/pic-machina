@@ -19,6 +19,16 @@ import { uuid, now } from '../utils/misc.js';
 export function getAllBlocks()    { return dbGetAll('blocks'); }
 export function getBlock(id)     { return dbGet('blocks', id); }
 
+export async function getSystemBlocks() {
+  const all = await dbGetAll('blocks');
+  return all.filter(b => b.isSystem);
+}
+
+export async function getUserBlocks() {
+  const all = await dbGetAll('blocks');
+  return all.filter(b => !b.isSystem);
+}
+
 export async function saveBlock(block) {
   if (!block.id) block.id = uuid();
   block.updatedAt = now();

@@ -1,0 +1,112 @@
+/**
+ * PicMachina — Built-in System Blocks
+ *
+ * Reusable node sequences seeded into IndexedDB on app start.
+ * Users can clone them to create their own editable copies.
+ * isSystem: true prevents editing in BKB.
+ */
+
+export const SYSTEM_BLOCKS = [
+
+  // ─── 1. Multi-size Export ─────────────────────────────
+  {
+    id:          'sys-block-multi-export',
+    name:        'Multi-size Export',
+    description: 'Branch into four JPEG size variants: Full (1920px), Medium (800px), Thumb (400px), Micro (200px).',
+    isSystem:    true,
+    category:    'Export',
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'mse-branch', type: 'branch', label: 'Size Variants',
+        branches: [
+          {
+            id: 'mse-full', label: 'Full (1920px)',
+            nodes: [
+              { id: 'mse-full-resize', type: 'transform', transformId: 'geo-resize',   label: 'Resize 1920px', params: { width: '1920', height: '', maintainAspect: true, algo: 'Lanczos' } },
+              { id: 'mse-full-export', type: 'transform', transformId: 'flow-export',  label: 'Export Full',   params: { suffix: '_full',  format: 'image/jpeg', quality: 92 } }
+            ]
+          },
+          {
+            id: 'mse-med', label: 'Medium (800px)',
+            nodes: [
+              { id: 'mse-med-resize', type: 'transform', transformId: 'geo-resize',   label: 'Resize 800px',  params: { width: '800',  height: '', maintainAspect: true, algo: 'Lanczos' } },
+              { id: 'mse-med-export', type: 'transform', transformId: 'flow-export',  label: 'Export Medium', params: { suffix: '_med',   format: 'image/jpeg', quality: 85 } }
+            ]
+          },
+          {
+            id: 'mse-thumb', label: 'Thumb (400px)',
+            nodes: [
+              { id: 'mse-thumb-resize', type: 'transform', transformId: 'geo-resize',   label: 'Resize 400px',  params: { width: '400',  height: '', maintainAspect: true, algo: 'Lanczos' } },
+              { id: 'mse-thumb-export', type: 'transform', transformId: 'flow-export',  label: 'Export Thumb',  params: { suffix: '_thumb', format: 'image/jpeg', quality: 80 } }
+            ]
+          },
+          {
+            id: 'mse-micro', label: 'Micro (200px)',
+            nodes: [
+              { id: 'mse-micro-resize', type: 'transform', transformId: 'geo-resize',   label: 'Resize 200px',  params: { width: '200',  height: '', maintainAspect: true, algo: 'Lanczos' } },
+              { id: 'mse-micro-export', type: 'transform', transformId: 'flow-export',  label: 'Export Micro',  params: { suffix: '_micro', format: 'image/jpeg', quality: 75 } }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+
+  // ─── 2. Web Ready ─────────────────────────────────────
+  {
+    id:          'sys-block-web-ready',
+    name:        'Web Ready',
+    description: 'Resize to max 1920px wide, strip GPS metadata, export as WebP at 85% quality.',
+    isSystem:    true,
+    category:    'Export',
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      { id: 'wr-resize', type: 'transform', transformId: 'geo-resize',   label: 'Resize 1920px', params: { width: '1920', height: '', maintainAspect: true, algo: 'Lanczos' } },
+      { id: 'wr-strip',  type: 'transform', transformId: 'meta-strip',   label: 'Strip GPS',     params: { level: 'GPS Only' } },
+      { id: 'wr-export', type: 'transform', transformId: 'flow-export',  label: 'Export WebP',   params: { suffix: '', format: 'image/webp', quality: 85 } }
+    ]
+  },
+
+  // ─── 3. Social Media Pack ─────────────────────────────
+  {
+    id:          'sys-block-social-pack',
+    name:        'Social Media Pack',
+    description: 'Branch into three social media crops: Square (1080×1080), Landscape (1920×1080), Portrait (1080×1350).',
+    isSystem:    true,
+    category:    'Export',
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'sp-branch', type: 'branch', label: 'Social Variants',
+        branches: [
+          {
+            id: 'sp-square', label: 'Square (1080×1080)',
+            nodes: [
+              { id: 'sp-sq-resize', type: 'transform', transformId: 'geo-resize',      label: 'Resize Square',    params: { width: '1080', height: '1080', maintainAspect: false, algo: 'Lanczos' } },
+              { id: 'sp-sq-export', type: 'transform', transformId: 'flow-export',     label: 'Export Square',    params: { suffix: '_sq',   format: 'image/jpeg', quality: 90 } }
+            ]
+          },
+          {
+            id: 'sp-land', label: 'Landscape (1920×1080)',
+            nodes: [
+              { id: 'sp-land-resize', type: 'transform', transformId: 'geo-resize',    label: 'Resize Landscape', params: { width: '1920', height: '1080', maintainAspect: false, algo: 'Lanczos' } },
+              { id: 'sp-land-export', type: 'transform', transformId: 'flow-export',   label: 'Export Landscape', params: { suffix: '_land', format: 'image/jpeg', quality: 90 } }
+            ]
+          },
+          {
+            id: 'sp-port', label: 'Portrait (1080×1350)',
+            nodes: [
+              { id: 'sp-port-resize', type: 'transform', transformId: 'geo-resize',    label: 'Resize Portrait',  params: { width: '1080', height: '1350', maintainAspect: false, algo: 'Lanczos' } },
+              { id: 'sp-port-export', type: 'transform', transformId: 'flow-export',   label: 'Export Portrait',  params: { suffix: '_port', format: 'image/jpeg', quality: 90 } }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+
+];

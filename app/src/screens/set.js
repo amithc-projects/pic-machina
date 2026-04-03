@@ -5,11 +5,14 @@
  * Uses File System Access API for persistent folder handles.
  */
 
-import { pickFolder, getFolder, listImages } from '../data/folders.js';
-import { getAllRecipes, getRecipe }           from '../data/recipes.js';
-import { startBatch }                         from '../engine/batch.js';
-import { navigate }                           from '../main.js';
-import { formatBytes }                        from '../utils/misc.js';
+import { pickFolder, getFolder, listImages }        from '../data/folders.js';
+import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
+import { startBatch }                               from '../engine/batch.js';
+import { navigate }                                 from '../main.js';
+import { formatBytes }                              from '../utils/misc.js';
+import { renderParamField, collectParams,
+         bindParamFieldEvents,
+         injectParamFieldStyles }                   from '../utils/param-fields.js';
 
 export async function render(container, hash) {
   // Parse recipe id from hash e.g. #set?recipe=sys-web-optimise
@@ -98,6 +101,15 @@ export async function render(container, hash) {
               <span>Skip already-processed files</span>
             </label>
           </section>
+
+          <!-- Recipe run parameters (shown when recipe has params) -->
+          <section class="set-section" id="set-params-section" style="display:none">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+              <div class="set-section-title" style="margin-bottom:0">Parameters</div>
+              <button class="btn-ghost" id="set-params-reset" style="margin-left:auto;font-size:11px;padding:2px 8px;color:var(--ps-text-muted)">Reset</button>
+            </div>
+            <div id="set-params-fields" style="display:flex;flex-direction:column;gap:10px"></div>
+          </section>
         </div>
 
         <!-- Right: image grid -->
@@ -170,6 +182,13 @@ export async function render(container, hash) {
 
     const subfolder = container.querySelector('#set-subfolder').value.trim() || 'output';
 
+    // Collect inline run params (if any) and persist last-used values
+    let runParams = {};
+    if (currentRecipe.params?.length) {
+      runParams = collectParams(container, currentRecipe.params, 'rp');
+      localStorage.setItem(`ic-run-params-${currentRecipe.id}`, JSON.stringify(runParams));
+    }
+
     // Verify output folder is still accessible before navigating away
     try {
       await outputHandle.getDirectoryHandle('.', { create: false }).catch(() => {});
@@ -185,6 +204,7 @@ export async function render(container, hash) {
           files,
           outputHandle,
           subfolder,
+          runParams,
           onProgress: (p, t, fn) => window._queProgress?.(p, t, fn),
           onLog:      (lvl, msg) => window._queLog?.(lvl, msg),
           onComplete: (run)      => window._queComplete?.(run),
@@ -313,12 +333,45 @@ export async function render(container, hash) {
     btn.disabled = !ready;
   }
 
+  function recipeSlug(name) {
+    return (name || 'output').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'output';
+  }
+
   function updateRecipeDisplay() {
     const name = container.querySelector('#set-recipe-name');
     if (name) name.textContent = currentRecipe?.name || 'No recipe selected';
     const editBtn = container.querySelector('#btn-edit-recipe');
     if (editBtn) editBtn.style.display = currentRecipe ? '' : 'none';
+
+    // Default subfolder to sanitized recipe name
+    const subfolderEl = container.querySelector('#set-subfolder');
+    if (subfolderEl && currentRecipe) subfolderEl.value = recipeSlug(currentRecipe.name);
+
+    // Render inline recipe params
+    renderInlineParams();
     updateRunButton();
+  }
+
+  function renderInlineParams() {
+    injectParamFieldStyles();
+    const section = container.querySelector('#set-params-section');
+    const fields  = container.querySelector('#set-params-fields');
+    if (!section || !fields) return;
+
+    const paramDefs = currentRecipe?.params || [];
+    if (!paramDefs.length) { section.style.display = 'none'; return; }
+
+    section.style.display = '';
+    const storageKey = `ic-run-params-${currentRecipe.id}`;
+    const lastUsed   = JSON.parse(localStorage.getItem(storageKey) || 'null') || {};
+    fields.innerHTML = paramDefs.map(p => renderParamField(p, lastUsed[p.name] ?? p.defaultValue, 'rp')).join('');
+    bindParamFieldEvents(container, paramDefs, 'rp');
+
+    container.querySelector('#set-params-reset')?.addEventListener('click', () => {
+      localStorage.removeItem(storageKey);
+      fields.innerHTML = paramDefs.map(p => renderParamField(p, p.defaultValue, 'rp')).join('');
+      bindParamFieldEvents(container, paramDefs, 'rp');
+    }, { once: true });
   }
 
   container.querySelector('#btn-edit-recipe')?.addEventListener('click', () => {
@@ -378,6 +431,7 @@ export async function render(container, hash) {
       });
     });
   }
+
 }
 
 // ── Scoped styles ─────────────────────────────────────────

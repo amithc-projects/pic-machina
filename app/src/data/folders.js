@@ -13,7 +13,8 @@ import { dbGet, dbPut } from './db.js';
  * @returns {FileSystemDirectoryHandle}
  */
 export async function pickFolder(role) {
-  const handle = await window.showDirectoryPicker({ mode: role === 'output' ? 'readwrite' : 'read' });
+  const mode = (role === 'output' || role === 'browse') ? 'readwrite' : 'read';
+  const handle = await window.showDirectoryPicker({ mode });
   await dbPut('folders', { key: role, handle });
   return handle;
 }
@@ -27,12 +28,13 @@ export async function getFolder(role) {
   if (!record) return null;
 
   const handle = record.handle;
+  const mode = (role === 'output' || role === 'browse') ? 'readwrite' : 'read';
 
   // Verify (and re-request) permission
-  const permission = await handle.queryPermission({ mode: role === 'output' ? 'readwrite' : 'read' });
+  const permission = await handle.queryPermission({ mode });
   if (permission === 'granted') return handle;
 
-  const request = await handle.requestPermission({ mode: role === 'output' ? 'readwrite' : 'read' });
+  const request = await handle.requestPermission({ mode });
   if (request === 'granted') return handle;
 
   // Permission denied — clear stored handle

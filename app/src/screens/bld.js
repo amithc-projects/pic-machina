@@ -7,12 +7,14 @@
  */
 
 import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave } from '../data/recipes.js';
+import { getAllBlocks } from '../data/blocks.js';
 import { navigate } from '../main.js';
 import { uuid, now, deepClone } from '../utils/misc.js';
 import { registry, ImageProcessor } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 import { showConfirm } from '../utils/dialogs.js';
 import { extractExif } from '../engine/exif-reader.js';
+import { renderParamField } from '../utils/param-fields.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -109,7 +111,23 @@ function buildNodeRow(item, isSelected) {
     </div>`;
 }
 
-function buildAddNodeModal(grouped) {
+function buildParamRow(p, i) {
+  const typeLabel = { text:'Text', number:'Number', range:'Range', select:'Select', boolean:'Toggle', color:'Color' }[p.type] || p.type;
+  return `
+    <div class="bld-param-row" data-idx="${i}">
+      <span class="ic-badge" style="font-size:10px;font-family:var(--font-mono)">${escHtml(p.name)}</span>
+      <span class="text-sm" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.label)}</span>
+      <span class="text-sm text-muted">${typeLabel}</span>
+      <button class="btn-icon bld-param-edit" data-idx="${i}" title="Edit">
+        <span class="material-symbols-outlined" style="font-size:14px">edit</span>
+      </button>
+      <button class="btn-icon bld-param-delete" data-idx="${i}" title="Delete" style="color:var(--ps-red)">
+        <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+      </button>
+    </div>`;
+}
+
+function buildAddNodeModal(grouped, blocks = []) {
   const sections = Object.entries(grouped).map(([cat, transforms]) => {
     const { color } = Object.values(CAT_COLORS).find(e =>
       transforms.some(t => t.categoryKey === e.key)
@@ -128,13 +146,25 @@ function buildAddNodeModal(grouped) {
       </div>`;
   }).join('');
 
+  const blockItems = blocks.length === 0
+    ? `<div style="padding:6px 2px;color:var(--ps-text-muted);font-size:12px">No blocks yet. <a href="#bkb" style="color:var(--ps-blue)">Create a block →</a></div>`
+    : `<div class="bld-add-grid">
+        ${blocks.map(b => `
+          <button class="bld-add-item bld-add-block-item" data-block-id="${escHtml(b.id)}" data-block-name="${escHtml(b.name)}">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#a855f7">widgets</span>
+            <span class="bld-add-item-name">${escHtml(b.name)}</span>
+            ${b.isSystem ? `<span class="ic-badge" style="font-size:9px;line-height:1;padding:1px 4px;margin-top:2px">sys</span>` : ''}
+          </button>
+        `).join('')}
+      </div>`;
+
   return `
     <div id="bld-add-modal" class="bld-modal-overlay" style="display:none">
       <div class="bld-modal">
         <div class="bld-modal-header">
           <span class="bld-modal-title">Add Step</span>
           <div class="flex items-center gap-2">
-            <input type="text" id="bld-add-search" class="ic-input" placeholder="Search transforms…" style="width:200px" autocomplete="off">
+            <input type="text" id="bld-add-search" class="ic-input" placeholder="Search transforms & blocks…" style="width:220px" autocomplete="off">
             <button class="btn-icon" id="bld-add-close">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -142,6 +172,10 @@ function buildAddNodeModal(grouped) {
         </div>
         <div class="bld-add-body" id="bld-add-sections">
           ${sections}
+          <div class="bld-add-section bld-add-section--blocks">
+            <div class="bld-add-cat" style="color:#a855f7">Blocks</div>
+            ${blockItems}
+          </div>
         </div>
         <div class="bld-modal-footer">
           <button class="btn-secondary bld-add-branch-btn" data-type="branch">
@@ -193,9 +227,15 @@ export async function render(container, hash) {
     return flattenNodes(draft.nodes);
   }
 
-  // Get grouped transforms for modal
+  // Get grouped transforms + blocks for modal
   import('../../src/engine/index.js').catch(() => {});
-  const grouped = registry.getGrouped();
+  const grouped   = registry.getGrouped();
+  const allBlocks = await getAllBlocks();
+  allBlocks.sort((a, b) => {
+    // System blocks first, then alphabetical
+    if (a.isSystem !== b.isSystem) return a.isSystem ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
   container.innerHTML = `
     <div class="screen bld-screen">
@@ -254,6 +294,21 @@ export async function render(container, hash) {
             <label class="ic-label" style="margin-top:12px">Tags</label>
             <input type="text" id="bld-tags" class="ic-input" value="${(draft.tags || []).join(', ')}" placeholder="web, social, print …">
             <div class="text-sm text-muted" style="margin-top:4px">Comma-separated</div>
+
+            <div style="margin-top:16px;border-top:1px solid var(--ps-border);padding-top:12px">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                <span class="material-symbols-outlined" style="font-size:15px;color:var(--ps-blue)">tune</span>
+                <span class="ic-label" style="margin-bottom:0">Run Parameters</span>
+                <button class="btn-ghost" id="bld-add-param" style="margin-left:auto;font-size:11px;padding:2px 8px">
+                  <span class="material-symbols-outlined" style="font-size:13px">add</span> Add
+                </button>
+              </div>
+              <div id="bld-params-list" class="bld-params-list">
+                ${(draft.params || []).length === 0
+                  ? `<div class="text-sm text-muted" id="bld-params-empty">No parameters defined.</div>`
+                  : (draft.params || []).map((p, i) => buildParamRow(p, i)).join('')}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -324,7 +379,7 @@ export async function render(container, hash) {
       </div>
     </div>
 
-    ${buildAddNodeModal(grouped)}`;
+    ${buildAddNodeModal(grouped, allBlocks)}`;
 
   injectBldStyles();
 
@@ -629,7 +684,7 @@ export async function render(container, hash) {
   });
 
   // Add transform node
-  container.querySelectorAll('.bld-add-item').forEach(btn => {
+  container.querySelectorAll('.bld-add-item:not(.bld-add-block-item)').forEach(btn => {
     btn.addEventListener('click', () => {
       const tid = btn.dataset.transformId;
       const def = registry.get(tid);
@@ -644,6 +699,23 @@ export async function render(container, hash) {
       addModal.style.display = 'none';
       // Open NED to configure
       navigate(`#ned?recipe=${draft.id}&node=${node.id}`);
+    });
+  });
+
+  // Add block-ref node
+  container.querySelectorAll('.bld-add-block-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const node = {
+        id:      uuid(),
+        type:    'block-ref',
+        blockId: btn.dataset.blockId,
+        label:   btn.dataset.blockName,
+      };
+      insertAtSelection(node);
+      refreshNodeList();
+      markDirty();
+      addModal.style.display = 'none';
+      // No NED for blocks — they have no per-instance params
     });
   });
 
@@ -723,12 +795,17 @@ export async function render(container, hash) {
       });
     });
 
-    // Edit → open NED
+    // Edit → open NED for transforms, BKB for block-refs
     container.querySelectorAll('.bld-btn-edit').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
         const id = btn.dataset.id;
-        navigate(`#ned?recipe=${draft.id}&node=${id}`);
+        const info = findNodeAndParent(draft.nodes, id);
+        if (info?.node.type === 'block-ref') {
+          navigate(`#bkb?id=${info.node.blockId}`);
+        } else {
+          navigate(`#ned?recipe=${draft.id}&node=${id}`);
+        }
       });
     });
 
@@ -771,7 +848,9 @@ export async function render(container, hash) {
       row.addEventListener('dblclick', () => {
         const id = row.dataset.id;
         const info = findNodeAndParent(draft.nodes, id);
-        if (info && info.node.type === 'transform') {
+        if (info?.node.type === 'block-ref') {
+          navigate(`#bkb?id=${info.node.blockId}`);
+        } else if (info?.node.type === 'transform') {
           navigate(`#ned?recipe=${draft.id}&node=${id}`);
         }
       });
@@ -851,6 +930,132 @@ export async function render(container, hash) {
   });
 
   bindNodeActions();
+
+  // ── Run params management ─────────────────────────────────
+  function refreshParamsList() {
+    const list = container.querySelector('#bld-params-list');
+    if (!list) return;
+    if (!(draft.params || []).length) {
+      list.innerHTML = `<div class="text-sm text-muted" id="bld-params-empty">No parameters defined.</div>`;
+    } else {
+      list.innerHTML = (draft.params || []).map((p, i) => buildParamRow(p, i)).join('');
+    }
+    bindParamActions();
+  }
+
+  function bindParamActions() {
+    container.querySelectorAll('.bld-param-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        draft.params = (draft.params || []).filter((_, i) => i !== idx);
+        refreshParamsList();
+        markDirty();
+      });
+    });
+    container.querySelectorAll('.bld-param-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        showParamEditor((draft.params || [])[idx], idx);
+      });
+    });
+  }
+
+  function showParamEditor(existing, editIdx) {
+    const p = existing ? { ...existing } : { name: '', label: '', type: 'text', defaultValue: '' };
+    const isNew = editIdx == null;
+
+    const dlg = document.createElement('dialog');
+    dlg.className = 'modal';
+    dlg.innerHTML = `
+      <div class="modal__header">
+        <h2 class="modal__title">${isNew ? 'Add' : 'Edit'} Parameter</h2>
+      </div>
+      <div class="modal__body" style="padding:16px;min-width:320px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label class="ic-label">Machine Name <span class="text-muted">(used in {{recipe.xxx}})</span></label>
+          <input type="text" id="pe-name" class="ic-input" value="${escHtml(p.name)}" placeholder="e.g. overlap">
+        </div>
+        <div>
+          <label class="ic-label">Label</label>
+          <input type="text" id="pe-label" class="ic-input" value="${escHtml(p.label)}" placeholder="e.g. Overlap %">
+        </div>
+        <div>
+          <label class="ic-label">Type</label>
+          <select id="pe-type" class="ic-input">
+            ${['text','number','range','select','boolean','color'].map(t =>
+              `<option value="${t}" ${p.type===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div id="pe-extra"></div>
+        <div>
+          <label class="ic-label">Default Value</label>
+          <input type="text" id="pe-default" class="ic-input" value="${escHtml(String(p.defaultValue ?? ''))}">
+        </div>
+      </div>
+      <div class="modal__footer" style="display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--ps-border)">
+        <button class="btn-secondary" id="pe-cancel">Cancel</button>
+        <button class="btn-primary" id="pe-save">Save</button>
+      </div>`;
+
+    function updateExtra() {
+      const type = dlg.querySelector('#pe-type').value;
+      const extra = dlg.querySelector('#pe-extra');
+      if (type === 'range' || type === 'number') {
+        extra.innerHTML = `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label class="ic-label">Min</label><input type="number" id="pe-min" class="ic-input" value="${escHtml(String(p.min??''))}"></div>
+            <div><label class="ic-label">Max</label><input type="number" id="pe-max" class="ic-input" value="${escHtml(String(p.max??''))}"></div>
+          </div>`;
+      } else if (type === 'select') {
+        const opts = (p.options||[]).map(o=>`${o.label}:${o.value}`).join(', ');
+        extra.innerHTML = `
+          <div><label class="ic-label">Options <span class="text-muted">(Label:value, comma-separated)</span></label>
+          <input type="text" id="pe-options" class="ic-input" value="${escHtml(opts)}" placeholder="GIF:gif, MP4:mp4"></div>`;
+      } else {
+        extra.innerHTML = '';
+      }
+    }
+
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    updateExtra();
+    dlg.querySelector('#pe-type').addEventListener('change', updateExtra);
+
+    dlg.querySelector('#pe-cancel').addEventListener('click', () => { dlg.close(); dlg.remove(); });
+    dlg.querySelector('#pe-save').addEventListener('click', () => {
+      const name  = dlg.querySelector('#pe-name').value.trim().replace(/\s+/g,'_');
+      const label = dlg.querySelector('#pe-label').value.trim();
+      const type  = dlg.querySelector('#pe-type').value;
+      if (!name || !label) return;
+
+      const entry = { name, label, type, defaultValue: dlg.querySelector('#pe-default').value };
+      const minEl = dlg.querySelector('#pe-min');
+      const maxEl = dlg.querySelector('#pe-max');
+      if (minEl && minEl.value !== '') entry.min = parseFloat(minEl.value);
+      if (maxEl && maxEl.value !== '') entry.max = parseFloat(maxEl.value);
+      if (type === 'range' || type === 'number') entry.defaultValue = parseFloat(entry.defaultValue) || 0;
+      if (type === 'boolean') entry.defaultValue = entry.defaultValue === 'true';
+      const optsEl = dlg.querySelector('#pe-options');
+      if (optsEl) {
+        entry.options = optsEl.value.split(',').map(s => {
+          const [label, value] = s.split(':').map(x => x.trim());
+          return { label: label || value, value: value || label };
+        }).filter(o => o.value);
+      }
+
+      if (!draft.params) draft.params = [];
+      if (isNew) draft.params.push(entry);
+      else draft.params[editIdx] = entry;
+
+      refreshParamsList();
+      markDirty();
+      dlg.close(); dlg.remove();
+    });
+    dlg.addEventListener('cancel', () => { dlg.remove(); });
+  }
+
+  container.querySelector('#bld-add-param')?.addEventListener('click', () => showParamEditor(null, null));
+  bindParamActions();
 
   // ── Cleanup: flush autosave ───────────────────────────────
   return async () => { await flushAutosave(draft); };
@@ -971,6 +1176,8 @@ function injectBldStyles() {
     .bld-nodes-panel { width:340px; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--ps-border); }
     .bld-nodes-header { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--ps-border); flex-shrink:0; }
     .bld-node-list { flex:1; overflow-y:auto; padding:8px 0; }
+    .bld-params-list { display:flex; flex-direction:column; gap:4px; }
+    .bld-param-row { display:flex; align-items:center; gap:6px; padding:5px 6px; border-radius:6px; background:var(--ps-bg-raised); }
 
     /* Inline preview panel */
     .bld-inline-preview { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }

@@ -58,8 +58,9 @@ export function initDB() {
 
     req.onsuccess = async e => {
       _db = e.target.result;
-      // Seed system recipes on first run
+      // Seed system recipes and blocks on every start (upserts keep them current)
       await seedSystemRecipes(_db);
+      await seedSystemBlocks(_db);
       resolve(_db);
     };
 
@@ -115,6 +116,18 @@ export function dbDelete(storeName, key) {
   });
 }
 
+// ─── System block seeding ─────────────────────────────────
+async function seedSystemBlocks(db) {
+  const { SYSTEM_BLOCKS } = await import('./system-blocks.js');
+  const tx = db.transaction('blocks', 'readwrite');
+  const store = tx.objectStore('blocks');
+  SYSTEM_BLOCKS.forEach(b => store.put(b));
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // ─── System recipe seeding ────────────────────────────────
 async function seedSystemRecipes(db) {
   // Upsert all system recipes so new ones added to system-recipes.js appear automatically
@@ -125,15 +138,13 @@ async function seedSystemRecipes(db) {
     req.onerror = () => reject(req.error);
   });
 
-  const existingIds = new Set(existing.map(r => r.id));
-
   const { SYSTEM_RECIPES } = await import('./system-recipes.js');
-  const newRecipes = SYSTEM_RECIPES.filter(r => !existingIds.has(r.id));
-  if (!newRecipes.length) return; // nothing to add
+  // Always upsert every system recipe so param changes in system-recipes.js are reflected
+  // on next app start. User-created recipes are unaffected (they are not in SYSTEM_RECIPES).
 
   const tx = db.transaction('recipes', 'readwrite');
   const store = tx.objectStore('recipes');
-  newRecipes.forEach(r => store.put(r));
+  SYSTEM_RECIPES.forEach(r => store.put(r));
   return new Promise((resolve, reject) => {
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);

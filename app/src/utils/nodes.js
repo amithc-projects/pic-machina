@@ -81,6 +81,27 @@ export function countNodes(nodes = []) {
 }
 
 /**
+ * Apply run-time param overrides to all nodes in the tree.
+ * Each key in runParams overwrites a matching param key in any transform node.
+ */
+export function applyRunParams(nodes, runParams) {
+  if (!runParams || !Object.keys(runParams).length) return;
+  for (const node of nodes) {
+    if (node.type === 'transform' && node.params) {
+      for (const [k, v] of Object.entries(runParams)) {
+        if (k in node.params) node.params[k] = v;
+      }
+    }
+    if (node.type === 'branch')
+      for (const b of node.branches || []) applyRunParams(b.nodes || [], runParams);
+    if (node.type === 'conditional') {
+      applyRunParams(node.thenNodes || [], runParams);
+      applyRunParams(node.elseNodes || [], runParams);
+    }
+  }
+}
+
+/**
  * Finds a node by ID in the tree and returns its parent array and index.
  */
 export function findNodeAndParent(nodes, nodeId) {

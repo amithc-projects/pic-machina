@@ -40,7 +40,7 @@ export const SYSTEM_RECIPES = [
   {
     id:          'sys-thumbnail-pack',
     name:        'Thumbnail Pack',
-    description: 'Create three size variants — Full (1920px), Medium (800px), Thumb (400px) — as JPEGs.',
+    description: 'Create four JPEG size variants — Full (1920px), Medium (800px), Thumb (400px), Micro (200px) — using the Multi-size Export block.',
     isSystem:    true,
     coverColor:  '#8b5cf6',
     tags:        ['thumbnails', 'variants', 'resize'],
@@ -48,31 +48,9 @@ export const SYSTEM_RECIPES = [
     updatedAt:   0,
     nodes: [
       {
-        id:   'branch-1', type: 'branch',
-        label: 'Size Variants',
-        branches: [
-          {
-            id: 'variant-full', label: 'Full',
-            nodes: [
-              { id: 'f-resize', type: 'transform', transformId: 'geo-resize', params: { width: '1920', maintainAspect: true } },
-              { id: 'f-export', type: 'transform', transformId: 'flow-export', params: { suffix: '_full', format: 'image/jpeg', quality: 92 } }
-            ]
-          },
-          {
-            id: 'variant-med', label: 'Medium',
-            nodes: [
-              { id: 'm-resize', type: 'transform', transformId: 'geo-resize', params: { width: '800', maintainAspect: true } },
-              { id: 'm-export', type: 'transform', transformId: 'flow-export', params: { suffix: '_med', format: 'image/jpeg', quality: 85 } }
-            ]
-          },
-          {
-            id: 'variant-thumb', label: 'Thumb',
-            nodes: [
-              { id: 't-resize', type: 'transform', transformId: 'geo-resize', params: { width: '400', maintainAspect: true } },
-              { id: 't-export', type: 'transform', transformId: 'flow-export', params: { suffix: '_thumb', format: 'image/jpeg', quality: 80 } }
-            ]
-          }
-        ]
+        id: 'tp-block-ref', type: 'block-ref',
+        blockId: 'sys-block-multi-export',
+        label: 'Multi-size Export'
       }
     ]
   },
@@ -576,6 +554,100 @@ export const SYSTEM_RECIPES = [
       { id: 'ts-3', type: 'transform', transformId: 'flow-export',
         params: { suffix: '_miniature', format: 'image/jpeg', quality: 92 }, label: 'Export' }
     ]
-  }
+  },
+
+  // ── Photo Stack Animation ─────────────────────────────────
+  {
+    id: 'sys-photo-stack', name: 'Photo Stack Animation',
+    description: 'Polaroid-framed animated stack — each photo gets a white border and handwritten caption, then appears on a desk one by one. Outputs GIF or MP4.',
+    isSystem: true, coverColor: '#3d2b1a',
+    tags: ['animation', 'polaroid', 'stack', 'gif', 'video', 'creative'],
+    createdAt: 0, updatedAt: 0,
+    params: [
+      { name: 'format',      label: 'Output Format',     type: 'select',
+        options: [{ label: 'Animated GIF', value: 'gif' }, { label: 'MP4 Video', value: 'mp4' }],
+        defaultValue: 'gif' },
+      { name: 'width',       label: 'Canvas Width (px)',  type: 'number', min: 320, defaultValue: 1920 },
+      { name: 'height',      label: 'Canvas Height (px)', type: 'number', min: 240, defaultValue: 1080 },
+      { name: 'overlap',     label: 'Overlap %',          type: 'range',  min: 0, max: 90, defaultValue: 0 },
+      { name: 'maxRotation', label: 'Max Rotation (°)',   type: 'range',  min: 0, max: 45, defaultValue: 35 },
+      { name: 'frameDelay',  label: 'Frame Delay (ms)',   type: 'number', defaultValue: 800 },
+    ],
+    nodes: [
+      { id: 'psa-1', type: 'transform', transformId: 'overlay-polaroid-frame',
+        params: { borderColor: '#f5f5f0', borderSide: 20, borderBottom: 60, caption: '{{filename | sanitized}}' },
+        label: 'Polaroid Frame' },
+      { id: 'psa-2', type: 'transform', transformId: 'flow-animate-stack',
+        params: { filename: 'photo-stack', format: 'gif', width: 1920, height: 1080,
+                  deskColor: '#3d2b1a', frameDelay: 800, maxRotation: 35, overlap: 0 },
+        label: 'Animate Stack' },
+    ]
+  },
+
+  // ── Aerochrome (Infrared Film) ────────────────────────────
+  {
+    id: 'sys-aerochrome', name: 'Aerochrome (Infrared)',
+    description: 'Simulates Kodak Aerochrome infrared film — foliage turns vivid pink/red, skies stay deep blue.',
+    isSystem: true, coverColor: '#c0392b',
+    tags: ['film', 'infrared', 'aerochrome', 'creative', 'color'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'ac-1', type: 'transform', transformId: 'color-channel-swap',
+        params: { redSource: 'G', greenSource: 'R', blueSource: 'B' },
+        label: 'Swap R↔G (Infrared)' },
+      { id: 'ac-2', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: 60, contrast: 20 },
+        label: 'Boost Saturation & Contrast' },
+      { id: 'ac-3', type: 'transform', transformId: 'filter-bloom',
+        params: { threshold: 63, blurRadius: 8, strength: 40 },
+        label: 'Halation Bloom' },
+      { id: 'ac-4', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_aerochrome', format: 'image/jpeg', quality: 92 },
+        label: 'Export JPEG' },
+    ]
+  },
+
+  // ── Digital Glitch ────────────────────────────────────────
+  {
+    id: 'sys-glitch', name: 'Digital Glitch',
+    description: 'Chromatic aberration, pixel sorting, and CRT scanlines — lo-fi data-corruption aesthetic.',
+    isSystem: true, coverColor: '#7c3aed',
+    tags: ['glitch', 'digital', 'vaporwave', 'creative', 'crt'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'gl-1', type: 'transform', transformId: 'filter-chromatic-aberration',
+        params: { offset: 4, direction: 'horizontal' },
+        label: 'Chromatic Aberration' },
+      { id: 'gl-2', type: 'transform', transformId: 'filter-pixel-sort',
+        params: { threshold: 80, direction: 'light-to-dark', stripHeight: 1 },
+        label: 'Pixel Sort' },
+      { id: 'gl-3', type: 'transform', transformId: 'overlay-scanlines',
+        params: { spacing: 3, opacity: 20, color: '#000000' },
+        label: 'Scanlines' },
+      { id: 'gl-4', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_glitch', format: 'image/jpeg', quality: 90 },
+        label: 'Export JPEG' },
+    ]
+  },
+
+  // ── Retro 8-Bit / Dithered ────────────────────────────────
+  {
+    id: 'sys-8bit', name: 'Retro 8-Bit',
+    description: 'Pixelate with nearest-neighbour and dither to a CGA palette — classic 8-bit game aesthetic.',
+    isSystem: true, coverColor: '#065f46',
+    tags: ['8-bit', 'pixel art', 'retro', 'dither', 'creative', 'cga'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: '8b-1', type: 'transform', transformId: 'geo-pixelate',
+        params: { blockSize: 6 },
+        label: 'Pixelate' },
+      { id: '8b-2', type: 'transform', transformId: 'filter-dither',
+        params: { palette: 'cga', dithering: true },
+        label: 'CGA Dither' },
+      { id: '8b-3', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_8bit', format: 'image/png', quality: 100 },
+        label: 'Export PNG' },
+    ]
+  },
 
 ];

@@ -189,9 +189,12 @@ export class ImageProcessor {
     }
 
     // ── Aggregation captures ──
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet'].includes(id)) {
-      const blob = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
-      results.push({ blob, filename: `_capture_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder });
+    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(id)) {
+      const blob    = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
+      const caption = node.params?.caption != null
+        ? interpolate(String(node.params.caption), context)
+        : '';
+      results.push({ blob, filename: `_capture_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption });
       return;
     }
 

@@ -14,7 +14,8 @@ import { createRun, updateRun, appendLog }        from '../data/runs.js';
 import { getAllBlocks }                            from '../data/blocks.js';
 import { ImageProcessor }                         from './processor.js';
 import { extractExif }                            from './exif-reader.js';
-import { createGIF, createVideo, createContactSheet } from './compositor.js';
+import { createGIF, createVideo, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
+import { applyRunParams }                         from '../utils/nodes.js';
 
 // ─── AI transform IDs that require the main thread ───────
 const MAIN_THREAD_TRANSFORMS = new Set([
@@ -22,6 +23,9 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-face-privacy',
   'ai-silhouette',
   'ai-smart-redact',
+  // gif.js requires HTMLCanvasElement (not OffscreenCanvas) so must run on main thread
+  'flow-photo-stack',
+  'flow-animate-stack',
 ]);
 
 function flattenNodes(nodes) {
@@ -68,17 +72,18 @@ function getWorker() {
 }
 
 // ─── Main-thread batch runner ─────────────────────────────
-async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, blocksById, run, onProgress, onLog, onComplete }) {
+async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, blocksById, runParams, run, onProgress, onLog, onComplete }) {
   const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
   const processor = new ImageProcessor();
   const total = files.length;
 
   const resolvedNodes = resolveBlocks(recipe.nodes || [], blocksById);
+  applyRunParams(resolvedNodes, runParams);
 
   // Aggregation collector (GIF / video / contact sheet)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
   }
@@ -108,6 +113,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         exif,
         meta:      {},
         variables: new Map(),
+        recipe:    runParams || {},
         outputSubfolder: subfolder || 'output',
       };
 
@@ -116,6 +122,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       for (const result of results) {
         if (result.aggregationId && aggregations[result.aggregationId]) {
           aggregations[result.aggregationId].blobs.push(result.blob);
+          (aggregations[result.aggregationId].captions ??= []).push(result.caption ?? '');
         } else {
           try {
             const folder = result.subfolder
@@ -155,6 +162,35 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       } else if (agg.node.transformId === 'flow-contact-sheet') {
         const blob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
         await writeFile(subHandle, p.filename || 'contact-sheet.jpg', blob);
+      } else if (agg.node.transformId === 'flow-photo-stack') {
+        const fmt  = p.format || 'gif';
+        const blob = await createPhotoStack(agg.blobs, {
+          width:        p.width        || 1920,
+          height:       p.height       || 1080,
+          deskColor:    p.deskColor    || '#3d2b1a',
+          frameDelay:   p.frameDelay   || 800,
+          maxRotation:  p.maxRotation  ?? 35,
+          borderColor:  p.borderColor  || '#f5f5f0',
+          borderBottom: p.borderBottom || 60,
+          format:       fmt,
+          captions:     agg.captions   || [],
+          overlap:      p.overlap      ?? 0,
+        });
+        const base = (p.filename || 'photo-stack').replace(/\.(gif|mp4)$/i, '');
+        await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
+      } else if (agg.node.transformId === 'flow-animate-stack') {
+        const fmt  = p.format || 'gif';
+        const blob = await createAnimatedStack(agg.blobs, {
+          width:       p.width       || 1920,
+          height:      p.height      || 1080,
+          deskColor:   p.deskColor   || '#3d2b1a',
+          frameDelay:  p.frameDelay  || 800,
+          maxRotation: p.maxRotation ?? 35,
+          overlap:     p.overlap     ?? 0,
+          format:      fmt,
+        });
+        const base = (p.filename || 'stack').replace(/\.(gif|mp4)$/i, '');
+        await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
       }
     } catch (err) {
       onLog('error', `Aggregation failed (${agg.node.transformId}): ${err.message}`);
@@ -187,7 +223,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
  * @param {function} opts.onError        — (msg) => void
  * @returns {{ cancel: function, runId: string }}
  */
-export async function startBatch({ recipe, files, outputHandle, subfolder = 'output', onProgress, onLog, onComplete, onError }) {
+export async function startBatch({ recipe, files, outputHandle, subfolder = 'output', runParams = {}, onProgress, onLog, onComplete, onError }) {
   const allBlocks  = await getAllBlocks();
   const blocksById = Object.fromEntries(allBlocks.map(b => [b.id, b]));
 
@@ -211,7 +247,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
   if (recipeNeedsMainThread(recipe)) {
     // Fire the batch as an async task so we can return { runId, cancel } immediately
     runMainThreadBatch({
-      recipe, files, outputHandle, subfolder, blocksById, run,
+      recipe, files, outputHandle, subfolder, blocksById, runParams, run,
       onProgress: wrappedProgress,
       onLog:      wrappedLog,
       onComplete: wrappedComplete,
@@ -281,7 +317,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
     payload: {
       recipe,
       files,
-      outputConfig: { subfolder, blocks: blocksById },
+      outputConfig: { subfolder, blocks: blocksById, runParams },
       runId: run.id,
     }
   });

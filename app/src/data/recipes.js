@@ -85,6 +85,38 @@ export function flushAutosave(recipe) {
   return saveRecipe(recipe);
 }
 
+// ─── Thumbnail ────────────────────────────────────────────
+
+/**
+ * Resize a File to a small JPEG data URL and store it on the recipe.
+ * @param {string} recipeId
+ * @param {File} file
+ */
+export async function setRecipeThumbnail(recipeId, file) {
+  const recipe = await getRecipe(recipeId);
+  if (!recipe) throw new Error(`Recipe ${recipeId} not found`);
+
+  const bitmap = await createImageBitmap(file);
+  const MAX_W = 480, MAX_H = 300;
+  const scale = Math.min(MAX_W / bitmap.width, MAX_H / bitmap.height, 1);
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+
+  recipe.thumbnail = canvas.toDataURL('image/jpeg', 0.8);
+  await saveRecipe(recipe);
+}
+
+export async function clearRecipeThumbnail(recipeId) {
+  const recipe = await getRecipe(recipeId);
+  if (!recipe) return;
+  delete recipe.thumbnail;
+  await saveRecipe(recipe);
+}
+
 // ─── Bundling (Export/Import) ───────────────────────────
 
 /**

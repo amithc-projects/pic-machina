@@ -52,6 +52,7 @@ function resolveKey(key, ctx) {
   const field = rest.join('.');
 
   if (ns === 'exif' || ns === 'meta') return ctx.exif?.[field] ?? ctx.meta?.[field] ?? null;
+  if (ns === 'recipe')  return ctx.recipe?.[field] != null ? String(ctx.recipe[field]) : null;
   if (ns === 'loop')    return `{{loop.${field}}}`;   // v1.2 reserved
   if (ns === 'sidecar') return `{{sidecar.${field}}}`; // v1.1 reserved
 
@@ -68,6 +69,13 @@ function applyPipe(value, pipe, ctx) {
   const dateMatch = pipe.match(/^date\("([^"]+)"\)$/);
   if (dateMatch) {
     return formatDateValue(value, dateMatch[1]);
+  }
+
+  // sanitized — strip file extension, replace hyphens/underscores with spaces
+  if (pipe === 'sanitized') {
+    return String(value ?? '')
+      .replace(/\.[^.]+$/, '')  // remove extension
+      .replace(/[-_]/g, ' ');   // hyphens and underscores → spaces
   }
 
   // "fallback string" — literal string fallback

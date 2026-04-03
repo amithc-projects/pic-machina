@@ -434,3 +434,29 @@ registry.register({
     ctx.restore();
   }
 });
+
+// ─── Pixelate ─────────────────────────────────────────────
+registry.register({
+  id: 'geo-pixelate', name: 'Pixelate', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'grid_3x3',
+  description: 'Downsample then upsample with nearest-neighbour for a retro pixel-block effect.',
+  params: [
+    { name: 'blockSize', label: 'Block Size (px)', type: 'range', min: 2, max: 32, defaultValue: 8 },
+  ],
+  apply(ctx, p) {
+    const W  = ctx.canvas.width, H = ctx.canvas.height;
+    const bs = Math.max(2, Math.round(p.blockSize ?? 8));
+    const sw = Math.max(1, Math.ceil(W / bs));
+    const sh = Math.max(1, Math.ceil(H / bs));
+
+    const small = document.createElement('canvas');
+    small.width = sw; small.height = sh;
+    const sCtx = small.getContext('2d');
+    sCtx.imageSmoothingEnabled = false;
+    sCtx.drawImage(ctx.canvas, 0, 0, sw, sh);
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(small, 0, 0, W, H);
+    ctx.imageSmoothingEnabled = true;
+  }
+});

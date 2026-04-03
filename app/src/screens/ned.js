@@ -15,6 +15,7 @@ import { ImageProcessor }                      from '../engine/index.js';
 import { extractExif }                         from '../engine/exif-reader.js';
 import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }               from '../utils/image-info.js';
+import { renderParamField, collectParams }     from '../utils/param-fields.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -25,112 +26,6 @@ const CAT_COLORS = {
   flow:    '#0077ff',
   meta:    '#f472b6',
 };
-
-// ── Param field renderer ───────────────────────────────────
-function renderParamField(param, value) {
-  const id = `ned-param-${param.name}`;
-  const val = value ?? param.defaultValue ?? '';
-
-  switch (param.type) {
-    case 'boolean':
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}</label>
-          <label class="ned-toggle">
-            <input type="checkbox" id="${id}" name="${param.name}" ${val ? 'checked' : ''}>
-            <span class="ned-toggle-track"></span>
-          </label>
-        </div>`;
-
-    case 'select':
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}</label>
-          <select id="${id}" name="${param.name}" class="ic-input">
-            ${(param.options || []).map(opt =>
-              `<option value="${escHtml(opt.value)}" ${opt.value == val ? 'selected' : ''}>${escHtml(opt.label)}</option>`
-            ).join('')}
-          </select>
-        </div>`;
-
-    case 'range':
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}
-            <span id="${id}-val" class="mono text-sm" style="margin-left:auto;color:var(--ps-blue)">${val}</span>
-          </label>
-          <input type="range" id="${id}" name="${param.name}" class="ic-range"
-            min="${param.min ?? 0}" max="${param.max ?? 100}" step="${param.step ?? 1}" value="${val}">
-        </div>`;
-
-    case 'color':
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}</label>
-          <div class="ned-color-row">
-            <input type="color" id="${id}" name="${param.name}" value="${val}" class="ned-color-input">
-            <input type="text" id="${id}-hex" class="ic-input" value="${val}" maxlength="7"
-              style="flex:1;font-family:var(--font-mono);font-size:12px">
-          </div>
-        </div>`;
-
-    case 'number':
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}</label>
-          <input type="number" id="${id}" name="${param.name}" class="ic-input"
-            value="${val}" ${param.min != null ? `min="${param.min}"` : ''} ${param.max != null ? `max="${param.max}"` : ''}
-            ${param.step != null ? `step="${param.step}"` : ''}>
-        </div>`;
-
-    case 'textarea':
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}</label>
-          <textarea id="${id}" name="${param.name}" class="ic-input" rows="4">${escHtml(String(val))}</textarea>
-        </div>`;
-
-    case 'file':
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}</label>
-          <div class="ned-file-row">
-            <input type="text" id="${id}" name="${param.name}" class="ic-input ned-file-path"
-              value="${escHtml(String(val))}" placeholder="No file selected…" readonly>
-            <button type="button" class="btn-secondary ned-file-browse-btn" data-target="${id}">
-              <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
-              Browse
-            </button>
-            <input type="file" id="${id}-picker" accept="image/*" style="display:none">
-          </div>
-        </div>`;
-
-    default: // 'text'
-      return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${param.label}</label>
-          <input type="text" id="${id}" name="${param.name}" class="ic-input" value="${escHtml(String(val))}">
-        </div>`;
-  }
-}
-
-// ── Collect form values ────────────────────────────────────
-function collectParams(container, paramDefs) {
-  const result = {};
-  for (const p of paramDefs) {
-    const id = `ned-param-${p.name}`;
-    const el = container.querySelector(`#${id}`);
-    if (!el) continue;
-    if (p.type === 'boolean') {
-      result[p.name] = el.checked;
-    } else if (p.type === 'range' || p.type === 'number') {
-      result[p.name] = parseFloat(el.value);
-    } else {
-      result[p.name] = el.value;
-    }
-  }
-  return result;
-}
 
 // ── Find node in recipe tree by id ─────────────────────────
 function findNode(nodes, nodeId) {
@@ -183,7 +78,7 @@ export async function render(container, hash) {
 
   const conditionHtml = isConditional ? buildConditionEditor(node.condition) : '';
   const branchHtml    = isBranch      ? buildBranchEditor(node)              : '';
-  const paramsHtml    = def ? (def.params || []).map(p => renderParamField(p, node.params?.[p.name])).join('') : '';
+  const paramsHtml    = def ? (def.params || []).map(p => renderParamField(p, node.params?.[p.name], 'ned')).join('') : '';
 
   container.innerHTML = `
     <div class="screen ned-screen">
@@ -469,7 +364,7 @@ export async function render(container, hash) {
   }
 
   async function saveNode() {
-    if (def) node.params = collectParams(container, def.params || []);
+    if (def) node.params = collectParams(container, def.params || [], 'ned');
     const labelInput = container.querySelector('#ned-label-input');
     if (labelInput) node.label = labelInput.value || def?.name || node.type;
     if (isConditional) node.condition = collectCondition(container);
@@ -498,7 +393,7 @@ export async function render(container, hash) {
     if (!previewArea) return;
 
     try {
-      const params  = collectParams(container, def.params || []);
+      const params  = collectParams(container, def.params || [], 'ned');
       const exif    = testFile ? await extractExif(testFile) : {};
       const context = { filename: testFile?.name || 'test.jpg', exif, meta: {}, variables: new Map() };
 

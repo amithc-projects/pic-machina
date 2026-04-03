@@ -92,6 +92,29 @@ registry.register({
   apply() { /* handled by Processor as aggregation node */ }
 });
 
+// ─── Photo Stack Animation ────────────────────────────────
+registry.register({
+  id: 'flow-photo-stack', name: 'Photo Stack Animation', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'photo_library',
+  description: 'Collect all photos and compose an animated polaroid stack — each photo appears on a desk in sequence. Outputs GIF or MP4.',
+  params: [
+    { name: 'filename',     label: 'Output Filename',       type: 'text',    defaultValue: 'photo-stack' },
+    { name: 'format',       label: 'Output Format',         type: 'select',
+      options: [{ label: 'Animated GIF', value: 'gif' }, { label: 'MP4 Video', value: 'mp4' }],
+      defaultValue: 'gif' },
+    { name: 'width',        label: 'Canvas Width (px)',      type: 'number',  defaultValue: 1920 },
+    { name: 'height',       label: 'Canvas Height (px)',     type: 'number',  defaultValue: 1080 },
+    { name: 'deskColor',    label: 'Desk Color',             type: 'color',   defaultValue: '#3d2b1a' },
+    { name: 'frameDelay',   label: 'Appear Delay (ms)',      type: 'number',  defaultValue: 800 },
+    { name: 'maxRotation',  label: 'Max Rotation (°)',       type: 'range',   min: 0, max: 45, defaultValue: 35 },
+    { name: 'borderColor',  label: 'Polaroid Frame Color',   type: 'color',   defaultValue: '#f5f5f0' },
+    { name: 'borderBottom', label: 'Caption Border (px)',    type: 'number',  defaultValue: 60 },
+    { name: 'caption',      label: 'Caption ({{vars}} supported)', type: 'text', defaultValue: '{{filename | sanitized}}' },
+    { name: 'overlap',      label: 'Overlap (%)',                  type: 'range', min: 0, max: 90, defaultValue: 0 },
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
+});
+
 // ─── Compose Grid ─────────────────────────────────────────
 registry.register({
   id: 'flow-compose-grid', name: 'Compose Grid', category: 'Flow Control', categoryKey: 'flow',
@@ -148,4 +171,24 @@ registry.register({
     ctx.canvas.height = totalH;
     ctx.drawImage(grid, 0, 0);
   }
+});
+
+// ─── Animate Stack ────────────────────────────────────────
+registry.register({
+  id: 'flow-animate-stack', name: 'Animate Stack', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'layers',
+  description: 'Collect frames and animate them appearing on a desk surface one by one. Add overlay-polaroid-frame upstream to get polaroid borders.',
+  params: [
+    { name: 'filename',    label: 'Output Filename',    type: 'text',   defaultValue: 'stack' },
+    { name: 'format',      label: 'Output Format',      type: 'select',
+      options: [{ label: 'Animated GIF', value: 'gif' }, { label: 'MP4 Video', value: 'mp4' }],
+      defaultValue: 'gif' },
+    { name: 'width',       label: 'Canvas Width (px)',  type: 'number', defaultValue: 1920 },
+    { name: 'height',      label: 'Canvas Height (px)', type: 'number', defaultValue: 1080 },
+    { name: 'deskColor',   label: 'Desk Color',          type: 'color',  defaultValue: '#3d2b1a' },
+    { name: 'frameDelay',  label: 'Appear Delay (ms)',   type: 'number', defaultValue: 800 },
+    { name: 'maxRotation', label: 'Max Rotation (°)',    type: 'range',  min: 0, max: 45, defaultValue: 35 },
+    { name: 'overlap',     label: 'Overlap (%)',          type: 'range',  min: 0, max: 90, defaultValue: 0 },
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
 });

@@ -9,7 +9,8 @@
  */
 
 import { getRun }                                   from '../data/runs.js';
-import { getFolder }                                 from '../data/folders.js';
+import { getFolder, pickFolder }                     from '../data/folders.js';
+import { setRecipeThumbnail }                        from '../data/recipes.js';
 import { navigate }                                  from '../main.js';
 import { formatBytes }                               from '../utils/misc.js';
 import { getImageInfo, renderImageInfoPanel,
@@ -55,29 +56,48 @@ export async function render(container, hash) {
   // Load run metadata
   const run = runId ? await getRun(runId) : null;
 
-  // No run specified — show prompt to come from output history
+  // No run specified — try to restore a previously browsed folder, else show picker
+  let browseHandle = null;
+  let browseMode   = false;
+
   if (!runId) {
-    container.innerHTML = `
-      <div class="screen">
-        <div class="screen-header">
-          <div class="screen-title">
-            <span class="material-symbols-outlined">folder_open</span>
-            Folder Viewer
+    browseHandle = await getFolder('browse').catch(() => null);
+    if (browseHandle) {
+      browseMode = true;
+    } else {
+      container.innerHTML = `
+        <div class="screen">
+          <div class="screen-header">
+            <div class="screen-title">
+              <span class="material-symbols-outlined">folder_open</span>
+              Folder Viewer
+            </div>
           </div>
-        </div>
-        <div class="screen-body" style="align-items:center;justify-content:center">
-          <div class="empty-state">
-            <span class="material-symbols-outlined" style="font-size:48px">folder_open</span>
-            <div class="empty-state-title">No folder selected</div>
-            <div class="empty-state-desc">Open the folder viewer from a completed batch run.</div>
-            <button class="btn-primary" id="fld-go-out">
-              <span class="material-symbols-outlined">history</span> Go to Output History
-            </button>
+          <div class="screen-body" style="align-items:center;justify-content:center">
+            <div class="empty-state">
+              <span class="material-symbols-outlined" style="font-size:48px">folder_open</span>
+              <div class="empty-state-title">No folder selected</div>
+              <div class="empty-state-desc">Open a folder to browse its contents, or go to Output History to view a completed batch run.</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px">
+                <button class="btn-primary" id="fld-browse-folder">
+                  <span class="material-symbols-outlined">folder_open</span> Open Folder
+                </button>
+                <button class="btn-secondary" id="fld-go-out">
+                  <span class="material-symbols-outlined">history</span> Output History
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>`;
-    container.querySelector('#fld-go-out')?.addEventListener('click', () => navigate('#out'));
-    return;
+        </div>`;
+      container.querySelector('#fld-go-out')?.addEventListener('click', () => navigate('#out'));
+      container.querySelector('#fld-browse-folder')?.addEventListener('click', async () => {
+        try {
+          await pickFolder('browse');
+          navigate('#fld');
+        } catch (e) { if (e.name !== 'AbortError') console.error(e); }
+      });
+      return;
+    }
   }
 
   container.innerHTML = `
@@ -87,14 +107,22 @@ export async function render(container, hash) {
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
         <div class="fld-breadcrumb">
-          <span class="fld-crumb-recipe">${escHtml(run?.recipeName || 'Output')}</span>
-          <span class="material-symbols-outlined fld-crumb-sep">chevron_right</span>
-          <span class="fld-crumb-folder">${escHtml(run?.outputFolder || 'output')}/</span>
+          ${browseMode
+            ? `<span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-muted)">folder_open</span>
+               <span class="fld-crumb-recipe">${escHtml(browseHandle.name)}</span>`
+            : `<span class="fld-crumb-recipe">${escHtml(run?.recipeName || 'Output')}</span>
+               <span class="material-symbols-outlined fld-crumb-sep">chevron_right</span>
+               <span class="fld-crumb-folder">${escHtml(run?.outputFolder || 'output')}/</span>`
+          }
         </div>
 
         <div style="flex:1"></div>
 
-        <div id="fld-selection-actions" class="flex items-center gap-1" style="display:none;margin-right:8px">
+        ${browseMode ? `<button class="btn-secondary btn-sm" id="fld-change-folder" style="margin-right:8px">
+          <span class="material-symbols-outlined" style="font-size:16px">folder_open</span> Change Folder
+        </button>` : ''}
+
+        <div id="fld-selection-actions" class="flex items-center gap-1" style="margin-right:8px">
           <button class="btn-secondary btn-sm" id="fld-btn-select-all" title="Select all visible items">
             <span class="material-symbols-outlined" style="font-size:16px">done_all</span>
             Select All
@@ -152,6 +180,7 @@ export async function render(container, hash) {
             <span class="text-sm text-muted">Loading files…</span>
           </div>
         </div>
+        <div class="fld-resize-handle" id="fld-resize-handle" style="display:none"></div>
         <div class="fld-detail" id="fld-detail" style="display:none"></div>
       </div>
     </div>`;
@@ -161,12 +190,21 @@ export async function render(container, hash) {
 
   container.querySelector('#fld-back')?.addEventListener('click', () => navigate(`#${fromRoute}`));
 
+  // ── Change Folder (browse mode) ─────────────────────────────
+  container.querySelector('#fld-change-folder')?.addEventListener('click', async () => {
+    try {
+      await pickFolder('browse');
+      navigate('#fld');
+    } catch (e) { if (e.name !== 'AbortError') console.error(e); }
+  });
+
   // ── State ───────────────────────────────────────────────────
+  let activeSubHandle = null; // used by deleteSelected
   let allEntries = [];   // { file: File, handle: FileSystemFileHandle }[]
   let inputFiles = [];   // File[] from input folder for comparison
   let inputByBase = new Map();
   let filtered   = [];   // MediaEntry[] current filtered+sorted list
-  let viewMode   = 'grid';
+  let viewMode   = localStorage.getItem('ic-view-mode') || 'filmstrip';
   let filterType = 'all';
   let sortKey    = 'name';
   let selected   = null; // MediaEntry | null
@@ -188,9 +226,14 @@ export async function render(container, hash) {
   container.querySelectorAll('[data-fld-view]').forEach(btn => {
     btn.addEventListener('click', () => {
       viewMode = btn.dataset.fldView;
+      localStorage.setItem('ic-view-mode', viewMode);
       container.querySelectorAll('[data-fld-view]').forEach(b => b.classList.toggle('is-active', b === btn));
       renderMain();
     });
+  });
+  // Restore active state based on saved viewMode
+  container.querySelectorAll('[data-fld-view]').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.fldView === viewMode);
   });
 
   // ── Filter chips ────────────────────────────────────────────
@@ -221,6 +264,51 @@ export async function render(container, hash) {
 
   container.querySelector('#fld-btn-delete-sel')?.addEventListener('click', deleteSelected);
 
+  // ── Resizable detail panel ──────────────────────────────────
+  const detailEl      = container.querySelector('#fld-detail');
+  const resizeHandle  = container.querySelector('#fld-resize-handle');
+  const DETAIL_W_KEY  = 'ic-fld-detail-width';
+  let detailWidth     = Math.max(220, Math.min(700, parseInt(localStorage.getItem(DETAIL_W_KEY)) || 340));
+
+  function applyDetailWidth(w) {
+    detailWidth = Math.max(220, Math.min(700, w));
+    if (detailEl) { detailEl.style.width = detailWidth + 'px'; detailEl.style.minWidth = detailWidth + 'px'; }
+  }
+
+  function showDetailAndHandle() {
+    if (resizeHandle) resizeHandle.style.display = '';
+    if (detailEl)     detailEl.style.display = 'flex';
+    applyDetailWidth(detailWidth);
+  }
+
+  let _isResizing = false;
+  resizeHandle?.addEventListener('mousedown', e => {
+    _isResizing = true;
+    resizeHandle.classList.add('is-dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  function _onResizeMove(e) {
+    if (!_isResizing) return;
+    const body = container.querySelector('#fld-body');
+    if (!body) return;
+    applyDetailWidth(body.getBoundingClientRect().right - e.clientX);
+  }
+
+  function _onResizeUp() {
+    if (!_isResizing) return;
+    _isResizing = false;
+    resizeHandle?.classList.remove('is-dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    localStorage.setItem(DETAIL_W_KEY, String(detailWidth));
+  }
+
+  document.addEventListener('mousemove', _onResizeMove);
+  document.addEventListener('mouseup',   _onResizeUp);
+
   container.querySelector('#fld-btn-slideshow')?.addEventListener('click', () => {
     const images = filtered.filter(ent => fileType(ent.file.name) === 'image');
     if (!images.length) {
@@ -232,21 +320,26 @@ export async function render(container, hash) {
 
   // ── Load files ──────────────────────────────────────────────
   try {
-    const outputHandle = await getFolder('output');
-    if (!outputHandle) {
-      showEmpty('Output folder not accessible. Grant permission in Batch Setup.');
-      return;
-    }
-
-    const subfolder = run?.outputFolder || 'output';
     let subHandle;
-    try {
-      subHandle = await outputHandle.getDirectoryHandle(subfolder);
-    } catch {
-      showEmpty(`Subfolder "${subfolder}" not found.`);
-      return;
+    if (browseMode) {
+      subHandle = browseHandle;
+    } else {
+      const outputHandle = await getFolder('output');
+      if (!outputHandle) {
+        showEmpty('Output folder not accessible. Grant permission in Batch Setup.');
+        return;
+      }
+
+      const subfolder = run?.outputFolder || 'output';
+      try {
+        subHandle = await outputHandle.getDirectoryHandle(subfolder);
+      } catch {
+        showEmpty(`Subfolder "${subfolder}" not found.`);
+        return;
+      }
     }
 
+    activeSubHandle = subHandle;
     allEntries = await listAllMedia(subHandle);
 
     // Try to load input files for comparison
@@ -368,20 +461,16 @@ export async function render(container, hash) {
     if (!confirmed) return;
 
     try {
-      const outputHandle = await getFolder('output');
-      const subfolder = run?.outputFolder || 'output';
-      const subHandle = await outputHandle.getDirectoryHandle(subfolder);
+      if (!activeSubHandle) throw new Error('Folder not accessible');
 
       for (const name of names) {
-        const ent = allEntries.find(e => e.file.name === name);
-        if (ent) {
-          // Use parentHandle.removeEntry for better reliability
-          await subHandle.removeEntry(name);
+        if (allEntries.find(e => e.file.name === name)) {
+          await activeSubHandle.removeEntry(name);
         }
       }
 
       // Refresh data
-      allEntries = await listAllMedia(subHandle);
+      allEntries = await listAllMedia(activeSubHandle);
       selectedSet.clear();
       lastIdx = -1;
       selected = null;
@@ -408,16 +497,17 @@ export async function render(container, hash) {
 
   function updateSelectionUI() {
     const selCount = selectedSet.size;
-    const actions = container.querySelector('#fld-selection-actions');
-    if (actions) actions.style.display = selCount > 0 ? 'flex' : 'none';
 
-    const delBtn = container.querySelector('#fld-btn-delete-sel');
-    if (delBtn) delBtn.disabled = selCount === 0;
+    const selectAllBtn = container.querySelector('#fld-btn-select-all');
+    const deselectBtn  = container.querySelector('#fld-btn-deselect-all');
+    const delBtn       = container.querySelector('#fld-btn-delete-sel');
+
+    if (selectAllBtn) selectAllBtn.style.display = selCount < filtered.length ? '' : 'none';
+    if (deselectBtn)  deselectBtn.style.display  = selCount > 0 ? '' : 'none';
+    if (delBtn)       delBtn.disabled             = selCount === 0;
 
     container.querySelectorAll('[data-fld-ent-name]').forEach(el => {
-      const name = el.dataset.fldEntName;
-      const isSelected = selectedSet.has(name);
-      el.classList.toggle('is-multiselected', isSelected);
+      el.classList.toggle('is-multiselected', selectedSet.has(el.dataset.fldEntName));
     });
   }
 
@@ -492,8 +582,12 @@ export async function render(container, hash) {
       strip.appendChild(thumb);
     });
 
-    // If something was selected, show it
-    if (selected) renderFilmstripPreview(selected);
+    // If something was selected, show it in main area and sidebar info panel
+    if (selected) {
+      renderFilmstripPreview(selected);
+      showDetailAndHandle();
+      renderInfoPanel(detailEl, selected);
+    }
   }
 
   function renderFilmstripPreview(ent) {
@@ -575,13 +669,13 @@ export async function render(container, hash) {
 
     if (viewMode === 'filmstrip') {
       renderFilmstripPreview(file);
-      return; // filmstrip uses inline preview, no side panel
+      showDetailAndHandle();
+      renderInfoPanel(detailEl, file);
+      return;
     }
 
-    const detail = container.querySelector('#fld-detail');
-    if (!detail) return;
-    detail.style.display = 'flex';
-    renderDetailContent(detail, file, false);
+    showDetailAndHandle();
+    renderDetailContent(detailEl, file, false);
   }
 
   /** Render file preview into an element (used by both detail panel + filmstrip preview). */
@@ -624,7 +718,6 @@ export async function render(container, hash) {
       // Image with before/after compare
       let sliderPct = 50;
       let isDragging = false;
-      let cmpMode = 'slider';
 
       el.innerHTML = `
         <div class="fld-detail-inner">
@@ -653,11 +746,16 @@ export async function render(container, hash) {
           </div>
           ${!fullSize ? `
           <div class="fld-detail-footer">
-            <button class="btn-secondary" style="width:100%" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
+            <button class="btn-secondary" style="flex:1" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
               <span class="material-symbols-outlined">download</span> Download
             </button>
+            ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
+              <span class="material-symbols-outlined">photo_library</span>
+            </button>` : ''}
           </div>` : ''}
         </div>`;
+
+      el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
 
       el.querySelectorAll('.fld-cmp-btn[data-cmp-mode]').forEach(btn => {
         if (btn.dataset.cmpMode === cmpMode) btn.classList.add('is-active');
@@ -760,11 +858,16 @@ export async function render(container, hash) {
           </div>
           ${!fullSize ? `
           <div class="fld-detail-footer">
-            <button class="btn-secondary" style="width:100%" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
+            <button class="btn-secondary" style="flex:1" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
               <span class="material-symbols-outlined">download</span> Download
             </button>
+            ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
+              <span class="material-symbols-outlined">photo_library</span>
+            </button>` : ''}
           </div>` : ''}
         </div>`;
+
+      el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
 
       el.querySelectorAll('.fld-cmp-btn[data-nosrc-mode]').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -785,11 +888,72 @@ export async function render(container, hash) {
     }
   }
 
+  async function renderInfoPanel(el, ent) {
+    const file = ent.file;
+    const type = fileType(file.name);
+    const fileUrl = URL.createObjectURL(file);
+    blobUrls.push(fileUrl);
+    el.innerHTML = `
+      <div class="fld-detail-inner">
+        <div class="fld-detail-header">
+          <div class="fld-detail-title">${escHtml(file.name)}</div>
+          <div class="fld-detail-meta">
+            ${type === 'video'
+              ? `<span class="ic-badge" style="background:rgba(0,119,255,.15);color:var(--ps-blue)">Video</span>`
+              : `<span class="ic-badge">${extOf(file.name).slice(1).toUpperCase()}</span>`
+            }
+            <span class="text-sm text-muted">${formatBytes(file.size)}</span>
+          </div>
+        </div>
+        <div class="fld-detail-preview" id="fld-info-panel-view">
+          <div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px">
+            <div class="spinner"></div><span class="text-sm text-muted">Reading metadata…</span>
+          </div>
+        </div>
+        <div class="fld-detail-footer">
+          <button class="btn-secondary" style="flex:1" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
+            <span class="material-symbols-outlined">download</span> Download
+          </button>
+          ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
+            <span class="material-symbols-outlined">photo_library</span>
+          </button>` : ''}
+        </div>
+      </div>`;
+    el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
+    const view = el.querySelector('#fld-info-panel-view');
+    if (!view) return;
+    const info = await getImageInfo(file);
+    view.innerHTML = '';
+    view.appendChild(renderImageInfoPanel(info));
+  }
+
   function downloadFile(file) {
     const url = URL.createObjectURL(file);
     const a   = document.createElement('a');
     a.href = url; a.download = file.name; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  async function wireThumbBtn(file, btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<img src="/assets/animated_logo.gif" style="width:18px;height:18px;display:block">`;
+    }
+    try {
+      await setRecipeThumbnail(run.recipeId, file);
+      window.AuroraToast?.show({
+        variant: 'success',
+        title: 'Recipe thumbnail updated',
+        description: 'The recipe card in the Library will now show this image.',
+      });
+    } catch (err) {
+      window.AuroraToast?.show({ variant: 'danger', title: 'Failed to set thumbnail', description: err.message });
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-symbols-outlined">photo_library</span>`;
+      }
+    }
   }
 
   function revokeBlobUrls() {
@@ -895,7 +1059,12 @@ export async function render(container, hash) {
     if (slideshowIsPlaying) startTimer();
   }
 
-  return () => { revokeBlobUrls(); clearInterval(slideshowTimer); };
+  return () => {
+    revokeBlobUrls();
+    clearInterval(slideshowTimer);
+    document.removeEventListener('mousemove', _onResizeMove);
+    document.removeEventListener('mouseup',   _onResizeUp);
+  };
 }
 
 // ── Styles ──────────────────────────────────────────────────
@@ -1041,9 +1210,20 @@ function injectFldStyles() {
     .fld-list-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; }
     .fld-list-name { font-size:12px; color:var(--ps-text); font-family:var(--font-mono); }
 
+    /* Resize handle between main and detail */
+    .fld-resize-handle {
+      width:5px; flex-shrink:0; cursor:col-resize;
+      background:var(--ps-border);
+      transition:background 120ms;
+      position:relative;
+    }
+    .fld-resize-handle:hover, .fld-resize-handle.is-dragging {
+      background:var(--ps-blue);
+    }
+
     /* Detail panel */
     .fld-detail {
-      width:340px; min-width:340px; border-left:1px solid var(--ps-border);
+      min-width:220px; border:none;
       display:flex; flex-direction:column; overflow:hidden; flex-shrink:0;
       background:var(--ps-bg-app);
     }
@@ -1056,7 +1236,7 @@ function injectFldStyles() {
       flex:1; overflow:hidden; position:relative;
       background:repeating-conic-gradient(var(--ps-bg-surface) 0% 25%,var(--ps-bg-app) 0% 50%) 0 0/20px 20px;
     }
-    .fld-detail-footer { padding:10px 14px; border-top:1px solid var(--ps-border); flex-shrink:0; }
+    .fld-detail-footer { padding:10px 14px; border-top:1px solid var(--ps-border); flex-shrink:0; display:flex; gap:6px; align-items:center; }
     .fld-detail-video { background:#000; }
 
     /* Mode toggle */

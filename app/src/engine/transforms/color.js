@@ -680,3 +680,185 @@ registry.register({
     ctx.drawImage(sharpCanvas, 0, 0);
   }
 });
+
+// ─── Channel Swap (Aerochrome / Infrared) ─────────────────
+registry.register({
+  id: 'color-channel-swap', name: 'Channel Swap', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'swap_horiz',
+  description: 'Reassign RGB channels. Swap R↔G to simulate Kodak Aerochrome infrared film.',
+  params: [
+    { name: 'redSource',   label: 'Red ← Source',   type: 'select',
+      options: [{ label: 'Red', value: 'R' }, { label: 'Green', value: 'G' }, { label: 'Blue', value: 'B' }],
+      defaultValue: 'G' },
+    { name: 'greenSource', label: 'Green ← Source', type: 'select',
+      options: [{ label: 'Red', value: 'R' }, { label: 'Green', value: 'G' }, { label: 'Blue', value: 'B' }],
+      defaultValue: 'R' },
+    { name: 'blueSource',  label: 'Blue ← Source',  type: 'select',
+      options: [{ label: 'Red', value: 'R' }, { label: 'Green', value: 'G' }, { label: 'Blue', value: 'B' }],
+      defaultValue: 'B' },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const id  = ctx.getImageData(0, 0, W, H);
+    const src = new Uint8ClampedArray(id.data); // snapshot original channels
+    const d   = id.data;
+
+    const CH = { R: 0, G: 1, B: 2 };
+    const rSrc = CH[p.redSource   ?? 'G'];
+    const gSrc = CH[p.greenSource ?? 'R'];
+    const bSrc = CH[p.blueSource  ?? 'B'];
+
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]     = src[i + rSrc];
+      d[i + 1] = src[i + gSrc];
+      d[i + 2] = src[i + bSrc];
+      // alpha unchanged
+    }
+    ctx.putImageData(id, 0, 0);
+  }
+});
+
+// ─── Pixel Sort ───────────────────────────────────────────
+registry.register({
+  id: 'filter-pixel-sort', name: 'Pixel Sort', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'sort',
+  description: 'Sorts pixels within horizontal strips by luminance — digital glitch aesthetic.',
+  params: [
+    { name: 'threshold',   label: 'Threshold (0-255)', type: 'range',  min: 0, max: 255, defaultValue: 80 },
+    { name: 'direction',   label: 'Sort Direction',     type: 'select',
+      options: [{ label: 'Light to Dark', value: 'light-to-dark' }, { label: 'Dark to Light', value: 'dark-to-light' }],
+      defaultValue: 'light-to-dark' },
+    { name: 'stripHeight', label: 'Strip Height (px)',  type: 'number', defaultValue: 1 },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const id        = ctx.getImageData(0, 0, W, H);
+    const d         = id.data;
+    const threshold = p.threshold ?? 80;
+    const darkFirst = (p.direction || 'light-to-dark') === 'dark-to-light';
+    const strip     = Math.max(1, Math.round(p.stripHeight ?? 1));
+
+    for (let y = 0; y < H; y += strip) {
+      let runStart = -1;
+
+      for (let x = 0; x <= W; x++) {
+        const bx   = Math.min(x, W - 1);
+        const base = (y * W + bx) * 4;
+        const lum  = 0.299 * d[base] + 0.587 * d[base + 1] + 0.114 * d[base + 2];
+        const inRun = x < W && lum >= threshold;
+
+        if (inRun && runStart === -1) {
+          runStart = x;
+        } else if (!inRun && runStart !== -1) {
+          const runLen = x - runStart;
+          if (runLen > 1) {
+            const endRow = Math.min(y + strip, H);
+            for (let row = y; row < endRow; row++) {
+              const pixels = [];
+              for (let px = runStart; px < x; px++) {
+                const idx = (row * W + px) * 4;
+                const lv  = 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+                pixels.push({ lv, r: d[idx], g: d[idx + 1], b: d[idx + 2], a: d[idx + 3] });
+              }
+              pixels.sort((a, b) => darkFirst ? a.lv - b.lv : b.lv - a.lv);
+              for (let k = 0; k < pixels.length; k++) {
+                const idx = (row * W + runStart + k) * 4;
+                d[idx] = pixels[k].r; d[idx + 1] = pixels[k].g;
+                d[idx + 2] = pixels[k].b; d[idx + 3] = pixels[k].a;
+              }
+            }
+          }
+          runStart = -1;
+        }
+      }
+    }
+    ctx.putImageData(id, 0, 0);
+  }
+});
+
+// ─── Dither ───────────────────────────────────────────────
+const _PALETTES = {
+  mono:    [[0,0,0],[255,255,255]],
+  gameboy: [[15,56,15],[48,98,48],[139,172,15],[155,188,15]],
+  cga: [
+    [0,0,0],[0,0,170],[0,170,0],[0,170,170],
+    [170,0,0],[170,0,170],[170,85,0],[170,170,170],
+    [85,85,85],[85,85,255],[85,255,85],[85,255,255],
+    [255,85,85],[255,85,255],[255,255,85],[255,255,255]
+  ],
+  c64: [
+    [0,0,0],[255,255,255],[136,0,0],[170,255,238],
+    [204,68,204],[0,204,85],[0,0,170],[238,238,119],
+    [221,136,85],[102,68,0],[255,119,119],[51,51,51],
+    [119,119,119],[170,255,102],[0,136,255],[187,187,187]
+  ],
+};
+
+function _nearestColor(r, g, b, palette) {
+  let bestDist = Infinity, bestIdx = 0;
+  for (let k = 0; k < palette.length; k++) {
+    const dr = r - palette[k][0], dg = g - palette[k][1], db = b - palette[k][2];
+    const dist = dr * dr + dg * dg + db * db;
+    if (dist < bestDist) { bestDist = dist; bestIdx = k; }
+  }
+  return palette[bestIdx];
+}
+
+registry.register({
+  id: 'filter-dither', name: 'Dither', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'grain',
+  description: 'Palette reduction with Floyd-Steinberg dithering — retro 8-bit look.',
+  params: [
+    { name: 'palette',   label: 'Palette',                   type: 'select',
+      options: [
+        { label: 'Mono (2 colors)',     value: 'mono'    },
+        { label: 'CGA (16 colors)',     value: 'cga'     },
+        { label: 'Game Boy (4 greens)', value: 'gameboy' },
+        { label: 'C64 (16 colors)',     value: 'c64'     },
+      ], defaultValue: 'cga' },
+    { name: 'dithering', label: 'Floyd-Steinberg Dithering', type: 'boolean', defaultValue: true },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const id  = ctx.getImageData(0, 0, W, H);
+    const src = id.data;
+
+    const palette   = _PALETTES[p.palette || 'cga'] || _PALETTES.cga;
+    const useDither = p.dithering !== false;
+
+    // Float buffer for error accumulation (R,G,B per pixel — no alpha)
+    const buf = new Float32Array(W * H * 3);
+    for (let i = 0, j = 0; i < src.length; i += 4, j += 3) {
+      buf[j] = src[i]; buf[j + 1] = src[i + 1]; buf[j + 2] = src[i + 2];
+    }
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const j    = (y * W + x) * 3;
+        const oldR = Math.max(0, Math.min(255, buf[j]));
+        const oldG = Math.max(0, Math.min(255, buf[j + 1]));
+        const oldB = Math.max(0, Math.min(255, buf[j + 2]));
+
+        const [newR, newG, newB] = _nearestColor(oldR, oldG, oldB, palette);
+
+        const di = (y * W + x) * 4;
+        src[di] = newR; src[di + 1] = newG; src[di + 2] = newB;
+
+        if (!useDither) continue;
+
+        const eR = oldR - newR, eG = oldG - newG, eB = oldB - newB;
+
+        function spread(tx, ty, w) {
+          if (tx < 0 || tx >= W || ty >= H) return;
+          const tj = (ty * W + tx) * 3;
+          buf[tj] += eR * w; buf[tj + 1] += eG * w; buf[tj + 2] += eB * w;
+        }
+        spread(x + 1, y,     7 / 16);
+        spread(x - 1, y + 1, 3 / 16);
+        spread(x,     y + 1, 5 / 16);
+        spread(x + 1, y + 1, 1 / 16);
+      }
+    }
+    ctx.putImageData(id, 0, 0);
+  }
+});

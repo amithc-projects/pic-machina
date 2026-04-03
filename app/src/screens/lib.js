@@ -5,7 +5,7 @@
  * Users can browse, preview, create, or clone recipes.
  */
 
-import { getAllRecipes, deleteRecipe, cloneRecipe, saveRecipe, getRecipeBundle, saveRecipeBundle } from '../data/recipes.js';
+import { getAllRecipes, deleteRecipe, cloneRecipe, saveRecipe, getRecipeBundle, saveRecipeBundle, clearRecipeThumbnail } from '../data/recipes.js';
 import { navigate } from '../main.js';
 import { formatDate, uuid, now } from '../utils/misc.js';
 import { initTabs } from '../aurora/tabs.js';
@@ -25,6 +25,9 @@ const COVER_GRADIENTS = {
 };
 
 function getCoverStyle(recipe) {
+  if (recipe.thumbnail) {
+    return `background-image:url(${recipe.thumbnail});background-size:cover;background-position:center;`;
+  }
   if (recipe.coverColor && COVER_GRADIENTS[recipe.coverColor]) {
     return `background: ${COVER_GRADIENTS[recipe.coverColor]};`;
   }
@@ -60,6 +63,9 @@ function recipeCardHTML(recipe) {
                  <button class="btn-icon lib-action-export" data-id="${recipe.id}" title="Export to JSON">
                    <span class="material-symbols-outlined">download</span>
                  </button>
+                 ${recipe.thumbnail ? `<button class="btn-icon lib-action-remove-thumb" data-id="${recipe.id}" title="Remove thumbnail">
+                   <span class="material-symbols-outlined" style="color:var(--ps-text-muted)">hide_image</span>
+                 </button>` : ''}
                  <button class="btn-icon lib-action-delete" data-id="${recipe.id}" title="Delete recipe">
                    <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
                  </button>`
@@ -389,6 +395,16 @@ export async function render(container) {
         applyFilter(container.querySelector('#lib-search')?.value || '');
         renderTagChips();
         window.AuroraToast?.show({ variant: 'success', title: 'Recipe deleted' });
+      });
+    });
+
+    container.querySelectorAll('.lib-action-remove-thumb').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        await clearRecipeThumbnail(btn.dataset.id);
+        recipes = await getAllRecipes();
+        applyFilter(container.querySelector('#lib-search')?.value || '');
+        window.AuroraToast?.show({ variant: 'success', title: 'Thumbnail removed' });
       });
     });
 
