@@ -703,6 +703,33 @@ export const SYSTEM_RECIPES = [
     ]
   },
 
+  // ── TV Room (perspective) ────────────────────────────────
+  {
+    id: 'sys-video-tv', name: 'TV Room',
+    description: 'Place a single video onto a perspective TV screen in a darkened room. The bezel, stand, and ambient glow are drawn programmatically — no background image required.',
+    isSystem: true, coverColor: '#1c1c2e',
+    tags: ['video', 'tv', 'perspective', 'room', 'cinematic'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'vt-1', type: 'transform', transformId: 'flow-video-wall',
+        params: {
+          filename:         'tv-room.mp4',
+          layout:           'custom-tv',
+          outputWidth:      1920,
+          outputHeight:     1080,
+          fps:              30,
+          bitrate:          10000000,
+          endOfVideo:       'black',
+          endText:          '',
+          fallbackImageUrl: '',
+          captions:         '',
+        },
+        label: 'TV Room'
+      }
+    ]
+  },
+
   // ── Digital Glitch ────────────────────────────────────────
   {
     id: 'sys-glitch', name: 'Digital Glitch',
