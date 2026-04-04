@@ -226,11 +226,12 @@ export async function render(container, hash) {
   async function refreshImageGrid() {
     if (!inputHandle) return;
     try {
-      selectedFiles = await listImages(inputHandle);
+      const hasVideoWall = (currentRecipe?.nodes || []).some(n => n.transformId === 'flow-video-wall');
+      selectedFiles = await listImages(inputHandle, { includeVideo: hasVideoWall });
       selectedIds   = new Set(selectedFiles.map(f => f.name));
       renderImageGrid();
       const stats = container.querySelector('#set-input-stats');
-      if (stats) stats.textContent = `${selectedFiles.length} image${selectedFiles.length !== 1 ? 's' : ''} found`;
+      if (stats) stats.textContent = `${selectedFiles.length} ${hasVideoWall ? 'file' : 'image'}${selectedFiles.length !== 1 ? 's' : ''} found`;
       updateRunButton();
     } catch (err) {
       console.error('[SET] listImages failed:', err);

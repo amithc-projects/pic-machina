@@ -15,6 +15,7 @@ import { getAllBlocks }                            from '../data/blocks.js';
 import { ImageProcessor }                         from './processor.js';
 import { extractExif }                            from './exif-reader.js';
 import { createGIF, createVideo, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
+import { createVideoWall } from './video-wall.js';
 import { applyRunParams }                         from '../utils/nodes.js';
 
 // ─── AI transform IDs that require the main thread ───────
@@ -26,6 +27,8 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   // gif.js requires HTMLCanvasElement (not OffscreenCanvas) so must run on main thread
   'flow-photo-stack',
   'flow-animate-stack',
+  // video-wall uses document.fonts (loadHandwritingFont) — must run on main thread
+  'flow-video-wall',
 ]);
 
 function flattenNodes(nodes) {
@@ -86,6 +89,9 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
     if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
+    if (node.transformId === 'flow-video-wall') {
+      aggregations[node.id] = { node, blobs: [], files: [] };
+    }
   }
 
   onLog('info', `Starting batch: ${total} file(s) — recipe "${recipe.name}"`);
@@ -102,12 +108,18 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
     onLog('info', `[${i + 1}/${total}] Processing: ${file.name}`);
 
     try {
-      const image = await createImageBitmap(file);
-      const exif  = await extractExif(file);
       const ext   = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+      const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+      // Video files can't be decoded as images — use a dummy 1×1 bitmap so the
+      // processor can still run (video-wall aggregation only needs originalFile).
+      const image = VIDEO_EXTS.has(ext)
+        ? await createImageBitmap(new ImageData(1, 1))
+        : await createImageBitmap(file);
+      const exif  = await extractExif(file);
 
       const context = {
         originalImage: image,
+        originalFile:  file,
         filename: file.name,
         ext,
         exif,
@@ -121,8 +133,13 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
 
       for (const result of results) {
         if (result.aggregationId && aggregations[result.aggregationId]) {
-          aggregations[result.aggregationId].blobs.push(result.blob);
-          (aggregations[result.aggregationId].captions ??= []).push(result.caption ?? '');
+          const agg = aggregations[result.aggregationId];
+          if (result.file) {
+            agg.files.push(result.file);
+          } else {
+            agg.blobs.push(result.blob);
+            (agg.captions ??= []).push(result.caption ?? '');
+          }
         } else {
           try {
             const folder = result.subfolder
@@ -149,6 +166,32 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
 
   // Post-process aggregations
   for (const [, agg] of Object.entries(aggregations)) {
+    // Video wall uses files[], all others use blobs[]
+    if (agg.node.transformId === 'flow-video-wall') {
+      if (!agg.files?.length) continue;
+      try {
+        onLog('info', `Rendering video wall: ${agg.files.length} video(s)`);
+        const p        = agg.node.params || {};
+        const captions = (p.captions || '').split(',').map(s => s.trim());
+        const blob     = await createVideoWall(agg.files, {
+          layout:           p.layout           || 'grid-2x2',
+          fps:              Number(p.fps)       || 30,
+          outputWidth:      Number(p.outputWidth)  || 1920,
+          outputHeight:     Number(p.outputHeight) || 1080,
+          captions,
+          endOfVideo:       p.endOfVideo       || 'black',
+          fallbackImageUrl: p.fallbackImageUrl || null,
+          endText:          p.endText          || 'No Signal Detected',
+          bitrate:          Number(p.bitrate)  || 8_000_000,
+          onProgress:       (pct, label) => onLog('info', label),
+        });
+        await writeFile(subHandle, p.filename || 'video-wall.mp4', blob);
+      } catch (err) {
+        onLog('error', `Video wall failed: ${err.message}`);
+      }
+      continue;
+    }
+
     if (!agg.blobs.length) continue;
     try {
       onLog('info', `Rendering aggregation: ${agg.node.transformId} (${agg.blobs.length} frames)`);

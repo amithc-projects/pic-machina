@@ -78,6 +78,9 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
     if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
+    if (node.transformId === 'flow-video-wall') {
+      aggregations[node.id] = { node, blobs: [], files: [] };
+    }
   }
 
   log(runId, 'info', `Starting batch: ${total} file(s) — recipe "${recipe.name}"`);
@@ -98,6 +101,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
 
       const context = {
         originalImage: image,
+        originalFile:  file,
         filename: file.name,
         ext,
         exif,
@@ -111,8 +115,13 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
 
       for (const result of results) {
         if (result.aggregationId && aggregations[result.aggregationId]) {
-          aggregations[result.aggregationId].blobs.push(result.blob);
-          (aggregations[result.aggregationId].captions ??= []).push(result.caption ?? '');
+          const agg = aggregations[result.aggregationId];
+          if (result.file) {
+            agg.files.push(result.file);
+          } else {
+            agg.blobs.push(result.blob);
+            (agg.captions ??= []).push(result.caption ?? '');
+          }
         } else {
           self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: result.filename, blob: result.blob, subfolder: result.subfolder } });
         }

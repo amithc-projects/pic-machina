@@ -189,6 +189,12 @@ export class ImageProcessor {
     }
 
     // ── Aggregation captures ──
+    if (id === 'flow-video-wall') {
+      // Capture the raw File object — no canvas export needed
+      results.push({ file: context.originalFile, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder });
+      return;
+    }
+
     if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(id)) {
       const blob    = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
       const caption = node.params?.caption != null

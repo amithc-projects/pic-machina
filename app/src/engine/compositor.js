@@ -316,7 +316,7 @@ export async function createAnimatedStack(blobs, {
 }
 
 // ── Handwriting font loader ────────────────────────────────
-async function loadHandwritingFont() {
+export async function loadHandwritingFont() {
   if (typeof document === 'undefined' || !document.fonts) return 'cursive';
   const name = 'Dancing Script';
   if (document.fonts.check(`600 16px "${name}"`)) return name;
@@ -336,7 +336,7 @@ async function loadHandwritingFont() {
 }
 
 // ── Caption drawing ────────────────────────────────────────
-function drawCaption(ctx, text, fw, fh, ph, borderTop, borderBottom, borderSide, fontName) {
+export function drawCaption(ctx, text, fw, fh, ph, borderTop, borderBottom, borderSide, fontName) {
   if (!text) return;
   const cx   = 0;
   const cy   = -fh / 2 + borderTop + ph + borderBottom / 2;

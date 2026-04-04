@@ -51,13 +51,14 @@ export async function clearFolder(role) {
  * Returns an array of File objects from a directory handle.
  * Optionally filtered by accepted MIME types / extensions.
  */
-export async function listImages(dirHandle) {
+export async function listImages(dirHandle, { includeVideo = false } = {}) {
   const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tif', '.tiff', '.heic', '.heif', '.bmp']);
+  const VIDEO_EXTS = new Set(['.mp4', '.mov', '.webm']);
   const files = [];
   for await (const [name, entry] of dirHandle.entries()) {
     if (entry.kind !== 'file') continue;
     const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
-    if (IMAGE_EXTS.has(ext)) {
+    if (IMAGE_EXTS.has(ext) || (includeVideo && VIDEO_EXTS.has(ext))) {
       const file = await entry.getFile();
       files.push(file);
     }

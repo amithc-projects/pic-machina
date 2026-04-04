@@ -607,6 +607,33 @@ export const SYSTEM_RECIPES = [
     ]
   },
 
+  // ── Video Wall ────────────────────────────────────────────
+  {
+    id: 'sys-video-wall', name: 'Video Wall',
+    description: 'Composite multiple video files into a single MP4 grid — security-camera wall style. Select your layout, set captions, and choose what to show when shorter clips end.',
+    isSystem: true, coverColor: '#0f172a',
+    tags: ['video', 'grid', 'composite', 'security', 'wall'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'vw-1', type: 'transform', transformId: 'flow-video-wall',
+        params: {
+          filename:         'video-wall.mp4',
+          layout:           'grid-2x2',
+          outputWidth:      1920,
+          outputHeight:     1080,
+          fps:              30,
+          bitrate:          8000000,
+          endOfVideo:       'text',
+          endText:          'No Signal Detected',
+          fallbackImageUrl: '',
+          captions:         'Camera 1,Camera 2,Camera 3,Camera 4',
+        },
+        label: 'Video Wall'
+      }
+    ]
+  },
+
   // ── Digital Glitch ────────────────────────────────────────
   {
     id: 'sys-glitch', name: 'Digital Glitch',

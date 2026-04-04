@@ -173,6 +173,39 @@ registry.register({
   }
 });
 
+// ─── Video Wall ───────────────────────────────────────────
+registry.register({
+  id: 'flow-video-wall', name: 'Video Wall', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'view_comfy',
+  description: 'Composite multiple input videos into a single grid-layout MP4 (security camera wall style). Inputs are sorted by filename.',
+  params: [
+    { name: 'filename',         label: 'Output Filename',             type: 'text',   defaultValue: 'video-wall.mp4' },
+    { name: 'layout',           label: 'Layout',                      type: 'select',
+      options: [
+        { label: '2×2 Grid (4 videos)',     value: 'grid-2x2'  },
+        { label: '3×3 Grid (9 videos)',     value: 'grid-3x3'  },
+        { label: '4×4 Grid (16 videos)',    value: 'grid-4x4'  },
+        { label: 'Side by Side (2 videos)', value: 'split-1x2' },
+      ],
+      defaultValue: 'grid-2x2' },
+    { name: 'outputWidth',      label: 'Output Width (px)',           type: 'number', defaultValue: 1920 },
+    { name: 'outputHeight',     label: 'Output Height (px)',          type: 'number', defaultValue: 1080 },
+    { name: 'fps',              label: 'FPS',                         type: 'number', defaultValue: 30 },
+    { name: 'bitrate',          label: 'Bitrate (bps)',               type: 'number', defaultValue: 8000000 },
+    { name: 'endOfVideo',       label: 'End-of-Video Behaviour',      type: 'select',
+      options: [
+        { label: 'Black Frame',    value: 'black' },
+        { label: 'Static Image',   value: 'image' },
+        { label: 'Text Overlay',   value: 'text'  },
+      ],
+      defaultValue: 'black' },
+    { name: 'endText',          label: 'End-of-Video Text',           type: 'text',   defaultValue: 'No Signal Detected' },
+    { name: 'fallbackImageUrl', label: 'Fallback Image URL',          type: 'text',   defaultValue: '' },
+    { name: 'captions',         label: 'Cell Captions (comma-separated, ordered by filename)', type: 'text', defaultValue: '' },
+  ],
+  apply() { /* handled by batch.js as aggregation node */ }
+});
+
 // ─── Animate Stack ────────────────────────────────────────
 registry.register({
   id: 'flow-animate-stack', name: 'Animate Stack', category: 'Flow Control', categoryKey: 'flow',
