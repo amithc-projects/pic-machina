@@ -14,6 +14,7 @@ import { createRun, updateRun, appendLog }        from '../data/runs.js';
 import { getAllBlocks }                            from '../data/blocks.js';
 import { ImageProcessor }                         from './processor.js';
 import { extractExif }                            from './exif-reader.js';
+import { ingestFile }                             from '../data/assets.js';
 import { createGIF, createVideo, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
 import { createVideoWall } from './video-wall.js';
 import { applyRunParams }                         from '../utils/nodes.js';
@@ -41,6 +42,10 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'video-extract-frame',
   // flow-gif-from-states uses gif.js which needs HTMLCanvasElement
   'flow-gif-from-states',
+  // ai-ocr-tag reads from IndexedDB asset store (needs main thread path for IDB)
+  'ai-ocr-tag',
+  // ai-analyse-people uses MediaPipe which requires the main thread
+  'ai-analyse-people',
 ]);
 
 function flattenNodes(nodes) {
@@ -129,6 +134,10 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         : await createImageBitmap(file);
       const exif  = await extractExif(file);
 
+      // Persist this file to the asset store (idempotent — no-op if already ingested).
+      // Returns the asset record whose sidecar map feeds {{sidecar.key}} interpolation.
+      const asset = await ingestFile(file);
+
       const context = {
         originalImage: image,
         originalFile:  file,
@@ -139,6 +148,8 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         variables: new Map(),
         recipe:    runParams || {},
         outputSubfolder: subfolder || 'output',
+        sidecar:   { ...(asset.geo ?? {}), ...(asset.sidecar ?? {}) },
+        assetHash: asset.hash,
         log: (level, msg) => onLog(level, msg),
       };
 
@@ -163,6 +174,20 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
             onLog('error', `Write failed: ${result.filename} — ${err.message}`);
           }
         }
+      }
+
+      // Write sidecar JSON — re-read asset so any enrichment (geocode etc.) is captured
+      if (context.assetHash) {
+        try {
+          const { getAsset } = await import('../data/assets.js');
+          const latest = await getAsset(context.assetHash);
+          if (latest) {
+            const json = JSON.stringify(latest, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const sidecarFolder = await getOrCreateOutputSubfolder(subHandle, '.PicMachina');
+            await writeFile(sidecarFolder, `${file.name}.json`, blob);
+          }
+        } catch { /* non-fatal */ }
       }
 
       successCount++;
@@ -346,7 +371,13 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
 
     if (type === 'FILE_DONE') {
       try {
-        const folder = payload.subfolder ? await getOrCreateOutputSubfolder(outputHandle, payload.subfolder) : subHandle;
+        let folder;
+        if (payload.subfolder === '.PicMachina') {
+          // Sidecar JSON lives inside the recipe output subfolder, not the root
+          folder = await getOrCreateOutputSubfolder(subHandle, '.PicMachina');
+        } else {
+          folder = payload.subfolder ? await getOrCreateOutputSubfolder(outputHandle, payload.subfolder) : subHandle;
+        }
         await writeFile(folder, payload.filename, payload.blob);
       } catch (err) {
         onLog?.('error', `Write failed: ${payload.filename} — ${err.message}`);
@@ -369,6 +400,10 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
       onError?.(payload.msg);
     }
   };
+
+  // Ingest files into the asset store on the main thread (IDB unavailable in workers).
+  // Runs concurrently with the worker — does not block batch start.
+  Promise.allSettled(files.map(f => ingestFile(f))).catch(() => {});
 
   worker.postMessage({
     type: 'START',

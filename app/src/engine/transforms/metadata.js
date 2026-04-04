@@ -103,6 +103,18 @@ registry.register({
 
       context.meta[p.targetField || 'location'] = location;
       context.variables.set(p.targetField || 'location', location);
+
+      // Persist to asset store so {{sidecar.city}} works on future runs without re-geocoding
+      if (context.assetHash) {
+        const geo = { ...components, location, geocodedAt: Date.now() };
+        try {
+          const { patchAsset } = await import('../../data/assets.js');
+          await patchAsset(context.assetHash, { geo });
+        } catch { /* non-fatal */ }
+        // Also expose immediately in context.sidecar for downstream nodes in this run
+        if (!context.sidecar) context.sidecar = {};
+        Object.assign(context.sidecar, components, { location });
+      }
     } catch (err) {
       console.warn('[meta-geocode] failed:', err);
     }

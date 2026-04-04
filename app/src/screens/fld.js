@@ -15,6 +15,9 @@ import { navigate }                                  from '../main.js';
 import { formatBytes }                               from '../utils/misc.js';
 import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }                     from '../utils/image-info.js';
+import { renderAssetPanel,
+         injectAssetPanelStyles,
+         renderExtractedMetadataForSidebar }         from '../utils/asset-panel.js';
 import { showConfirm }                               from '../utils/dialogs.js';
 
 const IMAGE_EXTS = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
@@ -738,9 +741,13 @@ export async function render(container, hash) {
                 <span class="material-symbols-outlined" style="font-size:13px">view_column</span> Side
               </button>
             </div>
+            ${!fullSize ? `
             <button class="fld-cmp-btn" data-cmp-mode="info" style="margin-left:8px;border-radius:8px;border:1px solid var(--ps-border);padding:4px 9px">
               <span class="material-symbols-outlined" style="font-size:13px">info</span> Info
             </button>
+            <button class="fld-cmp-btn" data-cmp-mode="meta" style="margin-left:4px;border-radius:8px;border:1px solid var(--ps-border);padding:4px 9px">
+              <span class="material-symbols-outlined" style="font-size:13px">edit_note</span> Metadata
+            </button>` : ''}
           </div>
           <div class="fld-detail-preview" id="fld-cmp-view">
           </div>
@@ -766,6 +773,7 @@ export async function render(container, hash) {
           }
           el.querySelectorAll('.fld-cmp-btn[data-cmp-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
           if (btn.dataset.cmpMode === 'info') renderInfo();
+          else if (btn.dataset.cmpMode === 'meta') renderMeta();
           else renderCmp();
         });
       });
@@ -777,6 +785,15 @@ export async function render(container, hash) {
         const info = await getImageInfo(file);
         cmpEl.innerHTML = '';
         cmpEl.appendChild(renderImageInfoPanel(info));
+      }
+
+      async function renderMeta() {
+        injectAssetPanelStyles();
+        const cmpEl = el.querySelector('#fld-cmp-view');
+        if (!cmpEl) return;
+        cmpEl.innerHTML = '';
+        cmpEl.style.overflow = 'hidden';
+        cmpEl.appendChild(await renderAssetPanel(file));
       }
 
       function renderCmp() {
@@ -851,6 +868,9 @@ export async function render(container, hash) {
               <button class="fld-cmp-btn" data-nosrc-mode="info">
                 <span class="material-symbols-outlined" style="font-size:13px">info</span> Info
               </button>
+              <button class="fld-cmp-btn" data-nosrc-mode="meta">
+                <span class="material-symbols-outlined" style="font-size:13px">edit_note</span> Metadata
+              </button>
             </div>
           </div>
           <div class="fld-detail-preview" id="fld-nosrc-view">
@@ -880,6 +900,11 @@ export async function render(container, hash) {
             const info = await getImageInfo(file);
             view.innerHTML = '';
             view.appendChild(renderImageInfoPanel(info));
+          } else if (noSrcMode === 'meta') {
+            injectAssetPanelStyles();
+            view.innerHTML = '';
+            view.style.overflow = 'hidden';
+            view.appendChild(await renderAssetPanel(file));
           } else {
             view.innerHTML = `<img src="${fileUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block" draggable="false">`;
           }
@@ -925,6 +950,9 @@ export async function render(container, hash) {
     const info = await getImageInfo(file);
     view.innerHTML = '';
     view.appendChild(renderImageInfoPanel(info));
+    // Append extracted metadata (geocode, OCR, vision, custom) below embedded EXIF
+    const extracted = await renderExtractedMetadataForSidebar(file);
+    if (extracted) view.appendChild(extracted);
   }
 
   function downloadFile(file) {

@@ -10,7 +10,7 @@
  */
 
 const DB_NAME = 'PicMachina';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let _db = null;
 
@@ -53,6 +53,14 @@ export function initDB() {
       // folders (File System Access handles)
       if (!db.objectStoreNames.contains('folders')) {
         db.createObjectStore('folders', { keyPath: 'key' });
+      }
+
+      // assets (v2) — per-file metadata store keyed by content hash
+      if (!db.objectStoreNames.contains('assets')) {
+        const assetStore = db.createObjectStore('assets', { keyPath: 'hash' });
+        assetStore.createIndex('filename',   'filename',   { unique: false });
+        assetStore.createIndex('ingestedAt', 'ingestedAt', { unique: false });
+        assetStore.createIndex('updatedAt',  'updatedAt',  { unique: false });
       }
     };
 

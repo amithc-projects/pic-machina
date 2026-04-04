@@ -54,7 +54,7 @@ function resolveKey(key, ctx) {
   if (ns === 'exif' || ns === 'meta') return ctx.exif?.[field] ?? ctx.meta?.[field] ?? null;
   if (ns === 'recipe')  return ctx.recipe?.[field] != null ? String(ctx.recipe[field]) : null;
   if (ns === 'loop')    return `{{loop.${field}}}`;   // v1.2 reserved
-  if (ns === 'sidecar') return `{{sidecar.${field}}}`; // v1.1 reserved
+  if (ns === 'sidecar') return ctx.sidecar?.[field] ?? null;
 
   // Bare key (no namespace) — check variables Map, then meta, then exif
   if (ctx.variables instanceof Map && ctx.variables.has(key)) return ctx.variables.get(key);

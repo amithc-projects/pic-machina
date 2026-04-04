@@ -45,6 +45,8 @@ import { ImageProcessor }   from './processor.js';
 import { createGIF, createVideo, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
 import { extractExif }       from './exif-reader.js';
 import { applyRunParams }    from '../utils/nodes.js';
+import { initDB }            from '../data/db.js';
+import { ingestFile }        from '../data/assets.js';
 
 let cancelled = false;
 
@@ -67,6 +69,14 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
   let successCount = 0, failCount = 0;
   const total = files.length;
   const runParams = outputConfig.runParams || {};
+
+  // Initialise IndexedDB within the worker (IDB is available in workers).
+  // This enables asset store reads/writes from transforms running here.
+  let dbReady = false;
+  try {
+    await initDB();
+    dbReady = true;
+  } catch { /* non-fatal — sidecar interpolation degrades gracefully */ }
 
   // Resolve block-refs in recipe nodes
   const resolvedNodes = await resolveBlocks(recipe.nodes || [], outputConfig.blocks || {});
@@ -99,6 +109,12 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
       const exif  = await extractExif(file);
       const ext   = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
 
+      // Ingest into asset store and load any previously-geocoded sidecar data.
+      let asset = null;
+      if (dbReady) {
+        try { asset = await ingestFile(file); } catch { /* non-fatal */ }
+      }
+
       const context = {
         originalImage: image,
         originalFile:  file,
@@ -109,6 +125,8 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         variables: new Map(),
         recipe:    runParams,
         outputSubfolder: outputConfig.subfolder || 'output',
+        sidecar:   { ...(asset?.geo ?? {}), ...(asset?.sidecar ?? {}) },
+        assetHash: asset?.hash ?? null,
         log: (level, msg) => log(runId, level, msg),
       };
 
@@ -126,6 +144,19 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         } else {
           self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: result.filename, blob: result.blob, subfolder: result.subfolder } });
         }
+      }
+
+      // Write sidecar JSON — re-read asset so any enrichment (geocode etc.) is captured
+      if (dbReady && context.assetHash) {
+        try {
+          const { getAsset } = await import('../data/assets.js');
+          const latest = await getAsset(context.assetHash);
+          if (latest) {
+            const json = JSON.stringify(latest, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: `${file.name}.json`, blob, subfolder: '.PicMachina' } });
+          }
+        } catch { /* non-fatal */ }
       }
 
       successCount++;
