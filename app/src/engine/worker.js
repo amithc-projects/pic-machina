@@ -109,6 +109,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         variables: new Map(),
         recipe:    runParams,
         outputSubfolder: outputConfig.subfolder || 'output',
+        log: (level, msg) => log(runId, level, msg),
       };
 
       const results = await processor.process(image, resolvedNodes, context);

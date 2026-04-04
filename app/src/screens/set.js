@@ -226,12 +226,13 @@ export async function render(container, hash) {
   async function refreshImageGrid() {
     if (!inputHandle) return;
     try {
-      const hasVideoWall = (currentRecipe?.nodes || []).some(n => n.transformId === 'flow-video-wall');
-      selectedFiles = await listImages(inputHandle, { includeVideo: hasVideoWall });
+      const VIDEO_TRANSFORMS = new Set(['flow-video-wall', 'video-extract-frame']);
+      const hasVideoRecipe = (currentRecipe?.nodes || []).some(n => VIDEO_TRANSFORMS.has(n.transformId));
+      selectedFiles = await listImages(inputHandle, { includeVideo: hasVideoRecipe });
       selectedIds   = new Set(selectedFiles.map(f => f.name));
       renderImageGrid();
       const stats = container.querySelector('#set-input-stats');
-      if (stats) stats.textContent = `${selectedFiles.length} ${hasVideoWall ? 'file' : 'image'}${selectedFiles.length !== 1 ? 's' : ''} found`;
+      if (stats) stats.textContent = `${selectedFiles.length} ${hasVideoRecipe ? 'file' : 'image'}${selectedFiles.length !== 1 ? 's' : ''} found`;
       updateRunButton();
     } catch (err) {
       console.error('[SET] listImages failed:', err);

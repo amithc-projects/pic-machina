@@ -607,6 +607,75 @@ export const SYSTEM_RECIPES = [
     ]
   },
 
+  // ── Video Frame GIF ──────────────────────────────────────
+  {
+    id: 'sys-video-frame-gif', name: 'Video Frame GIF',
+    description: 'Extract 5 still frames from a video (0%, 25%, 50%, 75%, 100%) and assemble them into an animated GIF thumbnail.',
+    isSystem: true, coverColor: '#0891b2',
+    tags: ['video', 'gif', 'thumbnail', 'frames', 'preview'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      // ── Frame 1: first frame (0%) ──
+      { id: 'vfg-e1', type: 'transform', transformId: 'video-extract-frame',
+        params: { atPercent: 0 }, label: 'Extract Frame 0%' },
+      { id: 'vfg-c1', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' }, label: 'Square Crop' },
+      { id: 'vfg-r1', type: 'transform', transformId: 'geo-resize',
+        params: { width: '360', height: '', maintainAspect: true }, label: 'Resize 360px' },
+      { id: 'vfg-s1', type: 'transform', transformId: 'flow-save',
+        params: { label: 'frame-0' }, label: 'Save Frame 0%' },
+
+      // ── Frame 2: 25% ──
+      { id: 'vfg-e2', type: 'transform', transformId: 'video-extract-frame',
+        params: { atPercent: 25 }, label: 'Extract Frame 25%' },
+      { id: 'vfg-c2', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' }, label: 'Square Crop' },
+      { id: 'vfg-r2', type: 'transform', transformId: 'geo-resize',
+        params: { width: '360', height: '', maintainAspect: true }, label: 'Resize 360px' },
+      { id: 'vfg-s2', type: 'transform', transformId: 'flow-save',
+        params: { label: 'frame-25' }, label: 'Save Frame 25%' },
+
+      // ── Frame 3: 50% ──
+      { id: 'vfg-e3', type: 'transform', transformId: 'video-extract-frame',
+        params: { atPercent: 50 }, label: 'Extract Frame 50%' },
+      { id: 'vfg-c3', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' }, label: 'Square Crop' },
+      { id: 'vfg-r3', type: 'transform', transformId: 'geo-resize',
+        params: { width: '360', height: '', maintainAspect: true }, label: 'Resize 360px' },
+      { id: 'vfg-s3', type: 'transform', transformId: 'flow-save',
+        params: { label: 'frame-50' }, label: 'Save Frame 50%' },
+
+      // ── Frame 4: 75% ──
+      { id: 'vfg-e4', type: 'transform', transformId: 'video-extract-frame',
+        params: { atPercent: 75 }, label: 'Extract Frame 75%' },
+      { id: 'vfg-c4', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' }, label: 'Square Crop' },
+      { id: 'vfg-r4', type: 'transform', transformId: 'geo-resize',
+        params: { width: '360', height: '', maintainAspect: true }, label: 'Resize 360px' },
+      { id: 'vfg-s4', type: 'transform', transformId: 'flow-save',
+        params: { label: 'frame-75' }, label: 'Save Frame 75%' },
+
+      // ── Frame 5: last frame (100%) ──
+      { id: 'vfg-e5', type: 'transform', transformId: 'video-extract-frame',
+        params: { atPercent: 100 }, label: 'Extract Frame 100%' },
+      { id: 'vfg-c5', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '1:1', strategy: 'Entropy' }, label: 'Square Crop' },
+      { id: 'vfg-r5', type: 'transform', transformId: 'geo-resize',
+        params: { width: '360', height: '', maintainAspect: true }, label: 'Resize 360px' },
+      { id: 'vfg-s5', type: 'transform', transformId: 'flow-save',
+        params: { label: 'frame-100' }, label: 'Save Frame 100%' },
+
+      // ── Assemble animated GIF ──
+      { id: 'vfg-gif', type: 'transform', transformId: 'flow-gif-from-states',
+        params: {
+          panels: 'frame-0,frame-25,frame-50,frame-75,frame-100',
+          delay:  500,
+          loop:   true,
+          suffix: '_preview',
+        }, label: 'Assemble GIF' },
+    ]
+  },
+
   // ── Video Wall ────────────────────────────────────────────
   {
     id: 'sys-video-wall', name: 'Video Wall',

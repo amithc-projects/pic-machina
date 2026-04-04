@@ -18,6 +18,14 @@ import { createGIF, createVideo, createContactSheet, createPhotoStack, createAni
 import { createVideoWall } from './video-wall.js';
 import { applyRunParams }                         from '../utils/nodes.js';
 
+// Ensure all transforms are registered for main-thread batch processing
+import './transforms/geometry.js';
+import './transforms/color.js';
+import './transforms/overlays.js';
+import './transforms/ai.js';
+import './transforms/metadata.js';
+import './transforms/flow.js';
+
 // ─── AI transform IDs that require the main thread ───────
 const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-remove-bg',
@@ -29,6 +37,10 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-animate-stack',
   // video-wall uses document.fonts (loadHandwritingFont) — must run on main thread
   'flow-video-wall',
+  // video-extract-frame uses <video> element — not available in workers
+  'video-extract-frame',
+  // flow-gif-from-states uses gif.js which needs HTMLCanvasElement
+  'flow-gif-from-states',
 ]);
 
 function flattenNodes(nodes) {
@@ -127,6 +139,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         variables: new Map(),
         recipe:    runParams || {},
         outputSubfolder: subfolder || 'output',
+        log: (level, msg) => onLog(level, msg),
       };
 
       const results = await processor.process(image, resolvedNodes, context);
@@ -287,7 +300,9 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
   const wrappedComplete  = (r) => onComplete?.(r);
 
   // ── Route: AI transforms need the main thread ────────────
-  if (recipeNeedsMainThread(recipe)) {
+  const needsMain = recipeNeedsMainThread(recipe);
+  await wrappedLog('info', `Routing: ${needsMain ? 'main thread' : 'worker'}`);
+  if (needsMain) {
     // Fire the batch as an async task so we can return { runId, cancel } immediately
     runMainThreadBatch({
       recipe, files, outputHandle, subfolder, blocksById, runParams, run,

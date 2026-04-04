@@ -132,9 +132,11 @@ export class ImageProcessor {
     const results = [];
     await this._runNodes(nodes, this.ctx, context, results, targetNodeId);
 
-    // If recipe has no explicit export nodes, auto-export at end
-    const hasExports = nodes.some(n => n.type === 'transform' && n.transformId === 'flow-export')
-      || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => bn.transformId === 'flow-export')));
+    // If recipe has no explicit export nodes, auto-export at end.
+    // flow-gif-from-states also produces file output — treat it as an export node.
+    const EXPORT_IDS = new Set(['flow-export', 'flow-gif-from-states']);
+    const hasExports = nodes.some(n => n.type === 'transform' && EXPORT_IDS.has(n.transformId))
+      || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => EXPORT_IDS.has(bn.transformId))));
 
     if (!hasExports && targetNodeId === undefined) {
       const blob = await this._exportCanvas(this.ctx, 'image/jpeg', 0.92);
@@ -188,6 +190,39 @@ export class ImageProcessor {
       return;
     }
 
+    // ── GIF from saved states ──
+    if (id === 'flow-gif-from-states') {
+      const labels = (node.params?.panels || '').split(',').map(s => s.trim()).filter(Boolean);
+      const states = labels.map(l => context.variables.get(l)).filter(Boolean);
+      context.log?.('info', `GIF assembly: found ${states.length}/${labels.length} states (looking for: ${labels.join(', ')})`);
+      if (!states.length) { context.log?.('warn', 'GIF assembly skipped — no saved states found'); return; }
+
+      const GIF = (await import('gif.js')).default;
+      const blob = await new Promise((resolve, reject) => {
+        const gif = new GIF({
+          workers: 2, quality: 10,
+          workerScript: '/gif.worker.js',
+          repeat: node.params?.loop !== false ? 0 : -1,
+        });
+        for (const imageData of states) {
+          const tmp = document.createElement('canvas');
+          tmp.width = imageData.width; tmp.height = imageData.height;
+          tmp.getContext('2d').putImageData(imageData, 0, 0);
+          gif.addFrame(tmp, { delay: node.params?.delay ?? 500 });
+        }
+        gif.on('finished', resolve);
+        gif.on('error',    reject);
+        gif.render();
+      });
+
+      const suffix = node.params?.suffix ?? '_preview';
+      const base   = context.filename.replace(/\.[^.]+$/, '');
+      const outName = `${base}${suffix}.gif`;
+      context.log?.('ok', `GIF rendered (${(blob.size / 1024).toFixed(1)} KB) → ${context.outputSubfolder}/${outName}`);
+      results.push({ blob, filename: outName, subfolder: context.outputSubfolder });
+      return;
+    }
+
     // ── Aggregation captures ──
     if (id === 'flow-video-wall') {
       // Capture the raw File object — no canvas export needed
@@ -210,7 +245,9 @@ export class ImageProcessor {
       try {
         await def.apply(ctx, node.params || {}, context);
       } catch (err) {
-        console.warn(`[processor] Transform "${id}" failed — skipping step:`, err.message);
+        const msg = `Transform "${id}" failed — skipping step: ${err.message}`;
+        console.warn('[processor]', msg);
+        context.log?.('warn', msg);
       }
     } else {
       console.warn(`[processor] Unknown transform: ${id}`);

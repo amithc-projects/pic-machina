@@ -34,6 +34,7 @@ registry.register({
   apply(ctx, p, context) {
     const key = p.label || 'state-1';
     context.variables.set(key, ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height));
+    context.log?.('info', `Saved state "${key}" (${ctx.canvas.width}×${ctx.canvas.height})`);
   }
 });
 
@@ -171,6 +172,79 @@ registry.register({
     ctx.canvas.height = totalH;
     ctx.drawImage(grid, 0, 0);
   }
+});
+
+// ─── Video Extract Frame ──────────────────────────────────
+registry.register({
+  id: 'video-extract-frame', name: 'Extract Video Frame', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'movie_filter',
+  description: 'Seek the input video to a position and draw that frame onto the canvas. Use resize/crop steps after to shape the frame.',
+  params: [
+    { name: 'atPercent', label: 'Position (%)', type: 'range', min: 0, max: 100, defaultValue: 0 },
+  ],
+  async apply(ctx, p, context) {
+    const file = context.originalFile;
+    if (!file) { console.warn('[video-extract-frame] No originalFile in context'); return; }
+
+    const url   = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.muted   = true;
+    video.preload = 'metadata';
+    // Must be in DOM for blob URL loading to work reliably in all browsers
+    video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+    document.body.appendChild(video);
+
+    const withTimeout = (promise, ms, label) => Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`Timed out: ${label}`)), ms)),
+    ]);
+
+    try {
+      await withTimeout(new Promise((resolve, reject) => {
+        video.onloadedmetadata = resolve;
+        video.onerror = () => {
+          const code = video.error?.code;
+          const msg  = video.error?.message || 'unknown';
+          reject(new Error(`Video load failed (code ${code}): ${msg}`));
+        };
+        video.src = url;
+        video.load();
+      }), 10_000, 'loadedmetadata');
+
+      const pct  = Math.max(0, Math.min(100, p.atPercent ?? 0));
+      const time = pct >= 100
+        ? Math.max(0, video.duration - 0.033)
+        : (pct / 100) * video.duration;
+
+      await withTimeout(new Promise((resolve, reject) => {
+        video.onseeked = resolve;
+        video.onerror  = () => reject(new Error(`Seek failed at ${pct}%`));
+        video.currentTime = time;
+      }), 10_000, `seek to ${pct}%`);
+
+      ctx.canvas.width  = video.videoWidth;
+      ctx.canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      context.log?.('info', `Extracted frame at ${p.atPercent ?? 0}% — ${video.videoWidth}×${video.videoHeight} (t=${time.toFixed(2)}s / ${video.duration.toFixed(2)}s)`);
+    } finally {
+      document.body.removeChild(video);
+      URL.revokeObjectURL(url);
+    }
+  }
+});
+
+// ─── GIF from States ──────────────────────────────────────
+registry.register({
+  id: 'flow-gif-from-states', name: 'GIF from States', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'gif_box',
+  description: 'Assemble saved canvas states into an animated GIF. Use after a series of Extract Frame → Process → Save State steps.',
+  params: [
+    { name: 'panels',   label: 'State Labels (comma-separated)', type: 'text',    defaultValue: 'frame-0,frame-25,frame-50,frame-75,frame-100' },
+    { name: 'delay',    label: 'Frame Delay (ms)',               type: 'number',  defaultValue: 500 },
+    { name: 'loop',     label: 'Loop',                           type: 'boolean', defaultValue: true },
+    { name: 'suffix',   label: 'Filename Suffix',                type: 'text',    defaultValue: '_preview' },
+  ],
+  apply() { /* handled specially by processor.js */ }
 });
 
 // ─── Video Wall ───────────────────────────────────────────
