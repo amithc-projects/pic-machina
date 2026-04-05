@@ -127,6 +127,7 @@ Aggregation nodes collect one frame per input image then produce a single combin
 | `flow-animate-stack` | Animate Stack | `filename`, `format`, `width`, `height`, `deskColor`, `frameDelay`, `maxRotation`, `overlap` | Each frame appears on a desk one by one, randomly rotated. Generic — use after `overlay-polaroid-frame` for a polaroid stack. |
 | `flow-photo-stack` | Photo Stack (Legacy) | All `flow-animate-stack` params + `borderColor`, `borderBottom`, `caption` | Combines polaroid framing + desk animation in a single node. Prefer the two-node pattern. |
 | `flow-template-aggregator` | Template Render | `templateId`, `filename`, `quality` | Maps batch images sequentially into defined template placeholder slots using OpenCV-detected bounds. If placeholders < images, it chunk-processes them into multiple numbered template composites. |
+| `flow-video-wall` | Video Wall | `layout`, `filename`, `outputWidth`, `outputHeight`, `fps` | Composites multiple input videos into a multi-stream MP4 grid. `layout` accepts system ids (`grid-2x2`, `custom-tv`) AND custom `templateId`s. Hardware accelerated. Supports Native `.mp4` file handle background looping. |
 
 ---
 

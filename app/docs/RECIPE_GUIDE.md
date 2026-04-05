@@ -524,6 +524,20 @@ If the template has 3 slots, processing 9 images will yield 3 composites.
 | `filename` | text | `"render.jpg"` |
 | `quality` | range 0–100 | `90` |
 
+#### `flow-video-wall` — Video Wall
+Composites multiple input videos into a single grid-layout MP4. Can map video output to built-in layouts (`grid-2x2`, `custom-tv`) or any dynamic template (`templateId`) dynamically via perspective grids. Supports native loopable video backgrounds via file-system handles!
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `filename` | text | `"video-wall.mp4"` | |
+| `layout` | text | `"grid-2x2"` | Supports system IDs or custom Template IDs |
+| `outputWidth` | number | `1920` | Output width px |
+| `outputHeight` | number | `1080` | Output height px |
+| `fps` | number | `30` | Output framerate |
+| `bitrate` | number | `8000000` | Video bitrate |
+| `endOfVideo` | text | `"black"` | `black`, `image`, or `text` |
+| `fallbackImageUrl` | text | | Local image URL used when `endOfVideo`='image' |
+| `captions` | text | | Comma-separated labels mapped dynamically across the cells |
+
 #### `flow-animate-stack` — Animated Desk Stack (Generic)
 Places each processed frame onto a textured desk, randomly rotated, animating each photo appearing one by one. Output is GIF or MP4. Use this when the per-image framing has already been applied (e.g. via `overlay-polaroid-frame`).
 | Param | Type | Default |

@@ -238,12 +238,16 @@ export async function render(container, hash) {
         includeVideo = true;
       } else if (!rType) {
         const VIDEO_TRANSFORMS = new Set(['flow-video-wall', 'video-extract-frame']);
-        includeVideo = (currentRecipe?.nodes || []).some(n => VIDEO_TRANSFORMS.has(n.transformId));
+        const hasVideoReq = (currentRecipe?.nodes || []).some(n => VIDEO_TRANSFORMS.has(n.transformId));
+        if (hasVideoReq) {
+           includeVideo = true;
+           onlyVideo = true;
+        }
       }
 
       selectedFiles = await listImages(inputHandle, { includeVideo, onlyVideo });
       selectedIds   = new Set(selectedFiles.map(f => f.name));
-      renderImageGrid();
+      renderImageGrid(onlyVideo, includeVideo);
       const stats = container.querySelector('#set-input-stats');
       const term = onlyVideo ? 'video' : (includeVideo ? 'file' : 'image');
       if (stats) stats.textContent = `${selectedFiles.length} ${term}${selectedFiles.length !== 1 ? 's' : ''} found`;
@@ -253,13 +257,18 @@ export async function render(container, hash) {
     }
   }
 
-  function renderImageGrid() {
+  function renderImageGrid(onlyVideo = false, includeVideo = false) {
     const grid = container.querySelector('#set-image-grid');
     if (!selectedFiles.length) {
+      const termTitle = onlyVideo ? 'videos' : (includeVideo ? 'files' : 'images');
+      const typeDesc  = onlyVideo ? 'videos' : (includeVideo ? 'images and videos' : 'images');
+      const reqCount  = parseInt(currentRecipe?.minItems);
+      const minStr    = reqCount > 0 ? `${reqCount} ` : 'supported ';
+
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-        <span class="material-symbols-outlined">image_not_supported</span>
-        <div class="empty-state-title">No images found</div>
-        <div class="empty-state-desc">This folder contains no supported image files.</div>
+        <span class="material-symbols-outlined">${onlyVideo ? 'movie' : 'image_not_supported'}</span>
+        <div class="empty-state-title">No ${termTitle} found</div>
+        <div class="empty-state-desc">This recipe requires ${minStr}${typeDesc} but none were found in this directory.</div>
       </div>`;
       return;
     }
@@ -390,6 +399,7 @@ export async function render(container, hash) {
     // Render inline recipe params
     renderInlineParams();
     updateRunButton();
+    refreshImageGrid();
   }
 
   function renderInlineParams() {

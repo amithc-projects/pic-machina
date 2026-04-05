@@ -17,7 +17,7 @@ The application targets photographers, content teams, and power users who need r
 | **Branch node** | Splits execution into parallel output paths (e.g. thumbnail + full-res) |
 | **Conditional node** | If/else logic based on image properties (orientation, GPS presence, metadata) |
 | **Aggregation node** | Collects one frame per image across the batch, then combines into a single output (GIF, MP4, contact sheet, stack animation) |
-| **Template** | A reusable background image with 4-point quadrilateral placeholder slots. Slots can be auto-detected via OpenCV or mapped manually. |
+| **Template** | A reusable background image or video with 4-point quadrilateral placeholder slots. Slots can be auto-detected via OpenCV or mapped manually. |
 | **Block** | A reusable group of nodes that can be referenced inside any recipe |
 | **Run Parameters** | Recipe-level variables surfaced as a form before each batch run; values override matching node params by name |
 | **System Recipe** | Read-only built-in recipe; users can clone to customise |
@@ -68,6 +68,7 @@ The application targets photographers, content teams, and power users who need r
 - **`flow-create-video`**: MP4 slideshow from one frame per input image
 - **`flow-contact-sheet`**: JPEG grid of all images
 - **`flow-template-aggregator`**: mapping node that batches input images sequentially into defined template placeholder slots.
+- **`flow-video-wall`**: multiplexes videos into grid layouts or custom defined Templates. Backgrounds natively buffer and loop MP4s leveraging File System Access API without inflating IndexedDB quotas.
 - **`flow-animate-stack`**: animated desk stack — each image appears one by one, randomly rotated, on a coloured desk surface; supports `overlap` parameter and GIF or MP4 output
 - **`flow-photo-stack`** (legacy): single-node convenience wrapper combining `overlay-polaroid-frame` + `flow-animate-stack`
 
