@@ -255,7 +255,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         format = 'video/mp4';
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'geo-timeline.mp4', blob: resultBlob } });
       } else if (agg.node.transformId === 'flow-contact-sheet') {
-        resultBlob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
+        resultBlob = await createContactSheet(agg.blobs, agg.metadata, { columns: p.columns || 4, gap: p.gap || 8, groupBy1: p.groupBy1, groupBy2: p.groupBy2 });
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'contact-sheet.jpg', blob: resultBlob } });
       } else if (agg.node.transformId === 'flow-photo-stack') {
         const fmt = p.format || 'gif';

@@ -154,10 +154,12 @@ registry.register({
 registry.register({
   id: 'flow-contact-sheet', name: 'Contact Sheet', category: 'Flow Control', categoryKey: 'flow',
   icon: 'grid_view',
-  description: 'Combine images into a single grid sheet.',
+  description: 'Combine images into a single grid sheet. Can optionally group by metadata.',
   params: [
     { name: 'columns',  label: 'Columns',          type: 'number', defaultValue: 4 },
     { name: 'gap',      label: 'Gap (px)',          type: 'number', defaultValue: 8 },
+    { name: 'groupBy1', label: 'Group By 1 (Title)', type: 'text',   defaultValue: '' },
+    { name: 'groupBy2', label: 'Group By 2 (Subtitle)', type: 'text', defaultValue: '' },
     { name: 'filename', label: 'Output Filename',   type: 'text',   defaultValue: 'contact-sheet.jpg' },
   ],
   apply() { /* handled by Processor as aggregation node */ }

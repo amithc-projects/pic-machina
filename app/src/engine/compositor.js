@@ -133,17 +133,71 @@ export async function createVideo(frames, { durationPerSlide = 2, fps = 30, widt
  * @param {number}  cellSize  — thumbnail size (auto if 0)
  * @returns {Promise<Blob>}
  */
-export async function createContactSheet(images, { columns = 4, gap = 8, cellSize = 0 } = {}) {
+export async function createContactSheet(images, metadataList = [], { columns = 4, gap = 8, cellSize = 0, groupBy1 = '', groupBy2 = '' } = {}) {
+  const { interpolate } = await import('../utils/variables.js');
+  
   // createImageBitmap works in both main thread and Web Workers (no new Image() needed)
   const loaded = await Promise.all(images.map(blob => createImageBitmap(blob)));
 
   const cols = Math.min(columns, loaded.length);
-  const rows = Math.ceil(loaded.length / cols);
-
   // Auto cell size based on first image
   const cs = cellSize || Math.round(1200 / cols);
   const canvasW = cols * cs + (cols - 1) * gap;
-  const canvasH = rows * cs + (rows - 1) * gap;
+
+  // Group images
+  const groups = []; // Array of { title, subtitle, items: [ { bmp, index } ] }
+  
+  if (!groupBy1 && !groupBy2) {
+    groups.push({ title: '', subtitle: '', items: loaded.map((bmp, index) => ({ bmp, index })) });
+  } else {
+    const groupMap = new Map(); // key -> group object
+    
+    for (let i = 0; i < loaded.length; i++) {
+      const bmp = loaded[i];
+      const md = metadataList[i] || {};
+      
+      const t1 = groupBy1 ? interpolate(groupBy1, md) : '';
+      const t2 = groupBy2 ? interpolate(groupBy2, md) : '';
+      
+      const key = `${t1}:::${t2}`;
+      if (!groupMap.has(key)) {
+        const groupObj = { title: t1, subtitle: t2, items: [] };
+        groupMap.set(key, groupObj);
+        groups.push(groupObj); // preserve chronological order
+      }
+      groupMap.get(key).items.push({ bmp, index: i });
+    }
+  }
+
+  const HEADER_HEIGHT = 120;   // Space for Title
+  const SUBHEADER_HEIGHT = 50; // Extra space if subtitle
+  const GROUP_MARGIN = 80;     // Space below the group grid
+
+  // Calculate total height
+  let canvasH = 0;
+  for (const g of groups) {
+    g.startY = canvasH; // where this group starts
+    
+    let headerSpace = 0;
+    if (g.title || g.subtitle) {
+      headerSpace += HEADER_HEIGHT;
+      if (g.subtitle) headerSpace += SUBHEADER_HEIGHT;
+    }
+    
+    g.gridStartY = canvasH + headerSpace;
+    const rows = Math.ceil(g.items.length / cols);
+    const gridH = rows * cs + (rows > 0 ? (rows - 1) * gap : 0);
+    
+    g.totalHeight = headerSpace + gridH + (groups.length > 1 ? GROUP_MARGIN : 0);
+    canvasH += g.totalHeight;
+  }
+  
+  if (groups.length === 1 && !groups[0].title) {
+    // Exact backward compatibility without margin
+    const rows = Math.ceil(loaded.length / cols);
+    canvasH = rows * cs + (rows > 0 ? (rows - 1) * gap : 0);
+    groups[0].gridStartY = 0;
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = canvasW; canvas.height = canvasH;
@@ -151,24 +205,46 @@ export async function createContactSheet(images, { columns = 4, gap = 8, cellSiz
   ctx.fillStyle = '#1a1a1e';
   ctx.fillRect(0, 0, canvasW, canvasH);
 
-  for (let i = 0; i < loaded.length; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const x   = col * (cs + gap);
-    const y   = row * (cs + gap);
-    const bmp = loaded[i];
+  for (const g of groups) {
+    // Draw Headers
+    if (g.title) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 80px Inter, sans-serif';
+      ctx.textBaseline = 'top';
+      // Fallback: If interpolation failed (e.g. {{sidecar.country}}), strip braces visually for elegance
+      const displayTitle = g.title.replace(/^\{\{/, '').replace(/\}\}$/, '');
+      ctx.fillText(displayTitle, 0, g.startY + 40);
+    }
+    if (g.subtitle) {
+      ctx.fillStyle = '#a1a1aa'; // zinc-400
+      ctx.font = '40px Inter, sans-serif';
+      ctx.textBaseline = 'top';
+      const displaySubtitle = g.subtitle.replace(/^\{\{/, '').replace(/\}\}$/, '');
+      ctx.fillText(displaySubtitle, 0, g.startY + 110);
+    }
+    
+    // Draw Grid
+    for (let i = 0; i < g.items.length; i++) {
+        const { bmp } = g.items[i];
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x   = col * (cs + gap);
+        const y   = g.gridStartY + row * (cs + gap);
+    
+        // Cover-fit into cell
+        const scale = Math.max(cs / bmp.width, cs / bmp.height);
+        const sw = Math.round(bmp.width  * scale);
+        const sh = Math.round(bmp.height * scale);
+        const sx = Math.round((sw - cs) / 2);
+        const sy = Math.round((sh - cs) / 2);
+    
+        const tmp = document.createElement('canvas'); tmp.width = sw; tmp.height = sh;
+        tmp.getContext('2d').drawImage(bmp, 0, 0, sw, sh);
+        ctx.drawImage(tmp, sx, sy, cs, cs, x, y, cs, cs);
+    }
+  }
 
-    // Cover-fit into cell (ImageBitmap uses .width/.height)
-    const scale = Math.max(cs / bmp.width, cs / bmp.height);
-    const sw = Math.round(bmp.width  * scale);
-    const sh = Math.round(bmp.height * scale);
-    const sx = Math.round((sw - cs) / 2);
-    const sy = Math.round((sh - cs) / 2);
-
-    const tmp = document.createElement('canvas'); tmp.width = sw; tmp.height = sh;
-    tmp.getContext('2d').drawImage(bmp, 0, 0, sw, sh);
-    ctx.drawImage(tmp, sx, sy, cs, cs, x, y, cs, cs);
-
+  for (const bmp of loaded) {
     bmp.close?.(); // free memory
   }
 

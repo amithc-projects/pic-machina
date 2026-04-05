@@ -318,7 +318,8 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         });
         await writeFile(subHandle, p.filename || 'geo-timeline.mp4', blob);
       } else if (agg.node.transformId === 'flow-contact-sheet') {
-        const blob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
+        p.filename = p.filename || 'contact-sheet.jpg'; // HACK: needed for progress UI mapping
+        const blob = await createContactSheet(agg.blobs, agg.metadata, { columns: p.columns || 4, gap: p.gap || 8, groupBy1: p.groupBy1, groupBy2: p.groupBy2 });
         await writeFile(subHandle, p.filename || 'contact-sheet.jpg', blob);
       } else if (agg.node.transformId === 'flow-photo-stack') {
         const fmt  = p.format || 'gif';
