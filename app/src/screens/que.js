@@ -94,12 +94,8 @@ export function render(container) {
     percent.textContent = pct + '%';
     ringArc.style.strokeDashoffset = CIRC - (CIRC * pct / 100);
     progressBar.style.width = pct + '%';
-    
-    // Only update the actual file counters when we aren't overriding the visual proportion with a subtask (like aggregation)
-    if (overridePct === null) {
-      statProc.textContent = done;
-      if (total) statTotal.textContent = total;
-    }
+    statProc.textContent = done;
+    if (total) statTotal.textContent = total;
   }
 
   function appendLog(level, msg) {

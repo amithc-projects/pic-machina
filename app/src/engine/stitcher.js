@@ -266,7 +266,8 @@ export async function createWebGLStitcher(blobs, {
   transitionDuration = 1.0,
   transitionMode = "crossfade",     // or "random" or array
   motionMode = "random",            // or "zoom-in", etc
-  onProgress
+  onProgress,
+  onLog
 } = {}) {
   const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
   
@@ -292,6 +293,7 @@ export async function createWebGLStitcher(blobs, {
   const motions = ['zoom-in', 'zoom-out', 'pan-left', 'pan-right'];
   const transKeys = Object.keys(TRANSITIONS);
 
+  onLog?.(`Loading and cropping ${blobs.length} images to GPU memory...`);
   for (let i = 0; i < blobs.length; i++) {
     // scale cover
     console.log('[Stitcher] Decoding frame', i+1, 'of', blobs.length);
@@ -313,6 +315,7 @@ export async function createWebGLStitcher(blobs, {
     
     bmp.close(); coverBmp.close();
   }
+  onLog?.(`Finished loading ${blobs.length} images to GPU.`);
 
   const target = new ArrayBufferTarget();
   const muxer  = new Muxer({ target, video: { codec: 'avc', width: w, height: h }, fastStart: 'in-memory' });

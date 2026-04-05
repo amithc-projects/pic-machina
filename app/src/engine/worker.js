@@ -200,6 +200,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         
         resultBlob = await createWebGLStitcher(agg.blobs, {
           ...p, width: p.width, height: p.height,
+          onLog: (msg) => log(runId, 'info', msg),
           onProgress: (f, t) => {
             const subPct = t > 0 ? (f / t) : 0;
             const overallPct = Math.round((baseAggPct + (aggRange * subPct)) * 100);

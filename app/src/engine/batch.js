@@ -265,6 +265,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
 
         const blob = await createWebGLStitcher(agg.blobs, {
           ...p, width: p.width, height: p.height,
+          onLog: (msg) => onLog('info', msg),
           onProgress: (f, t) => {
             const subPct = t > 0 ? (f / t) : 0;
             const overallPct = Math.round((baseAggPct + (aggRange * subPct)) * 100);
@@ -510,7 +511,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
     await appendLog(run, level, msg);
     onLog?.(level, msg);
   };
-  const wrappedProgress = (p, t, fn) => onProgress?.(p, t, fn);
+  const wrappedProgress = (p, t, fn, overridePct) => onProgress?.(p, t, fn, overridePct);
   const wrappedComplete  = (r) => onComplete?.(r);
 
   // ── Route: AI transforms need the main thread ────────────
@@ -550,7 +551,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
 
     if (type === 'PROGRESS') {
       run.successCount = payload.processed;
-      wrappedProgress(payload.processed, payload.total, payload.filename);
+      wrappedProgress(payload.processed, payload.total, payload.filename, payload.overridePct);
     }
 
     if (type === 'LOG') {
