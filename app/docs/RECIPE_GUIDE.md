@@ -513,6 +513,17 @@ Assembles all images into a grid JPEG.
 | `gap` | number | `8` |
 | `filename` | text | `"contact-sheet.jpg"` |
 
+#### `flow-template-aggregator` — Template Render
+Maps processed batch images sequentially into defined template placeholder slots using geometrical perspective projection.
+If the template only has exactly 1 slot, processing a batch of 10 images will yield 10 individually numbered composite renders (e.g. `laptop-1.jpg`, `laptop-2.jpg`).
+If the template has 3 slots, processing 9 images will yield 3 composites.
+*Note: Using this node suppresses the standard auto-export behavior of single images.*
+| Param | Type | Default |
+|---|---|---|
+| `templateId` | text | - |
+| `filename` | text | `"render.jpg"` |
+| `quality` | range 0–100 | `90` |
+
 #### `flow-animate-stack` — Animated Desk Stack (Generic)
 Places each processed frame onto a textured desk, randomly rotated, animating each photo appearing one by one. Output is GIF or MP4. Use this when the per-image framing has already been applied (e.g. via `overlay-polaroid-frame`).
 | Param | Type | Default |
