@@ -37,6 +37,7 @@ export async function render(container, hash) {
         </div>
         <div class="flex items-center gap-2">
           <span id="set-sel-count" class="ic-badge"></span>
+          <span id="set-run-warning" style="color:var(--ps-danger);display:none;font-size:12px;font-weight:500;padding-right:8px;"></span>
           <button class="btn-secondary" id="btn-select-all">Select All</button>
           <button class="btn-secondary" id="btn-edit-recipe" style="display:none" title="Edit selected recipe">
             <span class="material-symbols-outlined">edit</span>
@@ -226,13 +227,26 @@ export async function render(container, hash) {
   async function refreshImageGrid() {
     if (!inputHandle) return;
     try {
-      const VIDEO_TRANSFORMS = new Set(['flow-video-wall', 'video-extract-frame']);
-      const hasVideoRecipe = (currentRecipe?.nodes || []).some(n => VIDEO_TRANSFORMS.has(n.transformId));
-      selectedFiles = await listImages(inputHandle, { includeVideo: hasVideoRecipe });
+      let includeVideo = false;
+      let onlyVideo = false;
+      const rType = currentRecipe?.inputType;
+      
+      if (rType === 'video') {
+        onlyVideo = true;
+        includeVideo = true;
+      } else if (rType === 'any') {
+        includeVideo = true;
+      } else if (!rType) {
+        const VIDEO_TRANSFORMS = new Set(['flow-video-wall', 'video-extract-frame']);
+        includeVideo = (currentRecipe?.nodes || []).some(n => VIDEO_TRANSFORMS.has(n.transformId));
+      }
+
+      selectedFiles = await listImages(inputHandle, { includeVideo, onlyVideo });
       selectedIds   = new Set(selectedFiles.map(f => f.name));
       renderImageGrid();
       const stats = container.querySelector('#set-input-stats');
-      if (stats) stats.textContent = `${selectedFiles.length} ${hasVideoRecipe ? 'file' : 'image'}${selectedFiles.length !== 1 ? 's' : ''} found`;
+      const term = onlyVideo ? 'video' : (includeVideo ? 'file' : 'image');
+      if (stats) stats.textContent = `${selectedFiles.length} ${term}${selectedFiles.length !== 1 ? 's' : ''} found`;
       updateRunButton();
     } catch (err) {
       console.error('[SET] listImages failed:', err);
@@ -313,6 +327,7 @@ export async function render(container, hash) {
       if (cb) cb.checked = sel;
     });
     updateSelCount();
+    updateRunButton();
   }
 
   function updateSelCount() {
@@ -330,9 +345,32 @@ export async function render(container, hash) {
 
   function updateRunButton() {
     const btn = container.querySelector('#btn-run');
+    const warningText = container.querySelector('#set-run-warning');
     if (!btn) return;
-    const ready = currentRecipe && inputHandle && outputHandle && selectedIds.size > 0;
-    btn.disabled = !ready;
+
+    let warning = '';
+    if (currentRecipe) {
+      const count = selectedIds.size;
+      const min = currentRecipe.minItems;
+      const max = currentRecipe.maxItems;
+      
+      if (typeof min === 'number' && count < min) {
+        warning = min === max ? `Requires exactly ${min} items` : `Requires at least ${min} items`;
+      } else if (typeof max === 'number' && count > max) {
+        warning = min === max ? `Requires exactly ${max} items` : `Requires at most ${max} items`;
+      }
+    }
+
+    let isReady = !!(currentRecipe && inputHandle && outputHandle && selectedIds.size > 0);
+    if (warning) {
+      isReady = false;
+    }
+
+    btn.disabled = !isReady;
+    if (warningText) {
+      warningText.textContent = warning;
+      warningText.style.display = warning ? '' : 'none';
+    }
   }
 
   function recipeSlug(name) {

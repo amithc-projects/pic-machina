@@ -97,7 +97,9 @@ All transforms are registered by their `transformId` string.
 | `ai-face-privacy` | Face Privacy | `mode` (Blur/Pixelate/Bar), `confidence`, `padding` | MediaPipe face detection |
 | `ai-remove-bg` | Remove Background | `mode` (Transparent/Silhouette), `edgeSmoothing`, `bgFill`, `bgColor` | AI subject segmentation |
 | `ai-silhouette` | Silhouette | `color`, `opacity` | Removes BG and fills subject with solid colour |
-| `ai-smart-redact` | Smart Redact | `targets` (Text/Face), `method` (Blur/Bar) | OCR + face detection for privacy scrubbing |
+| `ai-smart-redact` | Smart Redact | `mode` (redact/extract), `targets` (Text/Face), `method` (Blur/Bar) | OCR + face detection for privacy scrubbing |
+| `ai-ocr-tag` | OCR Tag Extractor | `minLength` | Extracts tags from OCR text (needs Smart Redact Extract mode) |
+| `ai-analyse-people` | Analyse People | `faceConfidence`, `poseConfidence`, `maxPoses` | MediaPipe pose & face detection to asset store |
 | `ai-clipping-mask` | Clipping Mask | `shape` (Circle/RoundedRect/Diamond), `feathering` | Shape-based mask using AI segmentation |
 
 ---

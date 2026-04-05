@@ -281,6 +281,19 @@ registry.register({
   apply() { /* handled by batch.js as aggregation node */ }
 });
 
+// ─── Template Aggregator ──────────────────────────────────
+registry.register({
+  id: 'flow-template-aggregator', name: 'Template Render', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'wallpaper',
+  description: 'Composite multiple input images into a pre-defined Perspective Template.',
+  params: [
+    { name: 'filename',   label: 'Output Filename', type: 'text', defaultValue: 'render.jpg' },
+    { name: 'templateId', label: 'Template',        type: 'template-select', defaultValue: '' },
+    { name: 'quality',    label: 'Quality (0-100)', type: 'range', min: 1, max: 100, defaultValue: 90 },
+  ],
+  apply() { /* handled by batch.js as aggregation node */ }
+});
+
 // ─── Animate Stack ────────────────────────────────────────
 registry.register({
   id: 'flow-animate-stack', name: 'Animate Stack', category: 'Flow Control', categoryKey: 'flow',

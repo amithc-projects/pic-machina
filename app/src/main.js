@@ -14,6 +14,7 @@ const SCREENS = {
   ned: () => import('./screens/ned.js'),
   bld: () => import('./screens/bld.js'),
   bkb: () => import('./screens/bkb.js'),
+  tpl: () => import('./screens/tpl.js'),
   ins: () => import('./screens/ins.js'),
   pvw: () => import('./screens/pvw.js'),
   que: () => import('./screens/que.js'),

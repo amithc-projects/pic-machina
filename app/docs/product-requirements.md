@@ -39,14 +39,14 @@ The application targets photographers, content teams, and power users who need r
 - **System recipes** are seeded on first launch and always kept up to date (upserted on every app start)
 - Users can clone any system recipe to create an editable copy
 - Recipes support import/export as JSON
-- Recipe JSON includes: `id`, `name`, `description`, `tags`, `coverColor`, `params` (run parameters), `nodes`
+- Recipe JSON includes: `id`, `name`, `description`, `tags`, `coverColor`, `minItems`, `maxItems`, `inputType`, `params` (run parameters), `nodes`
 
 ### 3.3 Transform Engine
 
-- **56 registered transforms** across 7 categories (see `transformations.md` for full catalogue)
+- **58 registered transforms** across 7 categories (see `transformations.md` for full catalogue)
 - Transforms run in a **Web Worker** for non-AI recipes (keeps UI responsive)
 - **AI transforms** (`ai-*`) run on the main thread (require DOM/MediaPipe APIs unavailable in workers):
-  - `ai-face-privacy`, `ai-remove-bg`, `ai-silhouette`, `ai-smart-redact`
+  - `ai-face-privacy`, `ai-remove-bg`, `ai-silhouette`, `ai-smart-redact`, `ai-ocr-tag`, `ai-analyse-people`, `ai-clipping-mask`
 - **Aggregation pipeline**: `flow-photo-stack`, `flow-animate-stack` also run on main thread (gif.js requires HTMLCanvasElement)
 
 ### 3.4 Node Types
@@ -88,12 +88,15 @@ String-type params support `{{token}}` injection resolved per image at run time:
 | `{{filename \| sanitized}}` | Filename with underscores replacing special chars |
 | `{{exif.date}}`, `{{exif.make}}`, `{{exif.model}}` | EXIF fields |
 | `{{meta.X}}` | Custom metadata field |
+| `{{sidecar.X}}` | Custom sidecar or extracted AI/Geocode data |
 | `{{recipe.X}}` | Current run parameter value |
 
-### 3.8 Metadata Handling
+### 3.8 Metadata & Asset Store
 
+- **Asset Store**: a robust IndexedDB repository mapping files to extracted metadata (EXIF, geocode, OCR text, vision detection points, user sidecar) via collision-resistant SHA-256 hashes.
 - EXIF is read from input files via the `exif-reader` module
 - GPS, date, camera make/model available as tokens
+- Extracted AI data and geocoding are exposed via `{{sidecar.X}}` syntax
 - `meta-strip`: removes GPS Only, EXIF Only, or All metadata from output
 - `meta-set-exif`: writes artist, copyright, comment, description, software fields
 - `meta-geocode`: converts GPS coordinates to a text string (city, country) via a template

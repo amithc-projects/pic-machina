@@ -10,7 +10,7 @@
  */
 
 const DB_NAME = 'PicMachina';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let _db = null;
 
@@ -61,6 +61,13 @@ export function initDB() {
         assetStore.createIndex('filename',   'filename',   { unique: false });
         assetStore.createIndex('ingestedAt', 'ingestedAt', { unique: false });
         assetStore.createIndex('updatedAt',  'updatedAt',  { unique: false });
+      }
+
+      // templates
+      if (!db.objectStoreNames.contains('templates')) {
+        const tStore = db.createObjectStore('templates', { keyPath: 'id' });
+        tStore.createIndex('name', 'name', { unique: false });
+        tStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
     };
 

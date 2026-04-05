@@ -40,6 +40,8 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-video-wall',
   // video-extract-frame uses <video> element — not available in workers
   'video-extract-frame',
+  // flow-template-aggregator draws onto canvas on the main thread
+  'flow-template-aggregator',
   // flow-gif-from-states uses gif.js which needs HTMLCanvasElement
   'flow-gif-from-states',
   // ai-ocr-tag reads from IndexedDB asset store (needs main thread path for IDB)
@@ -103,7 +105,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   // Aggregation collector (GIF / video / contact sheet)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -272,6 +274,150 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         });
         const base = (p.filename || 'stack').replace(/\.(gif|mp4)$/i, '');
         await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
+      } else if (agg.node.transformId === 'flow-template-aggregator') {
+        const { getTemplate } = await import('../data/templates.js');
+        const { drawPerspectiveCell } = await import('./utils/perspective.js');
+        
+        const tplId = runParams?.templateId || p.templateId; // allow override via recipe run params
+        const tpl = await getTemplate(tplId);
+        if (!tpl) throw new Error(`Template not found: ${tplId}`);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = tpl.width;
+        canvas.height = tpl.height;
+        const ctx = canvas.getContext('2d');
+
+        // Draw background
+        if (tpl.backgroundBlob) {
+          const bgBitmap = await createImageBitmap(tpl.backgroundBlob);
+          ctx.drawImage(bgBitmap, 0, 0, canvas.width, canvas.height);
+          bgBitmap.close();
+        } else {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        const placeholders = [...(tpl.placeholders || [])].sort((a,b) => (a.zIndex||0) - (b.zIndex||0));
+        const numSlots = placeholders.length || 1; // Prevent divide by zero
+
+        // Batch processing logic for generic templates: consume `numSlots` blobs at a time
+        const numOutputs = Math.ceil(agg.blobs.length / numSlots);
+        let outputCount = 0;
+
+        for (let i = 0; i < agg.blobs.length; i += numSlots) {
+            const chunk = agg.blobs.slice(i, i + numSlots);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = tpl.width;
+            canvas.height = tpl.height;
+            const ctx = canvas.getContext('2d');
+
+            // Draw background
+            if (tpl.backgroundBlob) {
+               const bgBitmap = await createImageBitmap(tpl.backgroundBlob);
+               ctx.drawImage(bgBitmap, 0, 0, canvas.width, canvas.height);
+               bgBitmap.close();
+            } else {
+               ctx.fillStyle = '#000';
+               ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Draw each chunked blob into its respective slot
+            for (let j = 0; j < chunk.length; j++) {
+               let bmp = await createImageBitmap(chunk[j]);
+               const ph = placeholders[j];
+               
+               // In case a slot does not exist (robustness against broken templates)
+               if (!ph) {
+                   bmp.close();
+                   continue;
+               }
+               
+               const cellQuad = ph.points.map(pt => ({
+                   x: pt.x * canvas.width,
+                   y: pt.y * canvas.height
+               }));
+
+               const fitMode = ph.fitMode || 'stretch';
+               
+               if (fitMode !== 'stretch') {
+                   // Calculate target quad bounds (approximate aspect ratio)
+                   const [TL, TR, BR, BL] = cellQuad;
+                   const dist = (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                   const tw = (dist(TL, TR) + dist(BL, BR)) / 2;
+                   const th = (dist(TL, BL) + dist(TR, BR)) / 2;
+                   const targetAspect = tw / th;
+
+                   let tmpCtx = document.createElement('canvas').getContext('2d');
+                   tmpCtx.canvas.width = bmp.width; tmpCtx.canvas.height = bmp.height;
+                   tmpCtx.drawImage(bmp, 0, 0);
+
+                   if (fitMode === 'smart-crop' || fitMode === 'face-crop') {
+                       const { registry } = await import('./registry.js');
+                       if (fitMode === 'smart-crop') {
+                           const def = registry.get('geo-smart-crop');
+                           await def.apply(tmpCtx, { aspectRatio: `${targetAspect}:1`, strategy: 'Entropy' });
+                       } else if (fitMode === 'face-crop') {
+                           try {
+                               const def = registry.get('geo-face-crop');
+                               await def.apply(tmpCtx, { padding: 30, faceIndex: 0, confidence: 30 }, {});
+                           } catch (err) {
+                               onLog('warn', `Face crop failed (${err.message}) — falling back to manual cover`);
+                           }
+                       }
+                   }
+                   
+                   // After face-crop or if normal cover/contain, do manual ratio matching
+                   if (fitMode === 'cover' || fitMode === 'face-crop') {
+                       const W = tmpCtx.canvas.width, H = tmpCtx.canvas.height;
+                       let cw, ch;
+                       if (W / H > targetAspect) { ch = H; cw = ch * targetAspect; }
+                       else { cw = W; ch = cw / targetAspect; }
+                       const cx = (W - cw) / 2, cy = (H - ch) / 2;
+                       
+                       const outCanvas = document.createElement('canvas');
+                       outCanvas.width = cw; outCanvas.height = ch;
+                       outCanvas.getContext('2d').drawImage(tmpCtx.canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+                       tmpCtx = outCanvas.getContext('2d');
+                   } else if (fitMode === 'contain') {
+                       const W = tmpCtx.canvas.width, H = tmpCtx.canvas.height;
+                       let cw, ch;
+                       if (W / H > targetAspect) { cw = W; ch = cw / targetAspect; }
+                       else { ch = H; cw = ch * targetAspect; }
+                       
+                       const outCanvas = document.createElement('canvas');
+                       outCanvas.width = cw; outCanvas.height = ch;
+                       const oCtx = outCanvas.getContext('2d');
+                       oCtx.clearRect(0, 0, cw, ch);
+                       const cx = (cw - W) / 2, cy = (ch - H) / 2;
+                       oCtx.drawImage(tmpCtx.canvas, cx, cy, W, H);
+                       tmpCtx = outCanvas.getContext('2d');
+                   }
+                   
+                   // Update the bitmap source to the manipulated temporary canvas
+                   const oldBmp = bmp;
+                   bmp = await createImageBitmap(tmpCtx.canvas);
+                   oldBmp.close();
+               }
+
+               drawPerspectiveCell(ctx, bmp, cellQuad, 12);
+               bmp.close();
+            }
+
+            const outBlob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', (p.quality || 90) / 100));
+            
+            // Output name handling, apply index suffix if multiple outputs
+            let outName = p.filename || 'render';
+            if (!outName.toLowerCase().endsWith('.jpg') && !outName.toLowerCase().endsWith('.jpeg')) {
+                outName += '.jpg';
+            }
+            if (numOutputs > 1) {
+                outName = outName.replace(/\.jpg$/i, `-${outputCount + 1}.jpg`);
+            }
+            
+            await writeFile(subHandle, outName, outBlob);
+            outputCount++;
+        }
       }
     } catch (err) {
       onLog('error', `Aggregation failed (${agg.node.transformId}): ${err.message}`);

@@ -31,6 +31,9 @@ Key concepts:
   "description": "string — short summary",
   "tags": ["string"],
   "coverColor": "#hex — card colour in the library grid",
+  "minItems": "number | null — optional minimum input items required",
+  "maxItems": "number | null — optional maximum input items allowed",
+  "inputType": "string — optional 'image', 'video', or 'any' (defaults to fallback resolution if undefined)",
   "params": "RunParam[] — optional run-time override fields (see §6)",
   "nodes": "RecipeNode[]"
 }
@@ -426,10 +429,26 @@ Expands the canvas with a white border (wider at the bottom) and renders a capti
 | `opacity` | range 0–100 | `100` |
 
 #### `ai-smart-redact` — Smart Redact (OCR)
-| Param | Type | Default |
-|---|---|---|
+Detect and blur licence plates, text, or faces using OCR. Use Extract mode to store OCR text without modifying the image.
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `mode` | select | `"redact"` | `"redact"` \| `"extract"` |
 | `targets` | select | `"Text"` | `"Text"` \| `"Face"` |
 | `method` | select | `"Blur"` | `"Blur"` \| `"Bar"` |
+
+#### `ai-ocr-tag` — OCR Tag Extractor
+Extracts tags from stored OCR text (dates, prices, proper nouns). Requires Smart Redact (Extract mode) to have run first.
+| Param | Type | Default |
+|---|---|---|
+| `minLength` | range 2–10 | `3` |
+
+#### `ai-analyse-people` — Analyse People
+Detect and classify people using body pose landmarks and face detection. Stores results to asset metadata without modifying the image. Exposes `{{sidecar.faceCount}}`, `{{sidecar.personCount}}`, `{{sidecar.poseLabel}}`, `{{sidecar.peopleLabel}}`.
+| Param | Type | Default |
+|---|---|---|
+| `faceConfidence` | range 0–100 | `60` |
+| `poseConfidence` | range 0–100 | `50` |
+| `maxPoses` | range 1–10 | `5` |
 
 #### `ai-clipping-mask` — Clipping Mask
 | Param | Type | Default |
@@ -557,6 +576,7 @@ Any text param (caption, suffix, content, watermark text, etc.) supports `{{vari
 | `{{exif.make}}` | Camera make |
 | `{{exif.model}}` | Camera model |
 | `{{meta.X}}` | Any custom metadata field X |
+| `{{sidecar.X}}` | Any custom sidecar field or extracted data (e.g. `ocrTags`, `faceCount`, `city`) |
 | `{{recipe.X}}` | Value of run parameter named X |
 
 ---

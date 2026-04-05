@@ -15,7 +15,7 @@ import { ImageProcessor }                      from '../engine/index.js';
 import { extractExif }                         from '../engine/exif-reader.js';
 import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }               from '../utils/image-info.js';
-import { renderParamField, collectParams }     from '../utils/param-fields.js';
+import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -173,6 +173,10 @@ export async function render(container, hash) {
 
   injectNedStyles();
   injectImageInfoStyles();
+
+  if (def && def.params) {
+    bindParamFieldEvents(container, def.params, 'ned');
+  }
 
   let testImage  = null;
   let testFile   = null;

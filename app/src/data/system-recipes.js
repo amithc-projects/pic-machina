@@ -614,6 +614,8 @@ export const SYSTEM_RECIPES = [
     isSystem: true, coverColor: '#0891b2',
     tags: ['video', 'gif', 'thumbnail', 'frames', 'preview'],
     createdAt: 0, updatedAt: 0,
+    minItems: 1, maxItems: 1,
+    inputType: 'video',
     nodes: [
       // ── Frame 1: first frame (0%) ──
       { id: 'vfg-e1', type: 'transform', transformId: 'video-extract-frame',
@@ -683,6 +685,8 @@ export const SYSTEM_RECIPES = [
     isSystem: true, coverColor: '#0f172a',
     tags: ['video', 'grid', 'composite', 'security', 'wall'],
     createdAt: 0, updatedAt: 0,
+    minItems: 4, maxItems: 4,
+    inputType: 'video',
     nodes: [
       {
         id: 'vw-1', type: 'transform', transformId: 'flow-video-wall',
@@ -710,6 +714,8 @@ export const SYSTEM_RECIPES = [
     isSystem: true, coverColor: '#1c1c2e',
     tags: ['video', 'tv', 'perspective', 'room', 'cinematic'],
     createdAt: 0, updatedAt: 0,
+    minItems: 1, maxItems: 1,
+    inputType: 'video',
     nodes: [
       {
         id: 'vt-1', type: 'transform', transformId: 'flow-video-wall',

@@ -134,7 +134,11 @@ export class ImageProcessor {
 
     // If recipe has no explicit export nodes, auto-export at end.
     // flow-gif-from-states also produces file output — treat it as an export node.
-    const EXPORT_IDS = new Set(['flow-export', 'flow-gif-from-states']);
+    const EXPORT_IDS = new Set([
+        'flow-export', 'flow-gif-from-states', 'flow-video-wall', 
+        'flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 
+        'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'
+    ]);
     const hasExports = nodes.some(n => n.type === 'transform' && EXPORT_IDS.has(n.transformId))
       || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => EXPORT_IDS.has(bn.transformId))));
 
@@ -230,7 +234,7 @@ export class ImageProcessor {
       return;
     }
 
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(id)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(id)) {
       const blob    = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
       const caption = node.params?.caption != null
         ? interpolate(String(node.params.caption), context)

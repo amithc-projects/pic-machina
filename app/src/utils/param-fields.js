@@ -31,11 +31,13 @@ export function renderParamField(param, value, prefix = 'rp') {
           </label>
         </div>`;
 
+    case 'template-select':
     case 'select':
+      const selClass = param.type === 'template-select' ? 'ic-input ic-template-select' : 'ic-input';
       return `
         <div class="ned-field">
           <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
-          <select id="${id}" name="${param.name}" class="ic-input">
+          <select id="${id}" name="${param.name}" class="${selClass}" data-value="${escHtml(String(val))}">
             ${(param.options || []).map(opt =>
               `<option value="${escHtml(opt.value)}" ${opt.value == val ? 'selected' : ''}>${escHtml(opt.label)}</option>`
             ).join('')}
@@ -162,5 +164,22 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
         hex.addEventListener('input',   () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) picker.value = hex.value; });
       }
     }
+  }
+
+  // Handle dynamic template drop-downs asynchronously
+  const templateSelects = container.querySelectorAll('.ic-template-select');
+  if (templateSelects.length > 0) {
+    import('../data/templates.js').then(({ getAllTemplates }) => {
+      getAllTemplates().then(templates => {
+        templateSelects.forEach(select => {
+          const currentVal = select.dataset.value || select.value;
+          let html = '<option value="">-- Select Template --</option>';
+          templates.forEach(t => {
+            html += `<option value="${t.id}" ${t.id === currentVal ? 'selected' : ''}>${escHtml(t.name)}</option>`;
+          });
+          select.innerHTML = html;
+        });
+      });
+    });
   }
 }

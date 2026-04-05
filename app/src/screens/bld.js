@@ -295,6 +295,26 @@ export async function render(container, hash) {
             <input type="text" id="bld-tags" class="ic-input" value="${(draft.tags || []).join(', ')}" placeholder="web, social, print …">
             <div class="text-sm text-muted" style="margin-top:4px">Comma-separated</div>
 
+            <div style="display:flex;gap:12px;margin-top:16px">
+              <div style="flex:1">
+                <label class="ic-label">Min Items</label>
+                <input type="number" id="bld-min-items" class="ic-input" value="${draft.minItems ?? ''}" placeholder="Any" min="1">
+              </div>
+              <div style="flex:1">
+                <label class="ic-label">Max Items</label>
+                <input type="number" id="bld-max-items" class="ic-input" value="${draft.maxItems ?? ''}" placeholder="Any" min="1">
+              </div>
+            </div>
+
+            <div style="margin-top:12px">
+              <label class="ic-label">Media Type</label>
+              <select id="bld-input-type" class="ic-input">
+                <option value="image" ${draft.inputType === 'image' || !draft.inputType ? 'selected' : ''}>Images Only</option>
+                <option value="video" ${draft.inputType === 'video' ? 'selected' : ''}>Videos Only</option>
+                <option value="any" ${draft.inputType === 'any' ? 'selected' : ''}>Images & Videos</option>
+              </select>
+            </div>
+
             <div style="margin-top:16px;border-top:1px solid var(--ps-border);padding-top:12px">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
                 <span class="material-symbols-outlined" style="font-size:15px;color:var(--ps-blue)">tune</span>
@@ -634,6 +654,25 @@ export async function render(container, hash) {
   // ── Tags ──────────────────────────────────────────────────
   container.querySelector('#bld-tags')?.addEventListener('input', e => {
     draft.tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
+    markDirty();
+  });
+
+  // ── Limits ────────────────────────────────────────────────
+  container.querySelector('#bld-min-items')?.addEventListener('input', e => {
+    const val = parseInt(e.target.value, 10);
+    draft.minItems = isNaN(val) ? null : val;
+    markDirty();
+  });
+  
+  container.querySelector('#bld-max-items')?.addEventListener('input', e => {
+    const val = parseInt(e.target.value, 10);
+    draft.maxItems = isNaN(val) ? null : val;
+    markDirty();
+  });
+
+  // ── Media Type ────────────────────────────────────────────
+  container.querySelector('#bld-input-type')?.addEventListener('change', e => {
+    draft.inputType = e.target.value;
     markDirty();
   });
 
