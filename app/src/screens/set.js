@@ -206,7 +206,7 @@ export async function render(container, hash) {
           outputHandle,
           subfolder,
           runParams,
-          onProgress: (p, t, fn) => window._queProgress?.(p, t, fn),
+          onProgress: (p, t, fn, overridePct) => window._queProgress?.(p, t, fn, overridePct),
           onLog:      (lvl, msg) => window._queLog?.(lvl, msg),
           onComplete: (run)      => window._queComplete?.(run),
           onError:    (msg)      => window._queError?.(msg),

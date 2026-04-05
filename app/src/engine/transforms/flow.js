@@ -74,10 +74,64 @@ registry.register({
   description: 'Render images as an MP4 slideshow.',
   params: [
     { name: 'filename',         label: 'Output Filename',     type: 'text',   defaultValue: 'slideshow.mp4' },
+    { name: 'width',            label: 'Output Width (px)',   type: 'number', defaultValue: 1920 },
+    { name: 'height',           label: 'Output Height (px)',  type: 'number', defaultValue: 1080 },
     { name: 'durationPerSlide', label: 'Duration/Slide (sec)', type: 'number', defaultValue: 2 },
     { name: 'fps',              label: 'FPS',                  type: 'number', defaultValue: 30 },
   ],
   apply() { /* handled by Processor as aggregation node */ }
+});
+
+// ─── WebGL Video Stitcher ─────────────────────────────────
+registry.register({
+  id: 'flow-video-stitcher', name: 'WebGL Video Stitcher', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'animation',
+  description: 'Combine processed images/videos into an advanced timeline using GPU crossfades, wipes, and cinematic motion.',
+  params: [
+    { name: 'filename',           label: 'Output Filename',           type: 'text',   defaultValue: 'stitcher.mp4' },
+    { name: 'width',              label: 'Output Width (px)',         type: 'number', defaultValue: 1920 },
+    { name: 'height',             label: 'Output Height (px)',        type: 'number', defaultValue: 1080 },
+    { name: 'fps',                label: 'FPS',                       type: 'number', defaultValue: 30 },
+    { name: 'durationPerSlide',   label: 'Duration/Slide (sec)',      type: 'number', defaultValue: 3 },
+    { name: 'transitionDuration', label: 'Transition Duration (sec)', type: 'number', defaultValue: 1 },
+    { name: 'transitionMode',     label: 'Transition Effect',         type: 'select',
+      options: [
+        { label: 'Crossfade',        value: 'crossfade'  },
+        { label: 'Wipe Right',       value: 'wipeRight'  },
+        { label: 'Circle Crop Wipe', value: 'circleCrop' },
+        { label: 'Pixelize / Glitch',value: 'pixelize'   },
+        { label: 'Random Shuffle',   value: 'random'     }
+      ],
+      defaultValue: 'crossfade' },
+    { name: 'motionMode',         label: 'Ken Burns Motion',          type: 'select',
+      options: [
+        { label: 'None',           value: 'none' },
+        { label: 'Zoom In',        value: 'zoom-in'  },
+        { label: 'Zoom Out',       value: 'zoom-out' },
+        { label: 'Pan Left',       value: 'pan-left' },
+        { label: 'Pan Right',      value: 'pan-right' },
+        { label: 'Random Mix',     value: 'random'   }
+      ],
+      defaultValue: 'random' },
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
+});
+
+// ─── Inject Title Slide ───────────────────────────────────
+registry.register({
+  id: 'flow-title-slide', name: 'Inject Title Slide', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'title',
+  description: 'Automatically injects a generated title slide into the aggregator stream when a structural variable (like City or Date) changes.',
+  params: [
+    { name: 'triggerField', label: 'Trigger Field', type: 'text', defaultValue: '{{sidecar.city}}' },
+    { name: 'titleTemplate',label: 'Title Text',    type: 'text', defaultValue: '{{sidecar.city}}' },
+    { name: 'bgColor',      label: 'Background Color',type: 'color',defaultValue: '#111111' },
+    { name: 'bgImage',      label: 'Background File (Optional)', type: 'file', defaultValue: '' },
+    { name: 'fontFamily',   label: 'Font Family',   type: 'text', defaultValue: 'Inter' },
+    { name: 'fontSize',     label: 'Font Size (px)',type: 'number', defaultValue: 120 },
+    { name: 'textColor',    label: 'Text Color',    type: 'color',defaultValue: '#ffffff' },
+  ],
+  apply() { /* logic handled natively in processor.js eval loop */ }
 });
 
 // ─── Contact Sheet ────────────────────────────────────────

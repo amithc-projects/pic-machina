@@ -51,22 +51,28 @@ export async function createGIF(frames, { delay = 200, loop = true } = {}) {
  * @param {number}  fps
  * @returns {Promise<Blob>}
  */
-export async function createVideo(frames, { durationPerSlide = 2, fps = 30 } = {}) {
+export async function createVideo(frames, { durationPerSlide = 2, fps = 30, width, height } = {}) {
   const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
 
   // Load first frame to get dimensions (createImageBitmap works in Web Workers)
-  const firstBmp = await createImageBitmap(frames[0]);
-  const { width, height } = { width: firstBmp.width, height: firstBmp.height };
-  firstBmp.close?.();
+  let w = width ? parseInt(width, 10) : null;
+  let h = height ? parseInt(height, 10) : null;
 
-  // Ensure even dimensions (required by H.264)
-  const w = width  % 2 === 0 ? width  : width  - 1;
-  const h = height % 2 === 0 ? height : height - 1;
+  if (!w || !h) {
+    const firstBmp = await createImageBitmap(frames[0]);
+    w = w || firstBmp.width;
+    h = h || firstBmp.height;
+    firstBmp.close?.();
+  }
+
+  // Ensure even dimensions for AVC codec
+  const cw = w % 2 === 0 ? w : w - 1;
+  const ch = h % 2 === 0 ? h : h - 1;
 
   const target = new ArrayBufferTarget();
   const muxer  = new Muxer({
     target,
-    video: { codec: 'avc', width: w, height: h },
+    video: { codec: 'avc', width: cw, height: ch },
     fastStart: 'in-memory',
   });
 

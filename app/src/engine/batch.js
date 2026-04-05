@@ -48,6 +48,12 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-ocr-tag',
   // ai-analyse-people uses MediaPipe which requires the main thread
   'ai-analyse-people',
+  // Geometry transformers using MediaPipe AI (Tasks Vision) require the main thread
+  'geo-face-crop',
+  'geo-body-crop',
+  'geo-face-align',
+  // Title slides need custom Web Fonts from the main thread document to render beautifully
+  'flow-title-slide',
 ]);
 
 function flattenNodes(nodes) {
@@ -105,7 +111,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   // Aggregation collector (GIF / video / contact sheet)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -116,6 +122,9 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   onLog('info', `Starting batch: ${total} file(s) — recipe "${recipe.name}"`);
 
   let successCount = 0, failCount = 0;
+  const numAggs = Object.keys(aggregations).length;
+  const totalSteps = total + numAggs;
+  const runState = { injectedSlides: [], triggerStates: {} };
 
   for (let i = 0; i < files.length; i++) {
     if (run._cancelled) {
@@ -152,6 +161,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         outputSubfolder: subfolder || 'output',
         sidecar:   { ...(asset.geo ?? {}), ...(asset.sidecar ?? {}) },
         assetHash: asset.hash,
+        runState,
         log: (level, msg) => onLog(level, msg),
       };
 
@@ -198,13 +208,14 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       failCount++;
     }
 
-    onProgress(i + 1, total, file.name);
+    onProgress(i + 1, total, file.name, Math.round(((i + 1) / totalSteps) * 100));
 
     // Yield to keep the UI responsive between files
     await new Promise(res => setTimeout(res, 0));
   }
 
   // Post-process aggregations
+  let aggCount = 0;
   for (const [, agg] of Object.entries(aggregations)) {
     // Video wall uses files[], all others use blobs[]
     if (agg.node.transformId === 'flow-video-wall') {
@@ -229,6 +240,9 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       } catch (err) {
         onLog('error', `Video wall failed: ${err.message}`);
       }
+      
+      aggCount++;
+      onProgress(total, total, `Video Wall Complete`, Math.round(((total + aggCount) / totalSteps) * 100));
       continue;
     }
 
@@ -240,8 +254,37 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         const blob = await createGIF(agg.blobs, { delay: p.delay || 200, loop: p.loop !== false });
         await writeFile(subHandle, p.filename || 'animation.gif', blob);
       } else if (agg.node.transformId === 'flow-create-video') {
-        const blob = await createVideo(agg.blobs, { durationPerSlide: p.durationPerSlide || 2, fps: p.fps || 30 });
+        const blob = await createVideo(agg.blobs, { durationPerSlide: p.durationPerSlide || 2, fps: p.fps || 30, width: p.width, height: p.height });
         await writeFile(subHandle, p.filename || 'slideshow.mp4', blob);
+      } else if (agg.node.transformId === 'flow-video-stitcher') {
+        const { createWebGLStitcher } = await import('./stitcher.js');
+        let _lastPct = -1;
+        let _sTime = Date.now();
+        const baseAggPct = (total + aggCount) / totalSteps;
+        const aggRange = 1 / totalSteps;
+
+        const blob = await createWebGLStitcher(agg.blobs, {
+          ...p, width: p.width, height: p.height,
+          onProgress: (f, t) => {
+            const subPct = t > 0 ? (f / t) : 0;
+            const overallPct = Math.round((baseAggPct + (aggRange * subPct)) * 100);
+            onProgress(total, total, 'Stitching WebGL Video...', overallPct);
+            if (t > 0) {
+              const pct = Math.floor(subPct * 100);
+              if (pct % 5 === 0 && pct !== _lastPct) {
+                _lastPct = pct;
+                let msg = `Stitching video: ${pct}% complete`;
+                if (pct >= 20) {
+                  const elMs = Date.now() - _sTime;
+                  const remainSecs = Math.round(((elMs / (pct / 100)) - elMs) / 1000);
+                  msg += ` (ETA: ~${remainSecs}s)`;
+                }
+                onLog('info', msg);
+              }
+            }
+          }
+        });
+        await writeFile(subHandle, p.filename || 'stitched.mp4', blob);
       } else if (agg.node.transformId === 'flow-contact-sheet') {
         const blob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
         await writeFile(subHandle, p.filename || 'contact-sheet.jpg', blob);
@@ -262,18 +305,16 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         const base = (p.filename || 'photo-stack').replace(/\.(gif|mp4)$/i, '');
         await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
       } else if (agg.node.transformId === 'flow-animate-stack') {
-        const fmt  = p.format || 'gif';
         const blob = await createAnimatedStack(agg.blobs, {
-          width:       p.width       || 1920,
-          height:      p.height      || 1080,
-          deskColor:   p.deskColor   || '#3d2b1a',
-          frameDelay:  p.frameDelay  || 800,
-          maxRotation: p.maxRotation ?? 35,
-          overlap:     p.overlap     ?? 0,
-          format:      fmt,
+          ...p,
+          width:        p.width        || 1920,
+          height:       p.height       || 1080,
+          fps:          p.fps          || 30,
+          durationPerPhoto: p.durationPerPhoto || 1.5,
+          bgColor:      p.bgColor      || '#000000',
+          captions:     agg.captions   || [],
         });
-        const base = (p.filename || 'stack').replace(/\.(gif|mp4)$/i, '');
-        await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
+        await writeFile(subHandle, p.filename || 'animated-stack.mp4', blob);
       } else if (agg.node.transformId === 'flow-template-aggregator') {
         const { getTemplate } = await import('../data/templates.js');
         const { drawPerspectiveCell } = await import('./utils/perspective.js');
@@ -419,6 +460,8 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
             outputCount++;
         }
       }
+      aggCount++;
+      onProgress(total, total, `Finished ${agg.node.name || agg.node.transformId}`, Math.round(((total + aggCount) / totalSteps) * 100));
     } catch (err) {
       onLog('error', `Aggregation failed (${agg.node.transformId}): ${err.message}`);
     }

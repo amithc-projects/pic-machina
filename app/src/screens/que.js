@@ -89,13 +89,17 @@ export function render(container) {
   ringArc.style.strokeDasharray  = CIRC;
   ringArc.style.strokeDashoffset = CIRC;
 
-  function setProgress(done, total) {
-    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  function setProgress(done, total, overridePct = null) {
+    const pct = overridePct !== null ? overridePct : (total > 0 ? Math.round(done / total * 100) : 0);
     percent.textContent = pct + '%';
     ringArc.style.strokeDashoffset = CIRC - (CIRC * pct / 100);
     progressBar.style.width = pct + '%';
-    statProc.textContent = done;
-    if (total) statTotal.textContent = total;
+    
+    // Only update the actual file counters when we aren't overriding the visual proportion with a subtask (like aggregation)
+    if (overridePct === null) {
+      statProc.textContent = done;
+      if (total) statTotal.textContent = total;
+    }
   }
 
   function appendLog(level, msg) {
@@ -116,9 +120,9 @@ export function render(container) {
     }, 1000);
   }
 
-  window._queProgress = (processed, total, filename) => {
+  window._queProgress = (processed, total, filename, overridePct = null) => {
     if (!startTime) startElapsedTimer();
-    setProgress(processed, total);
+    setProgress(processed, total, overridePct);
     currentFile.textContent = filename;
     ringLabel.textContent = 'Processing';
   };

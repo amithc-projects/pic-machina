@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PicMachina - Model Evaluator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/src/ui/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  <style>
+    body {
+      background-color: var(--aurora-bg);
+      color: var(--aurora-text);
+      font-family: 'Inter', sans-serif;
+      padding: 24px;
+      margin: 0;
+    }
+    h1 { margin-top: 0; font-weight: 500; }
+    .toolbar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--aurora-surface);
+      border-radius: 8px;
+      align-items: center;
+    }
+    .eval-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--aurora-surface);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .eval-table th, .eval-table td {
+      padding: 12px;
+      border: 1px solid var(--aurora-border);
+      text-align: left;
+      vertical-align: top;
+    }
+    .eval-table th {
+      background: rgba(255,255,255,0.05);
+      font-weight: 500;
+    }
+    .thumb { max-width: 120px; height: auto; border-radius: 4px; display: block; border: 1px solid var(--aurora-border); }
+    .label-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: rgba(0, 119, 255, 0.2);
+      border: 1px solid rgba(0, 119, 255, 0.4);
+      border-radius: 12px;
+      font-size: 11px;
+      margin: 2px;
+      white-space: nowrap;
+    }
+    .status { margin-left: 16px; font-size: 14px; opacity: 0.8; }
+    .loading { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <h1>AI Classification Evaluator</h1>
+  
+  <div class="toolbar">
+    <button class="btn btn-primary" id="btn-pick-folder">
+      <span class="material-symbols-outlined">folder_open</span>
+      Select Test Folder
+    </button>
+    <div class="status" id="status-text">Ready.</div>
+  </div>
+
+  <table class="eval-table">
+    <thead>
+      <tr>
+        <th style="width:140px">Input Image</th>
+        <th>MediaPipe (EfficientNet-Lite0)</th>
+        <th>Transformers.js (MobileNet v3)</th>
+      </tr>
+    </thead>
+    <tbody id="eval-tbody">
+      <tr>
+        <td colspan="3" style="text-align:center; padding:32px; opacity:0.5">Select a folder to begin mapping capabilities.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Inject logic -->
+  <script type="module" src="/src/eval.js"></script>
+</body>
+</html>

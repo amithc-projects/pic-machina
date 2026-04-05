@@ -85,13 +85,17 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
   // Aggregation collector: aggregationId → { nodeConfig, blobs[] }
   const aggregations = {};
   for (const node of flatNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
       aggregations[node.id] = { node, blobs: [], files: [] };
     }
   }
+
+  const numAggs = Object.keys(aggregations).length;
+  const totalSteps = total + numAggs;
+  const runState = { injectedSlides: [], triggerStates: {} };
 
   log(runId, 'info', `Starting batch: ${total} file(s) — recipe "${recipe.name}"`);
 
@@ -127,6 +131,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         outputSubfolder: outputConfig.subfolder || 'output',
         sidecar:   { ...(asset?.geo ?? {}), ...(asset?.sidecar ?? {}) },
         assetHash: asset?.hash ?? null,
+        runState,
         log: (level, msg) => log(runId, level, msg),
       };
 
@@ -165,23 +170,57 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
       failCount++;
     }
 
-    self.postMessage({ type: 'PROGRESS', payload: { runId, processed: i + 1, total, filename: file.name } });
+    self.postMessage({ type: 'PROGRESS', payload: { runId, processed: i + 1, total, filename: file.name, overridePct: Math.round(((i+1)/totalSteps)*100) } });
   }
 
   // Post-process aggregations
-  for (const [aggId, agg] of Object.entries(aggregations)) {
+  let aggCount = 0;
+  for (const [, agg] of Object.entries(aggregations)) {
     if (!agg.blobs.length) continue;
     try {
       log(runId, 'info', `Rendering aggregation: ${agg.node.transformId} (${agg.blobs.length} frames)`);
       let resultBlob;
+      let format;
       const p = agg.node.params || {};
 
       if (agg.node.transformId === 'flow-create-gif') {
         resultBlob = await createGIF(agg.blobs, { delay: p.delay || 200, loop: p.loop !== false });
+        format = 'image/gif';
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'animation.gif', blob: resultBlob } });
       } else if (agg.node.transformId === 'flow-create-video') {
-        resultBlob = await createVideo(agg.blobs, { durationPerSlide: p.durationPerSlide || 2, fps: p.fps || 30 });
+        resultBlob = await createVideo(agg.blobs, { durationPerSlide: p.durationPerSlide || 2, fps: p.fps || 30, width: p.width, height: p.height });
+        format = 'video/mp4';
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'slideshow.mp4', blob: resultBlob } });
+      } else if (agg.node.transformId === 'flow-video-stitcher') {
+        const { createWebGLStitcher } = await import('./stitcher.js');
+        let _lastPct = -1;
+        let _sTime = Date.now();
+        const baseAggPct = (total + aggCount) / totalSteps;
+        const aggRange = 1 / totalSteps;
+        
+        resultBlob = await createWebGLStitcher(agg.blobs, {
+          ...p, width: p.width, height: p.height,
+          onProgress: (f, t) => {
+            const subPct = t > 0 ? (f / t) : 0;
+            const overallPct = Math.round((baseAggPct + (aggRange * subPct)) * 100);
+            self.postMessage({ type: 'PROGRESS', payload: { runId, processed: total, total, filename: 'Stitching WebGL Video...', overridePct: overallPct } });
+            if (t > 0) {
+              const pct = Math.floor(subPct * 100);
+              if (pct % 5 === 0 && pct !== _lastPct) {
+                _lastPct = pct;
+                let msg = `Stitching video: ${pct}% complete`;
+                if (pct >= 20) {
+                  const elMs = Date.now() - _sTime;
+                  const remainSecs = Math.round(((elMs / (pct / 100)) - elMs) / 1000);
+                  msg += ` (ETA: ~${remainSecs}s)`;
+                }
+                log(runId, 'info', msg);
+              }
+            }
+          }
+        });
+        format = 'video/mp4';
+        self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'stitched.mp4', blob: resultBlob } });
       } else if (agg.node.transformId === 'flow-contact-sheet') {
         resultBlob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'contact-sheet.jpg', blob: resultBlob } });
@@ -215,6 +254,9 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         const base = (p.filename || 'stack').replace(/\.(gif|mp4)$/i, '');
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob: resultBlob } });
       }
+      aggCount++;
+      self.postMessage({ type: 'PROGRESS', payload: { runId, processed: total, total, filename: `Finished ${agg.node.name || agg.node.transformId}`, overridePct: Math.round(((total + aggCount) / totalSteps) * 100) } });
+
     } catch (err) {
       log(runId, 'error', `Aggregation failed (${agg.node.transformId}): ${err.message}`);
     }

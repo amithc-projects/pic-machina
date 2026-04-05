@@ -779,4 +779,37 @@ export const SYSTEM_RECIPES = [
     ]
   },
 
+  // ── 39. Comic Book Cell ────────────────────────────────
+  {
+    id: 'sys-comic-book', name: 'Comic Book Cell',
+    description: 'Converts a photograph into a cel-shaded comic book panel with heavy ink outlines and halftone print textures.',
+    isSystem: true, coverColor: '#eab308',
+    inputType: 'image',
+    tags: ['comic', 'graphic novel', 'cel shading', 'halftone', 'creative'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'cb-1', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: 40, contrast: 30, vibrance: 20 },
+        label: 'Color Pop' },
+      { id: 'cb-2', type: 'transform', transformId: 'filter-kuwahara',
+        params: { radius: 4, passes: 2 },
+        label: 'Paint Flattening' },
+      { id: 'cb-3', type: 'transform', transformId: 'color-posterize',
+        params: { levels: 4 },
+        label: 'Cel Shading' },
+      { id: 'cb-4', type: 'transform', transformId: 'filter-edge-detect',
+        params: { blendMode: 'darken', edgeStrength: 75, threshold: 15 },
+        label: 'Ink Outlines' },
+      { id: 'cb-5', type: 'transform', transformId: 'filter-halftone',
+        params: { dotSpacing: 4, opacity: 30, blendMode: 'multiply' },
+        label: 'Print Texture' },
+      { id: 'cb-6', type: 'transform', transformId: 'geo-padding',
+        params: { top: 15, right: 15, bottom: 15, left: 15, color: '#000000' },
+        label: 'Black Frame' },
+      { id: 'cb-7', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_comic', format: 'image/jpeg', quality: 95 },
+        label: 'Export JPEG' },
+    ]
+  }
+
 ];

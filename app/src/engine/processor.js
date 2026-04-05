@@ -136,7 +136,7 @@ export class ImageProcessor {
     // flow-gif-from-states also produces file output — treat it as an export node.
     const EXPORT_IDS = new Set([
         'flow-export', 'flow-gif-from-states', 'flow-video-wall', 
-        'flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 
+        'flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 
         'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'
     ]);
     const hasExports = nodes.some(n => n.type === 'transform' && EXPORT_IDS.has(n.transformId))
@@ -227,6 +227,64 @@ export class ImageProcessor {
       return;
     }
 
+    // ── Inject Title Slide ──
+    if (id === 'flow-title-slide') {
+      if (!context.runState) return;
+      const triggerExpr = node.params?.triggerField || '';
+      const triggerVal  = interpolate(triggerExpr, context);
+
+      const fieldState = context.runState.triggerStates[node.id] || { lastVal: null };
+
+      if (triggerVal && triggerVal !== fieldState.lastVal) {
+        context.log?.('info', `Title Slide trigger detected change ("${fieldState.lastVal}" -> "${triggerVal}"). Generating Title Slide...`);
+        fieldState.lastVal = triggerVal;
+
+        const cw = ctx.canvas.width;
+        const ch = ctx.canvas.height;
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = cw; tmpCanvas.height = ch;
+        const tCtx = tmpCanvas.getContext('2d');
+
+        // Background
+        tCtx.fillStyle = node.params?.bgColor || '#111111';
+        tCtx.fillRect(0, 0, cw, ch);
+
+        if (node.params?.bgImage) {
+          try {
+            const resp = await fetch(node.params.bgImage);
+            const bitmap = await createImageBitmap(await resp.blob());
+            const scale = Math.max(cw / bitmap.width, ch / bitmap.height);
+            const sw = bitmap.width * scale, sh = bitmap.height * scale;
+            tCtx.drawImage(bitmap, (cw-sw)/2, (ch-sh)/2, sw, sh);
+            bitmap.close?.();
+          } catch (err) { context.log?.('warn', `Failed to load Title Slide bgImage: ${err.message}`); }
+        }
+
+        // Text
+        const titleText = interpolate(node.params?.titleTemplate || '', context);
+        if (titleText) {
+          const fontSize = node.params?.fontSize || 120;
+          tCtx.fillStyle = node.params?.textColor || '#ffffff';
+          tCtx.font = `bold ${fontSize}px "${node.params?.fontFamily || 'Inter'}"`;
+          tCtx.textAlign = 'center';
+          tCtx.textBaseline = 'middle';
+
+          // Basic multiline support just wrapping on newlines
+          const lines = titleText.split('\\n');
+          const lineHeight = fontSize * 1.2;
+          const startY = (ch / 2) - ((lines.length - 1) * lineHeight) / 2;
+          for (let i = 0; i < lines.length; i++) {
+            tCtx.fillText(lines[i], cw / 2, startY + (i * lineHeight));
+          }
+        }
+
+        const blob = await this._exportCanvas(tCtx, 'image/jpeg', 0.9);
+        context.runState.injectedSlides.push(blob);
+        context.runState.triggerStates[node.id] = fieldState;
+      }
+      return; // Never modifies the master canvas
+    }
+
     // ── Aggregation captures ──
     if (id === 'flow-video-wall') {
       // Capture the raw File object — no canvas export needed
@@ -234,7 +292,14 @@ export class ImageProcessor {
       return;
     }
 
-    if (['flow-create-gif', 'flow-create-video', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(id)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(id)) {
+      if (context.runState?.injectedSlides?.length > 0) {
+        for (const slideBlob of context.runState.injectedSlides) {
+          results.push({ blob: slideBlob, filename: `_injected_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption: '' });
+        }
+        context.runState.injectedSlides = [];
+      }
+
       const blob    = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
       const caption = node.params?.caption != null
         ? interpolate(String(node.params.caption), context)

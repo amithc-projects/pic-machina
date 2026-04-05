@@ -14,19 +14,20 @@
 - [ ] **Task 2.6: Local AI Text Synthesis**
   - Utilize browser-native LLMs (e.g., Gemini Nano) to summarize OCR results into automatic tags.
 
-## Phase 3: The Template Engine & Interactive Editor (NEW)
+## Phase 3: The Template Engine & Interactive Editor (COMPLETE)
 **Goal:** Transition from fixed grids to custom, user-defined perspective templates.
 
-- [ ] **Task 3.1: Shared Perspective Rendering Utility**
+- [x] **Task 3.1: Shared Perspective Rendering Utility**
   - Generalize the mesh-warp logic from `video-wall.js` into a shared engine utility for both video and still image aggregators.
-- [ ] **Task 3.2: Template Schema & Storage**
+- [x] **Task 3.2: Template Schema & Storage**
   - Define a JSON schema for templates (background image ref + array of named quads with 4 normalized corner points).
   - Add a `templates` store to IndexedDB.
-- [ ] **Task 3.3: UI: The Template Editor (TPL Screen)**
+- [x] **Task 3.3: UI: The Template Editor (TPL Screen)**
   - A new interactive screen where users can upload a background image and "draw" placeholders.
   - Support for dragging the 4 corner points of each placeholder to match perspective elements (like a photo frame on a wall or a billboard).
-- [ ] **Task 3.4: Template Aggregator Node (`flow-template-aggregator`)**
+- [x] **Task 3.4: Template Aggregator Node (`flow-template-aggregator`)**
   - A new aggregation node that accepts a Template ID and populates placeholders with batch images in sequence.
+  - **(Bonus)** Extended to support mapping multiplexed videos directly into templates natively via `flow-video-wall`, including full playback of looping video backgrounds via `FileSystemFileHandle` streams.
 
 ## Phase 4: Signature Creative Recipes
 - [x] Photo Stack Animation (Polaroid/Desk)
@@ -38,6 +39,10 @@
   - A scrolling narrative view using `meta-geocode` data and `exif.date` to map a trip's progression.
 - [ ] **Task 4.8: Recipe — The Photomosaic**
   - High-complexity aggregator matching hundreds of thumbnails to a target image using `dominantColor` vision data.
+- [ ] **Task 4.9: WebGL Slideshow Stitcher (`flow-video-stitcher`)**
+  - Advanced temporal aggregation using a `webgl` canvas to stitch images and videos.
+  - Integration of `gl-transitions` standards for GPU-accelerated crossfades, wipes, and effects.
+  - Native overlay drawing for rendering automated subtitles/captions generated from dynamic EXIF/IPTC metadata blocks.
 
 ## Phase 5: The Master Exporter & Project Bundling
 - [ ] **Task 5.1: ZIP Bundling Engine (`fflate`)**
