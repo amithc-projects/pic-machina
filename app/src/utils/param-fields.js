@@ -31,9 +31,11 @@ export function renderParamField(param, value, prefix = 'rp') {
           </label>
         </div>`;
 
+    case 'video-layout-select':
     case 'template-select':
     case 'select':
-      const selClass = param.type === 'template-select' ? 'ic-input ic-template-select' : 'ic-input';
+      const selClass = param.type === 'template-select' ? 'ic-input ic-template-select' : 
+                       (param.type === 'video-layout-select' ? 'ic-input ic-video-layout-select' : 'ic-input');
       return `
         <div class="ned-field">
           <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
@@ -168,9 +170,12 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
 
   // Handle dynamic template drop-downs asynchronously
   const templateSelects = container.querySelectorAll('.ic-template-select');
-  if (templateSelects.length > 0) {
+  const videoLayoutSelects = container.querySelectorAll('.ic-video-layout-select');
+
+  if (templateSelects.length > 0 || videoLayoutSelects.length > 0) {
     import('../data/templates.js').then(({ getAllTemplates }) => {
       getAllTemplates().then(templates => {
+        // Exclusive template selectors
         templateSelects.forEach(select => {
           const currentVal = select.dataset.value || select.value;
           let html = '<option value="">-- Select Template --</option>';
@@ -178,6 +183,22 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
             html += `<option value="${t.id}" ${t.id === currentVal ? 'selected' : ''}>${escHtml(t.name)}</option>`;
           });
           select.innerHTML = html;
+        });
+
+        // Hybrid selectors (preserves existing defined options)
+        videoLayoutSelects.forEach(select => {
+          const currentVal = select.dataset.value || select.value;
+          let html = select.innerHTML;
+          if (templates.length > 0) {
+              html += '<optgroup label="Templates">';
+              templates.forEach(t => {
+                html += `<option value="${t.id}" ${t.id === currentVal ? 'selected' : ''}>${escHtml(t.name)}</option>`;
+              });
+              html += '</optgroup>';
+          }
+          select.innerHTML = html;
+          // After injecting, explicitly update the value just in case it wasn't statically matched
+          if (currentVal) select.value = currentVal;
         });
       });
     });

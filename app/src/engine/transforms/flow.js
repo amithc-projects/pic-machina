@@ -254,7 +254,7 @@ registry.register({
   description: 'Composite multiple input videos into a single grid-layout MP4 (security camera wall style). Inputs are sorted by filename.',
   params: [
     { name: 'filename',         label: 'Output Filename',             type: 'text',   defaultValue: 'video-wall.mp4' },
-    { name: 'layout',           label: 'Layout',                      type: 'select',
+    { name: 'layout',           label: 'Layout',                      type: 'video-layout-select',
       options: [
         { label: '2×2 Grid (4 videos)',          value: 'grid-2x2'  },
         { label: '3×3 Grid (9 videos)',          value: 'grid-3x3'  },

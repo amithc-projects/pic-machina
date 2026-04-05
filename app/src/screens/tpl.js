@@ -144,10 +144,16 @@ async function renderEditor(container, tplId) {
             </div>
 
             <label class="ic-label" style="margin-top:16px;">Background Map</label>
-            <button class="btn-secondary" id="tpl-btn-bg" style="width:100%; justify-content:center;">
-              <span class="material-symbols-outlined">upload</span>
-              Upload Background
-            </button>
+            <div class="flex gap-2">
+              <button class="btn-secondary" id="tpl-btn-bg" style="flex:1; justify-content:center; padding: 6px;">
+                <span class="material-symbols-outlined">image</span>
+                Image
+              </button>
+              <button class="btn-secondary" id="tpl-btn-bg-video" style="flex:1; justify-content:center; padding: 6px;">
+                <span class="material-symbols-outlined">movie</span>
+                Video
+              </button>
+            </div>
             <span class="text-xs text-muted" style="display:block;margin-top:6px;">Replaces current dimensions to match image.</span>
           </div>
 
@@ -477,12 +483,63 @@ async function renderEditor(container, tplId) {
       cvs.width = tpl.width;
       cvs.height = tpl.height;
       tpl.backgroundBlob = f;
+      tpl.backgroundVideoHandle = null;
       container.querySelector('#tpl-w').value = tpl.width;
       container.querySelector('#tpl-h').value = tpl.height;
       drawCanvas();
       markDirty();
     };
     inp.click();
+  });
+
+  container.querySelector('#tpl-btn-bg-video').addEventListener('click', async () => {
+    try {
+      if (!window.showOpenFilePicker) {
+        showToast?.({ variant: 'error', message: 'Video backgrounds require a browser supporting File System Access API.' });
+        return;
+      }
+      const handles = await window.showOpenFilePicker({
+        types: [{ description: 'Video Files', accept: {'video/*': ['.mp4', '.webm', '.mov']} }],
+        multiple: false
+      });
+      const fileHandle = handles[0];
+      const file = await fileHandle.getFile();
+      
+      const video = document.createElement('video');
+      video.muted = true;
+      video.src = URL.createObjectURL(file);
+      video.preload = 'metadata';
+      video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+      document.body.appendChild(video);
+      
+      video.onloadedmetadata = () => { video.currentTime = 0; };
+      video.onerror = () => { showToast?.({ variant: 'error', message: 'Could not decode video file.'}); document.body.removeChild(video); };
+      
+      video.onseeked = async () => {
+        if (bgBitmap) bgBitmap.close();
+        const vc = document.createElement('canvas');
+        vc.width = video.videoWidth; vc.height = video.videoHeight;
+        vc.getContext('2d').drawImage(video, 0, 0);
+        bgBitmap = await createImageBitmap(vc);
+        
+        tpl.width = bgBitmap.width;
+        tpl.height = bgBitmap.height;
+        cvs.width = tpl.width;
+        cvs.height = tpl.height;
+        tpl.backgroundVideoHandle = fileHandle;
+        tpl.backgroundBlob = null;
+        
+        container.querySelector('#tpl-w').value = tpl.width;
+        container.querySelector('#tpl-h').value = tpl.height;
+        drawCanvas();
+        markDirty();
+        
+        document.body.removeChild(video);
+        URL.revokeObjectURL(video.src);
+      };
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error(err);
+    }
   });
 
   container.querySelector('#tpl-w').addEventListener('change', e => { tpl.width=parseInt(e.target.value)||1080; cvs.width=tpl.width; drawCanvas(); markDirty(); });

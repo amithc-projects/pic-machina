@@ -105,6 +105,15 @@ class VideoStream {
     this._buffer = [];
     if (this._decoder?.state !== 'closed') try { this._decoder.close(); } catch {}
   }
+
+  reset() {
+    this.exhausted = false;
+    for (const f of this._buffer) try { f.close(); } catch {}
+    this._buffer = [];
+    this._chunkIdx = 0;
+    if (this._decoder?.state !== 'closed') try { this._decoder.close(); } catch {}
+    this._decoder = this._createDecoder(this.codecString, this.description);
+  }
 }
 
 // ─── Template system ──────────────────────────────────────
@@ -509,16 +518,76 @@ export async function createVideoWall(videoFiles, {
   // Sort alphabetically by filename so grid order is predictable
   const sorted = [...videoFiles].sort((a, b) => a.name.localeCompare(b.name));
 
-  const tpl = TEMPLATES[layout] ?? TEMPLATES['grid-2x2'];
-
   // Ensure even dimensions (H.264 requirement)
   const w = outputWidth  % 2 === 0 ? outputWidth  : outputWidth  - 1;
   const h = outputHeight % 2 === 0 ? outputHeight : outputHeight - 1;
 
-  const cells = tpl.getCells(w, h);
+  let tpl = TEMPLATES[layout];
+  let fallbackBitmap = null;
+  let cells = [];
+  let bgBitmap = null;
+
+  if (tpl) {
+      cells = tpl.getCells(w, h);
+  } else {
+      // Dynamic Layout via Template ID
+      const { getTemplate } = await import('../data/templates.js');
+      const storedTpl = await getTemplate(layout);
+      if (!storedTpl) throw new Error(`[video-wall] Unknown layout or template: ${layout}`);
+
+      const sortedPhs = [...(storedTpl.placeholders || [])].sort((a,b) => (a.zIndex||0) - (b.zIndex||0));
+
+      let bgVideoStream = null;
+      if (storedTpl.backgroundVideoHandle) {
+          const handle = storedTpl.backgroundVideoHandle;
+          const permission = await handle.queryPermission({ mode: 'read' });
+          if (permission !== 'granted') {
+              const request = await handle.requestPermission({ mode: 'read' });
+              if (request !== 'granted') {
+                  throw new Error(`[video-wall] Permission denied for background video file`);
+              }
+          }
+          try {
+              const bgFile = await handle.getFile();
+              const bgDemux = await demuxVideoFile(bgFile);
+              bgVideoStream = new VideoStream(bgDemux.encodedChunks, bgDemux.codecString, bgDemux.description, bgDemux.durationUs);
+          } catch (err) {
+              throw new Error(`[video-wall] Background video file is missing or inaccessible: ${err.message}`);
+          }
+      } else if (storedTpl.backgroundBlob) {
+          bgBitmap = await createImageBitmap(storedTpl.backgroundBlob);
+      }
+
+      cells = sortedPhs.map(ph => ({
+           type: 'quad',
+           quad: ph.points.map(pt => ({
+               x: pt.x * w,
+               y: pt.y * h
+           })),
+           fitMode: ph.fitMode || 'stretch',
+           subdivisions: 12
+      }));
+
+      tpl = {
+          name: storedTpl.name,
+          maxStreams: cells.length,
+          drawBackground: (ctx, w, h, bgFrame) => {
+              if (bgFrame) {
+                  ctx.drawImage(bgFrame, 0, 0, w, h);
+              } else if (bgBitmap) {
+                  ctx.drawImage(bgBitmap, 0, 0, w, h);
+              }
+          },
+          bgVideoStream
+      };
+      
+      // If the template has no cells, fall back gracefully
+      if (cells.length === 0) {
+          cells = [{ type: 'rect', x: 0, y: 0, w, h, fitMode: 'contain' }];
+      }
+  }
 
   // Optional fallback image for end-of-video cells
-  let fallbackBitmap = null;
   if (endOfVideo === 'image' && fallbackImageUrl) {
     try {
       const resp = await fetch(fallbackImageUrl);
@@ -563,26 +632,45 @@ export async function createVideoWall(videoFiles, {
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
       error:  (e) => reject(new Error(`[video-wall] VideoEncoder: ${e.message}`)),
     });
-    encoder.configure({ codec: 'avc1.42001f', width: w, height: h, bitrate, framerate: fps });
+    // High Profile (64), Level 4.2 (2a) to support up to 1080p@60fps
+    encoder.configure({ codec: 'avc1.64002a', width: w, height: h, bitrate, framerate: fps });
 
     (async () => {
       try {
         const encodeStart = Date.now();
 
+        let bgStreamLoops = 0;
+
         for (let fi = 0; fi < totalFrames; fi++) {
           const ts = fi * (1_000_000 / fps);
+
+          let localBgTs = 0;
+          if (tpl.bgVideoStream) {
+              if (ts >= (bgStreamLoops + 1) * tpl.bgVideoStream.durationUs) {
+                  bgStreamLoops++;
+                  tpl.bgVideoStream.reset();
+              }
+              localBgTs = ts - (bgStreamLoops * tpl.bgVideoStream.durationUs);
+          }
 
           // Top up decode buffers every 30 frames (parallel across streams).
           // Bounds peak memory to LOOKAHEAD_US × N_streams regardless of clip length.
           if (fi % 30 === 0) {
-            await Promise.all(streamData.map(s => s.ensureBufferedTo(ts + LOOKAHEAD_US)));
+            const promises = streamData.map(s => s.ensureBufferedTo(ts + LOOKAHEAD_US));
+            if (tpl.bgVideoStream) promises.push(tpl.bgVideoStream.ensureBufferedTo(localBgTs + LOOKAHEAD_US));
+            await Promise.all(promises);
           }
 
           // ── Composite frame ──
           ctx.fillStyle = '#000';
           ctx.fillRect(0, 0, w, h);
 
-          if (tpl.drawBackground) tpl.drawBackground(ctx, w, h, cells);
+          let bgFrame = null;
+          if (tpl.bgVideoStream) {
+              bgFrame = tpl.bgVideoStream.getFrameAt(localBgTs);
+          }
+
+          if (tpl.drawBackground) tpl.drawBackground(ctx, w, h, bgFrame);
 
           for (let i = 0; i < cells.length; i++) {
             const stream = streamData[i];
@@ -649,7 +737,9 @@ export async function createVideoWall(videoFiles, {
   muxer.finalize();
 
   for (const s of streamData) s.close();
+  if (tpl?.bgVideoStream) tpl.bgVideoStream.close();
   if (fallbackBitmap) fallbackBitmap.close();
+  if (bgBitmap) bgBitmap.close();
 
   return new Blob([target.buffer], { type: 'video/mp4' });
 }
