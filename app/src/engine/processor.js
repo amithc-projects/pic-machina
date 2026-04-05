@@ -287,24 +287,22 @@ export class ImageProcessor {
 
     // ── Aggregation captures ──
     if (id === 'flow-video-wall') {
-      // Capture the raw File object — no canvas export needed
-      results.push({ file: context.originalFile, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder });
+      context.log?.('info', `Video extracted — routing to aggregator ${node.id}`);
+      results.push({ file: context.originalFile, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder, metadata: { exif: context.exif, sidecar: context.sidecar } });
       return;
     }
 
-    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(id)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(id)) {
       if (context.runState?.injectedSlides?.length > 0) {
         for (const slideBlob of context.runState.injectedSlides) {
-          results.push({ blob: slideBlob, filename: `_injected_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption: '' });
+          results.push({ blob: slideBlob, filename: `_injected_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption: '', metadata: { exif: context.exif, sidecar: context.sidecar } });
         }
         context.runState.injectedSlides = [];
       }
 
       const blob    = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
-      const caption = node.params?.caption != null
-        ? interpolate(String(node.params.caption), context)
-        : '';
-      results.push({ blob, filename: `_capture_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption });
+      const caption = interpolate(node.params?.caption || '', context);
+      results.push({ blob, filename: `_capture_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption, metadata: { exif: context.exif, sidecar: context.sidecar } });
       return;
     }
 

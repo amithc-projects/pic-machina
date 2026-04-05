@@ -505,6 +505,25 @@ Aggregation nodes collect **one frame per input image** during the batch run, th
 | `durationPerSlide` | number | `2` | seconds per image |
 | `fps` | number | `30` |
 
+#### `flow-video-stitcher` — GPU WebGL Slideshow
+An advanced Video Encoder aggregator utilizing WebGL to execute random GPU pan/zoom motions and dynamic crossfade transitions (gl-transitions) natively inside the browser.
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `filename` | text | `"stitched.mp4"` |
+| `durationPerSlide` | number | `3.0` | 
+| `transitionDuration` | number | `1.0` | Duration of overlapping crossfade
+| `transitionMode` | text | `"random"` | Or `"crossfade"`, `"wipe"`, etc
+| `motionMode` | text | `"random"` | Or `"zoom-in"`, `"pan-right"`
+
+#### `flow-title-slide` — Metadata Timeline Sequencer
+A main-thread interceptor block that observes a structural metadata value (e.g. `{{sidecar.City}}` or `{{sidecar.Date}}`). When the value explicitly changes between two consecutive frames during a batch run, this node automatically intercepts the queue and generates an interstitial title slide canvas block, injecting it into the payload streams immediately before the image frame that triggered the structural change. Best paired with `flow-video-stitcher`.
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `triggerField` | text | `{{sidecar.City}}` | The metadata property to monitor for changes
+| `template` | text | `Location: {{sidecar.City}}` | The Rich Text payload for the injected title slide
+| `backgroundUrl` | text | (empty) | Fallback background URL (accepts relative/absolute paths)
+| `durationPerSlide` | number | `3.0` | How long the title slide should hold in a video aggregator
+
 #### `flow-contact-sheet` — Contact Sheet
 Assembles all images into a grid JPEG.
 | Param | Type | Default |

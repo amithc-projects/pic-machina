@@ -810,6 +810,26 @@ export const SYSTEM_RECIPES = [
         params: { suffix: '_comic', format: 'image/jpeg', quality: 95 },
         label: 'Export JPEG' },
     ]
+  },
+  // ── 40. Geotemporal Timeline ─────────────────────────────
+  {
+    id: 'sys-geo-timeline', name: 'Geotemporal Timeline',
+    description: 'Generates a split-screen video timeline that physically charts your GPS coordinates across a rolling map on one side, while crossfading through your historical photos on the other.',
+    isSystem: true, coverColor: '#1e40af',
+    inputType: 'image',
+    tags: ['video', 'map', 'travel', 'timeline', 'gallery'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'geo-1', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '9:16', strategy: 'Attention' },
+        label: 'Portrait Crop' },
+      { id: 'geo-2', type: 'transform', transformId: 'meta-geocode',
+        params: { template: '{city}, {country}', targetField: 'location' },
+        label: 'Reverse Geocode' },
+      { id: 'geo-3', type: 'transform', transformId: 'flow-geo-timeline',
+        params: { width: 1920, height: 1080, fps: 30, durationPerPhoto: 3.5, transitionDuration: 1.0, filename: 'trip-timeline.mp4' },
+        label: 'Build Map Videocast' }
+    ]
   }
 
 ];

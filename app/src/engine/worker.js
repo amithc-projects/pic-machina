@@ -85,7 +85,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
   // Aggregation collector: aggregationId → { nodeConfig, blobs[] }
   const aggregations = {};
   for (const node of flatNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -145,6 +145,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
           } else {
             agg.blobs.push(result.blob);
             (agg.captions ??= []).push(result.caption ?? '');
+            (agg.metadata ??= []).push(result.metadata ?? {});
           }
         } else {
           self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: result.filename, blob: result.blob, subfolder: result.subfolder } });
@@ -222,6 +223,37 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         });
         format = 'video/mp4';
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'stitched.mp4', blob: resultBlob } });
+      } else if (agg.node.transformId === 'flow-geo-timeline') {
+        const { createGeoTimeline } = await import('./geo-timeline.js');
+        let _lastPct = -1;
+        let _sTime = Date.now();
+        const baseAggPct = (total + aggCount) / totalSteps;
+        const aggRange = 1 / totalSteps;
+        
+        resultBlob = await createGeoTimeline(agg.blobs, agg.metadata || [], {
+          ...p, width: p.width, height: p.height,
+          onLog: (msg) => log(runId, 'info', msg),
+          onProgress: (f, t) => {
+            const subPct = t > 0 ? (f / t) : 0;
+            const overallPct = Math.round((baseAggPct + (aggRange * subPct)) * 100);
+            self.postMessage({ type: 'PROGRESS', payload: { runId, processed: total, total, filename: 'Rendering Geotemporal Timeline...', overridePct: overallPct } });
+            if (t > 0) {
+              const pct = Math.floor(subPct * 100);
+              if (pct % 5 === 0 && pct !== _lastPct) {
+                _lastPct = pct;
+                let msg = `Rendering timeline: ${pct}% complete`;
+                if (pct >= 20) {
+                  const elMs = Date.now() - _sTime;
+                  const remainSecs = Math.round(((elMs / (pct / 100)) - elMs) / 1000);
+                  msg += ` (ETA: ~${remainSecs}s)`;
+                }
+                log(runId, 'info', msg);
+              }
+            }
+          }
+        });
+        format = 'video/mp4';
+        self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'geo-timeline.mp4', blob: resultBlob } });
       } else if (agg.node.transformId === 'flow-contact-sheet') {
         resultBlob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
         self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: p.filename || 'contact-sheet.jpg', blob: resultBlob } });

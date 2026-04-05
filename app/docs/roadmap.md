@@ -39,7 +39,7 @@
   - A scrolling narrative view using `meta-geocode` data and `exif.date` to map a trip's progression.
 - [ ] **Task 4.8: Recipe — The Photomosaic**
   - High-complexity aggregator matching hundreds of thumbnails to a target image using `dominantColor` vision data.
-- [ ] **Task 4.9: WebGL Slideshow Stitcher (`flow-video-stitcher`)**
+- [x] **Task 4.9: WebGL Slideshow Stitcher (`flow-video-stitcher`)**
   - Advanced temporal aggregation using a `webgl` canvas to stitch images and videos.
   - Integration of `gl-transitions` standards for GPU-accelerated crossfades, wipes, and effects.
   - Native overlay drawing for rendering automated subtitles/captions generated from dynamic EXIF/IPTC metadata blocks.

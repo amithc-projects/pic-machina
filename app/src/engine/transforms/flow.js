@@ -117,6 +117,22 @@ registry.register({
   apply() { /* handled by Processor as aggregation node */ }
 });
 
+// ─── Geotemporal Timeline ─────────────────────────────────
+registry.register({
+  id: 'flow-geo-timeline', name: 'Geotemporal Timeline', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'map',
+  description: 'Assemble GPS-mapped images into a continuous scrolling video charting a geographical journey on a map canvas.',
+  params: [
+    { name: 'filename',           label: 'Output Filename',           type: 'text',   defaultValue: 'geo-timeline.mp4' },
+    { name: 'width',              label: 'Output Width (px)',         type: 'number', defaultValue: 1920 },
+    { name: 'height',             label: 'Output Height (px)',        type: 'number', defaultValue: 1080 },
+    { name: 'fps',                label: 'FPS',                       type: 'number', defaultValue: 30 },
+    { name: 'durationPerPhoto',   label: 'Duration/Photo (sec)',      type: 'number', defaultValue: 3 },
+    { name: 'transitionDuration', label: 'Crossfade Duration (sec)',  type: 'number', defaultValue: 1 }
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
+});
+
 // ─── Inject Title Slide ───────────────────────────────────
 registry.register({
   id: 'flow-title-slide', name: 'Inject Title Slide', category: 'Flow Control', categoryKey: 'flow',

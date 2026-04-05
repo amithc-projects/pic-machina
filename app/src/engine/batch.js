@@ -111,7 +111,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   // Aggregation collector (GIF / video / contact sheet)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -175,6 +175,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
           } else {
             agg.blobs.push(result.blob);
             (agg.captions ??= []).push(result.caption ?? '');
+            (agg.metadata ??= []).push(result.metadata ?? {});
           }
         } else {
           try {
@@ -286,6 +287,36 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
           }
         });
         await writeFile(subHandle, p.filename || 'stitched.mp4', blob);
+      } else if (agg.node.transformId === 'flow-geo-timeline') {
+        const { createGeoTimeline } = await import('./geo-timeline.js');
+        let _lastPct = -1;
+        let _sTime = Date.now();
+        const baseAggPct = (total + aggCount) / totalSteps;
+        const aggRange = 1 / totalSteps;
+
+        const blob = await createGeoTimeline(agg.blobs, agg.metadata || [], {
+          ...p, width: p.width, height: p.height,
+          onLog: (msg) => onLog('info', msg),
+          onProgress: (f, t) => {
+            const subPct = t > 0 ? (f / t) : 0;
+            const overallPct = Math.round((baseAggPct + (aggRange * subPct)) * 100);
+            onProgress(total, total, 'Rendering Geotemporal Timeline...', overallPct);
+            if (t > 0) {
+              const pct = Math.floor(subPct * 100);
+              if (pct % 5 === 0 && pct !== _lastPct) {
+                _lastPct = pct;
+                let msg = `Rendering timeline: ${pct}% complete`;
+                if (pct >= 20) {
+                  const elMs = Date.now() - _sTime;
+                  const remainSecs = Math.round(((elMs / (pct / 100)) - elMs) / 1000);
+                  msg += ` (ETA: ~${remainSecs}s)`;
+                }
+                onLog('info', msg);
+              }
+            }
+          }
+        });
+        await writeFile(subHandle, p.filename || 'geo-timeline.mp4', blob);
       } else if (agg.node.transformId === 'flow-contact-sheet') {
         const blob = await createContactSheet(agg.blobs, { columns: p.columns || 4, gap: p.gap || 8 });
         await writeFile(subHandle, p.filename || 'contact-sheet.jpg', blob);
