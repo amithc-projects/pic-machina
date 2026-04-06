@@ -71,6 +71,7 @@ The application targets photographers, content teams, and power users who need r
 - **`flow-video-wall`**: multiplexes videos into grid layouts or custom defined Templates. Backgrounds natively buffer and loop MP4s leveraging File System Access API without inflating IndexedDB quotas.
 - **`flow-animate-stack`**: animated desk stack — each image appears one by one, randomly rotated, on a coloured desk surface; supports `overlap` parameter and GIF or MP4 output
 - **`flow-photo-stack`** (legacy): single-node convenience wrapper combining `overlay-polaroid-frame` + `flow-animate-stack`
+- **`flow-face-swap`**: client-side 478-point mesh interlock face swapper. N=2 files yield mutual cross-swaps. N>2 applies image 1's face to all subsequent heads.
 
 ### 3.6 Run Parameters
 

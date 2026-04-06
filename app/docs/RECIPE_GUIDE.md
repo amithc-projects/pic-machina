@@ -585,6 +585,12 @@ Combines `overlay-polaroid-frame` + `flow-animate-stack` in a single node (legac
 | `caption` | text | `"{{filename \| sanitized}}"` |
 | `overlap` | range 0–90 | `0` |
 
+#### `flow-face-swap` — Machina Face Swap
+A robust client-side ML engine that uses MediaPipe Face Landmarker (Tasks Vision) to triangulate 478 points, calculate an affine perspective matrix for each triangle, and seamlessly map Source faces onto Target bodies.
+| Param | Type | Default |
+|---|---|---|
+| `suffix` | text | `"_machinaswap"` |
+
 ---
 
 ### 3.7 Metadata (`meta-*`)
@@ -635,6 +641,7 @@ These recipes are read-only and available to every user. Users can clone them to
 | `sys-thumbnail-pack` | Thumbnail Pack | Three size variants (1920 / 800 / 400px) as JPEG | branch (3 paths) → geo-resize → flow-export |
 | `sys-privacy-scrub` | Privacy Scrub | Blur faces, strip all metadata | ai-face-privacy → meta-strip → flow-export |
 | `sys-watermark` | Watermark | Diagonal tiled watermark across image | overlay-watermark → flow-export |
+| `sys-machina-swap` | Machina-Swap | Mesh interlock node that cross-swaps faces (2 images) or pastes source to all (3+ images). | flow-face-swap |
 | `sys-photo-stack` | Photo Stack Animation | Polaroid frame each photo, animate dropping onto desk | overlay-polaroid-frame → flow-animate-stack |
 | `sys-popart-warhol` | Pop Art Warhol | 4-panel duotone grid | smart-crop → posterize → 4× duotone panels → flow-compose-grid |
 | `sys-popart-warhol-halftone` | Pop Art Warhol — Halftone | Warhol grid with halftone dot overlay | same as above + filter-halftone per panel |

@@ -43,6 +43,8 @@
   - Advanced temporal aggregation using a `webgl` canvas to stitch images and videos.
   - Integration of `gl-transitions` standards for GPU-accelerated crossfades, wipes, and effects.
   - Native overlay drawing for rendering automated subtitles/captions generated from dynamic EXIF/IPTC metadata blocks.
+- [ ] **Task 4.10: Image Stitching**
+  - Generate a combined image from a sequence of overlapping photos (e.g., panoramas).
 
 ## Phase 5: The Master Exporter & Project Bundling
 - [ ] **Task 5.1: ZIP Bundling Engine (`fflate`)**
