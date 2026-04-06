@@ -137,7 +137,7 @@ export class ImageProcessor {
     const EXPORT_IDS = new Set([
         'flow-export', 'flow-gif-from-states', 'flow-video-wall', 
         'flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 
-        'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'
+        'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'
     ]);
     const hasExports = nodes.some(n => n.type === 'transform' && EXPORT_IDS.has(n.transformId))
       || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => EXPORT_IDS.has(bn.transformId))));
@@ -292,7 +292,7 @@ export class ImageProcessor {
       return;
     }
 
-    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(id)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'].includes(id)) {
       if (context.runState?.injectedSlides?.length > 0) {
         for (const slideBlob of context.runState.injectedSlides) {
           results.push({ blob: slideBlob, filename: `_injected_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption: '', metadata: { exif: context.exif, sidecar: context.sidecar } });

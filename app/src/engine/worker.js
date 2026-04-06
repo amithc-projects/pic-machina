@@ -85,7 +85,7 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
   // Aggregation collector: aggregationId → { nodeConfig, blobs[] }
   const aggregations = {};
   for (const node of flatNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {

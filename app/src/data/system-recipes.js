@@ -830,6 +830,20 @@ export const SYSTEM_RECIPES = [
         params: { width: 1920, height: 1080, fps: 30, durationPerPhoto: 3.5, transitionDuration: 1.0, filename: 'trip-timeline.mp4' },
         label: 'Build Map Videocast' }
     ]
+  },
+  // ── 41. Machina Face Swap ──────────────────────────────
+  {
+    id: 'sys-machina-swap', name: 'Machina-Swap',
+    description: 'Natively swap faces across multiple portraits using 478-point mesh warping. Drop 2 photos to cross-swap both ways, or drop 3+ photos to paste the first face onto everyone else!',
+    isSystem: true, coverColor: '#ec4899',
+    inputType: 'image',
+    tags: ['ai', 'creative', 'fun', 'swap', 'faces'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'swap-1', type: 'transform', transformId: 'flow-face-swap',
+        params: { suffix: '_machinaswap', quality: 95 },
+        label: 'Mesh Interlock' }
+    ]
   }
-
 ];
+

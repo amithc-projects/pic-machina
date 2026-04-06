@@ -52,6 +52,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'geo-face-crop',
   'geo-body-crop',
   'geo-face-align',
+  'flow-face-swap',
   // Title slides need custom Web Fonts from the main thread document to render beautifully
   'flow-title-slide',
 ]);
@@ -111,7 +112,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   // Aggregation collector (GIF / video / contact sheet)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -176,6 +177,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
             agg.blobs.push(result.blob);
             (agg.captions ??= []).push(result.caption ?? '');
             (agg.metadata ??= []).push(result.metadata ?? {});
+            (agg.originalNames ??= []).push(context.originalFile?.name ?? result.filename);
           }
         } else {
           try {
@@ -350,6 +352,37 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         const fmt = p.format || 'gif';
         const base = (p.filename || 'animated-stack').replace(/\.(gif|mp4)$/i, '');
         await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
+      } else if (agg.node.transformId === 'flow-face-swap') {
+        const { createFaceSwap } = await import('./face-swap.js');
+        const N = agg.blobs.length;
+        if (N >= 2) {
+          const suffix = p.suffix || '_swap';
+          // Helpers for filenames
+          const getName = (idx) => (agg.originalNames?.[idx] || `face_${idx}.jpg`).replace(/\.[^/.]+$/, "");
+          
+          if (N === 2) {
+            onLog('info', 'Swapping faces between 2 images...');
+            // Swap both ways
+            try {
+              const b1 = await createFaceSwap(agg.blobs[0], agg.blobs[1], p);
+              await writeFile(subHandle, `${getName(1)}${suffix}.jpg`, b1);
+            } catch(e) { onLog('error', `Swap forward failed: ${e.message}`); }
+            
+            try {
+              const b2 = await createFaceSwap(agg.blobs[1], agg.blobs[0], p);
+              await writeFile(subHandle, `${getName(0)}${suffix}.jpg`, b2);
+            } catch(e) { onLog('error', `Swap reverse failed: ${e.message}`); }
+          } else {
+            onLog('info', `Swapping face from image 1 onto ${N - 1} other images...`);
+            // N > 2: Image 1 goes onto all others
+            for (let i = 1; i < N; i++) {
+              try {
+                const bi = await createFaceSwap(agg.blobs[0], agg.blobs[i], p);
+                await writeFile(subHandle, `${getName(i)}${suffix}.jpg`, bi);
+              } catch(e) { onLog('error', `Swap onto ${getName(i)} failed: ${e.message}`); }
+            }
+          }
+        }
       } else if (agg.node.transformId === 'flow-template-aggregator') {
         const { getTemplate } = await import('../data/templates.js');
         const { drawPerspectiveCell } = await import('./utils/perspective.js');
