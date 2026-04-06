@@ -96,6 +96,13 @@ async function boot() {
 
   initDrawers();
 
+  // Setup Backup UI Module
+  document.getElementById('nav-db-backup')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const { showBackupModal } = await import('./utils/backup.js');
+    showBackupModal();
+  });
+
   // Navigate to initial screen
   const initialHash = location.hash || `#${DEFAULT_SCREEN}`;
   navigate(initialHash);

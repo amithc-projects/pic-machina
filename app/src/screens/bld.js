@@ -377,11 +377,17 @@ export async function render(container, hash) {
                   <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
                 </div>
               </div>
-              <label class="btn-secondary bld-upload-label" style="cursor:pointer">
-                <span class="material-symbols-outlined" style="font-size:14px">upload</span>
-                Image
-                <input type="file" id="bld-preview-file" accept="image/*" style="display:none">
-              </label>
+              <div style="display: flex; gap: 8px;">
+                <label class="btn-secondary bld-upload-label" style="cursor:pointer" title="Upload a single test image">
+                  <span class="material-symbols-outlined" style="font-size:14px">image</span>
+                  Image
+                  <input type="file" id="bld-preview-file" accept="image/*" style="display:none">
+                </label>
+                <button class="btn-secondary bld-upload-label" id="bld-preview-folder-btn" title="Select a test folder (creates carousel)">
+                  <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
+                  Folder
+                </button>
+              </div>
             </div>
           </div>
           <div id="bld-preview-area" class="bld-preview-area">
@@ -391,6 +397,7 @@ export async function render(container, hash) {
               <div class="empty-state-desc" style="font-size:11px">Preview updates automatically.</div>
             </div>
           </div>
+          <div id="bld-preview-carousel" class="bld-preview-carousel" style="display:none; padding: 12px; gap: 8px; overflow-x: auto; white-space: nowrap; border-top: 1px solid var(--ps-border); background: var(--ps-surface); min-height: 73px;"></div>
           <div id="bld-preview-step-info" class="bld-preview-step-info" style="display:none">
             <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">info</span>
             <span id="bld-preview-step-label" class="text-xs text-muted"></span>
@@ -420,6 +427,7 @@ export async function render(container, hash) {
   const saveStatus = container.querySelector('#bld-save-status');
 
   // ── Inline preview state ──────────────────────────────────
+  let bldTestFiles     = window._icTestFolderFiles || [];
   let bldTestFile      = null;
   let bldPreviewNodeId = null;
   let bldPreviewTimer  = null;
@@ -574,13 +582,85 @@ export async function render(container, hash) {
     }
   }
 
+  // ── Carousel rendering ────────────────────────────────────
+  function renderCarousel() {
+    const carousel = container.querySelector('#bld-preview-carousel');
+    if (!carousel) return;
+    
+    if (bldTestFiles.length <= 1) {
+      carousel.style.display = 'none';
+      return;
+    }
+    
+    carousel.style.display = 'flex';
+    carousel.innerHTML = '';
+    
+    // Render up to 50 items for performance
+    const limit = Math.min(bldTestFiles.length, 50);
+    for (let i = 0; i < limit; i++) {
+      const file = bldTestFiles[i];
+      const thumb = document.createElement('img');
+      thumb.className = 'bld-carousel-thumb';
+      thumb.style.cssText = `
+        height: 48px; width: 48px; object-fit: cover; 
+        border-radius: 4px; cursor: pointer; 
+        border: 2px solid ${file === bldTestFile ? 'var(--ps-blue)' : 'transparent'}; 
+        flex-shrink: 0; background: var(--ps-bg);
+      `;
+      
+      const url = URL.createObjectURL(file);
+      thumb.src = url;
+      thumb.onload = () => URL.revokeObjectURL(url);
+      
+      thumb.addEventListener('click', () => {
+        bldTestFile = file;
+        window._icTestImage = { file };
+        
+        // Update selection styling visually without total re-render
+        carousel.querySelectorAll('img').forEach(img => img.style.borderColor = 'transparent');
+        thumb.style.borderColor = 'var(--ps-blue)';
+        
+        runBldPreview();
+      });
+      
+      carousel.appendChild(thumb);
+    }
+  }
+
   // File upload for inline preview
   container.querySelector('#bld-preview-file')?.addEventListener('change', async e => {
     const file = e.target.files?.[0];
     if (!file) return;
+    bldTestFiles = [];
+    window._icTestFolderFiles = [];
     bldTestFile = file;
     window._icTestImage = { file };
+    renderCarousel();
     runBldPreview();
+  });
+
+  // Folder upload for carousel preview
+  container.querySelector('#bld-preview-folder-btn')?.addEventListener('click', async () => {
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'read' });
+      const { listImages } = await import('../data/folders.js');
+      const files = await listImages(handle);
+      
+      if (files.length === 0) {
+        const { showToast } = await import('../aurora/toast.js');
+        showToast({ variant: 'warning', title: 'No images found', description: 'Selected directory contains no supported images.' });
+        return;
+      }
+      
+      bldTestFiles = files;
+      window._icTestFolderFiles = files; // Persist for session
+      bldTestFile = files[0];
+      window._icTestImage = { file: bldTestFile };
+      renderCarousel();
+      runBldPreview();
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Folder selection failed:', err);
+    }
   });
 
   // Drag & drop on preview area
@@ -590,13 +670,29 @@ export async function render(container, hash) {
   bldPreviewArea?.addEventListener('drop', async e => {
     e.preventDefault();
     bldPreviewArea.classList.remove('bld-preview-dragover');
-    const file = e.dataTransfer?.files?.[0];
-    if (file?.type.startsWith('image/')) {
-      bldTestFile = file;
-      window._icTestImage = { file };
-      runBldPreview();
+    
+    const droppedFiles = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
+    if (droppedFiles.length === 0) return;
+    
+    if (droppedFiles.length > 1) {
+      bldTestFiles = droppedFiles;
+      window._icTestFolderFiles = droppedFiles;
+      bldTestFile = droppedFiles[0];
+    } else {
+      bldTestFiles = [];
+      window._icTestFolderFiles = [];
+      bldTestFile = droppedFiles[0];
     }
+    
+    window._icTestImage = { file: bldTestFile };
+    renderCarousel();
+    runBldPreview();
   });
+
+  // Restore carousel on load if exists
+  if (bldTestFiles.length > 1) {
+    renderCarousel();
+  }
 
   // Kick off preview if we already have a test image
   if (bldTestFile) scheduleBldPreview(100);
