@@ -28,10 +28,11 @@ function getCoverStyle(recipe) {
   if (recipe.thumbnail) {
     return `background-image:url(${recipe.thumbnail});background-size:cover;background-position:center;`;
   }
-  if (recipe.coverColor && COVER_GRADIENTS[recipe.coverColor]) {
-    return `background: ${COVER_GRADIENTS[recipe.coverColor]};`;
+  const grad = COVER_GRADIENTS[recipe.coverColor] || 'linear-gradient(135deg, #111318 0%, #1e293b 100%)';
+  if (recipe.isSystem) {
+    return `background: url(./samples/${recipe.id}.jpg) center/cover, ${grad};`;
   }
-  return 'background: linear-gradient(135deg, #111318 0%, #1e293b 100%);';
+  return `background: ${grad};`;
 }
 
 

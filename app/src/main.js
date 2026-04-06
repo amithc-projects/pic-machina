@@ -103,6 +103,13 @@ async function boot() {
     showBackupModal();
   });
 
+  // Setup Help UI Module
+  document.getElementById('nav-help')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const { showHelpModal } = await import('./utils/help.js');
+    showHelpModal();
+  });
+
   // Navigate to initial screen
   const initialHash = location.hash || `#${DEFAULT_SCREEN}`;
   navigate(initialHash);

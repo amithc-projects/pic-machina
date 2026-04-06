@@ -347,7 +347,9 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
           bgColor:      p.bgColor      || '#000000',
           captions:     agg.captions   || [],
         });
-        await writeFile(subHandle, p.filename || 'animated-stack.mp4', blob);
+        const fmt = p.format || 'gif';
+        const base = (p.filename || 'animated-stack').replace(/\.(gif|mp4)$/i, '');
+        await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
       } else if (agg.node.transformId === 'flow-template-aggregator') {
         const { getTemplate } = await import('../data/templates.js');
         const { drawPerspectiveCell } = await import('./utils/perspective.js');

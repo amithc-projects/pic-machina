@@ -3,6 +3,7 @@
  */
 
 import { navigate } from '../main.js';
+import { showConfirm } from '../utils/dialogs.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -148,6 +149,27 @@ export function render(container) {
       cancelBtn.addEventListener('click', () => navigate('#lib'));
     }
 
+    if (window._queRunAgain) {
+      const runAgainBtn = document.createElement('button');
+      runAgainBtn.className = 'btn-secondary';
+      runAgainBtn.style.cssText = 'width:100%;justify-content:center;margin-bottom:8px;border-color:var(--ps-blue);color:var(--ps-blue);';
+      runAgainBtn.innerHTML = '<span class="material-symbols-outlined">replay</span> Run Again';
+      runAgainBtn.addEventListener('click', () => {
+        footerActs.innerHTML = '';
+        terminal.innerHTML = '';
+        appendLog('info', 'Executing "Run Again" using previous batch configuration...');
+        statOK.textContent = '0';
+        statFail.textContent = '0';
+        successCount = 0;
+        failCount = 0;
+        startTime = null;
+        elapsedEl.textContent = '00:00';
+        setProgress(0, 100);
+        window._queRunAgain();
+      });
+      footerActs.appendChild(runAgainBtn);
+    }
+
     const browseBtn = document.createElement('button');
     browseBtn.className = 'btn-primary';
     browseBtn.style.cssText = 'width:100%;justify-content:center;margin-bottom:8px';
@@ -173,6 +195,15 @@ export function render(container) {
   container.querySelector('#btn-cancel-batch')?.addEventListener('click', async () => {
     const ctrl = window._queRunControl;
     if (ctrl) {
+      const confirmed = await showConfirm({
+        title: 'Cancel Batch?',
+        body: 'Are you sure you want to stop processing? Images already completed will be preserved.',
+        confirmText: 'Stop Batch',
+        variant: 'danger',
+        icon: 'cancel'
+      });
+      if (!confirmed) return;
+
       await ctrl.cancel();
       clearInterval(elapsedTimer);
       appendLog('warn', 'Cancelled by user.');

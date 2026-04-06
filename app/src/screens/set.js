@@ -195,10 +195,10 @@ export async function render(container, hash) {
       await outputHandle.getDirectoryHandle('.', { create: false }).catch(() => {});
     } catch (_) { /* non-fatal — let startBatch surface the real error */ }
 
-    // Navigate to QUE with run control
-    navigate('#que');
-    // Small delay to let QUE render, then start
-    setTimeout(async () => {
+    // Update browser URL hash explicitly
+    location.hash = '#que';
+    
+    window._queRunAgain = async () => {
       try {
         batchControl = await startBatch({
           recipe: currentRecipe,
@@ -220,6 +220,11 @@ export async function render(container, hash) {
         window._queError?.(msg);
         window.AuroraToast?.show({ variant: 'danger', title: 'Batch failed to start', description: msg });
       }
+    };
+
+    // Small delay to let QUE render, then start
+    setTimeout(() => {
+      window._queRunAgain();
     }, 50);
   });
 
