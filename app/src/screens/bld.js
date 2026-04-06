@@ -9,6 +9,7 @@
 import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave } from '../data/recipes.js';
 import { getAllBlocks } from '../data/blocks.js';
 import { navigate } from '../main.js';
+import { showConfirm } from '../utils/dialogs.js';
 import { uuid, now, deepClone } from '../utils/misc.js';
 import { registry, ImageProcessor } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';

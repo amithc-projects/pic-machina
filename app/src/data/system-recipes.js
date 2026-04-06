@@ -844,6 +844,31 @@ export const SYSTEM_RECIPES = [
         params: { suffix: '_machinaswap', quality: 95 },
         label: 'Mesh Interlock' }
     ]
+  },
+  // ── 42. PM Solutions ID Card ──────────────────────────────
+  {
+    id: 'sys-pm-solutions-id', name: 'PM Solutions ID Card',
+    description: 'Generates a corporate ID card using the PM Solutions template. Crops the input photo, places it in the template hole, and injects name and title from EXIF data.',
+    isSystem: true, coverColor: '#991b1b',
+    inputType: 'image',
+    tags: ['id', 'corporate', 'template', 'overlay'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      { id: 'pm-1', type: 'transform', transformId: 'geo-smart-crop',
+        params: { aspectRatio: '3:4', strategy: 'Attention' }, label: 'Portrait Crop' },
+      { id: 'pm-2', type: 'transform', transformId: 'geo-resize',
+        params: { width: '480', height: '', maintainAspect: true }, label: 'Resize to Hole' },
+      { id: 'pm-3', type: 'transform', transformId: 'geo-padding',
+        params: { top: '200', bottom: '184', left: '272', right: '272', color: '#ffffff' }, label: 'Canvas Padding' },
+      { id: 'pm-4', type: 'transform', transformId: 'overlay-watermark',
+        params: { type: 'image', imageUrl: '/pm_solutions_template.png', size: 1024, opacity: 100, angle: 0, repeat: false }, label: 'Add Template Form' },
+      { id: 'pm-5', type: 'transform', transformId: 'overlay-rich-text',
+        params: { content: '{{exif.Artist}}', font: 'Inter', size: 48, color: '#000000', shadow: false, anchor: 'bottom-center', offsetX: 0, offsetY: 144, weight: '700' }, label: 'Name Slot' },
+      { id: 'pm-6', type: 'transform', transformId: 'overlay-rich-text',
+        params: { content: '{{exif.Title}}', font: 'Inter', size: 32, color: '#333333', shadow: false, anchor: 'bottom-center', offsetX: 0, offsetY: 84 }, label: 'Title Slot' },
+      { id: 'pm-7', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_ID', format: 'image/jpeg', quality: 95 }, label: 'Export ID Card' }
+    ]
   }
 ];
 

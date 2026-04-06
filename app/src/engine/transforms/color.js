@@ -5,11 +5,12 @@
 import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
 import initPhoton, * as photon from '../vendor/photon/photon_rs.js';
+import photonWasmUrl from '../vendor/photon/photon_rs_bg.wasm?url';
 
 let _photonInitialized = false;
 async function ensurePhoton() {
   if (!_photonInitialized) {
-    await initPhoton();
+    await initPhoton(photonWasmUrl);
     _photonInitialized = true;
   }
 }

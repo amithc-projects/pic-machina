@@ -6,11 +6,13 @@
 import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
 
+import photonWasmUrl from '../vendor/photon/photon_rs_bg.wasm?url';
+
 let photonLib = null;
 async function ensurePhoton() {
   if (photonLib) return photonLib;
   const initPhoton = (await import('../vendor/photon/photon_rs.js')).default;
-  await initPhoton();
+  await initPhoton(photonWasmUrl);
   photonLib = await import('../vendor/photon/photon_rs.js');
   return photonLib;
 }

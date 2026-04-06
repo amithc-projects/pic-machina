@@ -663,3 +663,69 @@ registry.register({
     ctx.restore();
   }
 });
+
+// ─── Template Frame ───────────────────────────────────────
+registry.register({
+  id: 'overlay-template', name: 'Template Frame',
+  category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'wallpaper',
+  description: 'Draw a Template around the current image. The image is seamlessly warped to fit the primary slot.',
+  params: [
+    { name: 'templateId', label: 'Template', type: 'template-select', defaultValue: '' }
+  ],
+  async apply(ctx, p) {
+    if (!p.templateId) return;
+    
+    let storedTpl;
+    try {
+      const { getTemplate } = await import('../../data/templates.js');
+      storedTpl = await getTemplate(p.templateId);
+    } catch { /* ignore if not in worker with DB or template missing */ }
+    if (!storedTpl) {
+      console.warn(`[overlay-template] Template ${p.templateId} not found`);
+      return;
+    }
+
+    let bgBitmap = null;
+    if (storedTpl.backgroundBlob) {
+      bgBitmap = await createImageBitmap(storedTpl.backgroundBlob);
+    }
+
+    const w = storedTpl.width || 1920;
+    const h = storedTpl.height || 1080;
+
+    // Save the input image (ctx is the current canvas)
+    let sourceWidth = ctx.canvas.width;
+    let sourceHeight = ctx.canvas.height;
+    
+    const tmp = document.createElement('canvas');
+    tmp.width = sourceWidth;
+    tmp.height = sourceHeight;
+    tmp.getContext('2d').drawImage(ctx.canvas, 0, 0);
+
+    // Expand canvas to template size
+    ctx.canvas.width = w;
+    ctx.canvas.height = h;
+    ctx.clearRect(0, 0, w, h);
+
+    // Draw Background
+    if (bgBitmap) {
+      ctx.drawImage(bgBitmap, 0, 0, w, h);
+      bgBitmap.close?.();
+    }
+
+    // Get the first slot (primary photo hole)
+    const slots = storedTpl.placeholders || [];
+    if (slots.length > 0) {
+      const slot = slots.sort((a,b) => (a.zIndex||0) - (b.zIndex||0))[0];
+      
+      const quad = slot.points.map(pt => ({
+        x: pt.x * w,
+        y: pt.y * h
+      }));
+
+      const { drawPerspectiveCell } = await import('../utils/perspective.js');
+      drawPerspectiveCell(ctx, tmp, quad, 12);
+    }
+  }
+});

@@ -401,6 +401,12 @@ Expands the canvas with a white border (wider at the bottom) and renders a capti
 | `opacity` | range 0–100 | `20` |
 | `color` | color | `"#000000"` |
 
+#### `overlay-template` — Template Frame
+Draws a Template around the current image using a strict pipeline pass. The image is seamlessly perspective-warped to fit the primary slot, allowing subsequent text overlay nodes to draw directly on the rendered template canvas without escaping the batch processing loop.
+| Param | Type | Default |
+|---|---|---|
+| `templateId` | template-select | - |
+
 ---
 
 ### 3.4 AI Transforms (`ai-*`)

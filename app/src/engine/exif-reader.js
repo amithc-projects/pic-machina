@@ -27,7 +27,21 @@ export async function extractExif(fileOrBlob) {
       };
     }
 
-    // Author / copyright
+    // Automatically expose all EXIF / XMP tags by their native names
+    if (tags.exif) {
+      for (const [key, value] of Object.entries(tags.exif)) {
+        if (value && value.description !== undefined) result[key] = value.description;
+        else if (value && typeof value === 'string') result[key] = value;
+      }
+    }
+    if (tags.xmp) {
+      for (const [key, value] of Object.entries(tags.xmp)) {
+        if (value && value.description !== undefined) result[key] = value.description;
+        else if (value && typeof value === 'string') result[key] = value;
+      }
+    }
+
+    // Author / copyright (Legacy aliases)
     if (tags.exif?.Artist?.description)             result.author    = tags.exif.Artist.description;
     if (tags.exif?.Copyright?.description)          result.copyright = tags.exif.Copyright.description;
     if (tags.exif?.ImageDescription?.description)   result.description = tags.exif.ImageDescription.description;
