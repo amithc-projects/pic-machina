@@ -4,6 +4,15 @@
 
 import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
+import initPhoton, * as photon from '../vendor/photon/photon_rs.js';
+
+let _photonInitialized = false;
+async function ensurePhoton() {
+  if (!_photonInitialized) {
+    await initPhoton();
+    _photonInitialized = true;
+  }
+}
 
 // ─── Standard Tuning ─────────────────────────────────────
 registry.register({
@@ -16,51 +25,58 @@ registry.register({
     { name: 'vibrance',   label: 'Vibrance',   type: 'range', min: -100, max: 100, defaultValue: 0 },
     { name: 'invert',     label: 'Invert',     type: 'boolean', defaultValue: false },
   ],
-  apply(ctx, p) {
-    const contrast   = (p.contrast   || 0) / 100;
-    const saturation = (p.saturation || 0) / 100;
-    const vibrance   = (p.vibrance   || 0) / 100;
-    const W = ctx.canvas.width, H = ctx.canvas.height;
-    const id = ctx.getImageData(0, 0, W, H);
-    const d = id.data;
-    const cf = contrast + 1;
+  async apply(ctx, p) {
+    await ensurePhoton();
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const contrast   = p.contrast || 0;
+    const saturation = p.saturation || 0;
+    const vibrance   = p.vibrance || 0;
+    
+    // Pass canvas data straight into WASM memory via raw bridge (Worker safe)
+    const idIn = ctx.getImageData(0, 0, W, H);
+    const pimg = new photon.PhotonImage(new Uint8Array(idIn.data), W, H);
 
-    for (let i = 0; i < d.length; i += 4) {
-      let r = d[i], g = d[i+1], b = d[i+2];
+    if (p.invert) {
+      photon.invert(pimg);
+    }
 
-      if (p.invert) { r = 255 - r; g = 255 - g; b = 255 - b; }
+    if (contrast !== 0) {
+      // Photon contrast parameter scales [-255(grey) to 255]
+      photon.adjust_contrast(pimg, (contrast / 100) * 255);
+    }
 
-      if (contrast !== 0) {
-        r = ((r / 255 - 0.5) * cf + 0.5) * 255;
-        g = ((g / 255 - 0.5) * cf + 0.5) * 255;
-        b = ((b / 255 - 0.5) * cf + 0.5) * 255;
-      }
+    if (saturation > 0) {
+      photon.saturate_hsl(pimg, saturation / 100);
+    } else if (saturation < 0) {
+      photon.desaturate_hsl(pimg, Math.abs(saturation) / 100);
+    }
 
-      if (saturation !== 0) {
-        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-        const sf = 1 + saturation;
-        r = gray + (r - gray) * sf;
-        g = gray + (g - gray) * sf;
-        b = gray + (b - gray) * sf;
-      }
+    // Dump WASM array back into native Canvas
+    const outPixels = pimg.get_raw_pixels();
+    const newId = new ImageData(new Uint8ClampedArray(outPixels), W, H);
+    ctx.putImageData(newId, 0, 0);
+    pimg.free();
 
-      // Vibrance: boost under-saturated pixels more
-      if (vibrance !== 0) {
+    // ── Vibrance (If enabled, fallback to JS loop since Photon doesn't have native vibrance) ──
+    if (vibrance !== 0) {
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const id = ctx.getImageData(0, 0, W, H);
+      const d = id.data;
+      const vibAmt = vibrance / 100;
+      for (let i = 0; i < d.length; i += 4) {
+        let r = d[i], g = d[i+1], b = d[i+2];
         const max = Math.max(r, g, b);
         const avg = (r + g + b) / 3;
-        const amt = (1 - (max - avg) / 128) * vibrance;
+        const amt = (1 - (max - avg) / 128) * vibAmt;
         const vf  = 1 + amt;
         const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-        r = gray + (r - gray) * vf;
-        g = gray + (g - gray) * vf;
-        b = gray + (b - gray) * vf;
+        d[i]   = clamp(gray + (r - gray) * vf, 0, 255);
+        d[i+1] = clamp(gray + (g - gray) * vf, 0, 255);
+        d[i+2] = clamp(gray + (b - gray) * vf, 0, 255);
       }
-
-      d[i]   = clamp(r, 0, 255);
-      d[i+1] = clamp(g, 0, 255);
-      d[i+2] = clamp(b, 0, 255);
+      ctx.putImageData(id, 0, 0);
     }
-    ctx.putImageData(id, 0, 0);
   }
 });
 
@@ -147,22 +163,33 @@ registry.register({
     { name: 'darkColor',  label: 'Shadow Color',    type: 'color', defaultValue: '#1a0533' },
     { name: 'lightColor', label: 'Highlight Color', type: 'color', defaultValue: '#e8f4d4' },
   ],
-  apply(ctx, p) {
+  async apply(ctx, p) {
+    await ensurePhoton();
     const parseHex = hex => {
-      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-      return [r,g,b];
+      const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+      return [r, g, b];
     };
-    const [dr,dg,db] = parseHex(p.darkColor  || '#000000');
-    const [lr,lg,lb] = parseHex(p.lightColor || '#ffffff');
-    const id = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-    const d = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const lum = (0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]) / 255;
-      d[i]   = Math.round(dr + (lr - dr) * lum);
-      d[i+1] = Math.round(dg + (lg - dg) * lum);
-      d[i+2] = Math.round(db + (lb - db) * lum);
-    }
-    ctx.putImageData(id, 0, 0);
+    
+    // Parse hex -> Photon RGB objects
+    const [dr, dg, db] = parseHex(p.darkColor  || '#000000');
+    const [lr, lg, lb] = parseHex(p.lightColor || '#ffffff');
+    const c1 = new photon.Rgb(dr, dg, db);
+    const c2 = new photon.Rgb(lr, lg, lb);
+
+    // Direct memory execution
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const idIn = ctx.getImageData(0, 0, W, H);
+    const pimg = new photon.PhotonImage(new Uint8Array(idIn.data), W, H);
+    
+    photon.duotone(pimg, c1, c2);
+    
+    const outPixels = pimg.get_raw_pixels();
+    const newId = new ImageData(new Uint8ClampedArray(outPixels), W, H);
+    ctx.putImageData(newId, 0, 0);
+    
+    // Clean up
+    pimg.free();
   }
 });
 
@@ -203,50 +230,48 @@ registry.register({
     { name: 'noiseLevel',    label: 'Noise Level (%)',    type: 'range', min: 0, max: 50, defaultValue: 0 },
     { name: 'pixelSize',     label: 'Pixel Size (px)',    type: 'range', min: 1, max: 40, defaultValue: 1 },
   ],
-  apply(ctx, p) {
+  async apply(ctx, p) {
+    await ensurePhoton();
     const W = ctx.canvas.width, H = ctx.canvas.height;
+    
+    // Send to WASM
+    const idIn = ctx.getImageData(0, 0, W, H);
+    const pimg = new photon.PhotonImage(new Uint8Array(idIn.data), W, H);
 
-    // Blur
+    // Filter Convolutions
     if (p.blurRadius > 0) {
-      const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
-      const tc = tmp.getContext('2d'); tc.filter = `blur(${p.blurRadius}px)`; tc.drawImage(ctx.canvas, 0, 0);
-      ctx.clearRect(0, 0, W, H); ctx.drawImage(tmp, 0, 0);
+      photon.gaussian_blur(pimg, Math.round(p.blurRadius));
     }
-
-    // Sharpen (unsharp mask via convolution)
+    
     if (p.sharpenAmount > 0) {
-      const amount = p.sharpenAmount / 100;
-      const id = ctx.getImageData(0, 0, W, H); const d = id.data;
-      const orig = new Uint8ClampedArray(d);
-      // 3x3 Laplacian sharpening kernel
-      const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
-      for (let y = 1; y < H - 1; y++) {
-        for (let x = 1; x < W - 1; x++) {
-          const idx = (y * W + x) * 4;
-          for (let c = 0; c < 3; c++) {
-            let v = 0;
-            for (let ky = -1; ky <= 1; ky++)
-              for (let kx = -1; kx <= 1; kx++)
-                v += orig[((y + ky) * W + (x + kx)) * 4 + c] * kernel[(ky + 1) * 3 + (kx + 1)];
-            d[idx + c] = clamp(orig[idx + c] + (v - orig[idx + c]) * amount, 0, 255);
-          }
-        }
-      }
-      ctx.putImageData(id, 0, 0);
+      // We run standard sharpen. The amount could dictate multiple passes or blend, 
+      // but photon.sharpen() executes an optimized 3x3 kernel instantly.
+      // E.g., multiple passes for intense sharpening, max 3.
+      const passes = Math.ceil(p.sharpenAmount / 33);
+      for (let i = 0; i < passes; i++) photon.sharpen(pimg);
     }
 
-    // Noise
+    // Sync WASM back to canvas
+    const outPixels = pimg.get_raw_pixels();
+    const newId = new ImageData(new Uint8ClampedArray(outPixels), W, H);
+    ctx.putImageData(newId, 0, 0);
+    pimg.free();
+
+    // ── Noise (Native JS to prevent WASM RNG panic) ──
     if (p.noiseLevel > 0) {
-      const id = ctx.getImageData(0, 0, W, H); const d = id.data;
-      const n = p.noiseLevel * 2.55;
+      const id = ctx.getImageData(0, 0, W, H);
+      const d = id.data;
+      const noiseAmt = p.noiseLevel * 2.55; 
       for (let i = 0; i < d.length; i += 4) {
-        const noise = (Math.random() - 0.5) * n * 2;
-        for (let j = 0; j < 3; j++) d[i+j] = clamp(d[i+j] + noise, 0, 255);
+        const n = (Math.random() - 0.5) * 2 * noiseAmt;
+        d[i]   = Math.max(0, Math.min(255, d[i]   + n));
+        d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+        d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
       }
       ctx.putImageData(id, 0, 0);
     }
 
-    // Pixelate
+    // ── Pixelate (Keep as JS loop, since photon doesn't have block-pixelate natively) ──
     if (p.pixelSize > 1) {
       const ps = Math.round(p.pixelSize);
       const id = ctx.getImageData(0, 0, W, H); const d = id.data;
@@ -576,54 +601,28 @@ registry.register({
 registry.register({
   id: 'filter-kuwahara', name: 'Kuwahara (Oil Paint)', category: 'Color & Tone', categoryKey: 'color',
   icon: 'brush',
-  description: 'Kuwahara filter — non-linear edge-preserving smoothing that creates a painterly oil effect.',
+  description: 'Kuwahara filter — non-linear edge-preserving smoothing that creates a painterly oil effect. Very intensive, optimized parameters applied.',
   params: [
-    { name: 'radius', label: 'Radius (stroke size)',  type: 'range', min: 1, max: 8, defaultValue: 3 },
-    { name: 'passes', label: 'Passes (intensity)',     type: 'range', min: 1, max: 3, defaultValue: 1 },
+    { name: 'radius', label: 'Radius (stroke size)',  type: 'range', min: 1, max: 5, defaultValue: 3 },
+    { name: 'passes', label: 'Passes (intensity)',     type: 'range', min: 1, max: 2, defaultValue: 1 },
   ],
-  apply(ctx, p) {
+  async apply(ctx, p) {
+    await ensurePhoton();
     const W = ctx.canvas.width, H = ctx.canvas.height;
     const radius = Math.round(p.radius ?? 3);
     const passes = Math.round(p.passes ?? 1);
 
+    const id = ctx.getImageData(0, 0, W, H);
+    const pimg = new photon.PhotonImage(new Uint8Array(id.data), W, H);
+
     for (let pass = 0; pass < passes; pass++) {
-      const id  = ctx.getImageData(0, 0, W, H);
-      const src = new Uint8ClampedArray(id.data);
-      const dst = id.data;
-
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          let bestR = 0, bestG = 0, bestB = 0, bestVar = Infinity;
-
-          // Test 4 overlapping quadrants (corners at ±radius from pixel)
-          for (let qy = -1; qy <= 0; qy++) {
-            for (let qx = -1; qx <= 0; qx++) {
-              let sumR = 0, sumG = 0, sumB = 0, sumR2 = 0, sumG2 = 0, sumB2 = 0, count = 0;
-              for (let dy = 0; dy <= radius; dy++) {
-                for (let dx = 0; dx <= radius; dx++) {
-                  const sx  = clamp(x + qx * radius + dx, 0, W - 1);
-                  const sy  = clamp(y + qy * radius + dy, 0, H - 1);
-                  const idx = (sy * W + sx) * 4;
-                  const r = src[idx], g = src[idx + 1], b = src[idx + 2];
-                  sumR += r; sumG += g; sumB += b;
-                  sumR2 += r * r; sumG2 += g * g; sumB2 += b * b;
-                  count++;
-                }
-              }
-              const mR = sumR / count, mG = sumG / count, mB = sumB / count;
-              const variance = (sumR2 / count - mR * mR) + (sumG2 / count - mG * mG) + (sumB2 / count - mB * mB);
-              if (variance < bestVar) {
-                bestVar = variance; bestR = mR; bestG = mG; bestB = mB;
-              }
-            }
-          }
-
-          const di = (y * W + x) * 4;
-          dst[di] = Math.round(bestR); dst[di + 1] = Math.round(bestG); dst[di + 2] = Math.round(bestB);
-        }
-      }
-      ctx.putImageData(id, 0, 0);
+        photon.oil(pimg, radius, 55.0);
     }
+
+    const outPixels = pimg.get_raw_pixels();
+    const newId = new ImageData(new Uint8ClampedArray(outPixels), W, H);
+    ctx.putImageData(newId, 0, 0);
+    pimg.free();
   }
 });
 
@@ -697,24 +696,34 @@ registry.register({
       options: [{ label: 'Red', value: 'R' }, { label: 'Green', value: 'G' }, { label: 'Blue', value: 'B' }],
       defaultValue: 'B' },
   ],
-  apply(ctx, p) {
-    const W = ctx.canvas.width, H = ctx.canvas.height;
-    const id  = ctx.getImageData(0, 0, W, H);
-    const src = new Uint8ClampedArray(id.data); // snapshot original channels
-    const d   = id.data;
+  async apply(ctx, p) {
+    await ensurePhoton();
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const idIn = ctx.getImageData(0, 0, W, H);
+    const pimg = new photon.PhotonImage(new Uint8Array(idIn.data), W, H);
 
+    // Map channels to Photon index
     const CH = { R: 0, G: 1, B: 2 };
     const rSrc = CH[p.redSource   ?? 'G'];
     const gSrc = CH[p.greenSource ?? 'R'];
     const bSrc = CH[p.blueSource  ?? 'B'];
 
-    for (let i = 0; i < d.length; i += 4) {
-      d[i]     = src[i + rSrc];
-      d[i + 1] = src[i + gSrc];
-      d[i + 2] = src[i + bSrc];
-      // alpha unchanged
-    }
-    ctx.putImageData(id, 0, 0);
+    // Photon swap function modifies in place.
+    // e.g., swap R and B.
+    // If user says Red <- Green, Green <- Red: swap(0, 1).
+    const swaps = [];
+    if (rSrc === 1 && gSrc === 0) swaps.push([0, 1]);
+    if (rSrc === 2 && bSrc === 0) swaps.push([0, 2]);
+    if (gSrc === 2 && bSrc === 1) swaps.push([1, 2]);
+    
+    // Execute combinations
+    swaps.forEach(([a, b]) => photon.swap_channels(pimg, a, b));
+    
+    const outPixels = pimg.get_raw_pixels();
+    const newId = new ImageData(new Uint8ClampedArray(outPixels), W, H);
+    ctx.putImageData(newId, 0, 0);
+    pimg.free();
   }
 });
 

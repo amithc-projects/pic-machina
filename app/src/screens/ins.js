@@ -104,24 +104,9 @@ export async function render(container, hash) {
         </div>
 
         <!-- Right: preview -->
-        <div class="ins-preview-panel">
-          <div class="ins-preview-header">
-            <span class="text-sm text-muted">Test Image</span>
-            <label class="btn-secondary" style="cursor:pointer">
-              <span class="material-symbols-outlined">upload</span>
-              Upload Image
-              <input type="file" id="ins-file-input" accept="image/*" style="display:none">
-            </label>
-          </div>
-
-          <div id="ins-preview-area" class="ins-preview-area">
-            <div class="empty-state">
-              <span class="material-symbols-outlined" style="font-size:48px">image</span>
-              <div class="empty-state-title">Upload a test image</div>
-              <div class="empty-state-desc">Preview how this block transforms images.</div>
-            </div>
-          </div>
-
+        <div class="ins-preview-panel" style="display:flex;flex-direction:column;">
+          <div id="ins-workspace-container" style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0"></div>
+          
           <div id="ins-step-scrubber" class="ins-step-scrubber" style="display:none">
             <span class="text-sm text-muted" style="flex-shrink:0">Step:</span>
             <input type="range" id="ins-step-slider" class="ic-range" min="0" value="0" style="flex:1">
@@ -142,67 +127,97 @@ export async function render(container, hash) {
   });
 
   // Step row click → jump preview
-  container.querySelectorAll('.ins-step-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const idx = parseInt(row.dataset.idx) + 1;
-      const slider = container.querySelector('#ins-step-slider');
-      if (slider) { slider.value = idx; showStep(idx); }
-    });
-  });
-
   let stepResults = [];
+  let currentlyProcessedFile = null;
+  let activeStepIdx = 0;
+  let testFile = null;
 
-  container.querySelector('#ins-step-slider')?.addEventListener('input', e => showStep(parseInt(e.target.value)));
+  const { ImageWorkspace } = await import('../components/image-workspace.js');
+  const wsContainer = container.querySelector('#ins-workspace-container');
 
-  container.querySelector('#ins-file-input')?.addEventListener('change', async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await runPreview(file);
-  });
+  const workspace = new ImageWorkspace(wsContainer, {
+    allowUpload: true,
+    allowFolder: false, // Blocks test on a single focused image
+    onFilesChange: (files, activeFile) => {
+      window._icTestImage = { file: activeFile };
+      testFile = activeFile;
+      if (!activeFile) {
+        container.querySelector('#ins-step-scrubber').style.display = 'none';
+        stepResults = [];
+        currentlyProcessedFile = null;
+      }
+    },
+    onRender: async (file) => {
+      if (currentlyProcessedFile !== file) {
+        currentlyProcessedFile = file;
+        
+        const url  = URL.createObjectURL(file);
+        const img  = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+        const exif = await extractExif(file);
+        const ctx  = { filename: file.name, exif, meta: {} };
 
-  async function runPreview(file) {
-    const previewArea = container.querySelector('#ins-preview-area');
-    if (!previewArea) return;
-    previewArea.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:12px"><div class="spinner spinner--lg"></div><div class="text-sm text-muted">Processing…</div></div>`;
+        stepResults = [{ label: 'Original', dataUrl: url }];
 
-    try {
-      const url    = URL.createObjectURL(file);
-      const img    = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-      const exif   = await extractExif(file);
-      const ctx    = { filename: file.name, exif, meta: {} };
+        for (let i = 0; i < block.nodes.length; i++) {
+          const proc = new ImageProcessor();
+          await proc.process(img, block.nodes, { ...ctx, variables: new Map() }, i);
+          const label = block.nodes[i].label || block.nodes[i].transformId || block.nodes[i].type;
+          stepResults.push({ label, dataUrl: proc.canvas.toDataURL('image/jpeg', 0.85) });
+        }
 
-      stepResults = [{ label: 'Original', dataUrl: url }];
+        activeStepIdx = stepResults.length - 1;
 
-      for (let i = 0; i < block.nodes.length; i++) {
-        const proc = new ImageProcessor();
-        await proc.process(img, block.nodes, { ...ctx, variables: new Map() }, i);
-        stepResults.push({ label: block.nodes[i].label || block.nodes[i].transformId || block.nodes[i].type, dataUrl: proc.canvas.toDataURL('image/jpeg', 0.85) });
+        const slider = container.querySelector('#ins-step-slider');
+        if (slider) { 
+          slider.max = stepResults.length - 1; 
+          slider.value = activeStepIdx; 
+        }
+        container.querySelector('#ins-step-scrubber').style.display = 'flex';
       }
 
-      const slider = container.querySelector('#ins-step-slider');
-      if (slider) { slider.max = stepResults.length - 1; slider.value = stepResults.length - 1; }
-      container.querySelector('#ins-step-scrubber').style.display = 'flex';
-      showStep(stepResults.length - 1);
-    } catch (err) {
-      const pa = container.querySelector('#ins-preview-area');
-      if (pa) pa.innerHTML = `<div class="empty-state"><span class="material-symbols-outlined">error</span><div class="empty-state-desc">${escHtml(err.message)}</div></div>`;
+      updateScrubberUI(activeStepIdx);
+
+      return {
+        beforeUrl: stepResults[0]?.dataUrl,
+        afterUrl: stepResults[activeStepIdx]?.dataUrl || stepResults[0]?.dataUrl,
+        beforeLabel: 'Original',
+        afterLabel: activeStepIdx === 0 ? 'Original' : `Step ${activeStepIdx}: ${stepResults[activeStepIdx]?.label}`,
+        context: { filename: file.name }
+      };
     }
+  });
+
+  if (window._icTestImage?.file) {
+    workspace.setFiles([window._icTestImage.file]);
   }
 
-  function showStep(idx) {
+  function updateScrubberUI(idx) {
     const step = stepResults[idx];
     if (!step) return;
     const label = container.querySelector('#ins-step-label');
     if (label) label.textContent = idx === 0 ? 'Original' : `Step ${idx}: ${step.label}`;
-    const pa = container.querySelector('#ins-preview-area');
-    if (pa) pa.innerHTML = `<img src="${step.dataUrl}" class="ins-result-img" draggable="false">`;
 
     // Highlight active step row
     container.querySelectorAll('.ins-step-row').forEach((row, i) => {
       row.classList.toggle('ins-step-row--active', i === idx - 1);
     });
   }
+
+  container.querySelectorAll('.ins-step-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const idx = parseInt(row.dataset.idx) + 1;
+      const slider = container.querySelector('#ins-step-slider');
+      if (slider) { slider.value = idx; }
+      activeStepIdx = idx;
+      if (testFile) workspace.triggerProcess();
+    });
+  });
+
+  container.querySelector('#ins-step-slider')?.addEventListener('input', e => {
+    activeStepIdx = parseInt(e.target.value);
+    if (testFile) workspace.triggerProcess(); // triggerProcess returns fast due to cache
+  });
 }
 
 let _insStyles = false;

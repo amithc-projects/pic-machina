@@ -56,160 +56,112 @@ export async function render(container, hash) {
     <!-- Lightbox for single-image compare -->
     <div id="out-lightbox" class="out-lightbox" style="display:none">
       <div class="out-lightbox-bg" id="out-lb-bg"></div>
-      <div class="out-lightbox-content">
-        <div class="out-lb-toolbar">
-          <span id="out-lb-title" class="text-sm font-medium"></span>
-          <div class="flex items-center gap-2">
-            <button class="cmp-mode-btn is-active" data-lb-mode="slider">
-              <span class="material-symbols-outlined" style="font-size:14px">swap_horiz</span> Slider
-            </button>
-            <button class="cmp-mode-btn" data-lb-mode="side">
-              <span class="material-symbols-outlined" style="font-size:14px">view_column</span> Side by Side
-            </button>
-            <button class="btn-icon" id="out-lb-prev" title="Previous image">
-              <span class="material-symbols-outlined">chevron_left</span>
-            </button>
-            <button class="btn-icon" id="out-lb-next" title="Next image">
-              <span class="material-symbols-outlined">chevron_right</span>
-            </button>
-            <button class="btn-secondary btn-sm" id="out-lb-download" title="Download output">
-              <span class="material-symbols-outlined" style="font-size:14px">download</span>
-            </button>
-            <button class="btn-icon" id="out-lb-close">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-        </div>
-        <div id="out-lb-view" class="out-lb-view"></div>
+      <div class="out-lightbox-content" id="out-lb-content" style="padding:0;overflow:hidden">
+        <!-- ImageWorkspace mounts here -->
       </div>
     </div>`;
 
   injectOutStyles();
 
   // ── Lightbox state ────────────────────────────────────────
-  let lbImages   = [];  // { outputFile, inputFile|null, name }
-  let lbIdx      = 0;
-  let lbMode     = localStorage.getItem('ic-cmp-mode') || 'slider';
-  let lbSliderPct = 50;
-  let lbDragging  = false;
+  let currentPairs = [];
+  let blobUrls = [];
+  let fldWorkspace = null;
 
-  function openLightbox(images, startIdx) {
-    lbImages = images;
-    lbIdx    = startIdx;
-    container.querySelector('#out-lightbox').style.display = 'flex';
-    renderLb();
+  async function ensureWorkspace() {
+    if (fldWorkspace) return fldWorkspace;
+    const { ImageWorkspace } = await import('../components/image-workspace.js');
+
+    const wsDiv = document.createElement('div');
+    wsDiv.style.position = 'absolute';
+    wsDiv.style.inset = '0';
+    container.querySelector('#out-lb-content').appendChild(wsDiv);
+
+    fldWorkspace = new ImageWorkspace(wsDiv, {
+      allowUpload: false,
+      allowFolder: true, // Show carousel if multiple files
+      customControlsHtml: `
+        <button class="btn-secondary btn-sm iw-download-btn" title="Download output" style="margin-left:8px">
+          <span class="material-symbols-outlined" style="font-size:14px">download</span>
+        </button>
+        <button class="btn-icon iw-close-btn" title="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      `,
+      onBindCustomControls: (cnt) => {
+        cnt.querySelector('.iw-close-btn')?.addEventListener('click', closeLightbox);
+        cnt.querySelector('.iw-download-btn')?.addEventListener('click', () => {
+          if (!fldWorkspace.activeFile) return;
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(fldWorkspace.activeFile);
+          a.download = fldWorkspace.activeFile.name;
+          a.click();
+        });
+      },
+      onRender: async (file) => {
+        const pair = currentPairs.find(p => p.outputFile === file);
+        if (!pair) return null;
+
+        const beforeUrl = URL.createObjectURL(pair.inputFile || pair.outputFile);
+        const afterUrl = URL.createObjectURL(pair.outputFile);
+        blobUrls.push(beforeUrl, afterUrl);
+
+        return {
+          beforeUrl,
+          afterUrl,
+          beforeLabel: pair.inputFile ? 'Input' : 'Output',
+          afterLabel: pair.inputFile ? 'Output' : 'Output',
+          context: { filename: file.name },
+          canCompare: !!pair.inputFile
+        };
+      },
+      onFilesChange: (files, activeFile) => {
+        const titleEl = wsDiv.querySelector('.iw-title');
+        if (titleEl && activeFile) {
+          const idx = files.indexOf(activeFile) + 1;
+          titleEl.textContent = `${activeFile.name}  (${idx}/${files.length})`;
+        }
+      }
+    });
+
+    return fldWorkspace;
   }
+
+  async function openLightbox(pairs, startIdx) {
+    currentPairs = pairs;
+    container.querySelector('#out-lightbox').style.display = 'flex';
+    const ws = await ensureWorkspace();
+    const files = pairs.map(p => p.outputFile);
+    ws.setFiles(files, startIdx);
+
+  }
+
   function closeLightbox() {
     container.querySelector('#out-lightbox').style.display = 'none';
-    lbImages = [];
-    // Revoke any blob URLs
-    container.querySelectorAll('[data-lb-url]').forEach(el => URL.revokeObjectURL(el.dataset.lbUrl));
+    currentPairs = [];
+    blobUrls.forEach(u => URL.revokeObjectURL(u));
+    blobUrls = [];
   }
+
   container.querySelector('#out-lb-bg')?.addEventListener('click', closeLightbox);
-  container.querySelector('#out-lb-close')?.addEventListener('click', closeLightbox);
-  container.querySelector('#out-lb-prev')?.addEventListener('click', () => { lbIdx = (lbIdx - 1 + lbImages.length) % lbImages.length; renderLb(); });
-  container.querySelector('#out-lb-next')?.addEventListener('click', () => { lbIdx = (lbIdx + 1) % lbImages.length; renderLb(); });
-  document.addEventListener('keydown', handleKeydown);
-
-  container.querySelectorAll('[data-lb-mode]').forEach(btn => {
-    btn.classList.toggle('is-active', btn.dataset.lbMode === lbMode);
-    btn.addEventListener('click', () => {
-      lbMode = btn.dataset.lbMode;
-      localStorage.setItem('ic-cmp-mode', lbMode);
-      container.querySelectorAll('[data-lb-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
-      renderLb();
-    });
-  });
-
-  container.querySelector('#out-lb-download')?.addEventListener('click', () => {
-    const item = lbImages[lbIdx];
-    if (!item?.outputFile) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(item.outputFile);
-    a.download = item.outputFile.name;
-    a.click();
-  });
 
   function handleKeydown(e) {
     if (container.querySelector('#out-lightbox').style.display === 'none') return;
-    if (e.key === 'Escape')     { closeLightbox(); }
-    if (e.key === 'ArrowLeft')  { lbIdx = (lbIdx - 1 + lbImages.length) % lbImages.length; renderLb(); }
-    if (e.key === 'ArrowRight') { lbIdx = (lbIdx + 1) % lbImages.length; renderLb(); }
-  }
-
-  async function renderLb() {
-    const item = lbImages[lbIdx];
-    if (!item) return;
-
-    const titleEl = container.querySelector('#out-lb-title');
-    if (titleEl) titleEl.textContent = `${item.outputFile.name}  (${lbIdx+1}/${lbImages.length})`;
-
-    const prevBtn = container.querySelector('#out-lb-prev');
-    const nextBtn = container.querySelector('#out-lb-next');
-    if (prevBtn) prevBtn.style.visibility = lbImages.length > 1 ? '' : 'hidden';
-    if (nextBtn) nextBtn.style.visibility = lbImages.length > 1 ? '' : 'hidden';
-
-    const afterUrl  = URL.createObjectURL(item.outputFile);
-    const beforeUrl = item.inputFile ? URL.createObjectURL(item.inputFile) : null;
-
-    const view = container.querySelector('#out-lb-view');
-    if (!view) return;
-
-    if (!beforeUrl) {
-      // Output only — just show the image
-      view.innerHTML = `<img src="${afterUrl}" class="out-lb-img" data-lb-url="${afterUrl}">`;
-      return;
-    }
-
-    if (lbMode === 'side') {
-      view.innerHTML = `
-        <div class="cmp-side-view">
-          <div class="cmp-side">
-            <div class="cmp-side-label">Before</div>
-            <img src="${beforeUrl}" class="cmp-side-img" data-lb-url="${beforeUrl}" draggable="false">
-          </div>
-          <div class="cmp-divider-vertical"></div>
-          <div class="cmp-side">
-            <div class="cmp-side-label cmp-side-label--blue">After</div>
-            <img src="${afterUrl}" class="cmp-side-img" data-lb-url="${afterUrl}" draggable="false">
-          </div>
-        </div>`;
-    } else {
-      lbSliderPct = 50;
-      // clip-path approach: both images fill the same box identically (object-fit:contain),
-      // the after image is clipped from the right so they align pixel-perfectly.
-      view.innerHTML = `
-        <div class="cmp-slider-view" id="lb-slider-view">
-          <img src="${beforeUrl}" class="lb-cmp-img" draggable="false">
-          <img src="${afterUrl}"  class="lb-cmp-img" id="lb-after-img" draggable="false"
-               style="clip-path:inset(0 50% 0 0)">
-          <div class="cmp-slider-handle" id="lb-handle" style="left:50%">
-            <div class="cmp-handle-line"></div>
-            <div class="cmp-handle-grip">
-              <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
-            </div>
-          </div>
-          <div class="cmp-slider-badge cmp-slider-badge--left">Before</div>
-          <div class="cmp-slider-badge cmp-slider-badge--right cmp-slider-badge--blue">After</div>
-        </div>`;
-
-      const sliderView = view.querySelector('#lb-slider-view');
-      const afterImg   = view.querySelector('#lb-after-img');
-      const handle     = view.querySelector('#lb-handle');
-
-      function setSlider(x) {
-        const rect = sliderView.getBoundingClientRect();
-        lbSliderPct = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
-        // clip right side of after image — reveals it from left to right as slider moves right
-        if (afterImg) afterImg.style.clipPath = `inset(0 ${100 - lbSliderPct}% 0 0)`;
-        if (handle)   handle.style.left = `${lbSliderPct}%`;
-      }
-      handle?.addEventListener('mousedown', e => { lbDragging = true; e.preventDefault(); });
-      document.addEventListener('mousemove', e => { if (lbDragging) setSlider(e.clientX); });
-      document.addEventListener('mouseup',   () => { lbDragging = false; });
-      sliderView?.addEventListener('click', e => { if (!lbDragging) setSlider(e.clientX); });
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (!fldWorkspace) return;
+      const files = fldWorkspace.files;
+      if (files.length <= 1) return;
+      
+      const idx = files.indexOf(fldWorkspace.activeFile);
+      let newIdx = e.key === 'ArrowLeft' ? idx - 1 : idx + 1;
+      if (newIdx < 0) newIdx = files.length - 1;
+      if (newIdx >= files.length) newIdx = 0;
+      
+      fldWorkspace.setFiles(files, newIdx);
     }
   }
+  document.addEventListener('keydown', handleKeydown);
 
   // ── Load runs ─────────────────────────────────────────────
   await loadRuns();
@@ -411,7 +363,7 @@ export async function render(container, hash) {
           // Build image pairs — try progressively looser name matches
           const pairs = outputFiles.map(outFile => {
             const withoutExt    = outFile.name.replace(/\.[^.]+$/, '');         // "a_bw.jpg" → "a_bw"
-            const withoutSuffix = withoutExt.replace(/_[a-z0-9]+$/i, '');      // "a_bw"    → "a"
+            const withoutSuffix = withoutExt.replace(/[-_][a-z0-9]+$/i, '');    // "a_bw"    → "a"
             const withoutBoth   = withoutSuffix.replace(/\.[^.]+$/, '');        // "a.jpg"   → "a"
             const inFile = inputByBaseName.get(withoutExt)
                         || inputByBaseName.get(withoutSuffix)
@@ -620,34 +572,7 @@ function injectOutStyles() {
     .out-lightbox { position:fixed; inset:0; z-index:500; display:flex; align-items:center; justify-content:center; }
     .out-lightbox-bg { position:absolute; inset:0; background:rgba(0,0,0,0.85); }
     .out-lightbox-content { position:relative; z-index:1; width:92vw; height:90vh; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,0.6); }
-    .out-lb-toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--ps-border); flex-shrink:0; gap:8px; }
-    .out-lb-view { flex:1; overflow:hidden; position:relative; background:repeating-conic-gradient(var(--ps-bg-surface) 0% 25%,var(--ps-bg-app) 0% 50%) 0 0/24px 24px; }
-    .out-lb-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; }
-    /* Both images in slider share the same box — clip-path cuts the after image at the handle position */
-    .lb-cmp-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; }
 
-    /* Reuse CMP classes (injected by cmp.js if visited, or inline here) */
-    .cmp-side-view { display:flex; width:100%; height:100%; }
-    .cmp-side { flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; }
-    .cmp-side-img { width:100%; height:100%; object-fit:contain; display:block; }
-    .cmp-side-label { position:absolute; top:10px; left:10px; z-index:2; background:rgba(0,0,0,0.7); color:#fff; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; font-family:var(--font-mono); }
-    .cmp-side-label--blue { background:rgba(0,119,255,0.85); }
-    .cmp-divider-vertical { width:2px; background:var(--ps-border); flex-shrink:0; }
-    .cmp-slider-view { position:relative; width:100%; height:100%; overflow:hidden; user-select:none; cursor:col-resize; }
-    .cmp-slider-base { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
-    .cmp-slider-clip { position:absolute; top:0; left:0; height:100%; overflow:hidden; }
-    .cmp-slider-after { position:absolute; top:0; left:0; width:100vw; max-width:none; height:100%; object-fit:contain; }
-    .cmp-slider-handle { position:absolute; top:0; height:100%; transform:translateX(-50%); display:flex; align-items:center; pointer-events:none; z-index:10; }
-    .cmp-handle-line { position:absolute; top:0; left:50%; width:2px; height:100%; background:rgba(255,255,255,0.9); transform:translateX(-50%); box-shadow:0 0 8px rgba(0,0,0,0.4); }
-    .cmp-handle-grip { position:relative; z-index:1; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.95); box-shadow:0 2px 10px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; cursor:col-resize; pointer-events:all; color:#111; }
-    .cmp-slider-badge { position:absolute; top:10px; z-index:5; background:rgba(0,0,0,0.7); color:#fff; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; font-family:var(--font-mono); }
-    .cmp-slider-badge--left { left:10px; }
-    .cmp-slider-badge--right { right:10px; }
-    .cmp-slider-badge--blue { background:rgba(0,119,255,0.85); }
-    .cmp-mode-toggle { display:flex; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:8px; overflow:hidden; }
-    .cmp-mode-btn { display:flex; align-items:center; gap:5px; padding:5px 10px; font-size:12px; font-weight:500; background:transparent; border:none; color:var(--ps-text-muted); cursor:pointer; font-family:var(--font-primary); transition:background 150ms,color 150ms; }
-    .cmp-mode-btn.is-active { background:var(--ps-blue); color:#fff; }
-    .cmp-mode-btn:hover:not(.is-active) { background:var(--ps-bg-hover); color:var(--ps-text); }
   `;
   document.head.appendChild(s);
 }

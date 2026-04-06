@@ -56,16 +56,31 @@ export function renderParamField(param, value, prefix = 'rp') {
             min="${param.min ?? 0}" max="${param.max ?? 100}" step="${param.step ?? 1}" value="${val}">
         </div>`;
 
-    case 'color':
+    case 'color': {
+      let savedColorsHtml = '';
+      try {
+        const saved = JSON.parse(localStorage.getItem('ic-saved-colors')) || [];
+        savedColorsHtml = saved.slice(0, 10).map(c => `
+          <div class="ned-saved-color" data-color="${c}" style="background:${c}; width:20px; height:20px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="${c}"></div>
+        `).join('');
+      } catch (e) {}
+
       return `
         <div class="ned-field">
           <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
-          <div class="ned-color-row">
+          <div class="ned-color-row" style="margin-bottom:4px;">
             <input type="color" id="${id}" name="${param.name}" value="${val}" class="ned-color-input">
             <input type="text" id="${id}-hex" class="ic-input" value="${val}" maxlength="7"
               style="flex:1;font-family:var(--font-mono);font-size:12px">
+            <button class="btn-icon ned-save-color-btn" data-input-id="${id}" title="Save Color" style="padding:0">
+              <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
+            </button>
+          </div>
+          <div class="ned-saved-colors-wrap" id="${id}-saved-wrap" style="display:flex; gap:4px; flex-wrap:wrap;">
+            ${savedColorsHtml}
           </div>
         </div>`;
+    }
 
     case 'number':
       return `
@@ -161,9 +176,42 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
     if (p.type === 'color') {
       const picker = container.querySelector(`#${id}`);
       const hex    = container.querySelector(`#${id}-hex`);
+      const saveBtn= container.querySelector(`.ned-save-color-btn[data-input-id="${id}"]`);
+      const wrap   = container.querySelector(`#${id}-saved-wrap`);
+      
       if (picker && hex) {
         picker.addEventListener('input', () => { hex.value = picker.value; });
         hex.addEventListener('input',   () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) picker.value = hex.value; });
+        
+        // Save logic
+        if (saveBtn && wrap) {
+          saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const col = picker.value.toLowerCase();
+            let saved = [];
+            try { saved = JSON.parse(localStorage.getItem('ic-saved-colors')) || []; } catch(e){}
+            if (!saved.includes(col)) {
+              saved.unshift(col);
+              saved = saved.slice(0, 10);
+              localStorage.setItem('ic-saved-colors', JSON.stringify(saved));
+              
+              // sync this wrap
+              wrap.innerHTML = saved.map(c => `
+                <div class="ned-saved-color" data-color="${c}" style="background:${c}; width:20px; height:20px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="${c}"></div>
+              `).join('');
+            }
+          });
+          
+          wrap.addEventListener('click', (e) => {
+            if (e.target.classList.contains('ned-saved-color')) {
+              const col = e.target.getAttribute('data-color');
+              picker.value = col;
+              hex.value = col;
+              picker.dispatchEvent(new Event('input', { bubbles: true }));
+              picker.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          });
+        }
       }
     }
   }

@@ -6,6 +6,15 @@
 import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
 
+let photonLib = null;
+async function ensurePhoton() {
+  if (photonLib) return photonLib;
+  const initPhoton = (await import('../vendor/photon/photon_rs.js')).default;
+  await initPhoton();
+  photonLib = await import('../vendor/photon/photon_rs.js');
+  return photonLib;
+}
+
 // ─── Face Privacy ─────────────────────────────────────────
 registry.register({
   id: 'ai-face-privacy', name: 'Face Privacy', category: 'AI & Composition', categoryKey: 'ai',
@@ -15,10 +24,10 @@ registry.register({
     { name: 'mode', label: 'Mode', type: 'select',
       options: [{ label: 'Blur', value: 'Blur' }, { label: 'Pixelate', value: 'Pixelate' }, { label: 'Black Bar', value: 'Bar' }],
       defaultValue: 'Blur' },
-    { name: 'confidence', label: 'Min Confidence (%)', type: 'range', min: 0, max: 100, defaultValue: 70 },
+    { name: 'confidence', label: 'Min Confidence (%)', type: 'range', min: 0, max: 100, defaultValue: 30 },
     { name: 'padding', label: 'Face Padding (%)', type: 'range', min: 0, max: 100, defaultValue: 20 },
   ],
-  async apply(ctx, p) {
+  async apply(ctx, p, context) {
     if (typeof WorkerGlobalScope !== 'undefined') {
       console.warn('[ai-face-privacy] Skipping — MediaPipe requires the main thread.');
       return;
@@ -31,7 +40,7 @@ registry.register({
       const detector = await FaceDetector.createFromOptions(vision, {
         baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite', delegate: 'CPU' },
         runningMode: 'IMAGE',
-        minDetectionConfidence: (p.confidence || 70) / 100,
+        minDetectionConfidence: (p.confidence || 30) / 100,
       });
 
       const result = detector.detect(ctx.canvas);
@@ -62,36 +71,42 @@ registry.register({
         if (mode === 'Bar') {
           ctx.fillStyle = '#000000';
           ctx.fillRect(x, y, bw, bh);
-        } else if (mode === 'Blur' || mode === 'Pixelate') {
+        } else if (mode === 'Blur') {
+          const photon = await ensurePhoton();
+          const id = ctx.getImageData(x, y, bw, bh);
+          const pimg = new photon.PhotonImage(new Uint8Array(id.data), bw, bh);
+          
+          let rad = Math.max(5, Math.round(bw / 10));
+          // Apply blur multiple times for stronger privacy effect
+          photon.gaussian_blur(pimg, rad);
+          photon.gaussian_blur(pimg, rad);
+          
+          const outPixels = pimg.get_raw_pixels();
+          const newId = new ImageData(new Uint8ClampedArray(outPixels), bw, bh);
+          ctx.putImageData(newId, x, y);
+          pimg.free();
+        } else if (mode === 'Pixelate') {
           const tmp = document.createElement('canvas');
           tmp.width = bw; tmp.height = bh;
           const tc = tmp.getContext('2d');
           tc.drawImage(ctx.canvas, x, y, bw, bh, 0, 0, bw, bh);
-          if (mode === 'Blur') {
-            const blurCtx = document.createElement('canvas');
-            blurCtx.width = bw; blurCtx.height = bh;
-            const bc = blurCtx.getContext('2d');
-            bc.filter = `blur(${Math.round(bw / 8)}px)`;
-            bc.drawImage(tmp, 0, 0);
-            ctx.drawImage(blurCtx, x, y);
-          } else {
-            // Pixelate
-            const ps = Math.max(4, Math.round(bw / 12));
-            const id = tc.getImageData(0, 0, bw, bh); const d = id.data;
-            for (let py2 = 0; py2 < bh; py2 += ps) {
-              for (let px2 = 0; px2 < bw; px2 += ps) {
-                const i = (py2 * bw + px2) * 4;
-                const [r, g, b, a] = [d[i], d[i+1], d[i+2], d[i+3]];
-                for (let dy = 0; dy < ps && py2 + dy < bh; dy++)
-                  for (let dx = 0; dx < ps && px2 + dx < bw; dx++) {
-                    const j = ((py2 + dy) * bw + (px2 + dx)) * 4;
-                    d[j] = r; d[j+1] = g; d[j+2] = b; d[j+3] = a;
-                  }
-              }
+          
+          const ps = Math.max(4, Math.round(bw / 12));
+          const id = tc.getImageData(0, 0, bw, bh); const d = id.data;
+          for (let py2 = 0; py2 < bh; py2 += ps) {
+            for (let px2 = 0; px2 < bw; px2 += ps) {
+              const i = (py2 * bw + px2) * 4;
+              const [r, g, b, a] = [d[i], d[i+1], d[i+2], d[i+3]];
+              for (let dy = 0; dy < ps && py2 + dy < bh; dy++)
+                for (let dx = 0; dx < ps && px2 + dx < bw; dx++) {
+                  const j = ((py2 + dy) * bw + (px2 + dx)) * 4;
+                  d[j] = r; d[j+1] = g; d[j+2] = b; d[j+3] = a;
+                }
             }
-            tc.putImageData(id, 0, 0);
-            ctx.drawImage(tmp, x, y);
           }
+          tc.putImageData(id, 0, 0);
+          // putImageData prevents alpha mixing issues just like the blur approach
+          ctx.putImageData(id, x, y);
         }
       }
     } catch (err) {
@@ -126,7 +141,7 @@ registry.register({
     { name: 'bgColor', label: 'Fill Colour', type: 'color', defaultValue: '#ffffff' },
     { name: 'bgImage', label: 'Background Image', type: 'file', defaultValue: '' },
   ],
-  async apply(ctx, p) {
+  async apply(ctx, p, context) {
     // batch.js routes AI recipes to the main thread, so this guard should never fire in normal
     // use. It's kept as a safety net in case the transform is somehow called from a worker.
     if (typeof WorkerGlobalScope !== 'undefined') {

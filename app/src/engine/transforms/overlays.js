@@ -12,7 +12,19 @@ registry.register({
   description: 'Render styled text over the image. Supports {{variable}} injection.',
   params: [
     { name: 'content',     label: 'Text ({{vars}} supported)', type: 'text',    defaultValue: '{{filename}}' },
-    { name: 'font',        label: 'Font Family',  type: 'text',    defaultValue: 'Inter' },
+    { name: 'font',        label: 'Font Family',  type: 'select',
+      options: [
+        { label: 'Inter', value: 'Inter' },
+        { label: 'Arial', value: 'Arial' },
+        { label: 'Times New Roman', value: '"Times New Roman"' },
+        { label: 'Courier New', value: '"Courier New"' },
+        { label: 'Georgia', value: 'Georgia' },
+        { label: 'Verdana', value: 'Verdana' },
+        { label: 'Trebuchet MS', value: '"Trebuchet MS"' },
+        { label: 'Impact', value: 'Impact' },
+        { label: 'Comic Sans MS', value: '"Comic Sans MS"' },
+        { label: 'Dancing Script', value: '"Dancing Script"' },
+      ], defaultValue: 'Inter' },
     { name: 'sizeMode',    label: 'Size Mode',    type: 'select',
       options: [
         { label: 'Fixed (px)',       value: 'px' },
@@ -138,6 +150,10 @@ registry.register({
   icon: 'branding_watermark',
   description: 'Repeat a text watermark diagonally across the image.',
   params: [
+    { name: 'type',    label: 'Watermark Type', type: 'select',
+      options: [{label:'Text', value:'text'}, {label:'Image', value:'image'}], defaultValue: 'text' },
+    { name: 'imageUrl',label: 'Image File',  type: 'file',   defaultValue: '' },
+    { name: 'repeat',  label: 'Repeat Pattern', type: 'boolean', defaultValue: true },
     { name: 'text',    label: 'Text',        type: 'text',   defaultValue: '© {{filename}}' },
     { name: 'font',    label: 'Font',        type: 'text',   defaultValue: 'Inter' },
     { name: 'size',    label: 'Size (px)',   type: 'number', defaultValue: 28 },
@@ -145,30 +161,70 @@ registry.register({
     { name: 'opacity', label: 'Opacity (%)', type: 'range',  min: 0, max: 100, defaultValue: 25 },
     { name: 'angle',   label: 'Angle (°)',   type: 'range',  min: -90, max: 90, defaultValue: -35 },
   ],
-  apply(ctx, p, context) {
-    const text = interpolate(p.text || '© owner', context);
+  async apply(ctx, p, context) {
     const W = ctx.canvas.width, H = ctx.canvas.height;
-    const size = p.size || 28;
+    const angle = ((p.angle ?? -35) * Math.PI) / 180;
     ctx.save();
     ctx.globalAlpha = (p.opacity || 25) / 100;
-    ctx.font = `${size}px ${p.font || 'Inter'}, sans-serif`;
-    ctx.fillStyle = p.color || '#ffffff';
-    ctx.textBaseline = 'middle';
-    const angle = ((p.angle ?? -35) * Math.PI) / 180;
-    const tw = ctx.measureText(text).width;
-    const step = tw + size * 3;
-    const diagLen = Math.sqrt(W * W + H * H);
-    const count = Math.ceil(diagLen / step) + 2;
-    for (let i = -count; i <= count; i++) {
-      ctx.save();
+    
+    if (p.type === 'image' && p.imageUrl) {
+      try {
+        const { getAssetUrl } = await import('../../data/assets.js');
+        const url = await getAssetUrl(p.imageUrl, context);
+        if (url) {
+          await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+              const aspect = img.width / img.height;
+              const drawH = p.size || 28;
+              const drawW = drawH * aspect;
+              const stepX = drawW * 1.5;
+              const stepY = drawH * 2.5;
+              ctx.translate(W / 2, H / 2);
+              ctx.rotate(angle);
+              if (p.repeat !== false) {
+                 const diagLen = Math.sqrt(W * W + H * H);
+                 const countX = Math.ceil(diagLen / stepX) + 2;
+                 const countY = Math.ceil(diagLen / stepY) + 2;
+                 for (let i = -countX; i <= countX; i++) {
+                   for (let j = -countY; j <= countY; j++) {
+                     ctx.drawImage(img, i * stepX - drawW / 2, j * stepY - drawH / 2, drawW, drawH);
+                   }
+                 }
+              } else {
+                 ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+              }
+              resolve();
+            };
+            img.onerror = resolve;
+            img.src = url;
+          });
+        }
+      } catch (e) {
+        console.warn('[overlay-watermark] image failed', e);
+      }
+    } else {
+      const text = interpolate(p.text || '© owner', context);
+      const size = p.size || 28;
+      ctx.font = `${size}px ${p.font || 'Inter'}, sans-serif`;
+      ctx.fillStyle = p.color || '#ffffff';
+      ctx.textBaseline = 'middle';
+      const tw = ctx.measureText(text).width;
+      
       ctx.translate(W / 2, H / 2);
       ctx.rotate(angle);
-      ctx.fillText(text, i * step - tw / 2, 0);
-      for (let j = 1; j <= count; j++) {
-        ctx.fillText(text, i * step - tw / 2, -j * step);
-        ctx.fillText(text, i * step - tw / 2,  j * step);
+      if (p.repeat !== false) {
+        const step = tw + size * 3;
+        const diagLen = Math.sqrt(W * W + H * H);
+        const count = Math.ceil(diagLen / step) + 2;
+        for (let i = -count; i <= count; i++) {
+          for (let j = -count; j <= count; j++) {
+            ctx.fillText(text, i * step - tw / 2, j * step);
+          }
+        }
+      } else {
+        ctx.fillText(text, -tw / 2, 0);
       }
-      ctx.restore();
     }
     ctx.restore();
   }
@@ -194,10 +250,11 @@ registry.register({
     const sz = p.size || 80;
     const pos = p.position || 'TR';
     ctx.save();
-    if (pos === 'TR') { ctx.translate(W, 0); ctx.rotate(Math.PI / 4); }
-    else if (pos === 'TL') { ctx.rotate(-Math.PI / 4); }
-    else if (pos === 'BR') { ctx.translate(W, H); ctx.rotate(-Math.PI / 4); }
-    else { ctx.translate(0, H); ctx.rotate(Math.PI / 4); }
+    // Offset translation inwards by sz/2 so rotation keeps it in viewport
+    if (pos === 'TR') { ctx.translate(W - sz/2, sz/2); ctx.rotate(Math.PI / 4); }
+    else if (pos === 'TL') { ctx.translate(sz/2, sz/2); ctx.rotate(-Math.PI / 4); }
+    else if (pos === 'BR') { ctx.translate(W - sz/2, H - sz/2); ctx.rotate(-Math.PI / 4); }
+    else { ctx.translate(sz/2, H - sz/2); ctx.rotate(Math.PI / 4); }
     ctx.fillStyle = p.bgColor || '#0077ff';
     ctx.fillRect(-sz * 1.5, -sz / 4, sz * 3, sz / 2);
     ctx.fillStyle = p.textColor || '#ffffff';
@@ -264,15 +321,24 @@ registry.register({
   icon: 'grid_4x4',
   description: 'Draw an evenly-spaced grid of lines over the image.',
   params: [
-    { name: 'spacing',   label: 'Grid Spacing (px)', type: 'number', defaultValue: 50 },
-    { name: 'color',     label: 'Line Color',         type: 'color',  defaultValue: '#ffffff' },
+    { name: 'spacingX',  label: 'Spacing X (px or %)', type: 'text',   defaultValue: '10%' },
+    { name: 'spacingY',  label: 'Spacing Y (px or %)', type: 'text',   defaultValue: '10%' },
+    { name: 'color',     label: 'Line Color',          type: 'color',  defaultValue: '#ffffff' },
     { name: 'opacity',   label: 'Opacity (%)',         type: 'range',  min: 0, max: 100, defaultValue: 50 },
-    { name: 'lineWidth', label: 'Line Width (px)',      type: 'number', defaultValue: 1 },
+    { name: 'lineWidth', label: 'Line Width (px)',     type: 'number', defaultValue: 1 },
   ],
   apply(ctx, p) {
     const W       = ctx.canvas.width;
     const H       = ctx.canvas.height;
-    const spacing = Math.max(1, Math.round(p.spacing ?? 50));
+    
+    // Parse px vs % strings
+    const parseDim = (val, max) => {
+      const s = String(val || '').trim();
+      if (s.endsWith('%')) return Math.max(1, Math.round(max * parseFloat(s) / 100));
+      return Math.max(1, Math.round(parseFloat(s) || 50));
+    };
+    const spacingX = parseDim(p.spacingX ?? '10%', W);
+    const spacingY = parseDim(p.spacingY ?? '10%', H);
 
     ctx.save();
     ctx.globalAlpha              = (p.opacity ?? 50) / 100;
@@ -281,8 +347,8 @@ registry.register({
     ctx.lineWidth                = Math.max(0.5, p.lineWidth ?? 1);
 
     ctx.beginPath();
-    for (let x = spacing; x < W; x += spacing) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
-    for (let y = spacing; y < H; y += spacing) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+    for (let x = spacingX; x < W; x += spacingX) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+    for (let y = spacingY; y < H; y += spacingY) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
     ctx.stroke();
 
     ctx.restore();
@@ -301,7 +367,15 @@ registry.register({
     { name: 'size',     label: 'Map Size (px)', type: 'number', defaultValue: 256 },
     { name: 'opacity',  label: 'Opacity (%)',   type: 'range', min: 0, max: 100, defaultValue: 85 },
     { name: 'anchor',   label: 'Anchor',        type: 'select',
-      options: [{ label: 'Bottom Right', value: 'bottom-right' }, { label: 'Bottom Left', value: 'bottom-left' }],
+      options: [
+        { label: 'Bottom Right (Inside)', value: 'bottom-right' }, 
+        { label: 'Bottom Left (Inside)', value: 'bottom-left' },
+        { label: 'Top Right (Inside)', value: 'top-right' }, 
+        { label: 'Top Left (Inside)', value: 'top-left' },
+        { label: 'Outside Bounds - Left', value: 'outside-left' },
+        { label: 'Outside Bounds - Right', value: 'outside-right' },
+        { label: 'Outside Bounds - Bottom', value: 'outside-bottom' },
+      ],
       defaultValue: 'bottom-right' },
     { name: 'margin',   label: 'Margin (px)', type: 'number', defaultValue: 16 },
   ],
@@ -316,6 +390,35 @@ registry.register({
     const sz   = p.size || 256;
     const W = ctx.canvas.width, H = ctx.canvas.height;
     const margin = p.margin ?? 16;
+    const anchor = p.anchor || 'bottom-right';
+
+    // Extrude canvas for outside anchors
+    let drawX = 0, drawY = 0;
+    if (anchor.startsWith('outside-')) {
+      const orig = document.createElement('canvas');
+      orig.width = W; orig.height = H;
+      orig.getContext('2d').drawImage(ctx.canvas, 0, 0);
+
+      const blockW = anchor !== 'outside-bottom' ? sz + margin * 2 : W;
+      const blockH = anchor === 'outside-bottom' ? sz + margin * 2 : H;
+
+      if (anchor === 'outside-left') {
+        ctx.canvas.width = W + blockW;
+        ctx.canvas.height = H;
+        drawX = blockW; // image shifts right
+      } else if (anchor === 'outside-right') {
+        ctx.canvas.width = W + blockW;
+        ctx.canvas.height = H;
+      } else if (anchor === 'outside-bottom') {
+        ctx.canvas.width = W;
+        ctx.canvas.height = H + blockH;
+      }
+      
+      // Paint bg white for the extruded part (matches pad background usually)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.drawImage(orig, drawX, drawY);
+    }
 
     // Tile maths
     const tileX = Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
@@ -329,8 +432,19 @@ registry.register({
       await new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-          let x = (p.anchor || 'bottom-right').includes('right') ? W - sz - margin : margin;
-          let y = (p.anchor || 'bottom-right').includes('bottom') ? H - sz - margin : margin;
+          let x, y;
+          if (anchor === 'outside-left') {
+             x = margin; y = H - sz - margin; 
+          } else if (anchor === 'outside-right') {
+             x = W + margin; y = H - sz - margin;
+          } else if (anchor === 'outside-bottom') {
+             x = margin; y = H + margin;
+          } else {
+             // Inside anchors
+             x = anchor.includes('right') ? W - sz - margin : margin;
+             y = anchor.includes('bottom') ? H - sz - margin : margin;
+          }
+
           ctx.save();
           ctx.globalAlpha = (p.opacity ?? 85) / 100;
           ctx.drawImage(img, x, y, sz, sz);

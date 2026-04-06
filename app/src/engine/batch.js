@@ -296,7 +296,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         const baseAggPct = (total + aggCount) / totalSteps;
         const aggRange = 1 / totalSteps;
 
-        const blob = await createGeoTimeline(agg.blobs, agg.metadata || [], {
+        const blob = await createGeoTimeline(agg.blobs, agg.metadata || [], agg.originalNames || [], {
           ...p, width: p.width, height: p.height,
           onLog: (msg) => onLog('info', msg),
           onProgress: (f, t) => {
@@ -543,6 +543,12 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   run.failCount    = failCount;
   await updateRun(run);
   onComplete(run);
+
+  if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+    new Notification('PicMachina Batch Complete', {
+      body: `Processed ${successCount} files successfully. ${failCount > 0 ? failCount + ' failed.' : ''}`.trim(),
+    });
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────

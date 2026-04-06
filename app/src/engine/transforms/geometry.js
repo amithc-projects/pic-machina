@@ -76,7 +76,7 @@ registry.register({
   description: 'Content-aware crop to a target aspect ratio.',
   params: [
     { name: 'aspectRatio', label: 'Aspect Ratio', type: 'select',
-      options: [{ label: '1:1', value: '1:1' }, { label: '4:5', value: '4:5' }, { label: '16:9', value: '16:9' }, { label: '4:3', value: '4:3' }, { label: '3:2', value: '3:2' }],
+      options: [{ label: '1:1', value: '1:1' }, { label: '4:5', value: '4:5' }, { label: '16:9', value: '16:9' }, { label: '9:16', value: '9:16' }, { label: '4:3', value: '4:3' }, { label: '3:2', value: '3:2' }],
       defaultValue: '1:1' },
     { name: 'strategy', label: 'Strategy', type: 'select',
       options: [{ label: 'Entropy (busy areas)', value: 'Entropy' }, { label: 'Attention (centre)', value: 'Attention' }],

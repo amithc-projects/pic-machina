@@ -560,7 +560,7 @@ export const SYSTEM_RECIPES = [
   {
     id: 'sys-photo-stack', name: 'Photo Stack Animation',
     description: 'Polaroid-framed animated stack — each photo gets a white border and handwritten caption, then appears on a desk one by one. Outputs GIF or MP4.',
-    isSystem: true, coverColor: '#3d2b1a',
+    isSystem: true, isOrdered: true, coverColor: '#3d2b1a',
     tags: ['animation', 'polaroid', 'stack', 'gif', 'video', 'creative'],
     createdAt: 0, updatedAt: 0,
     params: [
@@ -835,7 +835,7 @@ export const SYSTEM_RECIPES = [
   {
     id: 'sys-machina-swap', name: 'Machina-Swap',
     description: 'Natively swap faces across multiple portraits using 478-point mesh warping. Drop 2 photos to cross-swap both ways, or drop 3+ photos to paste the first face onto everyone else!',
-    isSystem: true, coverColor: '#ec4899',
+    isSystem: true, isOrdered: true, coverColor: '#ec4899',
     inputType: 'image',
     tags: ['ai', 'creative', 'fun', 'swap', 'faces'],
     createdAt: 0, updatedAt: 0,

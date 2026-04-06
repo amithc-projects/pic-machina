@@ -8,7 +8,7 @@ function easeInOutCubic(x) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
-export async function createGeoTimeline(blobs, metadata, {
+export async function createGeoTimeline(blobs, metadata, originalNames, {
   width = 1920,
   height = 1080,
   fps = 30,
@@ -20,6 +20,7 @@ export async function createGeoTimeline(blobs, metadata, {
   const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
   
   // 1. Extract GPS coords
+  const missingFiles = [];
   const points = metadata.map((m, i) => {
     let lat = null, lon = null;
     let city = '', country = '';
@@ -48,7 +49,22 @@ export async function createGeoTimeline(blobs, metadata, {
     }
     
     return { lat, lon, city, country, dateStr, index: i };
-  }).filter(p => p.lat !== null && !isNaN(p.lat));
+  }).filter((p, i) => {
+    if (p.lat === null || isNaN(p.lat) || p.lon === null || isNaN(p.lon)) {
+      missingFiles.push(originalNames[i] || `Image ${i+1}`);
+      return false;
+    }
+    return true;
+  });
+
+  if (missingFiles.length > 0 && onLog) {
+    onLog('warn', `Geo-Timeline: ${missingFiles.length} image(s) skipped due to missing GPS metadata: ${missingFiles.slice(0, 5).join(', ')}${missingFiles.length > 5 ? '...' : ''}`);
+  }
+
+  if (points.length === 0) {
+    if (onLog) onLog('error', 'Skipping Geo-Timeline: No GPS location data found in any of the provided images.');
+    throw new Error('Geo-Timeline requires images with GPS Exif data. None was found.');
+  }
 
   // 2. Fetch Base Map
   const { canvas: mapCanvas, getPixelCoordsForLonLat } = await fetchRenderedMap(points, 200, onLog);
@@ -105,15 +121,17 @@ export async function createGeoTimeline(blobs, metadata, {
         const currentBmp = bmps[slideIdx];
         const nextBmp = slideIdx + 1 < bmps.length ? bmps[slideIdx + 1] : null;
         
-        const prevPt = points[Math.max(0, slideIdx - 1)];
-        const currPt = points[slideIdx];
-        
         const pStage = Math.min(1.0, subFrame / transFrames); // 0 to 1 during transition, then 1.0 (holds)
         let pAmt = easeInOutCubic(pStage);
         
+        const ptIdx = Math.min(slideIdx, points.length - 1);
+        const prevPtIdx = Math.max(0, ptIdx - 1);
+        const prevPt = points[prevPtIdx];
+        const currPt = points[ptIdx];
+        
         // Map Target Camera coords (Interpolate from previous location to current location during crossfade)
-        const c1 = getPixelCoordsForLonLat(prevPt.lon, prevPt.lat);
-        const c2 = getPixelCoordsForLonLat(currPt.lon, currPt.lat);
+        const c1 = getPixelCoordsForLonLat(prevPt?.lon, prevPt?.lat);
+        const c2 = getPixelCoordsForLonLat(currPt?.lon, currPt?.lat);
         const curMapX = lerp(c1.x, c2.x, pAmt);
         const curMapY = lerp(c1.y, c2.y, pAmt);
         
@@ -149,9 +167,10 @@ export async function createGeoTimeline(blobs, metadata, {
         let hasLine = false;
         
         // Draw fully completed lines up to slideIdx - 1
-        for (let i = 0; i < slideIdx; i++) {
-          const ptA = getPixelCoordsForLonLat(points[i].lon, points[i].lat);
-          const ptB = getPixelCoordsForLonLat(points[i+1].lon, points[i+1].lat);
+        const maxCompletedLine = Math.min(slideIdx, points.length - 1);
+        for (let i = 0; i < maxCompletedLine; i++) {
+          const ptA = getPixelCoordsForLonLat(points[i]?.lon, points[i]?.lat);
+          const ptB = getPixelCoordsForLonLat(points[i+1]?.lon, points[i+1]?.lat);
           
           const sxA = (ptA.x - mcX) / srcW * mapW;
           const syA = (ptA.y - mcY) / srcH * height;
@@ -166,8 +185,8 @@ export async function createGeoTimeline(blobs, metadata, {
         
         // Interpolate the *currently drawing* line towards slideIdx point
         if (slideIdx > 0 && slideIdx < points.length && distance > 5) {
-          const ptA = getPixelCoordsForLonLat(points[slideIdx - 1].lon, points[slideIdx - 1].lat);
-          const ptB = getPixelCoordsForLonLat(points[slideIdx].lon, points[slideIdx].lat);
+          const ptA = getPixelCoordsForLonLat(points[slideIdx - 1]?.lon, points[slideIdx - 1]?.lat);
+          const ptB = getPixelCoordsForLonLat(points[slideIdx]?.lon, points[slideIdx]?.lat);
           
           const sxA = (ptA.x - mcX) / srcW * mapW;
           const syA = (ptA.y - mcY) / srcH * height;
@@ -188,7 +207,7 @@ export async function createGeoTimeline(blobs, metadata, {
 
         // Draw Nodes
         for (let i = 0; i <= slideIdx && i < points.length; i++) {
-          const pt = getPixelCoordsForLonLat(points[i].lon, points[i].lat);
+          const pt = getPixelCoordsForLonLat(points[i]?.lon, points[i]?.lat);
           const screenX = (pt.x - mcX) / srcW * mapW;
           const screenY = (pt.y - mcY) / srcH * height;
           
@@ -254,12 +273,12 @@ export async function createGeoTimeline(blobs, metadata, {
         
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 48px Inter, sans-serif';
-        const locStr = currPt.city ? `${currPt.city}, ${currPt.country}` : `Point ${slideIdx+1}`;
+        const locStr = currPt?.city ? `${currPt.city}, ${currPt.country}` : `Point ${ptIdx+1}`;
         ctx.fillText(locStr, mapW + 70, height - 90);
         
         ctx.fillStyle = '#94a3b8';
         ctx.font = '32px Inter, sans-serif';
-        ctx.fillText(currPt.dateStr || 'Unknown Date', mapW + 70, height - 60);
+        ctx.fillText(currPt?.dateStr || 'Unknown Date', mapW + 70, height - 60);
 
         const vf = new VideoFrame(c, { timestamp: Math.round((f / fps) * 1_000_000) });
         encoder.encode(vf);

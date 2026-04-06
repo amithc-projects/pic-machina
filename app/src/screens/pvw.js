@@ -143,87 +143,57 @@ export async function render(container, hash) {
           </div>
         </div>
 
-        <!-- Right panel: preview -->
-        <div class="pvw-preview-panel">
-          <div class="pvw-preview-header">
-            <span class="text-sm text-muted">Test Image</span>
-            <div class="flex items-center gap-2">
-              <button class="btn-icon" id="pvw-btn-info" title="Image info / metadata" style="display:none">
-                <span class="material-symbols-outlined">info</span>
-              </button>
-              <label class="btn-secondary pvw-upload-btn" style="cursor:pointer">
-                <span class="material-symbols-outlined">upload</span>
-                Upload Image
-                <input type="file" id="pvw-file-input" accept="image/*" style="display:none">
-              </label>
-            </div>
-          </div>
-
-          <div id="pvw-preview-area" class="pvw-preview-area">
-            <div class="empty-state">
-              <span class="material-symbols-outlined" style="font-size:48px">image</span>
-              <div class="empty-state-title">Upload a test image</div>
-              <div class="empty-state-desc">See how this recipe transforms your image.</div>
-            </div>
-          </div>
-
-          <div id="pvw-step-info" class="pvw-step-info" style="display:none">
-            <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">info</span>
-            <span id="pvw-step-detail-label" class="text-xs text-muted"></span>
-          </div>
-        </div>
+        <!-- Right panel: unified workspace -->
+        <div id="pvw-workspace-container" style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0"></div>
       </div>
     </div>`;
 
   injectPvwStyles();
-  injectImageInfoStyles();
 
-  // ── State ─────────────────────────────────────────────────
-  let testFile     = null;
-  let testImage    = null;
-  let previewNodeId = null; // node ID currently selected for preview
+  // ── Unified Image Workspace ───────────────────────────────
+  let previewNodeId = null;
 
-  // Restore persisted test image
-  if (window._icTestImage?.file) {
-    testFile = window._icTestImage.file;
-    setTimeout(() => {
-      container.querySelector('#pvw-btn-info').style.display = '';
-      runPreview(testFile);
-    }, 0);
-  }
+  const { ImageWorkspace } = await import('../components/image-workspace.js');
+  const wsContainer = container.querySelector('#pvw-workspace-container');
+  
+  const workspace = new ImageWorkspace(wsContainer, {
+    allowUpload: true,
+    allowFolder: true,
+    onFilesChange: (files, activeFile) => {
+      window._icTestFolderFiles = files;
+      window._icTestImage = { file: activeFile };
+      const btn = container.querySelector('#pvw-btn-compare');
+      if (btn) btn.disabled = !activeFile;
+    },
+    onRender: async (file) => {
+      const img = new Image();
+      const beforeUrl = URL.createObjectURL(file);
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = beforeUrl; });
+      
+      const exif = await extractExif(file);
+      const context = { filename: file.name, exif, meta: {}, variables: new Map() };
+      
+      const proc = new ImageProcessor();
+      const afterUrl = await proc.previewDataUrl(img, recipe.nodes, context, previewNodeId);
 
-  // ── Image info modal ──────────────────────────────────────
-  container.querySelector('#pvw-btn-info')?.addEventListener('click', async () => {
-    if (!testFile) return;
-    openInfoModal(testFile);
+      const flat = flattenNodes(recipe.nodes);
+      const nodeEnt = flat.find(f => f.node.id === previewNodeId);
+      const label = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
+
+      return {
+        beforeUrl,
+        afterUrl,
+        beforeLabel: 'Original',
+        afterLabel: previewNodeId ? `Up to: ${label}` : 'Result',
+        context
+      };
+    }
   });
 
-  function openInfoModal(file) {
-    let modal = document.getElementById('pvw-info-modal');
-    if (modal) modal.remove();
-    modal = document.createElement('dialog');
-    modal.id = 'pvw-info-modal';
-    modal.className = 'modal';
-    modal.style.cssText = 'width:520px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;padding:0;border-radius:14px;border:1px solid var(--ps-border);background:var(--ps-bg-surface)';
-    modal.innerHTML = `
-      <div class="modal__header" style="padding:12px 16px;border-bottom:1px solid var(--ps-border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-        <span style="font-size:14px;font-weight:600;color:var(--ps-text)">Image Info</span>
-        <button class="btn-icon" id="pvw-info-close"><span class="material-symbols-outlined">close</span></button>
-      </div>
-      <div id="pvw-info-body" style="flex:1;overflow-y:auto;padding:0">
-        <div style="display:flex;align-items:center;justify-content:center;height:120px;gap:8px">
-          <div class="spinner"></div><span class="text-sm text-muted">Reading metadata…</span>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-    modal.showModal();
-    modal.querySelector('#pvw-info-close')?.addEventListener('click', () => modal.close());
-    modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
-
-    getImageInfo(file).then(info => {
-      const body = modal.querySelector('#pvw-info-body');
-      if (body) { body.innerHTML = ''; body.appendChild(renderImageInfoPanel(info)); }
-    });
+  if (window._icTestFolderFiles && window._icTestFolderFiles.length > 0) {
+    workspace.setFiles(window._icTestFolderFiles);
+  } else if (window._icTestImage?.file) {
+    workspace.setFiles([window._icTestImage.file]);
   }
 
   // ── Back button ───────────────────────────────────────────
@@ -242,28 +212,7 @@ export async function render(container, hash) {
 
   // ── Compare button ────────────────────────────────────────
   container.querySelector('#pvw-btn-compare')?.addEventListener('click', () => {
-    if (testFile) navigate(`#cmp?recipe=${recipe.id}&file=_test`);
-  });
-
-  // ── File upload ───────────────────────────────────────────
-  container.querySelector('#pvw-file-input')?.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    testFile = file;
-    window._icTestImage = { file };
-    container.querySelector('#pvw-btn-info').style.display = '';
-    await runPreview(file);
-  });
-
-  // ── Drag & drop on preview area ───────────────────────────
-  const previewArea = container.querySelector('#pvw-preview-area');
-  previewArea?.addEventListener('dragover', e => { e.preventDefault(); previewArea.classList.add('pvw-dragover'); });
-  previewArea?.addEventListener('dragleave', () => previewArea.classList.remove('pvw-dragover'));
-  previewArea?.addEventListener('drop', async e => {
-    e.preventDefault();
-    previewArea.classList.remove('pvw-dragover');
-    const file = e.dataTransfer?.files?.[0];
-    if (file && file.type.startsWith('image/')) { testFile = file; window._icTestImage = { file }; container.querySelector('#pvw-btn-info').style.display = ''; await runPreview(file); }
+    if (window._icTestImage?.file) navigate(`#cmp?recipe=${recipe.id}&file=_test`);
   });
 
   // ── Step interaction ──────────────────────────────────────
@@ -284,50 +233,8 @@ export async function render(container, hash) {
       if (eye) eye.textContent = isAct ? 'visibility' : 'visibility_off';
     });
 
-    if (testFile) runPreview(testFile);
+    if (window._icTestImage?.file) workspace.triggerProcess();
   });
-
-  async function runPreview(file) {
-    previewArea.innerHTML = `<div class="pvw-processing"><div class="spinner spinner--lg"></div><div class="text-sm text-muted" style="margin-top:12px">Processing…</div></div>`;
-    try {
-      const url   = URL.createObjectURL(file);
-      testImage   = new Image();
-      await new Promise((res, rej) => { testImage.onload = res; testImage.onerror = rej; testImage.src = url; });
-
-      const exif    = await extractExif(file);
-      const context = { filename: file.name, exif, meta: {}, variables: new Map() };
-
-      const proc = new ImageProcessor();
-      const finalUrl = await proc.previewDataUrl(testImage, recipe.nodes, context, previewNodeId);
-
-      // Find node label
-      const flat = flattenNodes(recipe.nodes);
-      const nodeEnt = flat.find(f => f.node.id === previewNodeId);
-      const label = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
-
-      container.querySelector('#pvw-step-info').style.display = 'flex';
-      const detailLabel = container.querySelector('#pvw-step-detail-label');
-      if (detailLabel) detailLabel.textContent = `Showing preview up to: ${label}`;
-
-      container.querySelector('#pvw-btn-compare').disabled = false;
-
-      previewArea.innerHTML = `
-        <div class="pvw-img-wrapper">
-          <img src="${finalUrl}" class="pvw-result-img" draggable="false">
-          ${!previewNodeId
-            ? `<div class="pvw-img-badge">Original</div>`
-            : `<div class="pvw-img-badge pvw-img-badge--blue">After step: ${label}</div>`}
-        </div>`;
-
-    } catch (err) {
-      console.error('[pvw] Preview error:', err);
-      previewArea.innerHTML = `<div class="empty-state">
-        <span class="material-symbols-outlined">error</span>
-        <div class="empty-state-title">Preview failed</div>
-        <div class="empty-state-desc">${err.message}</div>
-      </div>`;
-    }
-  }
 }
 
 // ── Cover gradient helper (same as lib.js) ─────────────────

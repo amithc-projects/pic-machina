@@ -32,41 +32,10 @@ export async function render(container, hash) {
             ${recipe ? escHtml(recipe.name) : 'Comparison'}
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <!-- Mode toggle -->
-          <div class="cmp-mode-toggle" role="group" aria-label="Comparison mode">
-            <button class="cmp-mode-btn is-active" data-mode="slider" title="Slider">
-              <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
-              Slider
-            </button>
-            <button class="cmp-mode-btn" data-mode="side" title="Side by side">
-              <span class="material-symbols-outlined" style="font-size:16px">view_column</span>
-              Side by Side
-            </button>
-          </div>
-          <label class="btn-secondary" style="cursor:pointer">
-            <span class="material-symbols-outlined">upload</span>
-            Load Image
-            <input type="file" id="cmp-file-input" accept="image/*" style="display:none">
-          </label>
-        </div>
       </div>
 
-      <!-- Comparison workspace -->
-      <div id="cmp-workspace" class="cmp-workspace">
-        <div class="empty-state" style="padding-top:80px">
-          <span class="material-symbols-outlined" style="font-size:52px">compare</span>
-          <div class="empty-state-title">Upload an image to compare</div>
-          <div class="empty-state-desc">
-            ${recipe ? `See before/after for <strong>${escHtml(recipe.name)}</strong>.` : 'Load an image to see the before/after comparison.'}
-          </div>
-          <label class="btn-primary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-            <span class="material-symbols-outlined">upload</span>
-            Upload Image
-            <input type="file" id="cmp-file-input-2" accept="image/*" style="display:none">
-          </label>
-        </div>
-      </div>
+      <!-- Unified Image Workspace -->
+      <div id="cmp-workspace-container" style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0"></div>
 
       <div id="cmp-footer" class="cmp-footer" style="display:none">
         <div class="cmp-footer-left">
@@ -86,12 +55,7 @@ export async function render(container, hash) {
 
   injectCmpStyles();
 
-  let mode         = localStorage.getItem('ic-cmp-mode') || 'slider';
-  let beforeUrl    = null;
-  let afterUrl     = null;
-  let afterCanvas  = null;
-  let isDragging   = false;
-  let sliderPct    = 50;
+  let afterCanvas = null;
 
   // ── Back ──────────────────────────────────────────────────
   container.querySelector('#cmp-back')?.addEventListener('click', () => {
@@ -99,151 +63,66 @@ export async function render(container, hash) {
     else navigate('#lib');
   });
 
-  // ── Mode toggle ───────────────────────────────────────────
-  container.querySelectorAll('.cmp-mode-btn').forEach(btn => {
-    btn.classList.toggle('is-active', btn.dataset.mode === mode);
-    btn.addEventListener('click', () => {
-      mode = btn.dataset.mode;
-      localStorage.setItem('ic-cmp-mode', mode);
-      container.querySelectorAll('.cmp-mode-btn').forEach(b => b.classList.toggle('is-active', b === btn));
-      if (beforeUrl && afterUrl) renderComparison();
-    });
-  });
-
-  // ── File input ─────────────────────────────────────────────
-  function setupFileInput(inputId) {
-    container.querySelector(`#${inputId}`)?.addEventListener('change', async e => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      await processFile(file);
-    });
-  }
-  setupFileInput('cmp-file-input');
-  setupFileInput('cmp-file-input-2');
-
-  // Drag & drop on workspace
-  const workspace = container.querySelector('#cmp-workspace');
-  workspace?.addEventListener('dragover', e => { e.preventDefault(); workspace.classList.add('cmp-dragover'); });
-  workspace?.addEventListener('dragleave', () => workspace.classList.remove('cmp-dragover'));
-  workspace?.addEventListener('drop', async e => {
-    e.preventDefault();
-    workspace.classList.remove('cmp-dragover');
-    const file = e.dataTransfer?.files?.[0];
-    if (file?.type.startsWith('image/')) await processFile(file);
-  });
-
-  async function processFile(file) {
-    workspace.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px">
-      <div class="spinner spinner--lg"></div>
-      <div class="text-sm text-muted">Processing with recipe…</div>
-    </div>`;
-
-    try {
-      beforeUrl = URL.createObjectURL(file);
-      const img  = new Image();
+  // ── Unified Image Workspace ───────────────────────────────
+  const { ImageWorkspace } = await import('../components/image-workspace.js');
+  const wsContainer = container.querySelector('#cmp-workspace-container');
+  
+  const workspace = new ImageWorkspace(wsContainer, {
+    allowUpload: true,
+    allowFolder: false, // Explicit compare mode deals with singles
+    onFilesChange: (files, activeFile) => {
+      window._icCmpFile = activeFile;
+    },
+    onRender: async (file) => {
+      const beforeUrl = URL.createObjectURL(file);
+      const img = new Image();
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = beforeUrl; });
 
+      const baseExif = await extractExif(file);
+      window._icCmpTargetExif = baseExif;
+      const context = { filename: file.name, exif: baseExif, meta: {}, variables: new Map() };
+      
+      let afterUrl = beforeUrl;
+      afterCanvas = null;
+
       if (recipe) {
-        const exif    = await extractExif(file);
-        const ctx     = { filename: file.name, exif, meta: {}, variables: new Map() };
-        const proc    = new ImageProcessor();
-        await proc.process(img, recipe.nodes, ctx);
+        const proc = new ImageProcessor();
+        await proc.process(img, recipe.nodes, context);
         afterCanvas = proc.canvas;
-        afterUrl    = proc.canvas.toDataURL('image/jpeg', 0.92);
-      } else {
-        // No recipe — just show same image both sides
-        afterUrl = beforeUrl;
+        afterUrl = proc.canvas.toDataURL('image/jpeg', 0.92);
       }
 
-      // Footer info
+      window._icCmpAfterUrl = afterUrl;
+
+      // Update footer
       const beforeInfo = container.querySelector('#cmp-before-info');
-      const afterInfo  = container.querySelector('#cmp-after-info');
+      const afterInfo = container.querySelector('#cmp-after-info');
       if (beforeInfo) beforeInfo.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
       if (afterCanvas && afterInfo) afterInfo.textContent = `${afterCanvas.width}×${afterCanvas.height}`;
-
       container.querySelector('#cmp-footer').style.display = 'flex';
-      renderComparison();
-    } catch (err) {
-      workspace.innerHTML = `<div class="empty-state">
-        <span class="material-symbols-outlined">error</span>
-        <div class="empty-state-title">Processing failed</div>
-        <div class="empty-state-desc">${escHtml(err.message)}</div>
-      </div>`;
+
+      return {
+        beforeUrl,
+        afterUrl,
+        beforeLabel: 'Original',
+        afterLabel: recipe ? recipe.name : 'Result',
+        context
+      };
     }
-  }
+  });
 
-  function renderComparison() {
-    if (mode === 'side') {
-      renderSideBySide();
-    } else {
-      renderSlider();
-    }
-  }
-
-  function renderSideBySide() {
-    workspace.innerHTML = `
-      <div class="cmp-side-view">
-        <div class="cmp-side">
-          <div class="cmp-side-label">Before</div>
-          <img src="${beforeUrl}" class="cmp-side-img" draggable="false">
-        </div>
-        <div class="cmp-divider-vertical"></div>
-        <div class="cmp-side">
-          <div class="cmp-side-label cmp-side-label--blue">After</div>
-          <img src="${afterUrl}" class="cmp-side-img" draggable="false">
-        </div>
-      </div>`;
-  }
-
-  function renderSlider() {
-    workspace.innerHTML = `
-      <div class="cmp-slider-view" id="cmp-slider-view">
-        <img src="${beforeUrl}" class="cmp-slider-base" draggable="false">
-        <div class="cmp-slider-clip" id="cmp-slider-clip" style="width:${sliderPct}%">
-          <img src="${afterUrl}" class="cmp-slider-after" draggable="false">
-        </div>
-        <div class="cmp-slider-handle" id="cmp-slider-handle" style="left:${sliderPct}%">
-          <div class="cmp-handle-line"></div>
-          <div class="cmp-handle-grip">
-            <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
-          </div>
-        </div>
-        <div class="cmp-slider-badge cmp-slider-badge--left">Before</div>
-        <div class="cmp-slider-badge cmp-slider-badge--right cmp-slider-badge--blue">After</div>
-      </div>`;
-
-    const sliderView = container.querySelector('#cmp-slider-view');
-    const sliderClip = container.querySelector('#cmp-slider-clip');
-    const handle     = container.querySelector('#cmp-slider-handle');
-    if (!sliderView) return;
-
-    function setSlider(x) {
-      const rect = sliderView.getBoundingClientRect();
-      sliderPct  = Math.max(2, Math.min(98, ((x - rect.left) / rect.width) * 100));
-      if (sliderClip) sliderClip.style.width = `${sliderPct}%`;
-      if (handle)     handle.style.left       = `${sliderPct}%`;
-    }
-
-    handle?.addEventListener('mousedown', e => { isDragging = true; e.preventDefault(); });
-    document.addEventListener('mousemove', e => { if (isDragging) setSlider(e.clientX); });
-    document.addEventListener('mouseup',   () => { isDragging = false; });
-    handle?.addEventListener('touchstart', e => { isDragging = true; e.preventDefault(); }, { passive: false });
-    document.addEventListener('touchmove', e => { if (isDragging) setSlider(e.touches[0].clientX); }, { passive: true });
-    document.addEventListener('touchend',  () => { isDragging = false; });
-
-    // Click anywhere on view to jump
-    sliderView.addEventListener('click', e => {
-      if (!isDragging) setSlider(e.clientX);
-    });
+  // Init if file passed from other views
+  if (window._icCmpFile) {
+    workspace.setFiles([window._icCmpFile]);
   }
 
   // ── Save after ────────────────────────────────────────────
   container.querySelector('#cmp-btn-save')?.addEventListener('click', () => {
     if (!afterCanvas) return;
     afterCanvas.toBlob(blob => {
-      const a  = document.createElement('a');
-      a.href   = URL.createObjectURL(blob);
-      a.download = `${recipe?.name?.replace(/\s+/g, '_') || 'output'}_after.jpg`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${recipe?.name?.replace(/\\s+/g, '_') || 'output'}_after.jpg`;
       a.click();
     }, 'image/jpeg', 0.92);
   });

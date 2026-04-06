@@ -139,80 +139,101 @@ export async function render(container, hash) {
         </div>
 
         <!-- Preview panel -->
-        <div class="ned-preview-panel">
-          <div class="ned-preview-header">
-            <div class="cmp-mode-toggle" role="group" id="ned-mode-toggle" style="display:none">
-              <button class="cmp-mode-btn is-active" data-ned-mode="slider">
-                <span class="material-symbols-outlined" style="font-size:14px">swap_horiz</span> Slider
-              </button>
-              <button class="cmp-mode-btn" data-ned-mode="side">
-                <span class="material-symbols-outlined" style="font-size:14px">view_column</span> Side by Side
-              </button>
-            </div>
-            <span class="text-sm text-muted" id="ned-preview-label" style="flex:1;padding-left:4px">Live Preview</span>
-            <button class="btn-icon" id="ned-btn-info" title="Image info / metadata" style="display:none">
-              <span class="material-symbols-outlined">info</span>
-            </button>
-            <label class="btn-secondary" style="cursor:pointer;font-size:12px">
-              <span class="material-symbols-outlined" style="font-size:14px">upload</span>
-              Test Image
-              <input type="file" id="ned-file-input" accept="image/*" style="display:none">
-            </label>
-          </div>
-          <div id="ned-notice" class="ned-notice" style="display:none"></div>
-          <div id="ned-preview-area" class="ned-preview-area">
-            <div class="empty-state">
-              <span class="material-symbols-outlined" style="font-size:40px">image</span>
-              <div class="empty-state-title">Upload a test image</div>
-              <div class="empty-state-desc">See a live before/after comparison for this step.</div>
-            </div>
-          </div>
+        <div class="ned-preview-panel" style="position:relative">
+          <div id="ned-notice" class="ned-notice" style="display:none;position:absolute;top:0;left:0;right:0;z-index:20;"></div>
+          <div id="ned-workspace-container" style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0"></div>
         </div>
       </div>
     </div>`;
 
   injectNedStyles();
-  injectImageInfoStyles();
 
   if (def && def.params) {
     bindParamFieldEvents(container, def.params, 'ned');
   }
 
-  let testImage  = null;
-  let testFile   = null;
-  let beforeUrl  = null;
-  let afterUrl   = null;
-  let nedMode    = localStorage.getItem('ic-cmp-mode') || 'slider';
-  let sliderPct  = 50;
-  let isDragging = false;
-
-  // Restore persisted test image from previous session
-  if (window._icTestImage?.file) {
-    testFile = window._icTestImage.file;
-    beforeUrl = URL.createObjectURL(testFile);
-    testImage = new Image();
-    testImage.src = beforeUrl;
-    await new Promise(res => { testImage.onload = res; testImage.onerror = res; });
-    const infoBtn = container.querySelector('#ned-btn-info');
-    if (infoBtn) infoBtn.style.display = '';
-    setTimeout(runPreview, 0);
+  let _previewTimer = null;
+  function schedulePreview() {
+    clearTimeout(_previewTimer);
+    _previewTimer = setTimeout(() => workspace?.triggerProcess(), 300);
   }
 
-  // ── Mode toggle ───────────────────────────────────────────
-  container.querySelectorAll('[data-ned-mode]').forEach(btn => {
-    btn.classList.toggle('is-active', btn.dataset.nedMode === nedMode);
-    btn.addEventListener('click', () => {
-      nedMode = btn.dataset.nedMode;
-      localStorage.setItem('ic-cmp-mode', nedMode);
-      container.querySelectorAll('[data-ned-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
-      if (beforeUrl && afterUrl) renderComparison();
-    });
+  // ── Unified Image Workspace ───────────────────────────────
+  const { ImageWorkspace } = await import('../components/image-workspace.js');
+  const wsContainer = container.querySelector('#ned-workspace-container');
+  let testFile = null;
+
+  const workspace = new ImageWorkspace(wsContainer, {
+    allowUpload: true,
+    allowFolder: true, // Display the folder carousel in node tuning view
+    onFilesChange: (files, activeFile) => {
+      window._icTestFolderFiles = files;
+      window._icTestImage = { file: activeFile };
+      testFile = activeFile;
+    },
+    onRender: async (file) => {
+      if (!def) return { beforeUrl: URL.createObjectURL(file), afterUrl: URL.createObjectURL(file) };
+      
+      const beforeUrl = URL.createObjectURL(file);
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = beforeUrl; });
+      
+      const params = collectParams(container, def.params || [], 'ned');
+      const exif   = await extractExif(file);
+      
+      // Update Notice
+      let notice = null;
+      if (node.transformId === 'flow-geo-timeline' && (!exif?.gps?.lat)) {
+        notice = 'Timeline requires an image with GPS Exif data. This step will skip images lacking location metadata.';
+      }
+      const noticeEl = container.querySelector('#ned-notice');
+      if (noticeEl) {
+        noticeEl.textContent = notice || '';
+        noticeEl.style.display = notice ? 'block' : 'none';
+      }
+
+      const context = { filename: file.name, exif, meta: {}, variables: new Map() };
+      
+      const proc = new ImageProcessor();
+      proc.canvas.width = img.naturalWidth;
+      proc.canvas.height = img.naturalHeight;
+      proc.ctx.drawImage(img, 0, 0);
+
+      await def.apply(proc.ctx, params, context);
+
+      const afterUrl = await new Promise(res => proc.canvas.toBlob(b => {
+        res(b ? URL.createObjectURL(b) : null);
+      }, 'image/jpeg', 0.88));
+
+      return {
+        beforeUrl,
+        afterUrl,
+        beforeLabel: 'Original',
+        afterLabel: 'Result',
+        context
+      };
+    }
   });
+
+  if (window._icTestFolderFiles && window._icTestFolderFiles.length > 0) {
+    const idx = window._icTestFolderFiles.findIndex(f => f.name === window._icTestImage?.file?.name);
+    workspace.setFiles(window._icTestFolderFiles, idx >= 0 ? idx : 0);
+  } else if (window._icTestImage?.file) {
+    workspace.setFiles([window._icTestImage.file]);
+  }
 
   // ── Back ──────────────────────────────────────────────────
   container.querySelector('#ned-back')?.addEventListener('click', () => navigate(`#bld?id=${recipeId}`));
 
   // ── Done — save params and go back ───────────────────────
+  const saveNode = async () => {
+    if (def) node.params = collectParams(container, def.params || [], 'ned');
+    if (isConditional) node.condition = collectCondition(container);
+    const labelInput = container.querySelector('#ned-label-input');
+    if (labelInput) node.label = labelInput.value.trim();
+    await saveRecipe(recipe);
+  };
+
   container.querySelector('#ned-done-btn')?.addEventListener('click', async () => {
     await saveNode();
     navigate(`#bld?id=${recipeId}`);
@@ -319,175 +340,7 @@ export async function render(container, hash) {
     bindBranchActions();
   }
 
-  // ── Image info modal ──────────────────────────────────────
-  container.querySelector('#ned-btn-info')?.addEventListener('click', () => {
-    if (!testFile) return;
-    let modal = document.getElementById('ned-info-modal');
-    if (modal) modal.remove();
-    modal = document.createElement('dialog');
-    modal.id = 'ned-info-modal';
-    modal.style.cssText = 'width:520px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;padding:0;border-radius:14px;border:1px solid var(--ps-border);background:var(--ps-bg-surface)';
-    modal.innerHTML = `
-      <div style="padding:12px 16px;border-bottom:1px solid var(--ps-border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-        <span style="font-size:14px;font-weight:600;color:var(--ps-text)">Image Info</span>
-        <button class="btn-icon" id="ned-info-close"><span class="material-symbols-outlined">close</span></button>
-      </div>
-      <div id="ned-info-body" style="flex:1;overflow-y:auto;padding:0">
-        <div style="display:flex;align-items:center;justify-content:center;height:120px;gap:8px">
-          <div class="spinner"></div><span class="text-sm text-muted">Reading metadata…</span>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-    modal.showModal();
-    modal.querySelector('#ned-info-close')?.addEventListener('click', () => modal.close());
-    modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });
-    getImageInfo(testFile).then(info => {
-      const body = modal.querySelector('#ned-info-body');
-      if (body) { body.innerHTML = ''; body.appendChild(renderImageInfoPanel(info)); }
-    });
-  });
 
-  // ── File input ─────────────────────────────────────────────
-  container.querySelector('#ned-file-input')?.addEventListener('change', async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    testFile = file;
-    window._icTestImage = { file };
-    container.querySelector('#ned-btn-info').style.display = '';
-    if (beforeUrl) URL.revokeObjectURL(beforeUrl);
-    beforeUrl = URL.createObjectURL(file);
-    testImage = new Image();
-    await new Promise((res, rej) => { testImage.onload = res; testImage.onerror = rej; testImage.src = beforeUrl; });
-    runPreview();
-  });
-
-  let _previewTimer = null;
-  function schedulePreview() {
-    clearTimeout(_previewTimer);
-    _previewTimer = setTimeout(runPreview, 300);
-  }
-
-  async function saveNode() {
-    if (def) node.params = collectParams(container, def.params || [], 'ned');
-    const labelInput = container.querySelector('#ned-label-input');
-    if (labelInput) node.label = labelInput.value || def?.name || node.type;
-    if (isConditional) node.condition = collectCondition(container);
-    await saveRecipe(recipe);
-  }
-
-  // Transforms that need specific EXIF/data to produce a visible change
-  const NEEDS_GPS    = new Set(['overlay-map']);
-  const NEEDS_FACES  = new Set(['ai-face-privacy', 'geo-face-crop']);
-  const NEEDS_ALPHA  = new Set(['ai-remove-bg', 'ai-clipping-mask']);
-
-  function getTransformNotice(transformId, exif) {
-    if (NEEDS_GPS.has(transformId) && !exif?.gps)
-      return '⚠ This step uses GPS coordinates from EXIF data. The test image has no GPS — upload a geotagged photo to see the map overlay.';
-    if (NEEDS_FACES.has(transformId))
-      return 'ℹ This step requires face detection (MediaPipe). Preview may take a moment on first use.';
-    if (NEEDS_ALPHA.has(transformId))
-      return 'ℹ Background removal runs a WASM model — first preview may take several seconds to load.';
-    return null;
-  }
-
-  async function runPreview() {
-    if (!testImage || !def) return;
-    const previewArea = container.querySelector('#ned-preview-area');
-    const noticeEl    = container.querySelector('#ned-notice');
-    if (!previewArea) return;
-
-    try {
-      const params  = collectParams(container, def.params || [], 'ned');
-      const exif    = testFile ? await extractExif(testFile) : {};
-      const context = { filename: testFile?.name || 'test.jpg', exif, meta: {}, variables: new Map() };
-
-      // Show contextual notice
-      const notice = getTransformNotice(node.transformId, exif);
-      if (noticeEl) {
-        noticeEl.textContent = notice || '';
-        noticeEl.style.display = notice ? 'block' : 'none';
-      }
-
-      const proc = new ImageProcessor();
-      proc.canvas.width  = testImage.naturalWidth;
-      proc.canvas.height = testImage.naturalHeight;
-      proc.ctx.drawImage(testImage, 0, 0);
-
-      await def.apply(proc.ctx, params, context);
-
-      if (afterUrl) URL.revokeObjectURL(afterUrl);
-      await new Promise(res => proc.canvas.toBlob(b => {
-        afterUrl = b ? URL.createObjectURL(b) : null;
-        res();
-      }, 'image/jpeg', 0.88));
-
-      // Show mode toggle
-      const toggle = container.querySelector('#ned-mode-toggle');
-      if (toggle) toggle.style.display = '';
-      const label = container.querySelector('#ned-preview-label');
-      if (label) label.textContent = '';
-
-      renderComparison();
-    } catch (err) {
-      if (previewArea) previewArea.innerHTML = `<div class="empty-state">
-        <span class="material-symbols-outlined">error</span>
-        <div class="empty-state-title">Preview failed</div>
-        <div class="empty-state-desc">${escHtml(err.message)}</div>
-      </div>`;
-    }
-  }
-
-  function renderComparison() {
-    const previewArea = container.querySelector('#ned-preview-area');
-    if (!previewArea || !beforeUrl || !afterUrl) return;
-
-    if (nedMode === 'side') {
-      previewArea.innerHTML = `
-        <div class="ned-side-view">
-          <div class="ned-side">
-            <div class="ned-side-label">Before</div>
-            <img src="${beforeUrl}" class="ned-cmp-img" draggable="false">
-          </div>
-          <div style="width:2px;background:var(--ps-border);flex-shrink:0"></div>
-          <div class="ned-side">
-            <div class="ned-side-label ned-side-label--blue">After</div>
-            <img src="${afterUrl}" class="ned-cmp-img" draggable="false">
-          </div>
-        </div>`;
-    } else {
-      sliderPct = 50;
-      previewArea.innerHTML = `
-        <div class="ned-slider-view" id="ned-slider-view">
-          <img src="${beforeUrl}" class="ned-cmp-img" draggable="false">
-          <img src="${afterUrl}"  class="ned-cmp-img" id="ned-after-img" draggable="false"
-               style="clip-path:inset(0 50% 0 0)">
-          <div class="ned-slider-handle" id="ned-slider-handle" style="left:50%">
-            <div class="ned-handle-line"></div>
-            <div class="ned-handle-grip">
-              <span class="material-symbols-outlined" style="font-size:15px">swap_horiz</span>
-            </div>
-          </div>
-          <div class="ned-slider-badge ned-badge--left">Before</div>
-          <div class="ned-slider-badge ned-badge--right">After</div>
-        </div>`;
-
-      const view     = previewArea.querySelector('#ned-slider-view');
-      const afterImg = previewArea.querySelector('#ned-after-img');
-      const handle   = previewArea.querySelector('#ned-slider-handle');
-
-      function setSlider(x) {
-        const rect = view.getBoundingClientRect();
-        sliderPct = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
-        if (afterImg) afterImg.style.clipPath = `inset(0 ${100 - sliderPct}% 0 0)`;
-        if (handle)   handle.style.left = `${sliderPct}%`;
-      }
-
-      handle?.addEventListener('mousedown', e => { isDragging = true; e.preventDefault(); });
-      document.addEventListener('mousemove', e => { if (isDragging) setSlider(e.clientX); });
-      document.addEventListener('mouseup',   () => { isDragging = false; });
-      view?.addEventListener('click', e => { if (!isDragging) setSlider(e.clientX); });
-    }
-  }
 }
 
 // ── Condition editor builder ───────────────────────────────
@@ -606,26 +459,7 @@ function injectNedStyles() {
       background:repeating-conic-gradient(var(--ps-bg-surface) 0% 25%, var(--ps-bg-app) 0% 50%) 0 0/32px 32px;
     }
 
-    /* Comparison layouts */
-    .ned-side-view { display:flex; width:100%; height:100%; }
-    .ned-side { flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; }
-    .ned-cmp-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; }
-    .ned-side-label { position:absolute; top:8px; left:8px; z-index:2; background:rgba(0,0,0,0.7); color:#fff; font-size:10px; font-weight:600; padding:2px 7px; border-radius:12px; font-family:var(--font-mono); }
-    .ned-side-label--blue { background:rgba(0,119,255,0.85); }
 
-    .ned-slider-view { position:relative; width:100%; height:100%; overflow:hidden; user-select:none; cursor:col-resize; }
-    .ned-slider-handle { position:absolute; top:0; height:100%; transform:translateX(-50%); display:flex; align-items:center; z-index:10; pointer-events:none; }
-    .ned-handle-line { position:absolute; top:0; left:50%; width:2px; height:100%; background:rgba(255,255,255,0.9); transform:translateX(-50%); box-shadow:0 0 6px rgba(0,0,0,0.4); }
-    .ned-handle-grip { position:relative; z-index:1; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.95); box-shadow:0 2px 8px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; cursor:col-resize; pointer-events:all; color:#111; }
-    .ned-slider-badge { position:absolute; top:8px; z-index:5; background:rgba(0,0,0,0.7); color:#fff; font-size:10px; font-weight:600; padding:2px 7px; border-radius:12px; font-family:var(--font-mono); }
-    .ned-badge--left { left:8px; }
-    .ned-badge--right { right:8px; background:rgba(0,119,255,0.85); }
-
-    /* Mode toggle (shared with cmp/out) */
-    .cmp-mode-toggle { display:flex; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:8px; overflow:hidden; }
-    .cmp-mode-btn { display:flex; align-items:center; gap:5px; padding:5px 10px; font-size:12px; font-weight:500; background:transparent; border:none; color:var(--ps-text-muted); cursor:pointer; font-family:var(--font-primary); transition:background 150ms,color 150ms; }
-    .cmp-mode-btn.is-active { background:var(--ps-blue); color:#fff; }
-    .cmp-mode-btn:hover:not(.is-active) { background:var(--ps-bg-hover); color:var(--ps-text); }
   `;
   document.head.appendChild(s);
 }

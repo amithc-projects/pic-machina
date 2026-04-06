@@ -125,3 +125,73 @@ export async function showAlert({
     dialog.addEventListener('click', (e) => { if (e.target === dialog) handleClose(); });
   });
 }
+
+/**
+ * Shows a custom 3-button confirm dialog. Returns a Promise resolving to a string action.
+ * 
+ * @param {Object} options
+ * @param {string} options.title - Dialog title
+ * @param {string} options.body - Detailed message body
+ * @param {string} [options.btn1Text='Leave Gap']
+ * @param {string} [options.btn1Value='leave']
+ * @param {string} [options.btn2Text='Shift Sequence']
+ * @param {string} [options.btn2Value='shift']
+ * @param {string} [options.cancelText='Cancel']
+ * @param {string} [options.variant='primary']
+ * @param {string} [options.icon='format_list_numbered']
+ */
+export async function showThreeWayConfirm({ 
+  title, 
+  body, 
+  btn1Text = 'Leave Gap', 
+  btn1Value = 'leave',
+  btn2Text = 'Shift Sequence',
+  btn2Value = 'shift',
+  cancelText = 'Cancel', 
+  variant = 'primary',
+  icon = 'format_list_numbered'
+}) {
+  return new Promise(resolve => {
+    const dialog = document.createElement('dialog');
+    dialog.className = `ic-dialog ic-dialog--${variant}`;
+    
+    dialog.innerHTML = `
+      <div class="ic-dialog__content">
+        <div class="ic-dialog__icon-wrap">
+          <span class="material-symbols-outlined ic-dialog__icon">${icon}</span>
+        </div>
+        <div class="ic-dialog__body-wrap">
+          <h2 class="ic-dialog__title">${title}</h2>
+          <p class="ic-dialog__body">${body}</p>
+        </div>
+        <div class="ic-dialog__actions" style="flex-wrap: wrap;">
+          <button class="btn-secondary ic-dialog__btn-cancel" style="flex: 1 1 100%; margin-bottom: 8px;" value="cancel">${cancelText}</button>
+          <button class="btn-secondary ic-dialog__btn-1" style="flex: 1" value="${btn1Value}">${btn1Text}</button>
+          <button class="btn-${variant} ic-dialog__btn-2" style="flex: 1" value="${btn2Value}">${btn2Text}</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+    dialog.showModal();
+
+    const handleClose = (res) => {
+      dialog.close();
+      resolve(res);
+      setTimeout(() => dialog.remove(), 300);
+    };
+
+    dialog.querySelector('.ic-dialog__btn-cancel').onclick = () => handleClose('cancel');
+    dialog.querySelector('.ic-dialog__btn-1').onclick = () => handleClose(btn1Value);
+    dialog.querySelector('.ic-dialog__btn-2').onclick = () => handleClose(btn2Value);
+    
+    dialog.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      handleClose('cancel');
+    });
+
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) handleClose('cancel');
+    });
+  });
+}

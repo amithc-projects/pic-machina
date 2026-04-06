@@ -13,16 +13,18 @@ import { formatBytes }                              from '../utils/misc.js';
 import { renderParamField, collectParams,
          bindParamFieldEvents,
          injectParamFieldStyles }                   from '../utils/param-fields.js';
+import { showThreeWayConfirm }                      from '../utils/dialogs.js';
 
 export async function render(container, hash) {
+  injectStyles();
   // Parse recipe id from hash e.g. #set?recipe=sys-web-optimise
   const recipeId = new URLSearchParams(hash.split('?')[1] || '').get('recipe');
 
   // ── State ──────────────────────────────────────────────
-  let inputHandle    = null;
+  let inputHandle    = null;     // FileSystemDirectoryHandle
   let outputHandle   = null;
   let selectedFiles  = [];       // File[] from input folder
-  let selectedIds    = new Set();// filenames of checked items
+  let selectedIds    = new Map();// Map<filename, sequenceInt>
   let currentRecipe  = null;
   let allRecipes     = [];
   let batchControl   = null;     // { cancel, runId }
@@ -36,6 +38,7 @@ export async function render(container, hash) {
           Batch Setup
         </div>
         <div class="flex items-center gap-2">
+          <span id="set-order-hint" style="display:none; font-size:12px; margin-right:4px; font-style:italic;" class="text-muted">Select photos in sequence</span>
           <span id="set-sel-count" class="ic-badge"></span>
           <span id="set-run-warning" style="color:var(--ps-danger);display:none;font-size:12px;font-weight:500;padding-right:8px;"></span>
           <button class="btn-secondary" id="btn-select-all">Select All</button>
@@ -126,8 +129,6 @@ export async function render(container, hash) {
       </div>
     </div>`;
 
-  injectStyles();
-
   // ── Load recipes ──────────────────────────────────────
   allRecipes = await getAllRecipes();
 
@@ -170,15 +171,25 @@ export async function render(container, hash) {
   // ── Select all / none ────────────────────────────────
   container.querySelector('#btn-select-all').addEventListener('click', () => {
     const allSelected = selectedIds.size === selectedFiles.length && selectedFiles.length > 0;
-    selectedIds = allSelected ? new Set() : new Set(selectedFiles.map(f => f.name));
+    selectedIds.clear();
+    if (!allSelected) {
+      selectedFiles.forEach((f, i) => selectedIds.set(f.name, i + 1));
+    }
     lastClickedIdx = -1;
     renderSelectionState();
   });
 
   // ── Run batch ─────────────────────────────────────────
   container.querySelector('#btn-run').addEventListener('click', async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     if (!currentRecipe || !inputHandle || !outputHandle) return;
-    const files = selectedFiles.filter(f => selectedIds.has(f.name));
+    let files = selectedFiles.filter(f => selectedIds.has(f.name));
+    if (currentRecipe?.isOrdered) {
+        files = files.sort((a,b) => selectedIds.get(a.name) - selectedIds.get(b.name));
+    }
     if (!files.length) return;
 
     const subfolder = container.querySelector('#set-subfolder').value.trim() || 'output';
@@ -250,8 +261,18 @@ export async function render(container, hash) {
         }
       }
 
+      const previousSelection = new Map(selectedIds);
       selectedFiles = await listImages(inputHandle, { includeVideo, onlyVideo });
-      selectedIds   = new Set(selectedFiles.map(f => f.name));
+      selectedIds.clear();
+      
+      if (previousSelection.size > 0 && selectedFiles.some(f => previousSelection.has(f.name))) {
+        selectedFiles.forEach(f => {
+          if (previousSelection.has(f.name)) selectedIds.set(f.name, previousSelection.get(f.name));
+        });
+      } else {
+        selectedFiles.forEach((f, i) => selectedIds.set(f.name, i + 1));
+      }
+      
       renderImageGrid(onlyVideo, includeVideo);
       const stats = container.querySelector('#set-input-stats');
       const term = onlyVideo ? 'video' : (includeVideo ? 'file' : 'image');
@@ -279,12 +300,12 @@ export async function render(container, hash) {
     }
     grid.innerHTML = selectedFiles.map(f => `
       <label class="set-img-cell ${selectedIds.has(f.name) ? 'is-selected' : ''}" data-name="${f.name}">
-        <input type="checkbox" class="set-img-check" data-name="${f.name}" ${selectedIds.has(f.name) ? 'checked' : ''} style="display:none">
+        ${currentRecipe?.isOrdered 
+          ? `<div class="set-img-seq" style="display: ${selectedIds.has(f.name) ? 'flex' : 'none'}">${selectedIds.has(f.name) ? selectedIds.get(f.name) : ''}</div>`
+          : `<div class="set-img-check-icon" style="display: ${selectedIds.has(f.name) ? 'block' : 'none'}"><span class="material-symbols-outlined">check_circle</span></div>`
+        }
         <div class="set-img-thumb" data-file-name="${f.name}">
           <span class="material-symbols-outlined set-img-placeholder">image</span>
-        </div>
-        <div class="set-img-check-icon">
-          <span class="material-symbols-outlined">check_circle</span>
         </div>
         <div class="set-img-name">${f.name}</div>
         <div class="set-img-size">${formatBytes(f.size)}</div>
@@ -308,23 +329,71 @@ export async function render(container, hash) {
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     });
 
+    const getNextAvailableNumber = () => {
+      const nums = Array.from(selectedIds.values());
+      for (let i = 1; i <= selectedFiles.length + 1; i++) {
+        if (!nums.includes(i)) return i;
+      }
+      return 1;
+    };
+
     // Selection — click, ctrl+click, shift+click
     grid.querySelectorAll('.set-img-cell').forEach((cell, idx) => {
-      cell.addEventListener('click', e => {
+      cell.addEventListener('click', async e => {
         // Prevent the label from triggering a synthetic checkbox click,
         // which would bubble back here and double-fire the handler.
         e.preventDefault();
 
         const name = cell.dataset.name;
+        const isOrdered = !!currentRecipe?.isOrdered;
 
         if (e.shiftKey && lastClickedIdx !== -1) {
           // Extend range from last click to here
           const from = Math.min(lastClickedIdx, idx);
           const to   = Math.max(lastClickedIdx, idx);
-          for (let i = from; i <= to; i++) selectedIds.add(selectedFiles[i].name);
+          for (let i = from; i <= to; i++) {
+            const fName = selectedFiles[i].name;
+            if (!selectedIds.has(fName)) selectedIds.set(fName, isOrdered ? getNextAvailableNumber() : 1);
+          }
         } else {
-          // Plain click or ctrl+click: toggle this item
-          if (selectedIds.has(name)) selectedIds.delete(name); else selectedIds.add(name);
+          // Toggle this item
+          if (selectedIds.has(name)) {
+            if (!isOrdered) {
+              selectedIds.delete(name);
+            } else {
+              const num = selectedIds.get(name);
+              const maxNum = Math.max(...Array.from(selectedIds.values()));
+              
+              if (num === maxNum) {
+                selectedIds.delete(name);
+              } else {
+                const action = await showThreeWayConfirm({
+                  title: 'Remove from Sequence?',
+                  body: `You are removing item #${num}. What should happen to the items that follow it?`,
+                  btn1Text: 'Leave Gap',
+                  btn1Value: 'leave',
+                  btn2Text: 'Shift Sequence',
+                  btn2Value: 'shift',
+                  icon: 'format_list_numbered'
+                });
+
+                if (action === 'cancel') {
+                  lastClickedIdx = idx; // Update last clicked before aborting
+                  return;
+                }
+                
+                selectedIds.delete(name);
+                
+                if (action === 'shift') {
+                  for (const [k, v] of selectedIds.entries()) {
+                    if (v > num) selectedIds.set(k, v - 1);
+                  }
+                }
+              }
+            }
+          } else {
+            selectedIds.set(name, isOrdered ? getNextAvailableNumber() : 1);
+          }
           lastClickedIdx = idx;
         }
 
@@ -335,13 +404,25 @@ export async function render(container, hash) {
 
   function renderSelectionState() {
     container.querySelectorAll('.set-img-cell').forEach(cell => {
-      const sel = selectedIds.has(cell.dataset.name);
+      const name = cell.dataset.name;
+      const sel = selectedIds.has(name);
       cell.classList.toggle('is-selected', sel);
-      const cb = cell.querySelector('.set-img-check');
-      if (cb) cb.checked = sel;
+      const seqEl = cell.querySelector('.set-img-seq');
+      if (seqEl) {
+        seqEl.style.display = sel ? 'flex' : 'none';
+        seqEl.textContent = sel ? selectedIds.get(name) : '';
+      }
+      const chkEl = cell.querySelector('.set-img-check-icon');
+      if (chkEl) {
+        chkEl.style.display = sel ? 'block' : 'none';
+      }
     });
     updateSelCount();
     updateRunButton();
+    
+    // Toggle hint
+    const hintEl = container.querySelector('#set-order-hint');
+    if (hintEl) hintEl.style.display = (currentRecipe?.isOrdered && selectedIds.size > 0) ? '' : 'none';
   }
 
   function updateSelCount() {
@@ -543,8 +624,14 @@ function injectStyles() {
       display:flex; align-items:center; justify-content:center;
     }
     .set-img-thumb .material-symbols-outlined { font-size:32px; color:var(--ps-text-faint); }
+    .set-img-seq {
+      position:absolute; top:4px; right:4px; z-index:2;
+      background:var(--ps-blue); color:#fff; border-radius:50%;
+      width:22px; height:22px; display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:bold; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
     .set-img-check-icon {
-      position:absolute; top:4px; right:4px;
+      position:absolute; top:4px; right:4px; z-index:2;
       background:var(--ps-bg-raised); border-radius:50%; padding:1px;
       display:none; color:var(--ps-blue);
     }

@@ -97,6 +97,9 @@ function buildNodeRow(item, isSelected) {
       <span class="material-symbols-outlined" style="font-size:14px;color:${color};flex-shrink:0">${icon}</span>
       <span class="bld-node-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>
       ${node.disabled ? '<span class="ic-badge" style="font-size:10px">off</span>' : ''}
+      <div class="bld-node-info-icon" style="margin-right:8px; display:inline-flex" title="${escHtml(registry.get(node.transformId)?.description || 'No description available')}">
+        <span class="material-symbols-outlined dropdown-toggle" style="font-size:16px;color:var(--ps-blue)">info</span>
+      </div>
       <div class="bld-node-actions">
         <button class="btn-icon bld-btn-toggle" data-id="${node.id}" title="${node.disabled ? 'Enable' : 'Disable'}">
           <span class="material-symbols-outlined" style="font-size:14px">${node.disabled ? 'visibility_off' : 'visibility'}</span>
@@ -282,6 +285,11 @@ export async function render(container, hash) {
             <label class="ic-label" style="margin-top:12px">Description</label>
             <textarea id="bld-desc" class="ic-input" rows="3" placeholder="What does this recipe do?">${escHtml(draft.description || '')}</textarea>
 
+            <label class="ic-label" style="margin-top:12px; display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--ps-text); font-weight:normal; text-transform:none; letter-spacing:0;">
+              <input type="checkbox" id="bld-is-ordered" ${draft.isOrdered ? 'checked' : ''}>
+              Enforce Sequence Ordering
+            </label>
+
             <label class="ic-label" style="margin-top:12px">Cover Colour</label>
             <div class="bld-color-grid">
               ${COVER_COLORS.map(c => `
@@ -355,53 +363,7 @@ export async function render(container, hash) {
         </div>
 
         <!-- Right: inline preview -->
-        <div class="bld-inline-preview">
-          <div class="bld-inline-preview-header">
-            <span class="text-sm font-medium">Preview</span>
-            <div class="flex items-center gap-2">
-              <button class="btn-secondary bld-cmp-toggle" id="bld-cmp-toggle" style="display:none;font-size:12px;padding:4px 10px">
-                <span class="material-symbols-outlined" style="font-size:14px">compare</span>
-                Compare
-              </button>
-              <div id="bld-cmp-controls" class="flex items-center gap-2" style="display:none">
-                <div class="bld-cmp-mode-toggle">
-                  <button class="bld-cmp-mode-btn ${bldCompareLayout === 'slider' ? 'is-active' : ''}" data-layout="slider" title="Slider">
-                    <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
-                  </button>
-                  <button class="bld-cmp-mode-btn ${bldCompareLayout === 'side' ? 'is-active' : ''}" data-layout="side" title="Side by side">
-                    <span class="material-symbols-outlined" style="font-size:16px">view_column</span>
-                  </button>
-                </div>
-                <div id="bld-cmp-ref-row" class="bld-cmp-ref-row">
-                  <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
-                  <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
-                </div>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <label class="btn-secondary bld-upload-label" style="cursor:pointer" title="Upload a single test image">
-                  <span class="material-symbols-outlined" style="font-size:14px">image</span>
-                  Image
-                  <input type="file" id="bld-preview-file" accept="image/*" style="display:none">
-                </label>
-                <button class="btn-secondary bld-upload-label" id="bld-preview-folder-btn" title="Select a test folder (creates carousel)">
-                  <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
-                  Folder
-                </button>
-              </div>
-            </div>
-          </div>
-          <div id="bld-preview-area" class="bld-preview-area">
-            <div class="empty-state" style="padding:24px;text-align:center">
-              <span class="material-symbols-outlined" style="font-size:36px">image</span>
-              <div class="empty-state-title" style="font-size:12px">Upload a test image</div>
-              <div class="empty-state-desc" style="font-size:11px">Preview updates automatically.</div>
-            </div>
-          </div>
-          <div id="bld-preview-carousel" class="bld-preview-carousel" style="display:none; padding: 12px; gap: 8px; overflow-x: auto; white-space: nowrap; border-top: 1px solid var(--ps-border); background: var(--ps-surface); min-height: 73px;"></div>
-          <div id="bld-preview-step-info" class="bld-preview-step-info" style="display:none">
-            <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">info</span>
-            <span id="bld-preview-step-label" class="text-xs text-muted"></span>
-          </div>
+        <div id="bld-workspace-container" style="flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--ps-border)">
         </div>
       </div>
     </div>
@@ -424,24 +386,89 @@ export async function render(container, hash) {
     applyConfigOpen();
   });
 
+  container.querySelector('#bld-info-btn')?.addEventListener('click', async () => {
+    if (!bldTestFile) return;
+    const { renderFileInfoModal } = await import('../utils/info-modal.js');
+    renderFileInfoModal(bldTestFile, window._icBldAfterUrl);
+  });
+
   const saveStatus = container.querySelector('#bld-save-status');
 
-  // ── Inline preview state ──────────────────────────────────
-  let bldTestFiles     = window._icTestFolderFiles || [];
-  let bldTestFile      = null;
+  // ── Unified Image Workspace ───────────────────────────────
   let bldPreviewNodeId = null;
-  let bldPreviewTimer  = null;
-  let bldCompareMode   = false;
-  let bldCompareRef    = 'original'; // 'original' | 'prev'
+  let bldCompareRef = 'original';
 
-  // Restore persisted test image
-  if (window._icTestImage?.file) {
-    bldTestFile = window._icTestImage.file;
-  }
+  const { ImageWorkspace } = await import('../components/image-workspace.js');
+  const wsContainer = container.querySelector('#bld-workspace-container');
+  
+  const workspace = new ImageWorkspace(wsContainer, {
+    customControlsHtml: `
+      <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:flex;gap:4px">
+        <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
+        <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
+      </div>
+    `,
+    onBindCustomControls: (cnt) => {
+      cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(b => b.classList.remove('is-active'));
+          e.currentTarget.classList.add('is-active');
+          bldCompareRef = e.currentTarget.dataset.ref;
+          workspace.triggerProcess();
+        });
+      });
+    },
+    onFilesChange: (files, activeFile) => {
+      window._icTestFolderFiles = files;
+      window._icTestImage = { file: activeFile };
+    },
+    onRender: async (file) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
 
-  function scheduleBldPreview(delay = 400) {
-    clearTimeout(bldPreviewTimer);
-    bldPreviewTimer = setTimeout(() => runBldPreview(), delay);
+      const exif = await extractExif(file);
+      const context = { filename: file.name, exif, meta: {}, variables: new Map() };
+      
+      window._icBldTargetExif = exif;
+      window._icBldTargetContext = context;
+
+      const proc = new ImageProcessor();
+      const afterUrl = await proc.previewDataUrl(img, draft.nodes, context, bldPreviewNodeId);
+      window._icBldAfterUrl = afterUrl;
+
+      const flat = flattenNodes(draft.nodes);
+      const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
+      const afterTitle = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
+
+      let beforeUrl = URL.createObjectURL(file);
+      let beforeTitle = 'Original';
+
+      if (bldCompareRef === 'prev') {
+        const prevId = getPrevNodeId();
+        if (prevId) {
+          const proc2 = new ImageProcessor();
+          const ctx2 = { filename: file.name, exif, meta: {}, variables: new Map() };
+          beforeUrl = await proc2.previewDataUrl(img, draft.nodes, ctx2, prevId);
+          const prevEnt = flat.find(f => f.node.id === prevId);
+          beforeTitle = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : 'Prev Step';
+        }
+      }
+
+      return {
+        beforeUrl,
+        afterUrl,
+        beforeLabel: beforeTitle,
+        afterLabel: afterTitle,
+        context
+      };
+    }
+  });
+
+  if (window._icTestFolderFiles && window._icTestFolderFiles.length > 0) {
+    workspace.setFiles(window._icTestFolderFiles);
+  } else if (window._icTestImage?.file) {
+    workspace.setFiles([window._icTestImage.file]);
   }
 
   function getPrevNodeId() {
@@ -451,251 +478,10 @@ export async function render(container, hash) {
     return idx > 0 ? nodes[idx - 1].node.id : null;
   }
 
-  function renderCompareSlider(area, beforeUrl, afterUrl, beforeLabel, afterLabel) {
-    area.innerHTML = `
-      <div class="bld-cmp-wrap" id="bld-cmp-wrap">
-        <img class="bld-cmp-img" id="bld-cmp-before-img" src="${beforeUrl}" draggable="false" style="clip-path:inset(0 50% 0 0)">
-        <img class="bld-cmp-img" id="bld-cmp-after-img"  src="${afterUrl}"  draggable="false" style="clip-path:inset(0 0 0 50%)">
-        <div class="bld-cmp-handle" id="bld-cmp-handle" style="left:50%">
-          <div class="bld-cmp-handle-line"></div>
-          <div class="bld-cmp-handle-knob">
-            <span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span>
-          </div>
-        </div>
-        <span class="bld-cmp-label bld-cmp-label--l">${beforeLabel}</span>
-        <span class="bld-cmp-label bld-cmp-label--r">${afterLabel}</span>
-      </div>`;
-
-    const wrap      = area.querySelector('#bld-cmp-wrap');
-    const handle    = area.querySelector('#bld-cmp-handle');
-    const beforeImg = area.querySelector('#bld-cmp-before-img');
-    const afterImg  = area.querySelector('#bld-cmp-after-img');
-    let dragging = false;
-
-    const setPos = clientX => {
-      const rect = wrap.getBoundingClientRect();
-      const pos  = Math.max(0.01, Math.min(0.99, (clientX - rect.left) / rect.width));
-      const pct  = (pos * 100).toFixed(1);
-      handle.style.left         = `${pct}%`;
-      beforeImg.style.clipPath  = `inset(0 ${(100 - pos * 100).toFixed(1)}% 0 0)`;
-      afterImg.style.clipPath   = `inset(0 0 0 ${pct}%)`;
-    };
-
-    handle.addEventListener('mousedown', e => { dragging = true; e.preventDefault(); });
-    window.addEventListener('mousemove', e => { if (dragging) setPos(e.clientX); });
-    window.addEventListener('mouseup',   () => { dragging = false; });
-    handle.addEventListener('touchstart', e => { dragging = true; e.preventDefault(); }, { passive: false });
-    window.addEventListener('touchmove',  e => { if (dragging) setPos(e.touches[0].clientX); }, { passive: true });
-    window.addEventListener('touchend',   () => { dragging = false; });
+  function scheduleBldPreview(delay = 400) {
+    clearTimeout(window._icBldTimer);
+    window._icBldTimer = setTimeout(() => workspace.triggerProcess(), delay);
   }
-
-  function renderSideBySide(area, beforeUrl, afterUrl, beforeLabel, afterLabel) {
-    area.innerHTML = `
-      <div class="bld-cmp-side-view" id="bld-cmp-side-view">
-        <div class="bld-cmp-side">
-          <div class="bld-cmp-side-label">${beforeLabel}</div>
-          <img src="${beforeUrl}" class="bld-cmp-side-img" draggable="false">
-        </div>
-        <div class="bld-cmp-divider"></div>
-        <div class="bld-cmp-side">
-          <div class="bld-cmp-side-label bld-cmp-side-label--blue">${afterLabel}</div>
-          <img src="${afterUrl}" class="bld-cmp-side-img" draggable="false">
-        </div>
-      </div>`;
-  }
-
-  async function runBldPreview() {
-    if (!bldTestFile) return;
-    const previewArea = container.querySelector('#bld-preview-area');
-    if (!previewArea) return;
-
-    previewArea.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;padding:32px">
-      <div class="spinner"></div>
-      <div class="text-sm text-muted" style="margin-top:10px">Processing…</div>
-    </div>`;
-
-    try {
-      const url = URL.createObjectURL(bldTestFile);
-      const img = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-
-      const exif    = await extractExif(bldTestFile);
-      const context = { filename: bldTestFile.name, exif, meta: {}, variables: new Map() };
-
-      const proc     = new ImageProcessor();
-      const afterUrl = await proc.previewDataUrl(img, draft.nodes, context, bldPreviewNodeId);
-
-      // Step label
-      const flat    = flattenNodes(draft.nodes);
-      const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
-      const label   = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
-
-      const stepInfo  = container.querySelector('#bld-preview-step-info');
-      const stepLabel = container.querySelector('#bld-preview-step-label');
-      if (stepInfo)  stepInfo.style.display = 'flex';
-      if (stepLabel) stepLabel.textContent  = bldPreviewNodeId ? `Up to: ${label}` : 'All steps applied';
-
-      // Show compare button now that we have an image
-      const cmpToggle = container.querySelector('#bld-cmp-toggle');
-      if (cmpToggle) cmpToggle.style.display = '';
-
-      if (bldCompareMode) {
-        let beforeUrl, beforeLabel;
-        if (bldCompareRef === 'original') {
-          beforeUrl   = URL.createObjectURL(bldTestFile);
-          beforeLabel = 'Original';
-        } else {
-          const prevId = getPrevNodeId();
-          if (prevId) {
-            const proc2 = new ImageProcessor();
-            const ctx2  = { filename: bldTestFile.name, exif, meta: {}, variables: new Map() };
-            beforeUrl   = await proc2.previewDataUrl(img, draft.nodes, ctx2, prevId);
-            const prevEnt = flat.find(f => f.node.id === prevId);
-            beforeLabel   = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : 'Prev Step';
-          } else {
-            beforeUrl   = URL.createObjectURL(bldTestFile);
-            beforeLabel = 'Original';
-          }
-        }
-        if (bldCompareLayout === 'side') {
-          renderSideBySide(previewArea, beforeUrl, afterUrl, beforeLabel, label || 'All Steps');
-        } else {
-          renderCompareSlider(previewArea, beforeUrl, afterUrl, beforeLabel, label || 'All Steps');
-        }
-      } else {
-        previewArea.innerHTML = `
-          <div class="bld-preview-img-wrapper">
-            <img src="${afterUrl}" class="bld-preview-result-img" draggable="false">
-            <div class="bld-preview-img-badge${bldPreviewNodeId ? ' bld-preview-img-badge--blue' : ''}">
-              ${bldPreviewNodeId ? label : 'All Steps'}
-            </div>
-          </div>`;
-      }
-    } catch (err) {
-      console.error('[bld] Preview error:', err);
-      const area2 = container.querySelector('#bld-preview-area');
-      if (area2) area2.innerHTML = `<div class="empty-state" style="padding:24px">
-        <span class="material-symbols-outlined">error</span>
-        <div class="empty-state-title" style="font-size:12px">Preview failed</div>
-        <div class="empty-state-desc" style="font-size:11px">${err.message}</div>
-      </div>`;
-    }
-  }
-
-  // ── Carousel rendering ────────────────────────────────────
-  function renderCarousel() {
-    const carousel = container.querySelector('#bld-preview-carousel');
-    if (!carousel) return;
-    
-    if (bldTestFiles.length <= 1) {
-      carousel.style.display = 'none';
-      return;
-    }
-    
-    carousel.style.display = 'flex';
-    carousel.innerHTML = '';
-    
-    // Render up to 50 items for performance
-    const limit = Math.min(bldTestFiles.length, 50);
-    for (let i = 0; i < limit; i++) {
-      const file = bldTestFiles[i];
-      const thumb = document.createElement('img');
-      thumb.className = 'bld-carousel-thumb';
-      thumb.style.cssText = `
-        height: 48px; width: 48px; object-fit: cover; 
-        border-radius: 4px; cursor: pointer; 
-        border: 2px solid ${file === bldTestFile ? 'var(--ps-blue)' : 'transparent'}; 
-        flex-shrink: 0; background: var(--ps-bg);
-      `;
-      
-      const url = URL.createObjectURL(file);
-      thumb.src = url;
-      thumb.onload = () => URL.revokeObjectURL(url);
-      
-      thumb.addEventListener('click', () => {
-        bldTestFile = file;
-        window._icTestImage = { file };
-        
-        // Update selection styling visually without total re-render
-        carousel.querySelectorAll('img').forEach(img => img.style.borderColor = 'transparent');
-        thumb.style.borderColor = 'var(--ps-blue)';
-        
-        runBldPreview();
-      });
-      
-      carousel.appendChild(thumb);
-    }
-  }
-
-  // File upload for inline preview
-  container.querySelector('#bld-preview-file')?.addEventListener('change', async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    bldTestFiles = [];
-    window._icTestFolderFiles = [];
-    bldTestFile = file;
-    window._icTestImage = { file };
-    renderCarousel();
-    runBldPreview();
-  });
-
-  // Folder upload for carousel preview
-  container.querySelector('#bld-preview-folder-btn')?.addEventListener('click', async () => {
-    try {
-      const handle = await window.showDirectoryPicker({ mode: 'read' });
-      const { listImages } = await import('../data/folders.js');
-      const files = await listImages(handle);
-      
-      if (files.length === 0) {
-        const { showToast } = await import('../aurora/toast.js');
-        showToast({ variant: 'warning', title: 'No images found', description: 'Selected directory contains no supported images.' });
-        return;
-      }
-      
-      bldTestFiles = files;
-      window._icTestFolderFiles = files; // Persist for session
-      bldTestFile = files[0];
-      window._icTestImage = { file: bldTestFile };
-      renderCarousel();
-      runBldPreview();
-    } catch (err) {
-      if (err.name !== 'AbortError') console.error('Folder selection failed:', err);
-    }
-  });
-
-  // Drag & drop on preview area
-  const bldPreviewArea = container.querySelector('#bld-preview-area');
-  bldPreviewArea?.addEventListener('dragover', e => { e.preventDefault(); bldPreviewArea.classList.add('bld-preview-dragover'); });
-  bldPreviewArea?.addEventListener('dragleave', () => bldPreviewArea.classList.remove('bld-preview-dragover'));
-  bldPreviewArea?.addEventListener('drop', async e => {
-    e.preventDefault();
-    bldPreviewArea.classList.remove('bld-preview-dragover');
-    
-    const droppedFiles = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
-    if (droppedFiles.length === 0) return;
-    
-    if (droppedFiles.length > 1) {
-      bldTestFiles = droppedFiles;
-      window._icTestFolderFiles = droppedFiles;
-      bldTestFile = droppedFiles[0];
-    } else {
-      bldTestFiles = [];
-      window._icTestFolderFiles = [];
-      bldTestFile = droppedFiles[0];
-    }
-    
-    window._icTestImage = { file: bldTestFile };
-    renderCarousel();
-    runBldPreview();
-  });
-
-  // Restore carousel on load if exists
-  if (bldTestFiles.length > 1) {
-    renderCarousel();
-  }
-
-  // Kick off preview if we already have a test image
-  if (bldTestFile) scheduleBldPreview(100);
 
   function markDirty() {
     if (saveStatus) saveStatus.textContent = 'Unsaved…';
@@ -744,6 +530,11 @@ export async function render(container, hash) {
   // ── Description ───────────────────────────────────────────
   container.querySelector('#bld-desc')?.addEventListener('input', e => {
     draft.description = e.target.value;
+    markDirty();
+  });
+
+  container.querySelector('#bld-is-ordered')?.addEventListener('change', e => {
+    draft.isOrdered = e.target.checked;
     markDirty();
   });
 

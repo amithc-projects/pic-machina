@@ -593,10 +593,10 @@ export async function render(container, hash) {
     }
   }
 
-  function renderFilmstripPreview(ent) {
+  async function renderFilmstripPreview(ent) {
     const preview = container.querySelector('#fld-fs-preview');
     if (!preview) return;
-    renderDetailContent(preview, ent, true);
+    await renderDetailContent(preview, ent, true);
     // Scroll selected thumb into view
     const strip = container.querySelector('#fld-fs-strip');
     const sel = strip?.querySelector('.fld-fs-thumb.is-selected');
@@ -660,8 +660,65 @@ export async function render(container, hash) {
     });
   }
 
+  // ── Unified Image Workspace ───────────────────────────────
+  let fldWorkspace = null;
+
+  async function ensureWorkspace() {
+    if (fldWorkspace) return fldWorkspace;
+    const { ImageWorkspace } = await import('../components/image-workspace.js');
+    
+    const wsDiv = document.createElement('div');
+    wsDiv.style.flex = "1";
+    wsDiv.style.display = "flex";
+    wsDiv.style.flexDirection = "column";
+    wsDiv.style.minWidth = "0";
+    wsDiv.style.minHeight = "0";
+
+    fldWorkspace = new ImageWorkspace(wsDiv, {
+      allowUpload: false,
+      allowFolder: false,
+      customControlsHtml: `
+        <button class="btn-icon iw-meta-btn" title="View Extracted AI Metadata">
+           <span class="material-symbols-outlined">edit_note</span>
+        </button>
+      `,
+      onBindCustomControls: (container) => {
+        container.querySelector('.iw-meta-btn')?.addEventListener('click', async () => {
+          if (!fldWorkspace.activeFile) return;
+          injectAssetPanelStyles();
+          const p = container.querySelector('.iw-stage');
+          p.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><div class="spinner"></div></div>';
+          const ap = await renderAssetPanel(fldWorkspace.activeFile);
+          p.innerHTML = '';
+          p.style.overflow = 'hidden';
+          p.appendChild(ap);
+        });
+      },
+      onRender: async (file) => {
+        // Try matching various suffix patterns (underscores or hyphens)
+        const baseName    = file.name.replace(/\.[^.]+$/, '');
+        const baseNoSuf   = baseName.replace(/[-_][a-z0-9]+$/i, '');
+        const inputFile   = inputByBase.get(baseName) || inputByBase.get(baseNoSuf);
+
+        const beforeUrl = URL.createObjectURL(inputFile || file);
+        const afterUrl = URL.createObjectURL(file);
+        blobUrls.push(beforeUrl, afterUrl);
+        
+        return {
+          beforeUrl,
+          afterUrl,
+          beforeLabel: inputFile ? 'Input' : 'File',
+          afterLabel: inputFile ? 'Output' : 'File',
+          context: { filename: file.name },
+          canCompare: !!inputFile
+        };
+      }
+    });
+    return fldWorkspace;
+  }
+
   // ── Select / detail panel ───────────────────────────────────
-  function selectFile(file) {
+  async function selectFile(file) {
     selected = file;
 
     // Highlight selected cell in current view
@@ -671,29 +728,22 @@ export async function render(container, hash) {
     });
 
     if (viewMode === 'filmstrip') {
-      renderFilmstripPreview(file);
+      await renderFilmstripPreview(file);
       showDetailAndHandle();
       renderInfoPanel(detailEl, file);
       return;
     }
 
     showDetailAndHandle();
-    renderDetailContent(detailEl, file, false);
+    await renderDetailContent(detailEl, file, false);
   }
 
   /** Render file preview into an element (used by both detail panel + filmstrip preview). */
-  function renderDetailContent(el, ent, fullSize) {
+  async function renderDetailContent(el, ent, fullSize) {
     const file = ent.file;
     const type = fileType(file.name);
     const fileUrl = URL.createObjectURL(file);
     blobUrls.push(fileUrl);
-
-    // Find matching input file
-    const baseName    = file.name.replace(/\.[^.]+$/, '');
-    const baseNoSuf   = baseName.replace(/_[a-z0-9]+$/i, '');
-    const inputFile   = inputByBase.get(baseName) || inputByBase.get(baseNoSuf) || null;
-    const inputUrl    = inputFile ? URL.createObjectURL(inputFile) : null;
-    if (inputUrl) blobUrls.push(inputUrl);
 
     if (type === 'video') {
       el.innerHTML = `
@@ -717,139 +767,9 @@ export async function render(container, hash) {
             </button>
           </div>` : ''}
         </div>`;
-    } else if (inputUrl) {
-      // Image with before/after compare
-      let sliderPct = 50;
-      let isDragging = false;
-
-      el.innerHTML = `
-        <div class="fld-detail-inner">
-          ${!fullSize ? `
-          <div class="fld-detail-header">
-            <div class="fld-detail-title">${escHtml(file.name)}</div>
-            <div class="fld-detail-meta">
-              <span class="ic-badge">${extOf(file.name).slice(1).toUpperCase()}</span>
-              <span class="text-sm text-muted">${formatBytes(file.size)}</span>
-            </div>
-          </div>` : ''}
-          <div class="fld-detail-cmp-toolbar">
-            <div class="fld-cmp-toggle" role="group">
-              <button class="fld-cmp-btn" data-cmp-mode="slider">
-                <span class="material-symbols-outlined" style="font-size:13px">swap_horiz</span> Slider
-              </button>
-              <button class="fld-cmp-btn" data-cmp-mode="side">
-                <span class="material-symbols-outlined" style="font-size:13px">view_column</span> Side
-              </button>
-            </div>
-            ${!fullSize ? `
-            <button class="fld-cmp-btn" data-cmp-mode="info" style="margin-left:8px;border-radius:8px;border:1px solid var(--ps-border);padding:4px 9px">
-              <span class="material-symbols-outlined" style="font-size:13px">info</span> Info
-            </button>
-            <button class="fld-cmp-btn" data-cmp-mode="meta" style="margin-left:4px;border-radius:8px;border:1px solid var(--ps-border);padding:4px 9px">
-              <span class="material-symbols-outlined" style="font-size:13px">edit_note</span> Metadata
-            </button>` : ''}
-          </div>
-          <div class="fld-detail-preview" id="fld-cmp-view">
-          </div>
-          ${!fullSize ? `
-          <div class="fld-detail-footer">
-            <button class="btn-secondary" style="flex:1" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
-              <span class="material-symbols-outlined">download</span> Download
-            </button>
-            ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
-              <span class="material-symbols-outlined">photo_library</span>
-            </button>` : ''}
-          </div>` : ''}
-        </div>`;
-
-      el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
-
-      el.querySelectorAll('.fld-cmp-btn[data-cmp-mode]').forEach(btn => {
-        if (btn.dataset.cmpMode === cmpMode) btn.classList.add('is-active');
-        btn.addEventListener('click', () => {
-          if (btn.dataset.cmpMode !== 'info') {
-            cmpMode = btn.dataset.cmpMode;
-            localStorage.setItem('ic-cmp-mode', cmpMode);
-          }
-          el.querySelectorAll('.fld-cmp-btn[data-cmp-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
-          if (btn.dataset.cmpMode === 'info') renderInfo();
-          else if (btn.dataset.cmpMode === 'meta') renderMeta();
-          else renderCmp();
-        });
-      });
-
-      async function renderInfo() {
-        const cmpEl = el.querySelector('#fld-cmp-view');
-        if (!cmpEl) return;
-        cmpEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px"><div class="spinner"></div><span class="text-sm text-muted">Reading metadata…</span></div>';
-        const info = await getImageInfo(file);
-        cmpEl.innerHTML = '';
-        cmpEl.appendChild(renderImageInfoPanel(info));
-      }
-
-      async function renderMeta() {
-        injectAssetPanelStyles();
-        const cmpEl = el.querySelector('#fld-cmp-view');
-        if (!cmpEl) return;
-        cmpEl.innerHTML = '';
-        cmpEl.style.overflow = 'hidden';
-        cmpEl.appendChild(await renderAssetPanel(file));
-      }
-
-      function renderCmp() {
-        const cmpEl = el.querySelector('#fld-cmp-view');
-        if (!cmpEl) return;
-
-        if (cmpMode === 'side') {
-          cmpEl.innerHTML = `
-            <div class="fld-cmp-side">
-              <div class="fld-cmp-col">
-                <span class="fld-cmp-label">Before</span>
-                <img src="${inputUrl}" class="fld-cmp-img" draggable="false">
-              </div>
-              <div class="fld-cmp-divider"></div>
-              <div class="fld-cmp-col">
-                <span class="fld-cmp-label fld-cmp-label--after">After</span>
-                <img src="${fileUrl}" class="fld-cmp-img" draggable="false">
-              </div>
-            </div>`;
-        } else {
-          sliderPct = 50;
-          cmpEl.innerHTML = `
-            <div class="fld-cmp-slider" id="fld-slider-root">
-              <img src="${inputUrl}" class="fld-cmp-img" draggable="false">
-              <img src="${fileUrl}"  class="fld-cmp-img" id="fld-slider-after" draggable="false"
-                   style="clip-path:inset(0 0 0 50%)">
-              <div class="fld-cmp-handle" id="fld-slider-handle" style="left:50%">
-                <div class="fld-cmp-handle-line"></div>
-                <div class="fld-cmp-handle-grip">
-                  <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
-                </div>
-              </div>
-              <span class="fld-cmp-badge fld-cmp-badge--before">Before</span>
-              <span class="fld-cmp-badge fld-cmp-badge--after">After</span>
-            </div>`;
-
-          const root     = cmpEl.querySelector('#fld-slider-root');
-          const afterImg = cmpEl.querySelector('#fld-slider-after');
-          const handle   = cmpEl.querySelector('#fld-slider-handle');
-
-          function setSlider(x) {
-            const rect = root.getBoundingClientRect();
-            sliderPct = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
-            if (afterImg) afterImg.style.clipPath = `inset(0 0 0 ${sliderPct}%)`;
-            if (handle)   handle.style.left = `${sliderPct}%`;
-          }
-          handle?.addEventListener('mousedown', e => { isDragging = true; e.preventDefault(); });
-          document.addEventListener('mousemove', e => { if (isDragging) setSlider(e.clientX); });
-          document.addEventListener('mouseup',   () => { isDragging = false; });
-          root?.addEventListener('click', e => { if (!isDragging) setSlider(e.clientX); });
-        }
-      }
-      renderCmp();
     } else {
-      // Image without original — preview + info
-      let noSrcMode = 'preview';
+      const ws = await ensureWorkspace();
+      
       el.innerHTML = `
         <div class="fld-detail-inner">
           ${!fullSize ? `
@@ -860,22 +780,7 @@ export async function render(container, hash) {
               <span class="text-sm text-muted">${formatBytes(file.size)}</span>
             </div>
           </div>` : ''}
-          <div class="fld-detail-cmp-toolbar">
-            <div class="fld-cmp-toggle" role="group">
-              <button class="fld-cmp-btn" data-nosrc-mode="preview">
-                <span class="material-symbols-outlined" style="font-size:13px">image</span> Preview
-              </button>
-              <button class="fld-cmp-btn" data-nosrc-mode="info">
-                <span class="material-symbols-outlined" style="font-size:13px">info</span> Info
-              </button>
-              <button class="fld-cmp-btn" data-nosrc-mode="meta">
-                <span class="material-symbols-outlined" style="font-size:13px">edit_note</span> Metadata
-              </button>
-            </div>
-          </div>
-          <div class="fld-detail-preview" id="fld-nosrc-view">
-            <img src="${fileUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block" draggable="false">
-          </div>
+          <div class="fld-detail-preview" id="fld-ws-mount" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>
           ${!fullSize ? `
           <div class="fld-detail-footer">
             <button class="btn-secondary" style="flex:1" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
@@ -887,29 +792,12 @@ export async function render(container, hash) {
           </div>` : ''}
         </div>`;
 
+      const mountNode = el.querySelector('#fld-ws-mount');
+      mountNode.appendChild(ws.container);
       el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
+      
+      ws.setFiles([file]);
 
-      el.querySelectorAll('.fld-cmp-btn[data-nosrc-mode]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          noSrcMode = btn.dataset.nosrcMode;
-          el.querySelectorAll('.fld-cmp-btn[data-nosrc-mode]').forEach(b => b.classList.toggle('is-active', b === btn));
-          const view = el.querySelector('#fld-nosrc-view');
-          if (!view) return;
-          if (noSrcMode === 'info') {
-            view.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px"><div class="spinner"></div><span class="text-sm text-muted">Reading metadata…</span></div>';
-            const info = await getImageInfo(file);
-            view.innerHTML = '';
-            view.appendChild(renderImageInfoPanel(info));
-          } else if (noSrcMode === 'meta') {
-            injectAssetPanelStyles();
-            view.innerHTML = '';
-            view.style.overflow = 'hidden';
-            view.appendChild(await renderAssetPanel(file));
-          } else {
-            view.innerHTML = `<img src="${fileUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block" draggable="false">`;
-          }
-        });
-      });
     }
   }
 
@@ -1267,33 +1155,7 @@ function injectFldStyles() {
     .fld-detail-footer { padding:10px 14px; border-top:1px solid var(--ps-border); flex-shrink:0; display:flex; gap:6px; align-items:center; }
     .fld-detail-video { background:#000; }
 
-    /* Mode toggle */
-    .fld-cmp-toggle { display:flex; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:8px; overflow:hidden; }
-    .fld-cmp-btn { display:flex; align-items:center; gap:5px; padding:4px 9px; font-size:11px; font-weight:500; background:transparent; border:none; color:var(--ps-text-muted); cursor:pointer; font-family:var(--font-primary); transition:background 150ms,color 150ms; }
-    .fld-cmp-btn.is-active { background:var(--ps-blue); color:#fff; }
-    .fld-cmp-btn:hover:not(.is-active) { background:var(--ps-bg-hover); color:var(--ps-text); }
 
-    /* Self-contained comparison images — fill the positioned parent absolutely */
-    .fld-cmp-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; }
-
-    /* Side-by-side layout */
-    .fld-cmp-side { display:flex; width:100%; height:100%; }
-    .fld-cmp-col { flex:1; position:relative; overflow:hidden; min-width:0; }
-    .fld-cmp-divider { width:2px; background:var(--ps-border); flex-shrink:0; }
-    .fld-cmp-label { position:absolute; top:10px; left:10px; z-index:2; background:rgba(0,0,0,0.72); color:#fff; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; font-family:var(--font-mono); }
-    .fld-cmp-label--after { background:rgba(0,119,255,0.85); }
-
-    /* Slider layout */
-    .fld-cmp-slider { position:relative; width:100%; height:100%; overflow:hidden; user-select:none; cursor:col-resize; }
-    .fld-cmp-handle { position:absolute; top:0; height:100%; transform:translateX(-50%); display:flex; align-items:center; pointer-events:none; z-index:10; }
-    .fld-cmp-handle-line { position:absolute; top:0; left:50%; width:2px; height:100%; background:rgba(255,255,255,0.9); transform:translateX(-50%); box-shadow:0 0 8px rgba(0,0,0,0.4); }
-    .fld-cmp-handle-grip { position:relative; z-index:1; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.95); box-shadow:0 2px 10px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; cursor:col-resize; pointer-events:all; color:#111; }
-    .fld-cmp-badge { position:absolute; top:10px; z-index:5; background:rgba(0,0,0,0.72); color:#fff; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; font-family:var(--font-mono); pointer-events:none; }
-    /* Lightbox slider vs Side logic */
-    .fld-cmp-badge--before { left:10px; }
-    .fld-cmp-badge--after { right:10px; background:rgba(0,119,255,0.85); }
-
-    /* Modals */
     .fld-modal {
       border:none; border-radius:16px; padding:0; background:var(--ps-bg-surface);
       box-shadow:0 24px 80px rgba(0,0,0,0.5); color:var(--ps-text);
