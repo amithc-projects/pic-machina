@@ -6,6 +6,7 @@
 import { initDrawers } from './aurora/drawer.js';
 import { showToast }   from './aurora/toast.js';
 import { initDB }      from './data/db.js';
+import { applyThemeColors } from './utils/settings.js';
 
 // Screen module map — lazy loaded on demand
 const SCREENS = {
@@ -87,6 +88,7 @@ if (savedTheme) document.documentElement.dataset.mode = savedTheme;
 
 // ─── Boot ─────────────────────────────────────────────────
 async function boot() {
+  applyThemeColors();
   try {
     await initDB();
   } catch (err) {
@@ -108,6 +110,13 @@ async function boot() {
     e.preventDefault();
     const { showHelpModal } = await import('./utils/help.js');
     showHelpModal();
+  });
+
+  // Setup Settings UI Module
+  document.getElementById('nav-settings')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const { showSettingsModal } = await import('./utils/settings-dialog.js');
+    showSettingsModal();
   });
 
   // Navigate to initial screen

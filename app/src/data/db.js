@@ -165,3 +165,25 @@ async function seedSystemRecipes(db) {
     tx.onerror = () => reject(tx.error);
   });
 }
+
+// ─── Directory History (MRU) ──────────────────────────────
+export async function dbSaveFolderHistory(type, handle) {
+  const key = `mru_${type}`; // e.g., 'mru_input'
+  const record = (await dbGet('folders', key)) || { key, handles: [] };
+  
+  // Remove if it exists to bubble it to the top
+  record.handles = record.handles.filter(h => h.name !== handle.name);
+  record.handles.unshift(handle);
+  
+  // Keep only top 5 recent folders
+  if (record.handles.length > 5) {
+    record.handles = record.handles.slice(0, 5);
+  }
+  return dbPut('folders', record);
+}
+
+export async function dbGetFolderHistory(type) {
+  const key = `mru_${type}`;
+  const record = await dbGet('folders', key);
+  return record ? record.handles : [];
+}

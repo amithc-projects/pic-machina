@@ -10,6 +10,8 @@ import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { startBatch }                               from '../engine/batch.js';
 import { navigate }                                 from '../main.js';
 import { formatBytes }                              from '../utils/misc.js';
+import { dbSaveFolderHistory, dbGetFolderHistory }  from '../data/db.js';
+import { getSettings }                              from '../utils/settings.js';
 import { renderParamField, collectParams,
          bindParamFieldEvents,
          injectParamFieldStyles }                   from '../utils/param-fields.js';
@@ -29,6 +31,9 @@ export async function render(container, hash) {
   let allRecipes     = [];
   let batchControl   = null;     // { cancel, runId }
   let lastClickedIdx = -1;       // for shift+click range
+  
+  let inputHistory   = [];
+  let outputHistory  = [];
 
   container.innerHTML = `
     <div class="screen set-screen">
@@ -71,9 +76,12 @@ export async function render(container, hash) {
           <!-- Input folder -->
           <section class="set-section">
             <div class="set-section-title">Input Folder</div>
-            <div class="set-folder-row" id="set-input-row">
+            <div class="set-folder-row" id="set-input-row" style="flex-wrap:wrap">
               <span class="material-symbols-outlined" style="color:var(--ps-text-faint)">folder</span>
               <span id="set-input-path" class="set-folder-path text-muted">Not selected</span>
+              <select id="set-input-mru" class="ic-input" style="width: auto; height: 33px; padding: 4px 8px; display: none; max-width:140px; font-size: 11px;">
+                <option value="">Recent...</option>
+              </select>
               <button class="btn-secondary" id="btn-pick-input">
                 <span class="material-symbols-outlined">folder_open</span>Browse
               </button>
@@ -82,11 +90,14 @@ export async function render(container, hash) {
           </section>
 
           <!-- Output folder -->
-          <section class="set-section">
-            <div class="set-section-title">Output Folder</div>
-            <div class="set-folder-row" id="set-output-row">
+          <section class="set-section" id="set-output-section">
+            <div class="set-section-title" id="set-output-title">Output Folder</div>
+            <div class="set-folder-row" id="set-output-row" style="flex-wrap:wrap">
               <span class="material-symbols-outlined" style="color:var(--ps-text-faint)">drive_folder_upload</span>
               <span id="set-output-path" class="set-folder-path text-muted">Not selected</span>
+              <select id="set-output-mru" class="ic-input" style="width: auto; height: 33px; padding: 4px 8px; display: none; max-width:140px; font-size: 11px;">
+                <option value="">Recent...</option>
+              </select>
               <button class="btn-secondary" id="btn-pick-output">
                 <span class="material-symbols-outlined">folder_open</span>Browse
               </button>
@@ -138,6 +149,67 @@ export async function render(container, hash) {
   if (inputHandle)  { container.querySelector('#set-input-path').textContent  = inputHandle.name; await refreshImageGrid(); }
   if (outputHandle) { container.querySelector('#set-output-path').textContent = outputHandle.name; }
 
+  // ── Apply Settings ──────────────────────────────────────
+  const settings = getSettings();
+  if (settings.batch?.useInputForOutput) {
+     container.querySelector('#set-output-title').textContent = 'Output Destination';
+     container.querySelector('#set-output-row').style.display = 'none';
+  }
+
+  // ── MRU Injection ───────────────────────────────────────
+  async function renderMRUs() {
+    inputHistory = await dbGetFolderHistory('input');
+    outputHistory = await dbGetFolderHistory('output');
+    
+    const renderDropdown = (hist, curHandle, selId) => {
+      const dp = container.querySelector(selId);
+      if (!hist || hist.length === 0) return dp.style.display = 'none';
+      let html = `<option value="">History...</option>`;
+      hist.forEach((h, i) => html += `<option value="${i}">${h.name}</option>`);
+      dp.innerHTML = html;
+      dp.style.display = 'block';
+    };
+
+    renderDropdown(inputHistory, inputHandle, '#set-input-mru');
+    renderDropdown(outputHistory, outputHandle, '#set-output-mru');
+  }
+  await renderMRUs();
+
+  container.querySelector('#set-input-mru')?.addEventListener('change', async e => {
+    const idx = parseInt(e.target.value);
+    if (isNaN(idx)) return;
+    const h = inputHistory[idx];
+    try {
+      if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+        if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
+      }
+      inputHandle = h;
+      container.querySelector('#set-input-path').textContent = inputHandle.name;
+      await dbSaveFolderHistory('input', inputHandle);
+      await renderMRUs();
+      await refreshImageGrid();
+      updateRunButton();
+      e.target.value = '';
+    } catch (err) { console.error('MRU input load failed', err); }
+  });
+
+  container.querySelector('#set-output-mru')?.addEventListener('change', async e => {
+    const idx = parseInt(e.target.value);
+    if (isNaN(idx)) return;
+    const h = outputHistory[idx];
+    try {
+      if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+        if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
+      }
+      outputHandle = h;
+      container.querySelector('#set-output-path').textContent = outputHandle.name;
+      await dbSaveFolderHistory('output', outputHandle);
+      await renderMRUs();
+      updateRunButton();
+      e.target.value = '';
+    } catch (err) { console.error('MRU output load failed', err); }
+  });
+
   // Pre-select recipe if passed in hash
   if (recipeId) {
     currentRecipe = await getRecipe(recipeId);
@@ -154,6 +226,8 @@ export async function render(container, hash) {
     try {
       inputHandle = await pickFolder('input');
       container.querySelector('#set-input-path').textContent = inputHandle.name;
+      await dbSaveFolderHistory('input', inputHandle);
+      await renderMRUs();
       await refreshImageGrid();
       updateRunButton();
     } catch (e) { if (e.name !== 'AbortError') console.error(e); }
@@ -164,6 +238,8 @@ export async function render(container, hash) {
     try {
       outputHandle = await pickFolder('output');
       container.querySelector('#set-output-path').textContent = outputHandle.name;
+      await dbSaveFolderHistory('output', outputHandle);
+      await renderMRUs();
       updateRunButton();
     } catch (e) { if (e.name !== 'AbortError') console.error(e); }
   });
@@ -185,7 +261,24 @@ export async function render(container, hash) {
       Notification.requestPermission();
     }
 
-    if (!currentRecipe || !inputHandle || !outputHandle) return;
+    if (!currentRecipe || !inputHandle) return;
+    
+    let effOutputHandle = outputHandle;
+    const settings = getSettings();
+    if (settings.batch?.useInputForOutput) {
+      effOutputHandle = inputHandle;
+      
+      // Ensure we have read/write access to input folder if using it as output natively
+      if ((await effOutputHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+          if ((await effOutputHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
+              window.AuroraToast?.show({ variant: 'danger', title: 'Permission Denied', description: 'Cannot write output to the input directory without your permission.' });
+              return;
+          }
+      }
+    }
+    
+    if (!effOutputHandle) return;
+
     let files = selectedFiles.filter(f => selectedIds.has(f.name));
     if (currentRecipe?.isOrdered) {
         files = files.sort((a,b) => selectedIds.get(a.name) - selectedIds.get(b.name));
@@ -214,7 +307,7 @@ export async function render(container, hash) {
         batchControl = await startBatch({
           recipe: currentRecipe,
           files,
-          outputHandle,
+          outputHandle: effOutputHandle,
           subfolder,
           runParams,
           onProgress: (p, t, fn, overridePct) => window._queProgress?.(p, t, fn, overridePct),
@@ -274,6 +367,10 @@ export async function render(container, hash) {
       }
       
       renderImageGrid(onlyVideo, includeVideo);
+      
+      // Sync preview window state
+      window._icTestFolderFiles = [...selectedFiles];
+      
       const stats = container.querySelector('#set-input-stats');
       const term = onlyVideo ? 'video' : (includeVideo ? 'file' : 'image');
       if (stats) stats.textContent = `${selectedFiles.length} ${term}${selectedFiles.length !== 1 ? 's' : ''} found`;
@@ -456,7 +553,12 @@ export async function render(container, hash) {
       }
     }
 
-    let isReady = !!(currentRecipe && inputHandle && outputHandle && selectedIds.size > 0);
+    let effOut = outputHandle;
+    if (getSettings().batch?.useInputForOutput) {
+       effOut = inputHandle; // Bypasses the discrete outputHandle check
+    }
+
+    let isReady = !!(currentRecipe && inputHandle && effOut && selectedIds.size > 0);
     if (warning) {
       isReady = false;
     }

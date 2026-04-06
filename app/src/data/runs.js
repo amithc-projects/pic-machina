@@ -39,6 +39,7 @@ export async function createRun(partial) {
     successCount: 0,
     failCount:    0,
     log:          [],
+    outputHandleObj: partial.outputHandleObj || null,
   };
   await dbPut('runs', run);
   return run;

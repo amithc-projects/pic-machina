@@ -12,7 +12,6 @@ import { navigate } from '../main.js';
 import { uuid, now, deepClone } from '../utils/misc.js';
 import { registry, ImageProcessor } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
-import { showConfirm } from '../utils/dialogs.js';
 import { extractExif } from '../engine/exif-reader.js';
 import { renderParamField } from '../utils/param-fields.js';
 
@@ -25,6 +24,7 @@ const CAT_COLORS = {
   'Flow & Export':       { key: 'flow',    color: '#0077ff' },
   'Metadata':            { key: 'meta',    color: '#f472b6' },
 };
+
 
 const COVER_COLORS = [
   { label: 'Blue',   value: '#0077ff' },

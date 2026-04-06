@@ -327,7 +327,7 @@ export async function render(container, hash) {
     if (browseMode) {
       subHandle = browseHandle;
     } else {
-      const outputHandle = await getFolder('output');
+      let outputHandle = run?.outputHandleObj || await getFolder('output');
       if (!outputHandle) {
         showEmpty('Output folder not accessible. Grant permission in Batch Setup.');
         return;

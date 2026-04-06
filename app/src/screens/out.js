@@ -5,12 +5,13 @@
  * Clicking an output image opens a before/after comparison in CMP.
  */
 
-import { getAllRuns, deleteRun }               from '../data/runs.js';
+import { getAllRuns, deleteRun, getRun }       from '../data/runs.js';
 import { getFolder, listImages,
          getOrCreateOutputSubfolder }          from '../data/folders.js';
 import { navigate }                            from '../main.js';
 import { formatDateTime, formatBytes }         from '../utils/misc.js';
 import { showConfirm }                         from '../utils/dialogs.js';
+import { getSettings }                         from '../utils/settings.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -326,7 +327,9 @@ export async function render(container, hash) {
         galleryEl.innerHTML = `<div style="padding:12px;display:flex;align-items:center;gap:8px"><div class="spinner"></div><span class="text-sm text-muted">Loading output files…</span></div>`;
 
         try {
-          const outputHandle = await getFolder('output');
+          const run = await getRun(runId);
+          let outputHandle = run?.outputHandleObj || await getFolder('output');
+          
           if (!outputHandle) {
             galleryEl.innerHTML = `<div class="out-gallery-empty">Output folder not accessible. <button class="btn-secondary out-btn-repick">Pick Folder</button></div>`;
             return;
@@ -465,9 +468,20 @@ export async function render(container, hash) {
 
     // Browse folder viewer
     container.querySelectorAll('.out-btn-browse').forEach(btn => {
-      btn.addEventListener('click', e => {
+      btn.addEventListener('click', async e => {
         e.stopPropagation();
-        navigate(`#fld?run=${btn.dataset.runId}&from=out`);
+        const runId = btn.dataset.runId;
+        const run = await getRun(runId);
+        if (!run) return;
+        let outputHandle = run.outputHandleObj || await getFolder('output');
+        if (!outputHandle) return;
+        try {
+          const subHandle = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
+          window._icFldTargetHandle = subHandle;
+          navigate('#fld');
+        } catch (err) {
+          window.AuroraToast?.show({ variant: 'danger', title: 'Subfolder not found', description: err.message });
+        }
       });
     });
 

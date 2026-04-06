@@ -577,6 +577,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
     inputFolder:  '',
     outputFolder: subfolder,
     imageCount:   files.length,
+    outputHandleObj: outputHandle
   });
 
   // Wrap callbacks to also persist log entries to the run record

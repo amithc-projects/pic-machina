@@ -59,9 +59,17 @@ export function renderParamField(param, value, prefix = 'rp') {
     case 'color': {
       let savedColorsHtml = '';
       try {
-        const saved = JSON.parse(localStorage.getItem('ic-saved-colors')) || [];
-        savedColorsHtml = saved.slice(0, 10).map(c => `
-          <div class="ned-saved-color" data-color="${c}" style="background:${c}; width:20px; height:20px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="${c}"></div>
+        import('./settings.js').then(m => {
+          // Handled externally if needed via async.
+        }).catch(()=>{});
+        const saved = JSON.parse(localStorage.getItem('ic-settings'))?.palette || [
+            { label: 'Black',  color: '#000000' },
+            { label: 'White',  color: '#ffffff' },
+            { label: 'Pink',   color: '#f472b6' },
+            { label: 'Blue',   color: '#3b82f6' }
+        ];
+        savedColorsHtml = saved.map(c => `
+          <div class="ned-saved-color" data-color="${c.color}" style="background:${c.color}; width:20px; height:20px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="${c.label}"></div>
         `).join('');
       } catch (e) {}
 
@@ -72,12 +80,12 @@ export function renderParamField(param, value, prefix = 'rp') {
             <input type="color" id="${id}" name="${param.name}" value="${val}" class="ned-color-input">
             <input type="text" id="${id}-hex" class="ic-input" value="${val}" maxlength="7"
               style="flex:1;font-family:var(--font-mono);font-size:12px">
-            <button class="btn-icon ned-save-color-btn" data-input-id="${id}" title="Save Color" style="padding:0">
-              <span class="material-symbols-outlined" style="font-size:16px;">add_circle</span>
-            </button>
           </div>
           <div class="ned-saved-colors-wrap" id="${id}-saved-wrap" style="display:flex; gap:4px; flex-wrap:wrap;">
             ${savedColorsHtml}
+            <button class="btn-ghost" title="Manage Swatches..." onclick="document.querySelector('#nav-settings')?.click()" style="padding:0; min-height:20px; width:20px; height:20px; margin-left:2px; border-radius:4px; background:var(--ps-bg-overlay);">
+               <span class="material-symbols-outlined" style="font-size:14px; color:var(--ps-text-muted);">settings</span>
+            </button>
           </div>
         </div>`;
     }
@@ -176,32 +184,13 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
     if (p.type === 'color') {
       const picker = container.querySelector(`#${id}`);
       const hex    = container.querySelector(`#${id}-hex`);
-      const saveBtn= container.querySelector(`.ned-save-color-btn[data-input-id="${id}"]`);
       const wrap   = container.querySelector(`#${id}-saved-wrap`);
       
       if (picker && hex) {
         picker.addEventListener('input', () => { hex.value = picker.value; });
         hex.addEventListener('input',   () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) picker.value = hex.value; });
         
-        // Save logic
-        if (saveBtn && wrap) {
-          saveBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const col = picker.value.toLowerCase();
-            let saved = [];
-            try { saved = JSON.parse(localStorage.getItem('ic-saved-colors')) || []; } catch(e){}
-            if (!saved.includes(col)) {
-              saved.unshift(col);
-              saved = saved.slice(0, 10);
-              localStorage.setItem('ic-saved-colors', JSON.stringify(saved));
-              
-              // sync this wrap
-              wrap.innerHTML = saved.map(c => `
-                <div class="ned-saved-color" data-color="${c}" style="background:${c}; width:20px; height:20px; border-radius:4px; border:1px solid rgba(255,255,255,0.2); cursor:pointer;" title="${c}"></div>
-              `).join('');
-            }
-          });
-          
+        if (wrap) {
           wrap.addEventListener('click', (e) => {
             if (e.target.classList.contains('ned-saved-color')) {
               const col = e.target.getAttribute('data-color');
