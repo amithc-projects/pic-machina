@@ -47,12 +47,10 @@ export class ImageWorkspace {
       <div class="ic-image-workspace" style="display:flex;flex-direction:column;height:100%;background:var(--ps-surface)">
         <div class="iw-header" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ps-border)">
           <div class="iw-title" style="font-size:13px;font-weight:500;color:var(--ps-text)">Preview</div>
+          <style>
+             .ic-image-workspace.is-single-mode .iw-custom-controls { opacity: 0.5; pointer-events: none; }
+          </style>
           <div class="iw-controls" style="display:flex;align-items:center;gap:8px">
-            
-            <button class="btn-secondary iw-cmp-toggle ${this.compareMode ? 'is-active' : ''}" style="display:none;font-size:12px;padding:4px 10px;${this.compareMode ? 'background:var(--ps-surface-hover);' : ''}">
-              <span class="material-symbols-outlined" style="font-size:14px">compare</span>
-              Compare
-            </button>
 
             <div class="iw-cmp-controls" style="display:none;align-items:center;gap:8px">
               <button class="btn-icon iw-zoom-btn" title="Toggle Zoom on hover" style="color:${this.isZoomEnabled ? 'var(--ps-blue)' : 'var(--ps-text-muted)'}">
@@ -62,11 +60,14 @@ export class ImageWorkspace {
                 <span class="material-symbols-outlined">info</span>
               </button>
               <div class="iw-mode-toggle" style="display:flex;background:var(--ps-bg);border-radius:4px;padding:2px">
-                <button class="btn-icon iw-layout-slider ${this.compareLayout === 'slider' ? 'is-active' : ''}" title="Slider" style="border-radius:3px">
+                <button class="btn-icon iw-layout-single ${!this.compareMode ? 'is-active' : ''}" title="Single Preview" style="border-radius:3px;width:28px;height:28px">
+                  <span class="material-symbols-outlined" style="font-size:16px">crop_square</span>
+                </button>
+                <button class="btn-icon iw-layout-slider ${this.compareMode && this.compareLayout === 'slider' ? 'is-active' : ''}" title="Slider" style="border-radius:3px;width:28px;height:28px">
                   <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
                 </button>
-                <button class="btn-icon iw-layout-side ${this.compareLayout === 'side' ? 'is-active' : ''}" title="Side by side" style="border-radius:3px">
-                  <span class="material-symbols-outlined" style="font-size:16px">view_column</span>
+                <button class="btn-icon iw-layout-side ${this.compareMode && this.compareLayout === 'side' ? 'is-active' : ''}" title="Side by side" style="border-radius:3px;width:28px;height:28px">
+                  <span class="material-symbols-outlined" style="font-size:16px">vertical_split</span>
                 </button>
               </div>
               <div class="iw-custom-controls" style="display:flex;align-items:center">${this.options.customControlsHtml}</div>
@@ -129,8 +130,8 @@ export class ImageWorkspace {
 
     this.stage = this.container.querySelector('.iw-stage');
     this.carousel = this.container.querySelector('.iw-carousel');
-    this.cmpToggleBtn = this.container.querySelector('.iw-cmp-toggle');
     this.cmpControls = this.container.querySelector('.iw-cmp-controls');
+    this.modeToggleGroup = this.container.querySelector('.iw-mode-toggle');
   }
 
   bindEvents() {
@@ -163,13 +164,11 @@ export class ImageWorkspace {
       this.options.onBindCustomControls(this.container);
     }
 
-    // Layout toggles
-    this.cmpToggleBtn.addEventListener('click', () => {
-      this.compareMode = !this.compareMode;
-      this._tempCompareMode = this.compareMode;
-      localStorage.setItem('ic-cmp-mode', this.compareMode);
-      this.cmpToggleBtn.classList.toggle('is-active', this.compareMode);
-      this.cmpToggleBtn.style.background = this.compareMode ? 'var(--ps-surface-hover)' : '';
+    this.container.querySelector('.iw-layout-single')?.addEventListener('click', () => {
+      this.compareMode = false;
+      this._tempCompareMode = false;
+      localStorage.setItem('ic-cmp-mode', 'false');
+      this.updateLayoutToggleUI();
       this.renderCurrentState();
     });
 
@@ -179,8 +178,6 @@ export class ImageWorkspace {
       this._tempCompareMode = true;
       localStorage.setItem('ic-cmp-layout', 'slider');
       localStorage.setItem('ic-cmp-mode', 'true');
-      this.cmpToggleBtn.classList.add('is-active');
-      this.cmpToggleBtn.style.background = 'var(--ps-surface-hover)';
       this.updateLayoutToggleUI();
       this.renderCurrentState();
     });
@@ -190,8 +187,6 @@ export class ImageWorkspace {
       this._tempCompareMode = true;
       localStorage.setItem('ic-cmp-layout', 'side');
       localStorage.setItem('ic-cmp-mode', 'true');
-      this.cmpToggleBtn.classList.add('is-active');
-      this.cmpToggleBtn.style.background = 'var(--ps-surface-hover)';
       this.updateLayoutToggleUI();
       this.renderCurrentState();
     });
@@ -232,8 +227,10 @@ export class ImageWorkspace {
   }
 
   updateLayoutToggleUI() {
-    this.container.querySelector('.iw-layout-slider')?.classList.toggle('is-active', this.compareLayout === 'slider');
-    this.container.querySelector('.iw-layout-side')?.classList.toggle('is-active', this.compareLayout === 'side');
+    this.container.querySelector('.iw-layout-single')?.classList.toggle('is-active', !this.compareMode);
+    this.container.querySelector('.iw-layout-slider')?.classList.toggle('is-active', this.compareMode && this.compareLayout === 'slider');
+    this.container.querySelector('.iw-layout-side')?.classList.toggle('is-active', this.compareMode && this.compareLayout === 'side');
+    this.container.querySelector('.ic-image-workspace')?.classList.toggle('is-single-mode', !this.compareMode);
   }
 
   resetZoom() {
@@ -268,7 +265,10 @@ export class ImageWorkspace {
       this.lastRenderResult = await this.options.onRender(this.activeFile);
       const canCompare = this.lastRenderResult?.canCompare ?? true;
       
-      this.cmpToggleBtn.style.display = canCompare ? '' : 'none';
+      if (this.modeToggleGroup) {
+         this.modeToggleGroup.style.display = canCompare ? 'flex' : 'none';
+      }
+
       if (!canCompare && this.compareMode) {
          // Temporarily suppress compare mode rendering without overwriting localStorage
          this._tempCompareMode = false;
@@ -277,6 +277,7 @@ export class ImageWorkspace {
       }
       
       this.cmpControls.style.display = 'flex';
+      this.updateLayoutToggleUI();
       this.renderCurrentState();
     } catch (err) {
       console.error(err);
