@@ -1,9 +1,19 @@
 import { getSettings, saveSettings } from './settings.js';
 import { showToast } from '../aurora/toast.js';
+import { dbGet, dbPut } from '../data/db.js';
 
-export function showSettingsModal() {
+export async function showSettingsModal() {
   const current = getSettings();
   const palette = current.palette || [];
+  
+  // Fetch existing project root handle
+  let projectRootHandle = null;
+  try {
+    const rootRecord = await dbGet('folders', 'project_root');
+    if (rootRecord) projectRootHandle = rootRecord.handle;
+  } catch (err) {
+    console.warn('Failed to fetch project root handle', err);
+  }
   
   const modal = document.createElement('div');
   modal.style.cssText = 'position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);';
@@ -22,6 +32,28 @@ export function showSettingsModal() {
       
       <div style="padding: 24px; display:flex; flex-direction:column; gap:24px; background:var(--ps-bg-app); max-height: 70vh; overflow-y: auto;">
         
+        <!-- Project Root Link -->
+        <section style="display:flex; flex-direction:column; gap:12px;">
+          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Project Storage</h4>
+          <div style="background:var(--ps-bg-overlay); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Project Root Directory</span>
+                <span id="project-root-status" style="font-size:11px; color:var(--ps-text-muted); margin-top:2px;">
+                  ${projectRootHandle ? `<span style="color:var(--ps-green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> Linked to: ${projectRootHandle.name}</span>` : 'Not linked. Thumbnails will use base64 fallback.'}
+                </span>
+              </div>
+              <button class="btn-secondary" id="btn-link-project" style="font-size:11px; padding:6px 12px;">
+                <span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">folder_shared</span>
+                ${projectRootHandle ? 'Change Link' : 'Link Project Folder'}
+              </button>
+            </div>
+            <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.4;">
+              Linking the project root allows the app to save recipe thumbnails directly into the <code>samples/</code> and <code>user-samples/</code> folders for persistence.
+            </p>
+          </div>
+        </section>
+
         <!-- Batch Core -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Batch Engine</h4>
@@ -100,6 +132,23 @@ export function showSettingsModal() {
   };
 
   renderSwatches();
+
+  modal.querySelector('#btn-link-project').onclick = async (e) => {
+    try {
+      const handle = await window.showDirectoryPicker();
+      if (handle) {
+        await dbPut('folders', { key: 'project_root', handle });
+        projectRootHandle = handle;
+        modal.querySelector('#project-root-status').innerHTML = `<span style="color:var(--ps-green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> Linked to: ${handle.name}</span>`;
+        e.target.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">folder_shared</span> Change Link';
+        showToast({ variant: 'success', title: 'Project Linked', description: `Thumbnails will now be saved to ${handle.name}/samples.` });
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        showToast({ variant: 'danger', title: 'Linking failed', description: err.message });
+      }
+    }
+  };
 
   modal.querySelector('#btn-add-swatch').onclick = () => {
       palette.push({ label: 'New Color', color: '#ff0000' });

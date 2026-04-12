@@ -15,7 +15,7 @@ import { getAllBlocks }                            from '../data/blocks.js';
 import { ImageProcessor }                         from './processor.js';
 import { extractExif }                            from './exif-reader.js';
 import { ingestFile }                             from '../data/assets.js';
-import { createGIF, createVideo, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
+import { createGIF, createVideo, createPDF, createPPTX, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
 import { createVideoWall } from './video-wall.js';
 import { applyRunParams }                         from '../utils/nodes.js';
 
@@ -55,6 +55,10 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-face-swap',
   // Title slides need custom Web Fonts from the main thread document to render beautifully
   'flow-title-slide',
+  // PDF, PPTX, and ZIP creation rely on DOM APIs or have large main thread dependencies
+  'flow-create-pdf',
+  'flow-create-pptx',
+  'flow-create-zip',
 ]);
 
 function flattenNodes(nodes) {
@@ -109,10 +113,10 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   const resolvedNodes = resolveBlocks(recipe.nodes || [], blocksById);
   applyRunParams(resolvedNodes, runParams);
 
-  // Aggregation collector (GIF / video / contact sheet)
+  // Aggregation collector (GIF / video / contact sheet / zip)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -259,6 +263,22 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       } else if (agg.node.transformId === 'flow-create-video') {
         const blob = await createVideo(agg.blobs, { durationPerSlide: p.durationPerSlide || 2, fps: p.fps || 30, width: p.width, height: p.height });
         await writeFile(subHandle, p.filename || 'slideshow.mp4', blob);
+      } else if (agg.node.transformId === 'flow-create-pdf') {
+        const blob = await createPDF(agg.blobs, { orientation: p.orientation, format: p.format, quality: p.quality });
+        let fname = p.filename || 'document.pdf';
+        if (!fname.toLowerCase().endsWith('.pdf')) fname += '.pdf';
+        await writeFile(subHandle, fname, blob);
+      } else if (agg.node.transformId === 'flow-create-pptx') {
+        const blob = await createPPTX(agg.blobs, { layout: p.layout });
+        let fname = p.filename || 'presentation.pptx';
+        if (!fname.toLowerCase().endsWith('.pptx')) fname += '.pptx';
+        await writeFile(subHandle, fname, blob);
+      } else if (agg.node.transformId === 'flow-create-zip') {
+        const { createZIP } = await import('./compositor.js');
+        const blob = await createZIP(agg.blobs, agg.originalNames || []);
+        let fname = p.filename || 'archive.zip';
+        if (!fname.toLowerCase().endsWith('.zip')) fname += '.zip';
+        await writeFile(subHandle, fname, blob);
       } else if (agg.node.transformId === 'flow-video-stitcher') {
         const { createWebGLStitcher } = await import('./stitcher.js');
         let _lastPct = -1;

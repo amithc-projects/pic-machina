@@ -145,24 +145,35 @@ async function seedSystemBlocks(db) {
 
 // ─── System recipe seeding ────────────────────────────────
 async function seedSystemRecipes(db) {
-  // Upsert all system recipes so new ones added to system-recipes.js appear automatically
-  const existing = await new Promise((resolve, reject) => {
-    const tx = db.transaction('recipes', 'readonly');
-    const req = tx.objectStore('recipes').getAll();
-    req.onsuccess = () => resolve(req.result.filter(r => r.isSystem));
+  // 1. Get existing system recipes from DB first
+  const existingMap = new Map();
+  const txRead = db.transaction('recipes', 'readonly');
+  const storeRead = txRead.objectStore('recipes');
+  const allExisting = await new Promise((resolve, reject) => {
+    const req = storeRead.getAll();
+    req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+  allExisting.filter(r => r.isSystem).forEach(r => existingMap.set(r.id, r));
 
   const { SYSTEM_RECIPES } = await import('./system-recipes.js');
-  // Always upsert every system recipe so param changes in system-recipes.js are reflected
-  // on next app start. User-created recipes are unaffected (they are not in SYSTEM_RECIPES).
 
-  const tx = db.transaction('recipes', 'readwrite');
-  const store = tx.objectStore('recipes');
-  SYSTEM_RECIPES.forEach(r => store.put(r));
+  // 2. Perform upsert
+  const txWrite = db.transaction('recipes', 'readwrite');
+  const storeWrite = txWrite.objectStore('recipes');
+  
+  SYSTEM_RECIPES.forEach(incoming => {
+    const existing = existingMap.get(incoming.id);
+    if (existing && existing.thumbnail && !incoming.thumbnail) {
+      // Preserve existing thumbnail if the new one is undefined/null
+      incoming.thumbnail = existing.thumbnail;
+    }
+    storeWrite.put(incoming);
+  });
+
   return new Promise((resolve, reject) => {
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
+    txWrite.oncomplete = resolve;
+    txWrite.onerror = () => reject(txWrite.error);
   });
 }
 

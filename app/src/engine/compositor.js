@@ -397,6 +397,92 @@ export async function createAnimatedStack(blobs, {
   return new Blob([target.buffer], { type: 'video/mp4' });
 }
 
+/**
+ * Create a multi-page PDF from an array of image Blobs.
+ * @param {Blob[]}  blobs
+ * @param {object}  opts
+ * @returns {Promise<Blob>}
+ */
+export async function createPDF(blobs, { orientation = 'p', format = 'a4', quality = 0.8 } = {}) {
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ orientation, format, compress: true });
+
+  for (let i = 0; i < blobs.length; i++) {
+    if (i > 0) doc.addPage(format, orientation);
+    
+    const url = URL.createObjectURL(blobs[i]);
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load image for PDF'));
+        img.src = url;
+      });
+
+      const pageWidth  = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Calculate best fit (contain)
+      const scale = Math.min(pageWidth / img.width, pageHeight / img.height);
+      const w = img.width  * scale;
+      const h = img.height * scale;
+      const x = (pageWidth  - w) / 2;
+      const y = (pageHeight - h) / 2;
+
+      doc.addImage(img, 'JPEG', x, y, w, h, undefined, 'FAST');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  return doc.output('blob');
+}
+
+/**
+ * Create a multi-slide PowerPoint presentation from an array of image Blobs.
+ * @param {Blob[]}  blobs
+ * @param {object}  opts
+ * @returns {Promise<Blob>}
+ */
+export async function createPPTX(blobs, { layout = 'LAYOUT_16x9' } = {}) {
+  const { default: PptxGenJS } = await import('pptxgenjs');
+  const pptx = new PptxGenJS();
+  pptx.layout = layout;
+
+  for (const blob of blobs) {
+    const slide = pptx.addSlide();
+    const url = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+    
+    slide.addImage({ data: url, x: 0, y: 0, w: '100%', h: '100%', sizing: { type: 'contain' } });
+  }
+
+  const out = await pptx.write('blob');
+  return out;
+}
+
+/**
+ * Create a ZIP archive from an array of image Blobs.
+ * @param {Blob[]}   blobs
+ * @param {string[]} filenames
+ * @returns {Promise<Blob>}
+ */
+export async function createZIP(blobs, filenames) {
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+
+  for (let i = 0; i < blobs.length; i++) {
+    // Attempt to retain original extension, fallback to jpg if none provided
+    let fname = filenames && filenames[i] ? filenames[i] : `image-${i + 1}.jpg`;
+    zip.file(fname, blobs[i]);
+  }
+
+  return zip.generateAsync({ type: 'blob' });
+}
+
 // ── Handwriting font loader ────────────────────────────────
 export async function loadHandwritingFont() {
   if (typeof document === 'undefined' || !document.fonts) return 'cursive';

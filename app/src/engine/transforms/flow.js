@@ -385,3 +385,59 @@ registry.register({
   ],
   apply() { /* handled by Processor as aggregation node */ }
 });
+
+// ─── Create PDF ───────────────────────────────────────────
+registry.register({
+  id: 'flow-create-pdf', name: 'Create PDF', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'picture_as_pdf',
+  description: 'Assemble all processed images into a multi-page PDF document at the end of the batch.',
+  params: [
+    { name: 'filename', label: 'Output Filename', type: 'text',   defaultValue: 'document.pdf' },
+    { name: 'orientation', label: 'Orientation', type: 'select',
+      options: [
+        { label: 'Portrait', value: 'p' },
+        { label: 'Landscape', value: 'l' }
+      ],
+      defaultValue: 'p'
+    },
+    { name: 'format', label: 'Page Format', type: 'select',
+      options: [
+        { label: 'A4', value: 'a4' },
+        { label: 'Letter', value: 'letter' },
+        { label: 'Legal', value: 'legal' }
+      ],
+      defaultValue: 'a4'
+    },
+    { name: 'quality', label: 'Image Quality (0.1-1.0)', type: 'number', defaultValue: 0.8 },
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
+});
+
+// ─── Create PowerPoint ────────────────────────────────────
+registry.register({
+  id: 'flow-create-pptx', name: 'Create PowerPoint', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'present_to_all',
+  description: 'Assemble all processed images into a multi-slide PowerPoint presentation at the end of the batch.',
+  params: [
+    { name: 'filename', label: 'Output Filename', type: 'text',   defaultValue: 'presentation.pptx' },
+    { name: 'layout', label: 'Slide Layout', type: 'select',
+      options: [
+        { label: 'Widescreen (16:9)', value: 'LAYOUT_16x9' },
+        { label: 'Standard (4:3)', value: 'LAYOUT_4x3' }
+      ],
+      defaultValue: 'LAYOUT_16x9'
+    },
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
+});
+
+// ─── Create ZIP Archive ───────────────────────────────────
+registry.register({
+  id: 'flow-create-zip', name: 'Create ZIP', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'folder_zip',
+  description: 'Assemble all processed images into a ZIP archive at the end of the batch.',
+  params: [
+    { name: 'filename', label: 'Output Filename', type: 'text',   defaultValue: 'archive.zip' },
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
+});
