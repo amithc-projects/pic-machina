@@ -491,7 +491,145 @@ Assembles named saved states into a grid (e.g. a 2×2 Warhol-style panel).
 
 ---
 
-### 3.6 Aggregation Nodes
+### 3.6 Video Operations (`flow-video-*`)
+
+Video operation transforms use the **mediabunny** library to re-encode or inspect video files. Non-video files in the batch are silently skipped. All run on the main thread (WebCodecs required).
+
+> **Important**: Video operation transforms skip non-video files — they can safely coexist in a recipe that also processes images, they will only act on `.mp4`, `.mov`, `.webm` files.
+
+#### `flow-video-convert` — Convert Format
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `format` | select | `"mp4"` | `"mp4"` \| `"webm"` \| `"mkv"` \| `"mov"` \| `"ogg"` |
+| `codec` | select | `"auto"` | `"auto"` \| `"avc"` \| `"hevc"` \| `"av1"` \| `"vp8"` \| `"vp9"` |
+| `audioCodec` | select | `"auto"` | `"auto"` \| `"aac"` \| `"opus"` \| `"vorbis"` \| `"mp3"` |
+| `suffix` | text | `""` | |
+
+#### `flow-video-trim` — Trim
+| Param | Type | Default |
+|---|---|---|
+| `start` | number | `0` | Start time in seconds |
+| `end` | number | `""` | End time in seconds — blank = end of file |
+| `suffix` | text | `"_trimmed"` |
+
+#### `flow-video-compress` — Compress
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `quality` | select | `"medium"` | `"low"` \| `"medium"` \| `"high"` \| `"custom"` |
+| `bitrate` | number | `4` | Mbps — only used when `quality` = `"custom"` |
+| `suffix` | text | `"_compressed"` | |
+
+#### `flow-video-change-fps` — Change Frame Rate
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `fps` | select | `30` | `12` \| `24` \| `25` \| `30` \| `60` |
+| `suffix` | text | `""` | |
+
+#### `flow-video-strip-audio` — Strip Audio
+| Param | Type | Default |
+|---|---|---|
+| `suffix` | text | `"_silent"` |
+
+#### `flow-video-extract-audio` — Extract Audio
+Exports the audio track as a standalone audio file (video is discarded).
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `format` | select | `"mp3"` | `"mp3"` \| `"wav"` \| `"flac"` \| `"ogg"` \| `"aac"` |
+| `suffix` | text | `"_audio"` | |
+
+#### `flow-video-remix-audio` — Remix Audio
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `channels` | select | `"keep"` | `"keep"` (original) \| `"1"` (stereo→mono) \| `"2"` (mono→stereo) |
+| `sampleRate` | select | `"keep"` | `"keep"` \| `"22050"` \| `"44100"` \| `"48000"` |
+| `suffix` | text | `""` | |
+
+---
+
+### 3.7 Video Effects (`video-*`)
+
+Video effects apply existing image transforms to **every decoded frame** of a video via mediabunny's `process` callback, then re-encode the result. Each shares its params with the equivalent `color-*` / `filter-*` image transform, plus `suffix` and `bitrate` fields.
+
+In the Recipe Builder and Step Editor, video effect transforms show a **frame preview** — the effect is applied to a single extracted frame for instant feedback without a full re-encode.
+
+> Non-video files are silently skipped.
+
+#### `video-tuning` — Video Tuning (wraps `color-tuning`)
+| Param | Type | Default |
+|---|---|---|
+| `contrast` | range -100–100 | `0` |
+| `saturation` | range -100–100 | `0` |
+| `vibrance` | range -100–100 | `0` |
+| `invert` | boolean | `false` |
+| `suffix` | text | `""` |
+| `bitrate` | number | `8000000` |
+
+#### `video-duotone` — Video Duotone (wraps `color-duotone`)
+| Param | Type | Default |
+|---|---|---|
+| `darkColor` | color | `"#1a0533"` |
+| `lightColor` | color | `"#e8f4d4"` |
+| `suffix` | text | `""` |
+| `bitrate` | number | `8000000` |
+
+#### `video-tint` — Video Tint (wraps `color-tint`)
+| Param | Type | Default |
+|---|---|---|
+| `color` | color | `"#ff8800"` |
+| `strength` | range 0–100 | `20` |
+| `blendMode` | select | `"source-over"` |
+| `suffix` | text | `""` |
+| `bitrate` | number | `8000000` |
+
+#### `video-vignette` — Video Vignette (wraps `color-vignette`)
+| Param | Type | Default |
+|---|---|---|
+| `amount` | range 0–100 | `40` |
+| `radius` | range 0–100 | `65` |
+| `suffix` | text | `""` |
+| `bitrate` | number | `8000000` |
+
+#### `video-advanced-effects` — Video Advanced Effects (wraps `filter-advanced`)
+| Param | Type | Default |
+|---|---|---|
+| `blurRadius` | range 0–40 | `0` |
+| `sharpenAmount` | range 0–100 | `0` |
+| `noiseLevel` | range 0–50 | `0` |
+| `pixelSize` | range 1–40 | `1` |
+| `suffix` | text | `""` |
+| `bitrate` | number | `8000000` |
+
+#### `video-bloom` — Video Bloom / Glow (wraps `filter-bloom`)
+| Param | Type | Default |
+|---|---|---|
+| `threshold` | range 0–100 | `75` |
+| `blurRadius` | range 2–60 | `20` |
+| `strength` | range 0–100 | `70` |
+| `suffix` | text | `""` |
+| `bitrate` | number | `8000000` |
+
+#### `video-color-grade` — Video Color Grade (wraps `filter-color-grade`)
+| Param | Type | Default |
+|---|---|---|
+| `lift` | range 0–50 | `0` |
+| `shadowColor` | color | `"#000000"` |
+| `shadowStrength` | range 0–100 | `0` |
+| `highlightColor` | color | `"#ffffff"` |
+| `highlightStrength` | range 0–100 | `0` |
+| `suffix` | text | `""` |
+| `bitrate` | number | `8000000` |
+
+#### `video-chromatic-aberration` — Video Chromatic Aberration (wraps `filter-chromatic-aberration`)
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `offset` | range 1–30 | `8` | |
+| `direction` | select | `"horizontal"` | `"horizontal"` \| `"vertical"` \| `"diagonal"` |
+| `suffix` | text | `""` | |
+| `bitrate` | number | `8000000` | |
+
+---
+
+### 3.8 Aggregation Nodes
 
 Aggregation nodes collect **one frame per input image** during the batch run, then combine them into a single output file after all images have been processed.
 
@@ -597,9 +735,19 @@ A robust client-side ML engine that uses MediaPipe Face Landmarker (Tasks Vision
 |---|---|---|
 | `suffix` | text | `"_machinaswap"` |
 
+#### `flow-video-concat` — Video Concatenate
+Joins all selected video files end-to-end into a single output MP4. Input order follows file selection order in Batch Setup.
+| Param | Type | Default |
+|---|---|---|
+| `filename` | text | `"concatenated.mp4"` |
+| `fps` | number | `30` |
+| `width` | number | `""` | Leave blank to use first video's width |
+| `height` | number | `""` | Leave blank to use first video's height |
+| `bitrate` | number | `8000000` |
+
 ---
 
-### 3.7 Metadata (`meta-*`)
+### 3.9 Metadata (`meta-*`)
 
 #### `meta-strip` — Strip Metadata
 | Param | Type | Default |

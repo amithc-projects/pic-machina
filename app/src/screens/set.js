@@ -414,6 +414,7 @@ export async function render(container, hash) {
       const stats = container.querySelector('#set-input-stats');
       const term = onlyVideo ? 'video' : (includeVideo ? 'file' : 'image');
       if (stats) stats.textContent = `${selectedFiles.length} ${term}${selectedFiles.length !== 1 ? 's' : ''} found`;
+      updateSelCount();
       updateRunButton();
     } catch (err) {
       console.error('[SET] listImages failed:', err);

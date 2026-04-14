@@ -30,6 +30,8 @@ class VideoStream {
   constructor(encodedChunks, codecString, description, durationUs) {
     this.encodedChunks = encodedChunks;
     this.durationUs    = durationUs;
+    this.codecString   = codecString;   // stored for reset()
+    this.description   = description;   // stored for reset()
     this.exhausted     = false;
     this._buffer       = [];   // decoded VideoFrames, sorted by timestamp
     this._chunkIdx     = 0;    // next chunk index to feed to the decoder
@@ -39,9 +41,13 @@ class VideoStream {
   _createDecoder(codec, description) {
     const dec = new VideoDecoder({
       output: (f) => this._buffer.push(f),
-      error:  (e) => console.warn('[VideoStream decoder]', e),
+      error:  (e) => {
+        // Decoder transitioned to "closed" after an error — log but don't throw.
+        // ensureBufferedTo() checks state before decode() to handle this gracefully.
+        console.warn('[VideoStream decoder error]', e);
+      },
     });
-    const config = { codec, hardwareAcceleration: 'prefer-hardware' };
+    const config = { codec, hardwareAcceleration: 'no-preference' };
     if (description) config.description = description;
     dec.configure(config);
     // Skip any leading non-keyframes (decoder requires a keyframe first)
@@ -58,6 +64,15 @@ class VideoStream {
    */
   async ensureBufferedTo(targetTs) {
     if (this._chunkIdx >= this.encodedChunks.length) return;
+    // If the decoder is closed (due to an error), try to recover from the nearest
+    // prior keyframe so compositing can continue rather than hard-failing.
+    if (this._decoder.state === 'closed') {
+      const recoveryIdx = this._findPriorKeyframe(this._chunkIdx);
+      if (recoveryIdx < 0) return; // no keyframe to recover from — stream goes black
+      this._chunkIdx = recoveryIdx;
+      this._decoder = this._createDecoder(this.codecString, this.description);
+    }
+
     const last = this._buffer[this._buffer.length - 1];
     if (last && last.timestamp >= targetTs) return;
 
@@ -66,9 +81,20 @@ class VideoStream {
       (this._buffer.length === 0 ||
        this._buffer[this._buffer.length - 1].timestamp < targetTs)
     ) {
+      if (this._decoder.state === 'closed') break; // stop feeding if decoder errored
       this._decoder.decode(this.encodedChunks[this._chunkIdx++]);
     }
-    await this._decoder.flush();
+    if (this._decoder.state !== 'closed') {
+      await this._decoder.flush();
+    }
+  }
+
+  /** Find the index of the keyframe at or before startIdx. Returns -1 if none found. */
+  _findPriorKeyframe(startIdx) {
+    for (let i = Math.min(startIdx, this.encodedChunks.length - 1); i >= 0; i--) {
+      if (this.encodedChunks[i].type === 'key') return i;
+    }
+    return -1;
   }
 
   /**
@@ -164,6 +190,58 @@ const TEMPLATES = {
     name: 'Side by Side',
     maxStreams: 2,
     getCells: (w, h) => makeGridCells(2, 1, w, h, 'contain'),
+    drawBackground: null,
+  },
+  'pip-corner-br': {
+    name: 'Picture in Picture (Bottom Right)',
+    maxStreams: 2,
+    getCells: (w, h) => {
+      const pipW = Math.round(w * 0.28), pipH = Math.round(h * 0.28);
+      const margin = Math.round(Math.min(w, h) * 0.025);
+      return [
+        { type: 'rect', x: 0, y: 0, w, h, fitMode: 'cover' },
+        { type: 'rect', x: w - pipW - margin, y: h - pipH - margin, w: pipW, h: pipH, fitMode: 'cover' },
+      ];
+    },
+    drawBackground: null,
+  },
+  'pip-corner-bl': {
+    name: 'Picture in Picture (Bottom Left)',
+    maxStreams: 2,
+    getCells: (w, h) => {
+      const pipW = Math.round(w * 0.28), pipH = Math.round(h * 0.28);
+      const margin = Math.round(Math.min(w, h) * 0.025);
+      return [
+        { type: 'rect', x: 0, y: 0, w, h, fitMode: 'cover' },
+        { type: 'rect', x: margin, y: h - pipH - margin, w: pipW, h: pipH, fitMode: 'cover' },
+      ];
+    },
+    drawBackground: null,
+  },
+  'pip-corner-tr': {
+    name: 'Picture in Picture (Top Right)',
+    maxStreams: 2,
+    getCells: (w, h) => {
+      const pipW = Math.round(w * 0.28), pipH = Math.round(h * 0.28);
+      const margin = Math.round(Math.min(w, h) * 0.025);
+      return [
+        { type: 'rect', x: 0, y: 0, w, h, fitMode: 'cover' },
+        { type: 'rect', x: w - pipW - margin, y: margin, w: pipW, h: pipH, fitMode: 'cover' },
+      ];
+    },
+    drawBackground: null,
+  },
+  'pip-corner-tl': {
+    name: 'Picture in Picture (Top Left)',
+    maxStreams: 2,
+    getCells: (w, h) => {
+      const pipW = Math.round(w * 0.28), pipH = Math.round(h * 0.28);
+      const margin = Math.round(Math.min(w, h) * 0.025);
+      return [
+        { type: 'rect', x: 0, y: 0, w, h, fitMode: 'cover' },
+        { type: 'rect', x: margin, y: margin, w: pipW, h: pipH, fitMode: 'cover' },
+      ];
+    },
     drawBackground: null,
   },
   'custom-tv': {

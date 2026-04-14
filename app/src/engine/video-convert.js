@@ -85,7 +85,22 @@ async function runConversion(input, outputFormat, OutputFormatClass, mime, conve
  * @param {{ bitrate?: number, onLog?: function }} options
  * @returns {Promise<Blob>}
  */
-export async function processVideoEffect(file, applyFn, params = {}, { bitrate = 8_000_000, onLog } = {}) {
+/**
+ * Apply one or more canvas-based image transforms to every frame of a video.
+ *
+ * @param {File} file
+ * @param {Function|Array<{fn:Function, params:object}>} applyFnOrSteps
+ *   - Single function (legacy): called as fn(ctx, params, {}) per frame.
+ *   - Array of steps: each step is { fn, params }; all applied in sequence per frame.
+ * @param {object} params   Only used when applyFnOrSteps is a single function.
+ * @param {{ bitrate?: number, onLog?: function }} options
+ */
+export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bitrate = 8_000_000, onLog } = {}) {
+  // Normalise to array of steps
+  const steps = Array.isArray(applyFnOrSteps)
+    ? applyFnOrSteps
+    : [{ fn: applyFnOrSteps, params }];
+
   const log = (msg) => onLog?.('info', msg);
   const ext = getInputExt(file);
   const { OutputFormat, mime } = await resolveOutputFormat(['webm', 'ogg', 'mkv', 'mov'].includes(ext) ? ext : 'mp4');
@@ -98,16 +113,23 @@ export async function processVideoEffect(file, applyFn, params = {}, { bitrate =
   ]);
   const rawW = videoTrack.displayWidth;
   const rawH = videoTrack.displayHeight;
-  // H.264 requires even dimensions — round up by 1px if needed
-  const encW = rawW % 2 === 0 ? rawW : rawW + 1;
-  const encH = rawH % 2 === 0 ? rawH : rawH + 1;
 
+  // Determine OUTPUT dimensions via a dry-run: run all transforms on a blank canvas
+  // at the video's natural dimensions so geo-resize/crop compute final size correctly.
+  const dimCanvas = document.createElement('canvas');
+  dimCanvas.width = rawW; dimCanvas.height = rawH;
+  const dimCtx = dimCanvas.getContext('2d');
+  for (const step of steps) {
+    try { await step.fn(dimCtx, step.params || {}, {}); } catch { /* ignore */ }
+  }
+  // H.264 requires even dimensions — round up by 1px if needed
+  const outW = dimCanvas.width  % 2 === 0 ? dimCanvas.width  : dimCanvas.width  + 1;
+  const outH = dimCanvas.height % 2 === 0 ? dimCanvas.height : dimCanvas.height + 1;
+
+  // Working canvas (reused across all frames — reset to rawW×rawH before each frame)
   const canvas = document.createElement('canvas');
-  canvas.width  = encW;
-  canvas.height = encH;
   const ctx = canvas.getContext('2d');
 
-  // Estimate total frame count from duration × fps (derived from first sample duration)
   let estimatedTotal = 0;
   let frameCount     = 0;
   let lastLoggedPct  = -1;
@@ -122,25 +144,30 @@ export async function processVideoEffect(file, applyFn, params = {}, { bitrate =
     output,
     video: {
       bitrate: parseInt(bitrate) || 8_000_000,
-      processedWidth:  encW,
-      processedHeight: encH,
+      processedWidth:  outW,
+      processedHeight: outH,
       process: async (sample) => {
         if (frameCount === 0) {
           startTime = Date.now();
-          // Estimate total frames from duration ÷ per-frame duration
           if (sample.duration > 0) estimatedTotal = Math.round(totalDuration / sample.duration);
-          log(`Processing ${rawW}×${rawH} video (${totalDuration.toFixed(1)}s, ~${estimatedTotal} frames)`);
+          const dimStr = outW !== rawW || outH !== rawH
+            ? `${rawW}×${rawH}→${outW}×${outH}`
+            : `${rawW}×${rawH}`;
+          log(`Processing ${dimStr} video (${totalDuration.toFixed(1)}s, ~${estimatedTotal} frames)`);
         }
 
-        // Draw this decoded frame onto the working canvas (fills encW×encH)
-        sample.draw(ctx, 0, 0, encW, encH);
+        // Reset to input dimensions so transforms that resize start from the video frame size
+        canvas.width  = rawW;
+        canvas.height = rawH;
+        sample.draw(ctx, 0, 0, rawW, rawH);
 
-        // Apply the image effect
-        await applyFn(ctx, params, {});
+        // Apply all transforms in sequence
+        for (const step of steps) {
+          await step.fn(ctx, step.params || {}, {});
+        }
 
         frameCount++;
 
-        // Log progress every 5% with ETA (frame-count based, always accurate)
         if (estimatedTotal > 0) {
           const pct    = Math.min(99, (frameCount / estimatedTotal) * 100);
           const bucket = Math.floor(pct / 5) * 5;

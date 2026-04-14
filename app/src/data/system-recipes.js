@@ -845,7 +845,54 @@ export const SYSTEM_RECIPES = [
         label: 'Mesh Interlock' }
     ]
   },
-  // ── 42. PM Solutions ID Card ──────────────────────────────
+  // ── 42. Talking Head PiP ──────────────────────────────────
+  {
+    id: 'sys-talking-head-pip', name: 'Talking Head PiP',
+    description: 'Composites two videos: the first plays fullscreen as the background, the second is cropped circular and inset as a picture-in-picture talking head in the bottom-right corner.',
+    isSystem: true, isOrdered: true, coverColor: '#7c3aed',
+    inputType: 'video',
+    tags: ['video', 'picture-in-picture', 'talking head', 'composite', 'circular'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'pip-cond', type: 'conditional',
+        condition: { field: 'fileIndex', operator: 'gte', value: 1 },
+        thenNodes: [
+          {
+            id: 'pip-resize', type: 'transform', transformId: 'geo-resize',
+            params: { width: '', height: '540', maintainAspect: true },
+            label: 'Resize Talking Head'
+          },
+          {
+            id: 'pip-crop', type: 'transform', transformId: 'geo-smart-crop',
+            params: { aspectRatio: '1:1', strategy: 'Attention' },
+            label: 'Square Crop'
+          },
+          {
+            id: 'pip-round', type: 'transform', transformId: 'geo-round',
+            params: { radius: '50%', circular: true },
+            label: 'Make Circular'
+          },
+        ],
+        elseNodes: [],
+      },
+      {
+        id: 'pip-wall', type: 'transform', transformId: 'flow-video-wall',
+        params: {
+          layout: 'pip-corner-br',
+          fps: 30,
+          outputWidth: 1920,
+          outputHeight: 1080,
+          bitrate: 8000000,
+          endOfVideo: 'black',
+          filename: 'talking-head-pip.mp4',
+        },
+        label: 'Composite PiP'
+      }
+    ]
+  },
+
+  // ── 43. PM Solutions ID Card ──────────────────────────────
   {
     id: 'sys-pm-solutions-id', name: 'PM Solutions ID Card',
     description: 'Generates a corporate ID card using the PM Solutions template. Crops the input photo, places it in the template hole, and injects name and title from EXIF data.',

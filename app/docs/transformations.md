@@ -17,6 +17,7 @@ All transforms are registered by their `transformId` string.
 | `overlay-*` | Overlays & Typography |
 | `ai-*` | AI & Composition |
 | `flow-*` | Flow Control & Export |
+| `video-*` | Video Effects (per-frame) |
 | `meta-*` | Metadata |
 
 ---
@@ -129,6 +130,40 @@ Aggregation nodes collect one frame per input image then produce a single combin
 | `flow-face-swap` | Machina-Swap | `suffix` | Mesh interlock node that cross-swaps faces (2 images) or pastes source to all (3+ images). |
 | `flow-template-aggregator` | Template Render | `templateId`, `filename`, `quality` | Maps batch images sequentially into defined template placeholder slots using OpenCV-detected bounds. If placeholders < images, it chunk-processes them into multiple numbered template composites. |
 | `flow-video-wall` | Video Wall | `layout`, `filename`, `outputWidth`, `outputHeight`, `fps` | Composites multiple input videos into a multi-stream MP4 grid. `layout` accepts system ids (`grid-2x2`, `custom-tv`) AND custom `templateId`s. Hardware accelerated. Supports Native `.mp4` file handle background looping. |
+| `flow-video-concat` | Video Concatenate | `filename`, `fps`, `width`, `height`, `bitrate` | Joins all selected video files end-to-end into a single output MP4. |
+
+### Video Operations (Per-Video, Single-Input)
+
+These transforms operate on individual video files using the mediabunny conversion engine. Non-video files are skipped automatically. All run on the main thread.
+
+| Transform ID | Name | Key Params | Notes |
+|---|---|---|---|
+| `flow-video-convert` | Video: Convert Format | `format` (mp4/webm/mkv/mov/ogg), `codec`, `audioCodec`, `suffix` | Re-encode to a different container and/or codec |
+| `flow-video-trim` | Video: Trim | `start` (s), `end` (s), `suffix` | Cut to a specific time range |
+| `flow-video-compress` | Video: Compress | `quality` (low/medium/high/custom), `bitrate` (Mbps), `suffix` | Reduce file size via lower bitrate |
+| `flow-video-change-fps` | Video: Change Frame Rate | `fps` (12/24/25/30/60), `suffix` | Retarget the video frame rate |
+| `flow-video-strip-audio` | Video: Strip Audio | `suffix` | Remove all audio tracks |
+| `flow-video-extract-audio` | Video: Extract Audio | `format` (mp3/wav/flac/ogg/aac), `suffix` | Export audio track as a standalone audio file |
+| `flow-video-remix-audio` | Video: Remix Audio | `channels` (keep/1/2), `sampleRate` (keep/22050/44100/48000), `suffix` | Adjust audio channel layout and/or sample rate |
+
+---
+
+## Video Effects (Per-Frame)
+
+These transforms apply existing image effects to every frame of a video using the mediabunny `process` callback and WebCodecs encoding. Each shares its parameter set with the equivalent image transform. All output an MP4. Non-video files are skipped. Runs on the main thread (WebCodecs + DOM required).
+
+> **Preview mode**: In the Recipe Builder and Step Editor, these apply the effect to a single extracted frame for instant preview — no full re-encode needed.
+
+| Transform ID | Source Effect | Key Params | Notes |
+|---|---|---|---|
+| `video-tuning` | `color-tuning` | `contrast`, `saturation`, `vibrance`, `invert`, `suffix`, `bitrate` | Adjust contrast/saturation/vibrance on every frame |
+| `video-duotone` | `color-duotone` | `darkColor`, `lightColor`, `suffix`, `bitrate` | Two-colour tone mapping on every frame |
+| `video-tint` | `color-tint` | `color`, `strength`, `blendMode`, `suffix`, `bitrate` | Colour tint overlay on every frame |
+| `video-vignette` | `color-vignette` | `amount`, `radius`, `suffix`, `bitrate` | Edge darkening on every frame |
+| `video-advanced-effects` | `filter-advanced` | `blurRadius`, `sharpenAmount`, `noiseLevel`, `pixelSize`, `suffix`, `bitrate` | Blur/sharpen/grain/pixelate on every frame |
+| `video-bloom` | `filter-bloom` | `threshold`, `blurRadius`, `strength`, `suffix`, `bitrate` | Cinematic highlight glow on every frame |
+| `video-color-grade` | `filter-color-grade` | `lift`, `shadowColor`, `shadowStrength`, `highlightColor`, `highlightStrength`, `suffix`, `bitrate` | Split-tone shadow/highlight grading on every frame |
+| `video-chromatic-aberration` | `filter-chromatic-aberration` | `offset`, `direction`, `suffix`, `bitrate` | RGB channel fringe on every frame |
 
 ---
 

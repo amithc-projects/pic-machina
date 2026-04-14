@@ -31,7 +31,7 @@ The application targets photographers, content teams, and power users who need r
 - **Local-only operation**: all transforms execute on-device via Canvas API and Web Workers
 - **File System Access API**: users grant access to input and output directories; handles are persisted in IndexedDB and re-verified on next launch
 - **Non-destructive**: original files are never modified; outputs saved to a configurable subfolder
-- **Format support**: JPEG, PNG, WebP (input and output); GIF, MP4 (aggregation output only)
+- **Format support**: JPEG, PNG, WebP, HEIC, TIFF, BMP, GIF (image input); MP4, MOV, WebM (video input); JPEG, PNG, WebP (image output); GIF, MP4 (aggregation output); MP3, WAV, FLAC, Ogg, AAC (audio extraction output)
 - **Folder Viewer**: direct folder browsing mode — user can open any local folder and browse/delete contents, independent of a batch run
 
 ### 3.2 Recipe Architecture
@@ -44,10 +44,11 @@ The application targets photographers, content teams, and power users who need r
 
 ### 3.3 Transform Engine
 
-- **58 registered transforms** across 7 categories (see `transformations.md` for full catalogue)
-- Transforms run in a **Web Worker** for non-AI recipes (keeps UI responsive)
+- **80+ registered transforms** across 9 categories (see `transformations.md` for full catalogue)
+- Transforms run in a **Web Worker** for non-AI, non-video recipes (keeps UI responsive)
 - **AI transforms** (`ai-*`) run on the main thread (require DOM/MediaPipe APIs unavailable in workers):
   - `ai-face-privacy`, `ai-remove-bg`, `ai-silhouette`, `ai-smart-redact`, `ai-ocr-tag`, `ai-analyse-people`, `ai-clipping-mask`
+- **Video transforms** (`flow-video-*`, `video-*`) run on the main thread (WebCodecs + mediabunny library)
 - **Aggregation pipeline**: `flow-photo-stack`, `flow-animate-stack` also run on main thread (gif.js requires HTMLCanvasElement)
 
 ### 3.4 Node Types
@@ -69,6 +70,15 @@ The application targets photographers, content teams, and power users who need r
 - **`flow-contact-sheet`**: JPEG grid of all images
 - **`flow-template-aggregator`**: mapping node that batches input images sequentially into defined template placeholder slots.
 - **`flow-video-wall`**: multiplexes videos into grid layouts or custom defined Templates. Backgrounds natively buffer and loop MP4s leveraging File System Access API without inflating IndexedDB quotas.
+- **`flow-video-convert`**: re-encode to different container/codec (MP4, WebM, MKV, MOV, Ogg) via mediabunny
+- **`flow-video-trim`**: cut to time range in seconds
+- **`flow-video-compress`**: reduce file size via quality presets or custom bitrate
+- **`flow-video-change-fps`**: retarget frame rate (12/24/25/30/60 fps)
+- **`flow-video-strip-audio`**: remove all audio tracks
+- **`flow-video-extract-audio`**: export audio track as MP3, WAV, FLAC, Ogg, or AAC
+- **`flow-video-remix-audio`**: change channel layout (stereo↔mono) and/or sample rate
+- **`flow-video-concat`**: join all selected videos end-to-end into one MP4 (aggregation node)
+- **`video-*` effects** (8 transforms): apply existing image effects (tuning, duotone, tint, vignette, advanced, bloom, color grade, chromatic aberration) to every decoded video frame via mediabunny's process callback
 - **`flow-animate-stack`**: animated desk stack — each image appears one by one, randomly rotated, on a coloured desk surface; supports `overlap` parameter and GIF or MP4 output
 - **`flow-photo-stack`** (legacy): single-node convenience wrapper combining `overlay-polaroid-frame` + `flow-animate-stack`
 - **`flow-face-swap`**: client-side 478-point mesh interlock face swapper. N=2 files yield mutual cross-swaps. N>2 applies image 1's face to all subsequent heads.
@@ -121,7 +131,7 @@ String-type params support `{{token}}` injection resolved per image at run time:
 | **QUE** | Processing Queue | Live batch progress with terminal-style log. Cancel in-flight batch. Navigate to output when complete. |
 | **OUT** | Output History | Searchable run history. View per-run logs. Browse output folder. |
 | **CMP** | Comparison View | Side-by-side or split-slider before/after comparison. |
-| **FLD** | Folder Viewer | Finder-style file browser. Two entry points: (1) from a specific batch run via Output History, (2) direct "open folder" mode that remembers the last browsed folder. Grid, filmstrip, and list views. Slideshow mode. Delete files. Before/after comparison with input folder. |
+| **FLD** | Folder Viewer | Finder-style file browser. Two entry points: (1) from a specific batch run via Output History, (2) direct "open folder" mode that remembers the last browsed folder. Grid, filmstrip, and list views. Slideshow mode. Delete files. Before/after comparison with input folder. Video files show thumbnail preview from `.{videoname}.preview.jpg` sidecars (generated in background); user can set a custom preview frame via the camera button on any video card. |
 
 ---
 
@@ -159,7 +169,8 @@ Discovery [LIB] ──> Inspect [PVW] ──> Configure [SET] ──> Run [QUE]
 - **Processing**: Web Workers (non-AI), Main thread (AI + animation aggregation)
 - **AI**: MediaPipe (face detection, segmentation, pose); Tesseract.js (OCR); OpenCV.js (template slot auto-detection via WASM background worker)
 - **GIF encoding**: gif.js (requires HTMLCanvasElement, runs on main thread)
-- **MP4 encoding**: WebCodecs API + mp4-muxer
+- **MP4 encoding**: WebCodecs API + mp4-muxer (slideshow aggregation)
+- **Video processing**: mediabunny (format conversion, trim, compress, fps change, audio ops, per-frame effects)
 - **Design system**: Aurora UI (custom, dark-mode-first)
 
 ### 6.2 "Pro Studio" Aesthetic

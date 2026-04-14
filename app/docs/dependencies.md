@@ -16,7 +16,8 @@ This document outlines the core libraries and dependencies that power PicMachina
 - **Piexifjs** (`piexifjs`): Used strictly for *writing* and injecting modified EXIF GPS and metadata chunks back into exported JPEG canvases.
 
 ## Video & Animation
-- **MP4-Muxer** (`mp4-muxer`): Creates MP4 containers natively in the browser by packaging H.264 streams encoded via the WebCodecs `VideoEncoder` API.
+- **Mediabunny** (`mediabunny`): High-level video processing library built on top of WebCodecs. Powers all video conversion, trimming, compression, frame-rate changes, audio operations (strip, extract, remix), and per-frame visual effects. Uses a `Conversion` API with strongly-typed format and codec output options. Required for all `flow-video-*` and `video-*` transforms.
+- **MP4-Muxer** (`mp4-muxer`): Creates MP4 containers natively in the browser by packaging H.264 streams encoded via the WebCodecs `VideoEncoder` API. Used for the slideshow (`flow-create-video`) and stack animation (`flow-animate-stack`) aggregation nodes.
 - **MP4Box** (`mp4box`): Used for parsing and manipulating existing MP4 files for timeline aggregation and video extraction.
 - **gif.js** (`gif.js`): A JavaScript GIF encoder that relies on Web Workers to compile canvas frames into animated GIFs efficiently.
 

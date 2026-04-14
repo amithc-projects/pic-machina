@@ -18,6 +18,7 @@ import { ingestFile }                             from '../data/assets.js';
 import { createGIF, createVideo, createPDF, createPPTX, createContactSheet, createPhotoStack, createAnimatedStack } from './compositor.js';
 import { createVideoWall } from './video-wall.js';
 import { applyRunParams }                         from '../utils/nodes.js';
+import { registry }                               from './registry.js';
 
 // Ensure all transforms are registered for main-thread batch processing
 import './transforms/geometry.js';
@@ -26,9 +27,8 @@ import './transforms/overlays.js';
 import './transforms/ai.js';
 import './transforms/metadata.js';
 import './transforms/flow.js';
-import './transforms/video.js';
 
-// ─── AI transform IDs that require the main thread ───────
+// ─── Transform IDs that require the main thread ──────────
 const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-remove-bg',
   'ai-face-privacy',
@@ -60,7 +60,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-create-pdf',
   'flow-create-pptx',
   'flow-create-zip',
-  // Video conversion/trimming/compression use mediabunny (WebCodecs) and HTMLVideoElement
+  // Video conversion/trimming/compression/effects use mediabunny (WebCodecs + HTMLVideoElement)
   'flow-video-convert',
   'flow-video-trim',
   'flow-video-compress',
@@ -69,15 +69,6 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-video-strip-audio',
   'flow-video-extract-audio',
   'flow-video-remix-audio',
-  // Per-frame video effects (mediabunny process callback + WebCodecs)
-  'video-tuning',
-  'video-duotone',
-  'video-tint',
-  'video-vignette',
-  'video-advanced-effects',
-  'video-bloom',
-  'video-color-grade',
-  'video-chromatic-aberration',
 ]);
 
 function flattenNodes(nodes) {
@@ -109,8 +100,20 @@ function resolveBlocks(nodes, blocks) {
   return resolved;
 }
 
-function recipeNeedsMainThread(recipe) {
-  return flattenNodes(recipe.nodes || []).some(n => MAIN_THREAD_TRANSFORMS.has(n.transformId));
+const CANVAS_CATEGORY_KEYS = new Set(['geo', 'color', 'overlay']);
+const VIDEO_INPUT_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+
+function recipeNeedsMainThread(recipe, files = []) {
+  if (flattenNodes(recipe.nodes || []).some(n => MAIN_THREAD_TRANSFORMS.has(n.transformId))) return true;
+  // Canvas transforms applied to video files need main thread (mediabunny + WebCodecs)
+  const hasVideoFiles = files.some(f => VIDEO_INPUT_EXTS.has(f.name.slice(f.name.lastIndexOf('.') + 1).toLowerCase()));
+  if (hasVideoFiles || recipe.inputType === 'video') {
+    if (flattenNodes(recipe.nodes || []).some(n => {
+      const def = registry.get(n.transformId);
+      return def && CANVAS_CATEGORY_KEYS.has(def.categoryKey);
+    })) return true;
+  }
+  return false;
 }
 
 // ─── Worker path ──────────────────────────────────────────
@@ -188,6 +191,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         outputSubfolder: subfolder || 'output',
         sidecar:   { ...(asset.geo ?? {}), ...(asset.sidecar ?? {}) },
         assetHash: asset.hash,
+        fileIndex: i,
         runState,
         log: (level, msg) => onLog(level, msg),
       };
@@ -656,7 +660,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
   const wrappedComplete  = (r) => onComplete?.(r);
 
   // ── Route: AI transforms need the main thread ────────────
-  const needsMain = recipeNeedsMainThread(recipe);
+  const needsMain = recipeNeedsMainThread(recipe, files);
   await wrappedLog('info', `Routing: ${needsMain ? 'main thread' : 'worker'}`);
   if (needsMain) {
     // Fire the batch as an async task so we can return { runId, cancel } immediately

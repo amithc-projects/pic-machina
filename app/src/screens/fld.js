@@ -1059,7 +1059,26 @@ export async function render(container, hash) {
       btn.innerHTML = `<img src="/assets/animated_logo.gif" style="width:18px;height:18px;display:block">`;
     }
     try {
-      await setRecipeThumbnail(run.recipeId, file);
+      const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+      const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+      let thumbFile = file;
+      if (VIDEO_EXTS.has(ext)) {
+        // Try to capture the frame currently visible in the detail pane video element
+        const videoEl = btn.closest('.fld-detail-inner, .fld-ws-detail')?.querySelector('video')
+                     ?? document.querySelector('.fld-detail-preview video, .iws-video');
+        let frameCanvas;
+        if (videoEl && !isNaN(videoEl.currentTime) && videoEl.readyState >= 2) {
+          frameCanvas = document.createElement('canvas');
+          frameCanvas.width  = videoEl.videoWidth;
+          frameCanvas.height = videoEl.videoHeight;
+          frameCanvas.getContext('2d').drawImage(videoEl, 0, 0);
+        } else {
+          frameCanvas = await extractVideoFrame(file);
+        }
+        const blob = await new Promise(res => frameCanvas.toBlob(res, 'image/jpeg', 0.9));
+        thumbFile = new File([blob], file.name.replace(/\.[^.]+$/, '_thumb.jpg'), { type: 'image/jpeg' });
+      }
+      await setRecipeThumbnail(run.recipeId, thumbFile);
       window.AuroraToast?.show({
         variant: 'success',
         title: 'Recipe thumbnail updated',

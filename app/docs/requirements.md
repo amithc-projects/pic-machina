@@ -3,7 +3,7 @@ This is a comprehensive reference containing the client and browser constraints,
 
 ## Browser Requirements
 - **Chromium Only:** PicMachina utilizes modern, cutting-edge Web APIs that currently lack uniform vendor support. **Google Chrome (v113+)** or a Chromium equivalent (e.g. Edge, Brave) is strictly required. 
-- **WebCodecs API:** Used for encoding H.264 video natively (`VideoEncoder`) and extracting video frames natively (`VideoDecoder`). browsers without this built-in will not be able to generate videos using PicMachina.
+- **WebCodecs API:** Used for encoding H.264 video natively (`VideoEncoder`) and extracting video frames natively (`VideoDecoder`). Required for all video processing — format conversion, trimming, per-frame effects, and slideshow aggregation. Browsers without this built-in will not be able to generate or process videos using PicMachina.
 - **WebAssembly (WASM):** Advanced image filters, including the Kuwahara paint effect, execute in WebAssembly memory environments. WASM must be enabled and permitted by browser sandboxing.
 - **File System Access API:** PicMachina requires permission to read from directories and write export files back into nested sub-directories on the user's local disk directly.
 

@@ -74,6 +74,7 @@ function evalCondition(condition, ctx, canvas) {
   else if (field === 'aspectRatio') actual = canvas.width / canvas.height;
   else if (field === 'HasGPS')  return !!(ctx.exif?.gps);
   else if (field === 'IsPortrait') return canvas.height > canvas.width;
+  else if (field === 'fileIndex')  actual = ctx.fileIndex ?? 0;
   else if (field === 'MetaExists') return field in (ctx.exif || {}) || field in (ctx.meta || {});
   else if (field.startsWith('exif.')) actual = ctx.exif?.[field.slice(5)];
   else if (field.startsWith('meta.')) actual = ctx.meta?.[field.slice(5)];
@@ -141,16 +142,27 @@ export class ImageProcessor {
         'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip',
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio',
-        'video-tuning', 'video-duotone', 'video-tint', 'video-vignette',
-        'video-advanced-effects', 'video-bloom', 'video-color-grade', 'video-chromatic-aberration',
     ]);
     const hasExports = nodes.some(n => n.type === 'transform' && EXPORT_IDS.has(n.transformId))
       || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => EXPORT_IDS.has(bn.transformId))));
 
     if (!hasExports && targetNodeId === undefined) {
-      const blob = await this._exportCanvas(this.ctx, 'image/jpeg', 0.92);
-      const injected = await injectExif(blob, context);
-      results.push({ blob: injected, filename: context.filename, subfolder: context.outputSubfolder });
+      if (context._videoTransformQueue?.length > 0) {
+        // Flush video queue as auto-export
+        try {
+          const { processVideoEffect } = await import('./video-convert.js');
+          const queue = context._videoTransformQueue;
+          context._videoTransformQueue = [];
+          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+          results.push({ blob, filename: context.filename.replace(/\.[^.]+$/, '.mp4'), subfolder: context.outputSubfolder });
+        } catch (err) {
+          context.log?.('error', `Auto-export video failed: ${err.message}`);
+        }
+      } else {
+        const blob = await this._exportCanvas(this.ctx, 'image/jpeg', 0.92);
+        const injected = await injectExif(blob, context);
+        results.push({ blob: injected, filename: context.filename, subfolder: context.outputSubfolder });
+      }
     }
 
     return results;
@@ -186,6 +198,23 @@ export class ImageProcessor {
 
     // ── Export ────
     if (id === 'flow-export') {
+      // If canvas transforms were queued for a video file, flush them now
+      if (context._videoTransformQueue?.length > 0 && !context._previewMode) {
+        try {
+          const { processVideoEffect } = await import('./video-convert.js');
+          const queue = context._videoTransformQueue;
+          context._videoTransformQueue = [];
+          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+          const suffix = interpolate(node.params?.suffix || '', context);
+          const base   = context.filename.replace(/\.[^.]+$/, '');
+          results.push({ blob, filename: `${base}${suffix}.mp4`, subfolder: context.outputSubfolder });
+          context.log?.('ok', `Exported processed video → ${base}${suffix}.mp4`);
+        } catch (err) {
+          context.log?.('error', `Video export failed: ${err.message}`);
+        }
+        return;
+      }
+
       const fmt     = node.params?.format  || 'image/jpeg';
       const quality = (node.params?.quality ?? 90) / 100;
       const suffix  = interpolate(node.params?.suffix || '', context);
@@ -336,55 +365,23 @@ export class ImageProcessor {
       return;
     }
 
-    // ── Per-frame video effects (mediabunny process callback) ──
-    const VIDEO_EFFECT_IDS = new Set([
-      'video-tuning', 'video-duotone', 'video-tint', 'video-vignette',
-      'video-advanced-effects', 'video-bloom', 'video-color-grade', 'video-chromatic-aberration',
-    ]);
-    if (VIDEO_EFFECT_IDS.has(id)) {
-      const def = registry.get(id);
-      const sourceId = def?.sourceTransformId;
-      const sourceDef = sourceId ? registry.get(sourceId) : null;
-
-      // ── Preview mode: apply the source image effect directly to the canvas ──
-      // The canvas already holds a video frame (extracted by bld.js) or a test image.
+    // ── Canvas transforms on video files → queue for single-pass per-frame processing ──
+    // Any geo-*, color-*, or overlay-* transform applied to a video file is queued here.
+    // The queue is flushed (in one mediabunny encode pass) when flow-export or
+    // flow-video-wall is reached, so chained transforms cost only one encode, not N.
+    const CANVAS_CATEGORY_KEYS = new Set(['geo', 'color', 'overlay']);
+    const def_canvas = registry.get(id);
+    const _file = context.originalFile;
+    const _ext  = _file?.name.slice(_file.name.lastIndexOf('.') + 1).toLowerCase();
+    if (_file && VIDEO_EXTS.has(_ext) && def_canvas && CANVAS_CATEGORY_KEYS.has(def_canvas.categoryKey)) {
+      // Preview mode: canvas already holds a video frame — run transform directly on it
       if (context._previewMode) {
-        if (sourceDef?.apply) {
-          try { await sourceDef.apply(ctx, node.params || {}, context); } catch (err) { /* ignore */ }
-        }
+        try { await def_canvas.apply(ctx, node.params || {}, context); } catch { /* ignore */ }
         return;
       }
-
-      // ── Batch mode: run full mediabunny frame-by-frame conversion ──
-      const file = context.originalFile;
-      if (!file) { context.log?.('warn', `${id}: no source file available — skipping`); return; }
-      const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
-      if (!VIDEO_EXTS.has(ext)) {
-        context.log?.('warn', `${id}: skipping non-video file "${file.name}"`);
-        return;
-      }
-      try {
-        if (!sourceDef?.apply) throw new Error(`Source transform "${sourceId}" not found in registry`);
-
-        const { processVideoEffect } = await import('./video-convert.js');
-        const p = node.params || {};
-        const blob = await processVideoEffect(file, sourceDef.apply.bind(sourceDef), p, {
-          bitrate: p.bitrate || 8_000_000,
-          onLog: context.log,
-        });
-
-        const suffix = interpolate(p.suffix || '', context);
-        const base   = context.filename.replace(/\.[^.]+$/, '');
-        const outExt = blob.type.includes('webm') ? 'webm'
-                     : blob.type.includes('ogg')  ? 'ogg'
-                     : blob.type.includes('matroska') ? 'mkv'
-                     : blob.type.includes('quicktime') ? 'mov'
-                     : 'mp4';
-        results.push({ blob, filename: `${base}${suffix}.${outExt}`, subfolder: context.outputSubfolder });
-        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.${outExt}`);
-      } catch (err) {
-        context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
-      }
+      // Batch mode: accumulate into queue
+      if (!context._videoTransformQueue) context._videoTransformQueue = [];
+      context._videoTransformQueue.push({ fn: def_canvas.apply.bind(def_canvas), params: node.params || {} });
       return;
     }
 
@@ -405,8 +402,22 @@ export class ImageProcessor {
 
     // ── Aggregation captures ──
     if (id === 'flow-video-wall') {
+      if (context._previewMode) return;
+      let captureFile = context.originalFile;
+      // Flush any queued canvas transforms — produce a pre-processed video for the wall
+      if (context._videoTransformQueue?.length > 0) {
+        try {
+          const { processVideoEffect } = await import('./video-convert.js');
+          const queue = context._videoTransformQueue;
+          context._videoTransformQueue = [];
+          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+          captureFile = new File([blob], context.filename.replace(/\.[^.]+$/, '.mp4'), { type: 'video/mp4' });
+        } catch (err) {
+          context.log?.('error', `Pre-processing for video wall failed: ${err.message}`);
+        }
+      }
       context.log?.('info', `Video extracted — routing to aggregator ${node.id}`);
-      results.push({ file: context.originalFile, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder, metadata: { exif: context.exif, sidecar: context.sidecar } });
+      results.push({ file: captureFile, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder, metadata: { exif: context.exif, sidecar: context.sidecar } });
       return;
     }
 
