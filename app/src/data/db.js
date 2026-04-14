@@ -76,6 +76,12 @@ export function initDB() {
       // Seed system recipes and blocks on every start (upserts keep them current)
       await seedSystemRecipes(_db);
       await seedSystemBlocks(_db);
+      // Silently restore from file system shadow if IDB has no user data
+      import('../utils/backup.js').then(({ shadowRestore }) => {
+        shadowRestore().then(restored => {
+          if (restored) console.info('[PicMachina] User data restored from file system shadow.');
+        });
+      });
       resolve(_db);
     };
 

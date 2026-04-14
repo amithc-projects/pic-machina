@@ -7,23 +7,36 @@
   <title>PicMachina — Pro Studio Batch Image Processor</title>
   <meta name="description" content="Local-first, high-performance batch media processing with a visual node engine. Professional automation for creative workflows." />
 
-  <!-- Favicons & App Icons -->
-  <link rel="icon" type="image/png" href="/branding/favicon.png" />
-  <link rel="apple-touch-icon" href="/branding/apple-touch-icon.png" />
+  <!-- Favicons -->
+  <link rel="icon" href="/branding/brand-pack/favicons/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/branding/brand-pack/favicons/favicon-16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/branding/brand-pack/favicons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/branding/brand-pack/favicons/favicon-48.png" />
+
+  <!-- Apple Touch Icon -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/branding/brand-pack/app-icons/apple-touch-icon.png" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0B1020" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PicMachina" />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://picmachina.netlify.app/" />
   <meta property="og:title" content="PicMachina — Pro Studio Batch Image Processor" />
   <meta property="og:description" content="Local-first, high-performance batch media processing with a visual node engine." />
-  <meta property="og:image" content="https://picmachina.netlify.app/branding/og-image.png" />
+  <meta property="og:image" content="https://picmachina.netlify.app/branding/brand-pack/social/open-graph-1200x630.png" />
 
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://picmachina.netlify.app/" />
   <meta property="twitter:title" content="PicMachina — Pro Studio Batch Image Processor" />
   <meta property="twitter:description" content="Local-first, high-performance batch media processing with a visual node engine." />
-  <meta property="twitter:image" content="https://picmachina.netlify.app/branding/twitter-image.png" />
+  <meta property="twitter:image" content="https://picmachina.netlify.app/branding/brand-pack/social/twitter-card-1200x600.png" />
 
   <!-- Aurora Design System -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/amithc-projects/aurora-docs@main/static/css/aurora.css" />
@@ -41,7 +54,7 @@
   <!-- Pro Studio Theme (overrides Aurora tokens) -->
 
   <!-- App-level layout & utilities -->
-  <script type="module" crossorigin src="/assets/index-Cvca53V-.js"></script>
+  <script type="module" crossorigin src="/assets/index-P35XH36y.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/ai-bgremoval-CLcXU_4U.js">
   <link rel="stylesheet" crossorigin href="/assets/index-B3Ki0sLy.css">
 </head>
@@ -65,12 +78,6 @@
           <a href="#lib" class="app-nav__item" data-screen="lib" title="Recipe Library">
             <span class="material-symbols-outlined">library_books</span>
             <span class="app-nav__label">Library</span>
-          </a>
-        </li>
-        <li>
-          <a href="#set" class="app-nav__item" data-screen="set" title="Batch Setup">
-            <span class="material-symbols-outlined">folder_open</span>
-            <span class="app-nav__label">Batch Setup</span>
           </a>
         </li>
         <li>
@@ -143,6 +150,17 @@
   <!-- Toast portal is created dynamically by Aurora toast.js -->
 
   <!-- Entry point -->
+
+  <!-- PWA Service Worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('[PWA] Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
 </body>
 
 </html>

@@ -15,6 +15,7 @@
 
 import { dbGet, dbGetAll, dbPut, dbDelete } from './db.js';
 import { uuid, now } from '../utils/misc.js';
+import { shadowWrite } from '../utils/backup.js';
 
 export function getAllBlocks()    { return dbGetAll('blocks'); }
 export function getBlock(id)     { return dbGet('blocks', id); }
@@ -34,10 +35,14 @@ export async function saveBlock(block) {
   block.updatedAt = now();
   if (!block.createdAt) block.createdAt = block.updatedAt;
   await dbPut('blocks', block);
+  shadowWrite('blocks'); // fire-and-forget
   return block;
 }
 
-export function deleteBlock(id) { return dbDelete('blocks', id); }
+export async function deleteBlock(id) {
+  await dbDelete('blocks', id);
+  shadowWrite('blocks'); // fire-and-forget
+}
 
 export async function cloneBlock(id, newName) {
   const src = await getBlock(id);

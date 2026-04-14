@@ -20,6 +20,7 @@
 
 import { dbGet, dbGetAll, dbPut, dbDelete } from './db.js';
 import { uuid, now } from '../utils/misc.js';
+import { shadowWrite } from '../utils/backup.js';
 
 // ─── Read ─────────────────────────────────────────────────
 
@@ -48,11 +49,13 @@ export async function saveRecipe(recipe) {
   recipe.updatedAt = now();
   if (!recipe.createdAt) recipe.createdAt = recipe.updatedAt;
   await dbPut('recipes', recipe);
+  shadowWrite('recipes'); // fire-and-forget
   return recipe;
 }
 
-export function deleteRecipe(id) {
-  return dbDelete('recipes', id);
+export async function deleteRecipe(id) {
+  await dbDelete('recipes', id);
+  shadowWrite('recipes'); // fire-and-forget
 }
 
 export async function cloneRecipe(id, newName) {

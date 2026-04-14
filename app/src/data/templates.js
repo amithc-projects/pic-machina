@@ -1,5 +1,6 @@
 import { dbGet, dbGetAll, dbPut, dbDelete } from './db.js';
 import { uuid, now } from '../utils/misc.js';
+import { shadowWrite } from '../utils/backup.js';
 
 export async function getTemplate(id) {
   return dbGet('templates', id);
@@ -14,11 +15,13 @@ export async function saveTemplate(template) {
   template.updatedAt = now();
   if (!template.createdAt) template.createdAt = template.updatedAt;
   await dbPut('templates', template);
+  shadowWrite('templates'); // fire-and-forget
   return template;
 }
 
 export async function deleteTemplate(id) {
-  return dbDelete('templates', id);
+  await dbDelete('templates', id);
+  shadowWrite('templates'); // fire-and-forget
 }
 
 export function createEmptyTemplate() {
