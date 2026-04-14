@@ -10,50 +10,96 @@ function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Returns true if val is a {{...}} variable reference */
+function isVarRef(val) {
+  return typeof val === 'string' && /^\{\{/.test(val.trim());
+}
+
+/**
+ * Render the variable-bind toggle button that sits next to the field label.
+ * @param {string} id       — field DOM id
+ * @param {boolean} active  — whether variable mode is currently active
+ */
+function varBindBtn(id, active) {
+  return `<button type="button" class="ned-var-bind-btn${active ? ' ned-var-bind-btn--active' : ''}"
+    data-var-bind="${id}" title="Bind to recipe variable"
+    style="margin-left:auto;padding:0 2px;min-height:0;height:16px;display:flex;align-items:center;background:none;border:none;cursor:pointer;color:${active ? 'var(--ps-blue)' : 'var(--ps-text-muted)'}">
+    <span class="material-symbols-outlined" style="font-size:14px;line-height:1">data_object</span>
+  </button>`;
+}
+
+/**
+ * Render a variable-mode text input (replaces the native widget when binding is active).
+ * @param {string} id   — field DOM id
+ * @param {string} val  — current value (a {{...}} string)
+ */
+function varInput(id, name, val) {
+  return `<input type="text" id="${id}" name="${name}" class="ic-input ned-var-input"
+    value="${escHtml(String(val))}"
+    placeholder="{{recipe.variable-name}}"
+    style="border-color:var(--ps-blue);font-family:var(--font-mono);font-size:12px">`;
+}
+
 /**
  * Render a single param field as an HTML string.
  * @param {object} param     — { name, label, type, defaultValue, min, max, step, options }
  * @param {*}      value     — current value (falls back to defaultValue)
  * @param {string} [prefix]  — DOM id prefix (default 'rp')
+ * @param {object} [opts]    — { showVarBind: bool } — set false to hide the { } button (e.g. in set.js run-params)
  */
-export function renderParamField(param, value, prefix = 'rp') {
+export function renderParamField(param, value, prefix = 'rp', { showVarBind = true } = {}) {
   const id  = `${prefix}-param-${param.name}`;
   const val = value ?? param.defaultValue ?? '';
+
+  // For text / textarea types, variable refs work natively — no toggle needed
+  const supportsVarBind = showVarBind && !['text', 'textarea'].includes(param.type);
+  const varActive = supportsVarBind && isVarRef(val);
 
   switch (param.type) {
     case 'boolean':
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
-          <label class="ned-toggle">
-            <input type="checkbox" id="${id}" name="${param.name}" ${val ? 'checked' : ''}>
-            <span class="ned-toggle-track"></span>
-          </label>
+          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          ${varActive
+            ? varInput(id, param.name, val)
+            : `<label class="ned-toggle">
+                <input type="checkbox" id="${id}" name="${param.name}" ${val ? 'checked' : ''}>
+                <span class="ned-toggle-track"></span>
+              </label>`
+          }
         </div>`;
 
     case 'video-layout-select':
     case 'template-select':
-    case 'select':
-      const selClass = param.type === 'template-select' ? 'ic-input ic-template-select' : 
+    case 'select': {
+      const selClass = param.type === 'template-select' ? 'ic-input ic-template-select' :
                        (param.type === 'video-layout-select' ? 'ic-input ic-video-layout-select' : 'ic-input');
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
-          <select id="${id}" name="${param.name}" class="${selClass}" data-value="${escHtml(String(val))}">
-            ${(param.options || []).map(opt =>
-              `<option value="${escHtml(opt.value)}" ${opt.value == val ? 'selected' : ''}>${escHtml(opt.label)}</option>`
-            ).join('')}
-          </select>
+          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          ${varActive
+            ? varInput(id, param.name, val)
+            : `<select id="${id}" name="${param.name}" class="${selClass}" data-value="${escHtml(String(val))}">
+                ${(param.options || []).map(opt =>
+                  `<option value="${escHtml(opt.value)}" ${opt.value == val ? 'selected' : ''}>${escHtml(opt.label)}</option>`
+                ).join('')}
+              </select>`
+          }
         </div>`;
+    }
 
     case 'range':
       return `
         <div class="ned-field">
           <label class="ned-field-label" for="${id}">${escHtml(param.label)}
-            <span id="${id}-val" class="mono text-sm" style="margin-left:auto;color:var(--ps-blue)">${val}</span>
+            ${!varActive ? `<span id="${id}-val" class="mono text-sm" style="margin-left:auto;color:var(--ps-blue)">${val}</span>` : ''}
+            ${supportsVarBind ? varBindBtn(id, varActive) : ''}
           </label>
-          <input type="range" id="${id}" name="${param.name}" class="ic-range"
-            min="${param.min ?? 0}" max="${param.max ?? 100}" step="${param.step ?? 1}" value="${val}">
+          ${varActive
+            ? varInput(id, param.name, val)
+            : `<input type="range" id="${id}" name="${param.name}" class="ic-range"
+                min="${param.min ?? 0}" max="${param.max ?? 100}" step="${param.step ?? 1}" value="${val}">`
+          }
         </div>`;
 
     case 'color': {
@@ -75,28 +121,34 @@ export function renderParamField(param, value, prefix = 'rp') {
 
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
-          <div class="ned-color-row" style="margin-bottom:4px;">
-            <input type="color" id="${id}" name="${param.name}" value="${val}" class="ned-color-input">
-            <input type="text" id="${id}-hex" class="ic-input" value="${val}" maxlength="7"
-              style="flex:1;font-family:var(--font-mono);font-size:12px">
-          </div>
-          <div class="ned-saved-colors-wrap" id="${id}-saved-wrap" style="display:flex; gap:4px; flex-wrap:wrap;">
-            ${savedColorsHtml}
-            <button class="btn-ghost" title="Manage Swatches..." onclick="document.querySelector('#nav-settings')?.click()" style="padding:0; min-height:20px; width:20px; height:20px; margin-left:2px; border-radius:4px; background:var(--ps-bg-overlay);">
-               <span class="material-symbols-outlined" style="font-size:14px; color:var(--ps-text-muted);">settings</span>
-            </button>
-          </div>
+          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          ${varActive
+            ? varInput(id, param.name, val)
+            : `<div class="ned-color-row" style="margin-bottom:4px;">
+                <input type="color" id="${id}" name="${param.name}" value="${val}" class="ned-color-input">
+                <input type="text" id="${id}-hex" class="ic-input" value="${val}" maxlength="7"
+                  style="flex:1;font-family:var(--font-mono);font-size:12px">
+              </div>
+              <div class="ned-saved-colors-wrap" id="${id}-saved-wrap" style="display:flex; gap:4px; flex-wrap:wrap;">
+                ${savedColorsHtml}
+                <button class="btn-ghost" title="Manage Swatches..." onclick="document.querySelector('#nav-settings')?.click()" style="padding:0; min-height:20px; width:20px; height:20px; margin-left:2px; border-radius:4px; background:var(--ps-bg-overlay);">
+                   <span class="material-symbols-outlined" style="font-size:14px; color:var(--ps-text-muted);">settings</span>
+                </button>
+              </div>`
+          }
         </div>`;
     }
 
     case 'number':
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
-          <input type="number" id="${id}" name="${param.name}" class="ic-input"
-            value="${val}" ${param.min != null ? `min="${param.min}"` : ''} ${param.max != null ? `max="${param.max}"` : ''}
-            ${param.step != null ? `step="${param.step}"` : ''}>
+          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          ${varActive
+            ? varInput(id, param.name, val)
+            : `<input type="number" id="${id}" name="${param.name}" class="ic-input"
+                value="${val}" ${param.min != null ? `min="${param.min}"` : ''} ${param.max != null ? `max="${param.max}"` : ''}
+                ${param.step != null ? `step="${param.step}"` : ''}>`
+          }
         </div>`;
 
     case 'textarea':
@@ -127,11 +179,13 @@ export function collectParams(container, paramDefs, prefix = 'rp') {
     const id = `${prefix}-param-${p.name}`;
     const el = container.querySelector(`#${id}`);
     if (!el) continue;
-    if (p.type === 'boolean') {
+    if (p.type === 'boolean' && el.type === 'checkbox') {
       result[p.name] = el.checked;
-    } else if (p.type === 'range' || p.type === 'number') {
+    } else if ((p.type === 'range' || p.type === 'number') && !isVarRef(el.value)) {
+      // Only parseFloat if it's not a variable reference
       result[p.name] = parseFloat(el.value);
     } else {
+      // text, textarea, select, variable-mode inputs — store as string
       result[p.name] = el.value;
     }
   }
@@ -162,34 +216,40 @@ export function injectParamFieldStyles() {
     .ned-color-row { display:flex; align-items:center; gap:8px; }
     .ned-color-input { width:36px; height:32px; padding:2px; border:1px solid var(--ps-border); border-radius:6px; background:var(--ps-bg-app); cursor:pointer; }
     .ic-range { width:100%; accent-color:var(--ps-blue); }
+    .ned-var-bind-btn { transition:color 150ms; }
+    .ned-var-bind-btn:hover { color:var(--ps-blue) !important; }
+    .ned-var-input { border-color:var(--ps-blue) !important; }
   `;
   document.head.appendChild(s);
 }
 
 /**
- * Wire up live interactions for rendered fields (range value display, color sync).
+ * Wire up live interactions for rendered fields (range value display, color sync, var-bind toggle).
  * Call after inserting the rendered HTML into the DOM.
  * @param {Element} container
  * @param {object[]} paramDefs
  * @param {string} [prefix]
+ * @param {object} [opts]      — { getRecipeVars: () => string[] } — optional list of recipe var names for autocomplete
  */
-export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
+export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getRecipeVars } = {}) {
   for (const p of paramDefs) {
     const id = `${prefix}-param-${p.name}`;
+
     if (p.type === 'range') {
       const input = container.querySelector(`#${id}`);
       const disp  = container.querySelector(`#${id}-val`);
       if (input && disp) input.addEventListener('input', () => { disp.textContent = input.value; });
     }
+
     if (p.type === 'color') {
       const picker = container.querySelector(`#${id}`);
       const hex    = container.querySelector(`#${id}-hex`);
       const wrap   = container.querySelector(`#${id}-saved-wrap`);
-      
+
       if (picker && hex) {
         picker.addEventListener('input', () => { hex.value = picker.value; });
         hex.addEventListener('input',   () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) picker.value = hex.value; });
-        
+
         if (wrap) {
           wrap.addEventListener('click', (e) => {
             if (e.target.classList.contains('ned-saved-color')) {
@@ -201,6 +261,51 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
             }
           });
         }
+      }
+    }
+
+    // Variable-bind toggle button
+    const btn = container.querySelector(`[data-var-bind="${id}"]`);
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const field = btn.closest('.ned-field');
+        const isActive = btn.classList.contains('ned-var-bind-btn--active');
+
+        if (isActive) {
+          // Switch back to native widget — re-render this param at its default
+          const defaultVal = p.defaultValue ?? '';
+          const html = renderParamField(p, defaultVal, prefix, { showVarBind: true });
+          const tmp = document.createElement('div');
+          tmp.innerHTML = html;
+          field.replaceWith(tmp.firstElementChild);
+          // Re-wire events for the newly inserted field
+          bindParamFieldEvents(container, [p], prefix, { getRecipeVars });
+        } else {
+          // Switch to variable mode — replace widget with text input
+          const currentNativeEl = container.querySelector(`#${id}`);
+          const currentVal = currentNativeEl?.value ?? '';
+          const seed = currentVal && !isVarRef(currentVal) ? '{{recipe.' : (currentVal || '{{recipe.');
+          const html = renderParamField(p, seed, prefix, { showVarBind: true });
+          const tmp = document.createElement('div');
+          tmp.innerHTML = html;
+          field.replaceWith(tmp.firstElementChild);
+          // Focus and position cursor after "{{recipe."
+          const newInput = container.querySelector(`#${id}`);
+          if (newInput) {
+            newInput.focus();
+            newInput.setSelectionRange(newInput.value.length, newInput.value.length);
+            // Wire autocomplete if recipe vars are available
+            if (getRecipeVars) _wireVarAutocomplete(newInput, getRecipeVars);
+          }
+          // Re-wire toggle on the new element
+          bindParamFieldEvents(container, [p], prefix, { getRecipeVars });
+        }
+      });
+
+      // If already in variable mode on initial render, wire autocomplete
+      if (btn.classList.contains('ned-var-bind-btn--active')) {
+        const input = container.querySelector(`#${id}`);
+        if (input && getRecipeVars) _wireVarAutocomplete(input, getRecipeVars);
       }
     }
   }
@@ -240,4 +345,60 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp') {
       });
     });
   }
+}
+
+/**
+ * Wire a lightweight autocomplete dropdown to a variable-mode text input.
+ * Shows matching recipe variable names as the user types after "{{recipe.".
+ */
+function _wireVarAutocomplete(input, getRecipeVars) {
+  let dropdown = null;
+
+  function removeDropdown() {
+    if (dropdown) { dropdown.remove(); dropdown = null; }
+  }
+
+  input.addEventListener('input', () => {
+    removeDropdown();
+    const val = input.value;
+    const match = val.match(/\{\{recipe\.([^}]*)$/);
+    if (!match) return;
+
+    const typed = match[1].toLowerCase();
+    const vars = (getRecipeVars() || []).filter(v => v.toLowerCase().includes(typed));
+    if (!vars.length) return;
+
+    dropdown = document.createElement('div');
+    dropdown.className = 'ned-var-autocomplete';
+    dropdown.style.cssText = `
+      position:absolute; z-index:9999; background:var(--ps-bg-panel,#1a1a2e);
+      border:1px solid var(--ps-blue); border-radius:6px; overflow:hidden;
+      box-shadow:0 4px 12px rgba(0,0,0,.4); min-width:180px;
+    `;
+
+    for (const v of vars) {
+      const item = document.createElement('div');
+      item.textContent = v;
+      item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:12px;font-family:var(--font-mono);';
+      item.addEventListener('mouseenter', () => { item.style.background = 'var(--ps-blue)'; item.style.color = '#fff'; });
+      item.addEventListener('mouseleave', () => { item.style.background = ''; item.style.color = ''; });
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        // Replace the partial token with the selected variable
+        input.value = val.replace(/\{\{recipe\.[^}]*$/, `{{recipe.${v}}}`);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        removeDropdown();
+      });
+      dropdown.appendChild(item);
+    }
+
+    // Position below input
+    const rect = input.getBoundingClientRect();
+    dropdown.style.top  = `${rect.bottom + window.scrollY + 2}px`;
+    dropdown.style.left = `${rect.left + window.scrollX}px`;
+    document.body.appendChild(dropdown);
+  });
+
+  input.addEventListener('blur', () => setTimeout(removeDropdown, 150));
+  input.addEventListener('keydown', (e) => { if (e.key === 'Escape') removeDropdown(); });
 }

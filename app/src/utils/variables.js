@@ -88,6 +88,43 @@ function applyPipe(value, pipe, ctx) {
 }
 
 /**
+ * Resolve a param that may be a {{recipe.x}} variable reference or a plain value.
+ * Returns the raw interpolated string — caller should cast as needed (parseFloat etc.).
+ * If val is not a string or doesn't contain tokens, it is returned as-is.
+ */
+export function resolveParam(val, context) {
+  if (typeof val === 'string' && val.includes('{{')) {
+    return interpolate(val, context);
+  }
+  return val;
+}
+
+/**
+ * Walk a node params object and resolve any {{...}} variable references against context.
+ * Returns a new object with resolved values (numeric-looking strings are cast to numbers).
+ */
+export function resolveParams(params, context) {
+  if (!params) return params;
+  const out = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (typeof v === 'string' && v.includes('{{')) {
+      const resolved = interpolate(v, context);
+      // If the original param was a template token (not mixed text), try to cast to number/boolean
+      if (/^\{\{[^}]+\}\}$/.test(v.trim())) {
+        if (resolved === 'true')  { out[k] = true;  continue; }
+        if (resolved === 'false') { out[k] = false; continue; }
+        const n = Number(resolved);
+        if (!isNaN(n) && resolved.trim() !== '') { out[k] = n; continue; }
+      }
+      out[k] = resolved;
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/**
  * Format a date value (EXIF string "YYYY:MM:DD HH:MM:SS" or epoch) using a simple template.
  * Supported tokens: YYYY, MM, DD, MMM (month abbrev), HH, mm, SS
  */

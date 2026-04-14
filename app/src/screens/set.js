@@ -34,9 +34,18 @@ export async function render(container, hash) {
   let allRecipes     = [];
   let batchControl   = null;     // { cancel, runId }
   let lastClickedIdx = -1;       // for shift+click range
-  
+
   let inputHistory   = [];
   let outputHistory  = [];
+
+  // ── Slot assignment state (declared early to avoid TDZ) ──
+  const BUILTIN_SLOT_COUNTS = {
+    'grid-2x2': 4, 'grid-3x3': 9, 'grid-4x4': 16,
+    'split-1x2': 2, 'custom-tv': 1,
+    'pip-corner-br': 2, 'pip-corner-bl': 2,
+    'pip-corner-tr': 2, 'pip-corner-tl': 2,
+  };
+  let _slotTemplate = null;
 
   container.innerHTML = `
     <div class="screen set-screen">
@@ -118,6 +127,12 @@ export async function render(container, hash) {
               <input type="checkbox" id="opt-skip-existing" checked>
               <span>Skip already-processed files</span>
             </label>
+          </section>
+
+          <!-- Slot assignment (shown when recipe uses a named template) -->
+          <section class="set-section" id="set-slots-section" style="display:none">
+            <div class="set-section-title">Slot Assignment</div>
+            <div id="set-slots-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
           </section>
 
           <!-- Recipe run parameters (shown when recipe has params) -->
@@ -406,6 +421,7 @@ export async function render(container, hash) {
       }
       
       renderImageGrid(onlyVideo, includeVideo);
+      renderSlotAssignment();
       scheduleSetPreviewGeneration(inputHandle);
 
       // Sync preview window state
@@ -575,7 +591,8 @@ export async function render(container, hash) {
     });
     updateSelCount();
     updateRunButton();
-    
+    renderSlotAssignment();
+
     // Toggle hint
     const hintEl = container.querySelector('#set-order-hint');
     if (hintEl) hintEl.style.display = (currentRecipe?.isOrdered && selectedIds.size > 0) ? '' : 'none';
@@ -643,8 +660,9 @@ export async function render(container, hash) {
     const subfolderEl = container.querySelector('#set-subfolder');
     if (subfolderEl && currentRecipe) subfolderEl.value = recipeSlug(currentRecipe.name);
 
-    // Render inline recipe params
+    // Render inline recipe params and slot assignment
     renderInlineParams();
+    loadSlotTemplate().then(renderSlotAssignment);
     updateRunButton();
     refreshImageGrid();
   }
@@ -661,14 +679,142 @@ export async function render(container, hash) {
     section.style.display = '';
     const storageKey = `ic-run-params-${currentRecipe.id}`;
     const lastUsed   = JSON.parse(localStorage.getItem(storageKey) || 'null') || {};
-    fields.innerHTML = paramDefs.map(p => renderParamField(p, lastUsed[p.name] ?? p.defaultValue, 'rp')).join('');
+    fields.innerHTML = paramDefs.map(p => renderParamField(p, lastUsed[p.name] ?? p.defaultValue, 'rp', { showVarBind: false })).join('');
     bindParamFieldEvents(container, paramDefs, 'rp');
 
     container.querySelector('#set-params-reset')?.addEventListener('click', () => {
       localStorage.removeItem(storageKey);
-      fields.innerHTML = paramDefs.map(p => renderParamField(p, p.defaultValue, 'rp')).join('');
+      fields.innerHTML = paramDefs.map(p => renderParamField(p, p.defaultValue, 'rp', { showVarBind: false })).join('');
       bindParamFieldEvents(container, paramDefs, 'rp');
     }, { once: true });
+  }
+
+  // ── Slot assignment panel ─────────────────────────────
+
+  function flattenRecipeNodes(nodes) {
+    const out = [];
+    for (const n of (nodes || [])) {
+      if (n.type === 'transform') out.push(n);
+      if (n.type === 'conditional') { out.push(...flattenRecipeNodes(n.thenNodes)); out.push(...flattenRecipeNodes(n.elseNodes)); }
+      if (n.type === 'branch') n.branches?.forEach(b => out.push(...flattenRecipeNodes(b.nodes)));
+    }
+    return out;
+  }
+
+  async function loadSlotTemplate() {
+    if (!currentRecipe) { _slotTemplate = null; return; }
+
+    const allNodes = flattenRecipeNodes(currentRecipe.nodes);
+
+    // flow-video-wall uses params.layout — either a built-in key or a custom template ID
+    const wallNode = allNodes.find(n => n.transformId === 'flow-video-wall' && n.params?.layout);
+    if (wallNode) {
+      const layout = wallNode.params.layout;
+      if (layout in BUILTIN_SLOT_COUNTS) {
+        const count = BUILTIN_SLOT_COUNTS[layout];
+        _slotTemplate = { name: layout, placeholders: Array.from({ length: count }, () => ({})) };
+        return;
+      }
+      // Not a built-in key — try loading as a custom template from the DB
+      try {
+        const { getTemplate } = await import('../data/templates.js');
+        _slotTemplate = await getTemplate(layout) || null;
+      } catch { _slotTemplate = null; }
+      return;
+    }
+
+    // flow-template-aggregator uses params.templateId (custom template DB key)
+    const aggNode = allNodes.find(n => n.transformId === 'flow-template-aggregator' && n.params?.templateId);
+    if (aggNode) {
+      try {
+        const { getTemplate } = await import('../data/templates.js');
+        _slotTemplate = await getTemplate(aggNode.params.templateId) || null;
+      } catch { _slotTemplate = null; }
+      return;
+    }
+
+    _slotTemplate = null;
+  }
+
+  function renderSlotAssignment() {
+    const section = container.querySelector('#set-slots-section');
+    const list    = container.querySelector('#set-slots-list');
+    if (!section || !list) return;
+
+    if (!_slotTemplate || !_slotTemplate.placeholders?.length) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = '';
+
+    // Build reverse map: sequenceNumber → File
+    const seqToFile = new Map();
+    for (const [name, seq] of selectedIds.entries()) {
+      const file = selectedFiles.find(f => f.name === name);
+      if (file) seqToFile.set(seq, file);
+    }
+
+    // Sort placeholders by zIndex to match batch.js rendering order
+    const sortedPlaceholders = [..._slotTemplate.placeholders].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    list.innerHTML = sortedPlaceholders.map((ph, i) => {
+      const slotNum  = i + 1;
+      const label    = ph.label ? ` — ${ph.label}` : '';
+      const assigned = seqToFile.get(slotNum);
+      return `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
+          background:var(--ps-bg-raised);border:1px solid var(--ps-border);border-radius:6px;">
+          <div class="set-slot-thumb" data-slot="${slotNum}"
+            style="width:44px;height:44px;border-radius:4px;flex-shrink:0;
+              background:var(--ps-bg-overlay);border:1px solid var(--ps-border);
+              display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-text-faint)">
+              ${assigned ? (isVideoFile(assigned) ? 'movie' : 'image') : 'help_outline'}
+            </span>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:600;">Slot ${slotNum}${label}</div>
+            <div style="font-size:11px;color:var(--ps-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+              ${assigned ? assigned.name : '<span style="color:var(--ps-text-faint);font-style:italic">Not assigned</span>'}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Load thumbnails asynchronously
+    list.querySelectorAll('[data-slot]').forEach(thumbEl => {
+      const slotNum = parseInt(thumbEl.dataset.slot, 10);
+      const file    = seqToFile.get(slotNum);
+      if (!file) return;
+
+      const imgEl = thumbEl; // the div itself is the thumbnail container
+
+      if (isVideoFile(file)) {
+        const preview = setVideoPreviews.get(file.name);
+        if (preview) {
+          const url = URL.createObjectURL(preview);
+          imgEl.style.backgroundImage    = `url(${url})`;
+          imgEl.style.backgroundSize     = 'cover';
+          imgEl.style.backgroundPosition = 'center';
+          imgEl.innerHTML = '';
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        imgEl.style.backgroundImage    = `url(${url})`;
+        imgEl.style.backgroundSize     = 'cover';
+        imgEl.style.backgroundPosition = 'center';
+        imgEl.innerHTML = '';
+      };
+      img.onerror = () => URL.revokeObjectURL(url);
+      img.src = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    });
   }
 
   container.querySelector('#btn-edit-recipe')?.addEventListener('click', () => {

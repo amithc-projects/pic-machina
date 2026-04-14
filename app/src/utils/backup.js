@@ -1,5 +1,6 @@
 import { dbGetAll, getDB } from '../data/db.js';
 import { showToast } from '../aurora/toast.js';
+import { showConfirm } from './dialogs.js';
 
 /**
  * ImageChef — Database Backup & Restore Utility
@@ -51,11 +52,12 @@ export async function importAll(file, { wipeFirst = true } = {}) {
         const tx = db.transaction(store, 'readwrite');
         const os = tx.objectStore(store);
         
-        if (wipeFirst) {
+        const records = snapshot.data[store];
+      if (wipeFirst && records.length > 0) {
           os.clear();
         }
-        
-        for (const record of snapshot.data[store]) {
+
+        for (const record of records) {
           os.put(record);
           count++;
         }
@@ -114,16 +116,20 @@ export function showBackupModal() {
     modal.remove();
   };
   
-  modal.querySelector('#db-bk-import-input').onchange = (e) => {
+  modal.querySelector('#db-bk-import-input').onchange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (confirm('Are you absolutely sure you want to overwrite your entire database with this file? All unsaved/un-exported work will be permanently deleted.')) {
+      const confirmed = await showConfirm({
+        title: 'Overwrite Database?',
+        body: 'This will replace all existing recipes, blocks, and templates with the contents of the backup file. Any data not in the backup will be permanently deleted.',
+        confirmText: 'Overwrite',
+        cancelText: 'Cancel',
+        variant: 'danger',
+        icon: 'warning',
+      });
+      if (confirmed) {
         importAll(file, { wipeFirst: true });
-        // The modal stays open during the brief 1.5s delay before reload.
-        modal.querySelector('.modal-dialog').style.opacity = '0.5';
-        modal.querySelector('.modal-dialog').style.pointerEvents = 'none';
       } else {
-        // Reset file input
         e.target.value = '';
       }
     }

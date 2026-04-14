@@ -196,6 +196,8 @@ async function renderEditor(container, tplId) {
   let bgBitmap = null;
   let activePoint = null; // { pIdx, ptIdx }
   let candidatePlaceholders = [];
+  let selectedSlotIdx = null;
+  let _isDirty = false;
 
   // Init Image
   if (tpl.backgroundBlob) {
@@ -207,7 +209,7 @@ async function renderEditor(container, tplId) {
   cvs.width = tpl.width;
   cvs.height = tpl.height;
 
-  function markDirty() { if(status) status.textContent = 'Unsaved…'; }
+  function markDirty() { _isDirty = true; if(status) status.textContent = 'Unsaved…'; }
 
   function renderList() {
     let html = '';
@@ -235,10 +237,19 @@ async function renderEditor(container, tplId) {
       `;
     }
 
-    html += tpl.placeholders.map((ph, i) => `
-      <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--ps-bg-raised); border:1px solid var(--ps-border); border-radius:6px;">
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <span class="text-sm">Slot ${i + 1}</span>
+    html += tpl.placeholders.map((ph, i) => {
+      const isSel = i === selectedSlotIdx;
+      return `
+      <div class="tpl-ph-row" data-idx="${i}" style="
+        display:flex; align-items:flex-start; justify-content:space-between; padding:8px 12px;
+        background:${isSel ? 'rgba(255,149,0,0.12)' : 'var(--ps-bg-raised)'};
+        border:1px solid ${isSel ? '#ff9500' : 'var(--ps-border)'};
+        border-radius:6px; cursor:pointer; gap:8px;">
+        <div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:0;">
+          <span class="text-sm" style="font-weight:600; color:${isSel ? '#ff9500' : 'inherit'}">Slot ${i + 1}${ph.label ? ` — ${escHtml(ph.label)}` : ''}</span>
+          <input type="text" class="ic-input tpl-ph-label" data-idx="${i}"
+            placeholder="Label (optional)" value="${escHtml(ph.label || '')}"
+            style="font-size:11px; padding:2px 6px; height:22px; color:var(--ps-text-muted);">
           <select class="ic-input tpl-ph-fitmode" data-idx="${i}" style="font-size:12px; padding:2px 6px; height:24px;">
             <option value="stretch" ${(ph.fitMode === 'stretch' || !ph.fitMode) ? 'selected' : ''}>Stretch</option>
             <option value="cover" ${ph.fitMode === 'cover' ? 'selected' : ''}>Cover (Crop)</option>
@@ -247,11 +258,11 @@ async function renderEditor(container, tplId) {
             <option value="face-crop" ${ph.fitMode === 'face-crop' ? 'selected' : ''}>Face Crop</option>
           </select>
         </div>
-        <button class="btn-icon tpl-del-ph" data-idx="${i}" style="width:24px; height:24px;">
+        <button class="btn-icon tpl-del-ph" data-idx="${i}" style="width:24px; height:24px; flex-shrink:0;">
            <span class="material-symbols-outlined" style="font-size:14px; color:var(--ps-red);">delete</span>
         </button>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
 
     phListContainer.innerHTML = html;
 
@@ -290,13 +301,38 @@ async function renderEditor(container, tplId) {
       });
     });
 
+    phListContainer.querySelectorAll('.tpl-ph-label').forEach(inp => {
+      inp.addEventListener('input', e => {
+        const idx = parseInt(inp.dataset.idx, 10);
+        tpl.placeholders[idx].label = e.target.value.trim();
+        drawCanvas();
+        markDirty();
+      });
+      // Stop row-click from firing when typing in the label
+      inp.addEventListener('click', e => e.stopPropagation());
+    });
+
     phListContainer.querySelectorAll('.tpl-del-ph').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
         const idx = parseInt(btn.dataset.idx, 10);
+        if (selectedSlotIdx === idx) selectedSlotIdx = null;
+        else if (selectedSlotIdx > idx) selectedSlotIdx--;
         tpl.placeholders.splice(idx, 1);
         renderList();
         drawCanvas();
         markDirty();
+      });
+    });
+
+    // Row click → select slot
+    phListContainer.querySelectorAll('.tpl-ph-row').forEach(row => {
+      row.addEventListener('click', e => {
+        if (e.target.closest('button, select, input')) return;
+        const idx = parseInt(row.dataset.idx, 10);
+        selectedSlotIdx = selectedSlotIdx === idx ? null : idx;
+        renderList();
+        drawCanvas();
       });
     });
   }
@@ -314,6 +350,10 @@ async function renderEditor(container, tplId) {
 
     // 2. Placeholders
     tpl.placeholders.forEach((ph, pIdx) => {
+      const isSel = pIdx === selectedSlotIdx;
+      const strokeColor = isSel ? '#ff9500' : '#0ea5e9';
+      const fillColor   = isSel ? 'rgba(255,149,0,0.25)' : 'rgba(0,119,255,0.2)';
+
       ctx.beginPath();
       ph.points.forEach((pt, idx) => {
          const x = pt.x * cvs.width;
@@ -322,14 +362,11 @@ async function renderEditor(container, tplId) {
          else ctx.lineTo(x, y);
       });
       ctx.closePath();
-      
-      // Fill
-      ctx.fillStyle = 'rgba(0, 119, 255, 0.25)';
-      ctx.fill();
 
-      // Stroke
-      ctx.strokeStyle = '#0ea5e9';
-      ctx.lineWidth = 2;
+      ctx.fillStyle = fillColor;
+      ctx.fill();
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = isSel ? 3 : 2;
       ctx.stroke();
 
       // Handles
@@ -338,21 +375,26 @@ async function renderEditor(container, tplId) {
         const hy = pt.y * cvs.height;
         ctx.beginPath();
         ctx.arc(hx, hy, 6, 0, Math.PI * 2);
-        ctx.fillStyle = (activePoint && activePoint.pIdx === pIdx && activePoint.ptIdx === ptIdx) ? '#ffffff' : '#0ea5e9';
+        ctx.fillStyle = (activePoint && activePoint.pIdx === pIdx && activePoint.ptIdx === ptIdx) ? '#ffffff' : strokeColor;
         ctx.fill();
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 1;
         ctx.stroke();
       });
 
-      // Label Center
+      // Label at center
       const cx = (ph.points[0].x + ph.points[1].x + ph.points[2].x + ph.points[3].x) / 4 * cvs.width;
       const cy = (ph.points[0].y + ph.points[1].y + ph.points[2].y + ph.points[3].y) / 4 * cvs.height;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 24px var(--font-primary)';
+      const labelText = ph.label ? `Slot ${pIdx + 1} — ${ph.label}` : `Slot ${pIdx + 1}`;
+      ctx.fillStyle = isSel ? '#ff9500' : '#ffffff';
+      ctx.font = `bold 24px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`Slot ${pIdx + 1}`, cx, cy);
+      // Shadow for readability over any background
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 6;
+      ctx.fillText(labelText, cx, cy);
+      ctx.shadowBlur = 0;
     });
 
     // 3. Candidates
@@ -548,12 +590,50 @@ async function renderEditor(container, tplId) {
   async function doSave() {
     tpl.name = container.querySelector('#tpl-name').value || 'Untitled Template';
     await saveTemplate(tpl);
+    _isDirty = false;
     if(status) status.textContent = 'Saved';
     showToast?.({ variant: 'success', title: 'Template saved' });
   }
 
+  async function confirmLeave() {
+    if (!_isDirty) return true;
+    return showConfirm({
+      title: 'Unsaved Changes',
+      body: 'You have unsaved changes in this template. They will be lost if you leave now.',
+      confirmText: 'Leave without saving',
+      cancelText: 'Stay',
+      variant: 'warning',
+      icon: 'warning',
+    });
+  }
+
+  // Intercept any nav-rail clicks while there are unsaved changes
+  const navGuard = async (e) => {
+    if (!_isDirty) return;
+    const link = e.target.closest('#app-nav a, #app-nav button[data-screen]');
+    if (!link) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const leave = await confirmLeave();
+    if (leave) {
+      _isDirty = false;
+      document.removeEventListener('click', navGuard, true);
+      const href = link.getAttribute('href');
+      if (href) navigate(href);
+    }
+  };
+  document.addEventListener('click', navGuard, true);
+
   container.querySelector('#tpl-save-btn').addEventListener('click', doSave);
-  container.querySelector('#tpl-back').addEventListener('click', async () => { await doSave(); navigate('#tpl'); });
+
+  container.querySelector('#tpl-back').addEventListener('click', async () => {
+    const leave = await confirmLeave();
+    if (!leave) return;
+    _isDirty = false;
+    document.removeEventListener('click', navGuard, true);
+    navigate('#tpl');
+  });
+
   container.querySelector('#tpl-name').addEventListener('input', markDirty);
 
   // Ready

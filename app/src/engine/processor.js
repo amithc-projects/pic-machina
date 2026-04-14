@@ -12,7 +12,7 @@
  */
 
 import { registry } from './registry.js';
-import { interpolate } from '../utils/variables.js';
+import { interpolate, resolveParams } from '../utils/variables.js';
 
 // ─── EXIF helpers ─────────────────────────────────────────
 async function injectExif(blob, context) {
@@ -429,7 +429,28 @@ export class ImageProcessor {
         context.runState.injectedSlides = [];
       }
 
-      const blob    = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
+      const _file = context.originalFile;
+      const _ext  = _file?.name?.slice(_file.name.lastIndexOf('.') + 1).toLowerCase() ?? '';
+      const VIDEO_EXTS_AGG = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+
+      let blob;
+      if (_file && VIDEO_EXTS_AGG.has(_ext)) {
+        // Video file — extract a representative frame instead of the dummy 1×1 canvas
+        try {
+          const { extractVideoFrame } = await import('../utils/video-frame.js');
+          const frameCanvas = await extractVideoFrame(_file);
+          blob = await new Promise((res, rej) => frameCanvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/jpeg', 0.9));
+        } catch (err) {
+          context.log?.('warn', `Video frame extract failed for "${_file.name}": ${err.message} — using blank frame`);
+          const fallback = document.createElement('canvas');
+          fallback.width = 1280; fallback.height = 720;
+          fallback.getContext('2d').fillRect(0, 0, 1280, 720);
+          blob = await new Promise(res => fallback.toBlob(res, 'image/jpeg', 0.9));
+        }
+      } else {
+        blob = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
+      }
+
       const caption = interpolate(node.params?.caption || '', context);
       results.push({ blob, filename: `_capture_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption, metadata: { exif: context.exif, sidecar: context.sidecar } });
       return;
@@ -439,7 +460,8 @@ export class ImageProcessor {
     const def = registry.get(id);
     if (def) {
       try {
-        await def.apply(ctx, node.params || {}, context);
+        const resolvedParams = resolveParams(node.params || {}, context);
+        await def.apply(ctx, resolvedParams, context);
       } catch (err) {
         const msg = `Transform "${id}" failed — skipping step: ${err.message}`;
         console.warn('[processor]', msg);

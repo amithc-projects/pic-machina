@@ -150,7 +150,9 @@ export async function render(container, hash) {
   injectNedStyles();
 
   if (def && def.params) {
-    bindParamFieldEvents(container, def.params, 'ned');
+    // Provide recipe variable names for autocomplete in variable-bind mode
+    const getRecipeVars = () => (recipe?.params || []).map(p => p.name);
+    bindParamFieldEvents(container, def.params, 'ned', { getRecipeVars });
   }
 
   let _previewTimer = null;

@@ -27,10 +27,14 @@ export default defineConfig({
     exclude: ['@imgly/background-removal', '@mediapipe/tasks-vision'],
   },
   server: {
+    // Respect PORT/HOST set by portless (or other proxy tools)
+    port:       parseInt(process.env.PORT) || 5173,
+    host:       process.env.HOST           || 'localhost',
+    strictPort: !!process.env.PORT,  // error instead of silently picking another port
     headers: {
       // Required for SharedArrayBuffer (used by some WASM libs)
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
-    }
-  }
+    },
+  },
 });
