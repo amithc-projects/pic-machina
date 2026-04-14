@@ -26,6 +26,7 @@ import './transforms/overlays.js';
 import './transforms/ai.js';
 import './transforms/metadata.js';
 import './transforms/flow.js';
+import './transforms/video.js';
 
 // ─── AI transform IDs that require the main thread ───────
 const MAIN_THREAD_TRANSFORMS = new Set([
@@ -59,6 +60,24 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-create-pdf',
   'flow-create-pptx',
   'flow-create-zip',
+  // Video conversion/trimming/compression use mediabunny (WebCodecs) and HTMLVideoElement
+  'flow-video-convert',
+  'flow-video-trim',
+  'flow-video-compress',
+  'flow-video-change-fps',
+  'flow-video-concat',
+  'flow-video-strip-audio',
+  'flow-video-extract-audio',
+  'flow-video-remix-audio',
+  // Per-frame video effects (mediabunny process callback + WebCodecs)
+  'video-tuning',
+  'video-duotone',
+  'video-tint',
+  'video-vignette',
+  'video-advanced-effects',
+  'video-bloom',
+  'video-color-grade',
+  'video-chromatic-aberration',
 ]);
 
 function flattenNodes(nodes) {
@@ -121,6 +140,9 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
     }
     if (node.transformId === 'flow-video-wall') {
       aggregations[node.id] = { node, blobs: [], files: [] };
+    }
+    if (node.transformId === 'flow-video-concat') {
+      aggregations[node.id] = { node, files: [] };
     }
   }
 
@@ -250,6 +272,31 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       
       aggCount++;
       onProgress(total, total, `Video Wall Complete`, Math.round(((total + aggCount) / totalSteps) * 100));
+      continue;
+    }
+
+    if (agg.node.transformId === 'flow-video-concat') {
+      if (!agg.files?.length) continue;
+      try {
+        onLog('info', `Concatenating ${agg.files.length} video file(s)...`);
+        const p = agg.node.params || {};
+        const { concatVideos } = await import('./video-convert.js');
+        const blob = await concatVideos(agg.files, {
+          fps:     p.fps     || 30,
+          width:   p.width   || undefined,
+          height:  p.height  || undefined,
+          bitrate: p.bitrate || 8_000_000,
+          onLog,
+        });
+        let fname = p.filename || 'concatenated.mp4';
+        if (!fname.toLowerCase().endsWith('.mp4')) fname += '.mp4';
+        await writeFile(subHandle, fname, blob);
+        onLog('ok', `Concatenation complete → ${fname}`);
+      } catch (err) {
+        onLog('error', `Video concat failed: ${err.message}`);
+      }
+      aggCount++;
+      onProgress(total, total, 'Video Concat Complete', Math.round(((total + aggCount) / totalSteps) * 100));
       continue;
     }
 

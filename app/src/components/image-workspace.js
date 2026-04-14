@@ -1,4 +1,5 @@
 import { extractExif } from '../engine/exif-reader.js';
+import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 
 /**
  * ImageWorkspace Unified Component
@@ -378,9 +379,16 @@ export class ImageWorkspace {
       const thumb = document.createElement('img');
       thumb.className = `iw-thumb ${file === this.activeFile ? 'is-active' : ''}`;
       
-      const url = URL.createObjectURL(file);
-      thumb.src = url;
-      thumb.onload = () => URL.revokeObjectURL(url);
+      if (isVideoFile(file)) {
+        // Extract a frame so the <img> thumbnail doesn't break on video files
+        extractVideoFrame(file).then(canvas => {
+          canvas.toBlob(b => { if (b) thumb.src = URL.createObjectURL(b); }, 'image/jpeg', 0.8);
+        }).catch(() => { thumb.src = ''; });
+      } else {
+        const url = URL.createObjectURL(file);
+        thumb.src = url;
+        thumb.onload = () => URL.revokeObjectURL(url);
+      }
       
       thumb.addEventListener('click', () => {
         this.activeFile = file;

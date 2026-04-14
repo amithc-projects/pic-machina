@@ -51,12 +51,63 @@ export async function clearFolder(role) {
  * Returns an array of File objects from a directory handle.
  * Optionally filtered by accepted MIME types / extensions.
  */
+/** Returns the hidden preview sidecar filename for a video. */
+export function previewNameFor(videoName) {
+  return `.${videoName}.preview.jpg`;
+}
+
+/**
+ * Try to read an existing video preview sidecar from the folder.
+ * Returns a File or null if it doesn't exist.
+ */
+export async function readVideoPreview(dirHandle, videoName) {
+  try {
+    const handle = await dirHandle.getFileHandle(previewNameFor(videoName));
+    return await handle.getFile();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write a video preview sidecar (JPEG blob) to the folder.
+ * Requires readwrite permission on the folder handle.
+ */
+export async function writeVideoPreview(dirHandle, videoName, blob) {
+  try {
+    await writeFile(dirHandle, previewNameFor(videoName), blob);
+  } catch {
+    // Silently ignore — folder may be read-only
+  }
+}
+
+/**
+ * Load all existing preview sidecars from a directory into a Map<videoName, File>.
+ * Call once after opening a folder so thumbnails render immediately.
+ */
+export async function loadVideoPreviews(dirHandle) {
+  const map = new Map();
+  try {
+    for await (const [name, entry] of dirHandle.entries()) {
+      if (entry.kind !== 'file') continue;
+      // Pattern: .{videoName}.preview.jpg
+      const match = name.match(/^\.(.+)\.preview\.jpg$/);
+      if (match) {
+        const file = await entry.getFile();
+        map.set(match[1], file);
+      }
+    }
+  } catch { /* ignore */ }
+  return map;
+}
+
 export async function listImages(dirHandle, { includeVideo = false, onlyVideo = false } = {}) {
   const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tif', '.tiff', '.heic', '.heif', '.bmp']);
   const VIDEO_EXTS = new Set(['.mp4', '.mov', '.webm']);
   const files = [];
   for await (const [name, entry] of dirHandle.entries()) {
     if (entry.kind !== 'file') continue;
+    if (name.startsWith('.')) continue;  // skip hidden files (preview sidecars, .DS_Store, etc.)
     const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
     
     let match = false;

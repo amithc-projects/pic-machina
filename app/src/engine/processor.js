@@ -135,10 +135,14 @@ export class ImageProcessor {
     // If recipe has no explicit export nodes, auto-export at end.
     // flow-gif-from-states also produces file output — treat it as an export node.
     const EXPORT_IDS = new Set([
-        'flow-export', 'flow-gif-from-states', 'flow-video-wall', 
-        'flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet', 
+        'flow-export', 'flow-gif-from-states', 'flow-video-wall',
+        'flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet',
         'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap',
-        'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip'
+        'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip',
+        'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
+        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio',
+        'video-tuning', 'video-duotone', 'video-tint', 'video-vignette',
+        'video-advanced-effects', 'video-bloom', 'video-color-grade', 'video-chromatic-aberration',
     ]);
     const hasExports = nodes.some(n => n.type === 'transform' && EXPORT_IDS.has(n.transformId))
       || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => EXPORT_IDS.has(bn.transformId))));
@@ -284,6 +288,119 @@ export class ImageProcessor {
         context.runState.triggerStates[node.id] = fieldState;
       }
       return; // Never modifies the master canvas
+    }
+
+    // ── Per-file video operations (mediabunny) ──
+    const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+    if (['flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps',
+         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio'].includes(id)) {
+      if (context._previewMode) return; // full conversion not run during preview
+      const file = context.originalFile;
+      if (!file) { context.log?.('warn', `${id}: no source file available — skipping`); return; }
+      const ext  = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+      if (!VIDEO_EXTS.has(ext)) {
+        context.log?.('warn', `${id}: skipping non-video file "${file.name}"`);
+        return;
+      }
+      try {
+        const { convertVideo, trimVideo, compressVideo, changeFPS,
+                stripAudio, extractAudio, remixAudio } = await import('./video-convert.js');
+        const p = node.params || {};
+        let blob;
+        if      (id === 'flow-video-convert')       blob = await convertVideo(file, p);
+        else if (id === 'flow-video-trim')          blob = await trimVideo(file, p);
+        else if (id === 'flow-video-compress')      blob = await compressVideo(file, p);
+        else if (id === 'flow-video-change-fps')    blob = await changeFPS(file, p);
+        else if (id === 'flow-video-strip-audio')   blob = await stripAudio(file, p);
+        else if (id === 'flow-video-extract-audio') blob = await extractAudio(file, p);
+        else if (id === 'flow-video-remix-audio')   blob = await remixAudio(file, p);
+
+        const suffix  = interpolate(p.suffix || '', context);
+        const base    = context.filename.replace(/\.[^.]+$/, '');
+        // For audio extracts, use the chosen format extension; otherwise derive from MIME
+        const outExt  = id === 'flow-video-extract-audio'
+                      ? ({ mp3: 'mp3', wav: 'wav', flac: 'flac', ogg: 'ogg', aac: 'm4a' }[p.format] || 'mp3')
+                      : blob.type.includes('webm') ? 'webm'
+                      : blob.type.includes('ogg')  ? 'ogg'
+                      : blob.type.includes('matroska') ? 'mkv'
+                      : blob.type.includes('quicktime') ? 'mov'
+                      : blob.type.includes('mpeg') || blob.type.includes('mp3') ? 'mp3'
+                      : blob.type.includes('flac') ? 'flac'
+                      : blob.type.includes('wav')  ? 'wav'
+                      : 'mp4';
+        results.push({ blob, filename: `${base}${suffix}.${outExt}`, subfolder: context.outputSubfolder });
+        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.${outExt}`);
+      } catch (err) {
+        context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
+      }
+      return;
+    }
+
+    // ── Per-frame video effects (mediabunny process callback) ──
+    const VIDEO_EFFECT_IDS = new Set([
+      'video-tuning', 'video-duotone', 'video-tint', 'video-vignette',
+      'video-advanced-effects', 'video-bloom', 'video-color-grade', 'video-chromatic-aberration',
+    ]);
+    if (VIDEO_EFFECT_IDS.has(id)) {
+      const def = registry.get(id);
+      const sourceId = def?.sourceTransformId;
+      const sourceDef = sourceId ? registry.get(sourceId) : null;
+
+      // ── Preview mode: apply the source image effect directly to the canvas ──
+      // The canvas already holds a video frame (extracted by bld.js) or a test image.
+      if (context._previewMode) {
+        if (sourceDef?.apply) {
+          try { await sourceDef.apply(ctx, node.params || {}, context); } catch (err) { /* ignore */ }
+        }
+        return;
+      }
+
+      // ── Batch mode: run full mediabunny frame-by-frame conversion ──
+      const file = context.originalFile;
+      if (!file) { context.log?.('warn', `${id}: no source file available — skipping`); return; }
+      const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+      if (!VIDEO_EXTS.has(ext)) {
+        context.log?.('warn', `${id}: skipping non-video file "${file.name}"`);
+        return;
+      }
+      try {
+        if (!sourceDef?.apply) throw new Error(`Source transform "${sourceId}" not found in registry`);
+
+        const { processVideoEffect } = await import('./video-convert.js');
+        const p = node.params || {};
+        const blob = await processVideoEffect(file, sourceDef.apply.bind(sourceDef), p, {
+          bitrate: p.bitrate || 8_000_000,
+          onLog: context.log,
+        });
+
+        const suffix = interpolate(p.suffix || '', context);
+        const base   = context.filename.replace(/\.[^.]+$/, '');
+        const outExt = blob.type.includes('webm') ? 'webm'
+                     : blob.type.includes('ogg')  ? 'ogg'
+                     : blob.type.includes('matroska') ? 'mkv'
+                     : blob.type.includes('quicktime') ? 'mov'
+                     : 'mp4';
+        results.push({ blob, filename: `${base}${suffix}.${outExt}`, subfolder: context.outputSubfolder });
+        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.${outExt}`);
+      } catch (err) {
+        context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
+      }
+      return;
+    }
+
+    // ── Video concat aggregation capture ──
+    if (id === 'flow-video-concat') {
+      if (context._previewMode) return;
+      const file = context.originalFile;
+      if (!file) { context.log?.('warn', 'flow-video-concat: no source file — skipping'); return; }
+      const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+      if (!VIDEO_EXTS.has(ext)) {
+        context.log?.('warn', `flow-video-concat: skipping non-video file "${file.name}"`);
+        return;
+      }
+      context.log?.('info', `flow-video-concat: queued "${file.name}"`);
+      results.push({ file, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder });
+      return;
     }
 
     // ── Aggregation captures ──

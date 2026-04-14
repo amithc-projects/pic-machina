@@ -16,6 +16,7 @@ import { extractExif }                         from '../engine/exif-reader.js';
 import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }               from '../utils/image-info.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
+import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -173,14 +174,10 @@ export async function render(container, hash) {
     },
     onRender: async (file) => {
       if (!def) return { beforeUrl: URL.createObjectURL(file), afterUrl: URL.createObjectURL(file) };
-      
-      const beforeUrl = URL.createObjectURL(file);
-      const img = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = beforeUrl; });
-      
+
       const params = collectParams(container, def.params || [], 'ned');
       const exif   = await extractExif(file);
-      
+
       // Update Notice
       let notice = null;
       if (node.transformId === 'flow-geo-timeline' && (!exif?.gps?.lat)) {
@@ -192,14 +189,39 @@ export async function render(container, hash) {
         noticeEl.style.display = notice ? 'block' : 'none';
       }
 
-      const context = { filename: file.name, exif, meta: {}, variables: new Map() };
-      
-      const proc = new ImageProcessor();
-      proc.canvas.width = img.naturalWidth;
-      proc.canvas.height = img.naturalHeight;
-      proc.ctx.drawImage(img, 0, 0);
+      const context = {
+        filename: file.name, exif, meta: {}, variables: new Map(),
+        originalFile: file,
+        _previewMode: true,
+      };
 
-      await def.apply(proc.ctx, params, context);
+      // For video files, extract a representative frame as the canvas base.
+      // For image files, load normally.
+      let imageSource;
+      let beforeUrl;
+      if (isVideoFile(file)) {
+        const frameCanvas = await extractVideoFrame(file);
+        imageSource = frameCanvas;
+        beforeUrl = await new Promise(r => frameCanvas.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.88));
+      } else {
+        const rawUrl = URL.createObjectURL(file);
+        const img    = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = rawUrl; });
+        imageSource = img;
+        beforeUrl   = rawUrl; // keep alive; workspace will display it
+      }
+
+      const proc = new ImageProcessor();
+      proc.canvas.width  = imageSource.width  ?? imageSource.naturalWidth;
+      proc.canvas.height = imageSource.height ?? imageSource.naturalHeight;
+      proc.ctx.drawImage(imageSource, 0, 0);
+
+      // Video effect transforms delegate to their source image transform's apply().
+      // Other transforms call their own apply() as usual.
+      const applyDef = def.sourceTransformId ? registry.get(def.sourceTransformId) : def;
+      if (applyDef?.apply) {
+        try { await applyDef.apply(proc.ctx, params, context); } catch (err) { /* ignore */ }
+      }
 
       const afterUrl = await new Promise(res => proc.canvas.toBlob(b => {
         res(b ? URL.createObjectURL(b) : null);

@@ -9,7 +9,9 @@
  */
 
 import { getRun }                                   from '../data/runs.js';
-import { getFolder, pickFolder }                     from '../data/folders.js';
+import { getFolder, pickFolder, loadVideoPreviews,
+         writeVideoPreview }                         from '../data/folders.js';
+import { extractVideoFrame }                         from '../utils/video-frame.js';
 import { setRecipeThumbnail }                        from '../data/recipes.js';
 import { navigate }                                  from '../main.js';
 import { formatBytes }                               from '../utils/misc.js';
@@ -41,6 +43,7 @@ async function listAllMedia(dirHandle) {
   const entries = [];
   for await (const [name, entry] of dirHandle.entries()) {
     if (entry.kind !== 'file') continue;
+    if (name.startsWith('.')) continue; // skip hidden sidecars, .DS_Store, etc.
     const ext = extOf(name);
     if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) {
       entries.push({ file: await entry.getFile(), handle: entry });
@@ -204,6 +207,8 @@ export async function render(container, hash) {
   // ── State ───────────────────────────────────────────────────
   let activeSubHandle = null; // used by deleteSelected
   let allEntries = [];   // { file: File, handle: FileSystemFileHandle }[]
+  let videoPreviews = new Map(); // videoName → File (preview JPEG)
+  let _previewGenRunning = false;
   let inputFiles = [];   // File[] from input folder for comparison
   let inputByBase = new Map();
   let filtered   = [];   // MediaEntry[] current filtered+sorted list
@@ -343,7 +348,10 @@ export async function render(container, hash) {
     }
 
     activeSubHandle = subHandle;
-    allEntries = await listAllMedia(subHandle);
+    [allEntries, videoPreviews] = await Promise.all([
+      listAllMedia(subHandle),
+      loadVideoPreviews(subHandle),
+    ]);
 
     // Try to load input files for comparison
     const inputHandle = await getFolder('input').catch(() => null);
@@ -425,6 +433,164 @@ export async function render(container, hash) {
     else                           renderList(main);
 
     updateSelectionUI();
+
+    // Kick off background preview generation for any videos that don't have one yet
+    schedulePreviewGeneration();
+  }
+
+  // ── Background preview generation ───────────────────────────
+  function schedulePreviewGeneration() {
+    if (_previewGenRunning) return;
+    const pending = allEntries.filter(ent =>
+      VIDEO_EXTS.has(extOf(ent.file.name)) && !videoPreviews.has(ent.file.name)
+    );
+    if (!pending.length) return;
+
+    _previewGenRunning = true;
+    (async () => {
+      for (const ent of pending) {
+        try {
+          const canvas = await extractVideoFrame(ent.file);
+          const blob   = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+          if (blob && activeSubHandle) {
+            await writeVideoPreview(activeSubHandle, ent.file.name, blob);
+            // Update the in-memory map and refresh cards in the DOM
+            const previewFile = await activeSubHandle.getFileHandle(`.${ent.file.name}.preview.jpg`)
+              .then(h => h.getFile()).catch(() => null);
+            if (previewFile) {
+              videoPreviews.set(ent.file.name, previewFile);
+              replaceVideoThumb(ent.file.name, previewFile);
+            }
+          }
+        } catch { /* skip this video */ }
+        // Small yield between videos so we don't saturate the main thread
+        await new Promise(r => setTimeout(r, 50));
+      }
+      _previewGenRunning = false;
+    })();
+  }
+
+  /** Swap a pending <video> placeholder with the newly-generated preview <img>. */
+  function replaceVideoThumb(videoName, previewFile) {
+    const previewUrl = URL.createObjectURL(previewFile);
+    blobUrls.push(previewUrl);
+
+    // Grid cells
+    container.querySelectorAll(`[data-preview-pending="${CSS.escape(videoName)}"]`).forEach(vid => {
+      const thumb = vid.closest('.fld-thumb') || vid.closest('.fld-fs-thumb') || vid.parentElement;
+      const isGrid = vid.classList.contains('fld-thumb-vid');
+      const isFs   = vid.classList.contains('fld-fs-thumb-img');
+
+      const img = document.createElement('img');
+      img.draggable = false;
+      img.src       = previewUrl;
+
+      if (isGrid) {
+        img.className = 'fld-thumb-img';
+        vid.replaceWith(img);
+        // Remove any existing camera button (no-preview variant), then add the hover-only one
+        thumb?.querySelectorAll('.fld-thumb-chg-preview').forEach(b => b.remove());
+        const btn = document.createElement('button');
+        btn.className = 'fld-thumb-chg-preview';
+        btn.title = 'Change preview frame';
+        btn.dataset.name = videoName;
+        btn.innerHTML = '<span class="material-symbols-outlined">photo_camera</span>';
+        const ent = allEntries.find(e => e.file.name === videoName);
+        if (ent) btn.addEventListener('click', e => { e.stopPropagation(); showChangePreviewDialog(ent); });
+        thumb?.appendChild(btn);
+      } else if (isFs) {
+        img.className = 'fld-fs-thumb-img';
+        // Remove any existing camera button (no-preview variant)
+        thumb?.querySelectorAll('.fld-thumb-chg-preview').forEach(b => b.remove());
+        vid.replaceWith(img);
+      } else {
+        // List view — replace movie icon with img
+        img.className = 'fld-list-thumb';
+        vid.replaceWith(img);
+      }
+    });
+
+    // List view icons (no data-preview-pending, use name lookup)
+    container.querySelectorAll('.fld-list-icon').forEach(icon => {
+      const row = icon.closest('[data-fld-ent-name]');
+      if (row?.dataset.fldEntName === videoName) {
+        const img = document.createElement('img');
+        img.className = 'fld-list-thumb';
+        img.src = previewUrl;
+        img.draggable = false;
+        icon.replaceWith(img);
+      }
+    });
+  }
+
+  // ── Change Preview Frame dialog ──────────────────────────────
+  async function showChangePreviewDialog(ent) {
+    const existing = document.getElementById('fld-chg-preview-dialog');
+    if (existing) existing.remove();
+
+    const dialog = document.createElement('div');
+    dialog.id = 'fld-chg-preview-dialog';
+    dialog.className = 'fld-modal-overlay';
+    dialog.innerHTML = `
+      <div class="fld-modal" style="max-width:700px;width:90vw">
+        <div class="fld-modal-header">
+          <strong>Change Preview Frame</strong>
+          <span style="color:var(--ps-text-muted);font-size:13px;margin-left:8px">${escHtml(ent.file.name)}</span>
+          <button class="btn-icon" id="fld-chg-close" style="margin-left:auto">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="fld-modal-body" style="display:flex;flex-direction:column;gap:12px;padding:16px">
+          <video id="fld-chg-video" controls muted style="width:100%;border-radius:6px;background:#000;max-height:50vh"></video>
+          <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
+            <span style="font-size:13px;color:var(--ps-text-muted)">Seek to the frame you want, then capture.</span>
+            <button class="btn-primary" id="fld-chg-capture">
+              <span class="material-symbols-outlined">photo_camera</span> Use This Frame
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.appendChild(dialog);
+
+    const videoEl = dialog.querySelector('#fld-chg-video');
+    const fileUrl = URL.createObjectURL(ent.file);
+    videoEl.src = fileUrl;
+
+    dialog.querySelector('#fld-chg-close').addEventListener('click', () => {
+      URL.revokeObjectURL(fileUrl);
+      dialog.remove();
+    });
+    dialog.addEventListener('click', e => {
+      if (e.target === dialog) { URL.revokeObjectURL(fileUrl); dialog.remove(); }
+    });
+
+    dialog.querySelector('#fld-chg-capture').addEventListener('click', async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width  = videoEl.videoWidth;
+      canvas.height = videoEl.videoHeight;
+      canvas.getContext('2d').drawImage(videoEl, 0, 0);
+
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+      if (blob && activeSubHandle) {
+        await writeVideoPreview(activeSubHandle, ent.file.name, blob);
+        const previewHandle = await activeSubHandle.getFileHandle(`.${ent.file.name}.preview.jpg`).catch(() => null);
+        const previewFile   = previewHandle ? await previewHandle.getFile() : null;
+        if (previewFile) {
+          videoPreviews.set(ent.file.name, previewFile);
+          replaceVideoThumb(ent.file.name, previewFile);
+          // Also update the camera button's already-visible state
+          container.querySelectorAll(`[data-name="${CSS.escape(ent.file.name)}"].fld-thumb-chg-preview`)
+            .forEach(btn => {
+              const thumb = btn.closest('.fld-thumb');
+              const img = thumb?.querySelector('.fld-thumb-img');
+              if (img) { URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(previewFile); blobUrls.push(img.src); }
+            });
+        }
+      }
+      URL.revokeObjectURL(fileUrl);
+      dialog.remove();
+    });
   }
 
   function handleFileClick(ent, index, e) {
@@ -532,16 +698,33 @@ export async function render(container, hash) {
       const url = URL.createObjectURL(ent.file);
       blobUrls.push(url);
 
+      const previewFile = type === 'video' ? videoPreviews.get(ent.file.name) : null;
+      const previewUrl  = previewFile ? URL.createObjectURL(previewFile) : null;
+      if (previewUrl) blobUrls.push(previewUrl);
+
       cell.innerHTML = `
         <div class="fld-thumb ${type === 'video' ? 'fld-thumb--video' : ''}">
           ${type === 'video'
-            ? `<video src="${url}" class="fld-thumb-vid" preload="metadata" muted></video>
-               <div class="fld-thumb-video-badge"><span class="material-symbols-outlined">play_circle</span></div>`
+            ? previewUrl
+              ? `<img src="${previewUrl}" class="fld-thumb-img" draggable="false">
+                 <div class="fld-thumb-video-badge"><span class="material-symbols-outlined">play_circle</span></div>
+                 <button class="fld-thumb-chg-preview" title="Change preview frame" data-name="${escHtml(ent.file.name)}">
+                   <span class="material-symbols-outlined">photo_camera</span>
+                 </button>`
+              : `<video src="${url}" class="fld-thumb-vid" preload="metadata" muted data-preview-pending="${escHtml(ent.file.name)}"></video>
+                 <div class="fld-thumb-video-badge"><span class="material-symbols-outlined">play_circle</span></div>
+                 <button class="fld-thumb-chg-preview fld-thumb-chg-preview--noprev" title="Set preview frame" data-name="${escHtml(ent.file.name)}">
+                   <span class="material-symbols-outlined">photo_camera</span>
+                 </button>`
             : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
           }
         </div>
         <div class="fld-cell-name">${escHtml(ent.file.name)}</div>`;
 
+      cell.querySelector('.fld-thumb-chg-preview')?.addEventListener('click', e => {
+        e.stopPropagation();
+        showChangePreviewDialog(ent);
+      });
       cell.addEventListener('click', e => {
         handleFileClick(ent, i, e);
       });
@@ -572,13 +755,27 @@ export async function render(container, hash) {
       const url = URL.createObjectURL(ent.file);
       blobUrls.push(url);
 
+      const fsPreviewFile = type === 'video' ? videoPreviews.get(ent.file.name) : null;
+      const fsPreviewUrl  = fsPreviewFile ? URL.createObjectURL(fsPreviewFile) : null;
+      if (fsPreviewUrl) blobUrls.push(fsPreviewUrl);
+
       thumb.innerHTML = `
         ${type === 'video'
-          ? `<video src="${url}" class="fld-fs-thumb-img" preload="metadata" muted></video>
-             <span class="fld-fs-video-badge material-symbols-outlined">play_circle</span>`
+          ? fsPreviewUrl
+            ? `<img src="${fsPreviewUrl}" class="fld-fs-thumb-img" draggable="false">
+               <span class="fld-fs-video-badge material-symbols-outlined">play_circle</span>`
+            : `<video src="${url}" class="fld-fs-thumb-img" preload="metadata" muted data-preview-pending="${escHtml(ent.file.name)}"></video>
+               <span class="fld-fs-video-badge material-symbols-outlined">play_circle</span>
+               <button class="fld-thumb-chg-preview fld-thumb-chg-preview--noprev" title="Set preview frame" data-name="${escHtml(ent.file.name)}">
+                 <span class="material-symbols-outlined">photo_camera</span>
+               </button>`
           : `<img src="${url}" class="fld-fs-thumb-img" loading="lazy" draggable="false">`
         }`;
 
+      thumb.querySelector('.fld-thumb-chg-preview')?.addEventListener('click', e => {
+        e.stopPropagation();
+        showChangePreviewDialog(ent);
+      });
       thumb.addEventListener('click', e => {
         handleFileClick(ent, i, e);
       });
@@ -631,11 +828,17 @@ export async function render(container, hash) {
       const thumbUrl = URL.createObjectURL(ent.file);
       blobUrls.push(thumbUrl);
 
+      const listPreviewFile = type === 'video' ? videoPreviews.get(ent.file.name) : null;
+      const listPreviewUrl  = listPreviewFile ? URL.createObjectURL(listPreviewFile) : null;
+      if (listPreviewUrl) blobUrls.push(listPreviewUrl);
+
       const isSel = selectedSet.has(ent.file.name);
       tr.innerHTML = `
         <td class="fld-list-td">
           ${type === 'video'
-            ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">movie</span></div>`
+            ? listPreviewUrl
+              ? `<img src="${listPreviewUrl}" class="fld-list-thumb" draggable="false">`
+              : `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">movie</span></div>`
             : `<img src="${thumbUrl}" class="fld-list-thumb" loading="lazy" draggable="false">`}
         </td>
         <td class="fld-list-td">
@@ -1050,9 +1253,35 @@ function injectFldStyles() {
     .fld-thumb-vid { width:100%; height:100%; object-fit:cover; display:block; }
     .fld-thumb-video-badge {
       position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.4);
+      background:rgba(0,0,0,0.4); pointer-events:none;
     }
     .fld-thumb-video-badge .material-symbols-outlined { font-size:36px; color:rgba(255,255,255,0.9); }
+    .fld-thumb-chg-preview {
+      position:absolute; bottom:4px; right:4px; z-index:2;
+      background:rgba(0,0,0,0.6); border:none; border-radius:4px;
+      color:#fff; cursor:pointer; padding:3px 5px; display:none;
+      align-items:center; line-height:1;
+    }
+    .fld-thumb-chg-preview .material-symbols-outlined { font-size:14px; }
+    .fld-thumb:hover .fld-thumb-chg-preview { display:flex; }
+    .fld-thumb-chg-preview--noprev { display:flex; opacity:0.8; }
+    .fld-thumb-chg-preview--noprev:hover { opacity:1; }
+
+    /* Change-preview modal overlay (reused .fld-modal-overlay pattern) */
+    .fld-modal-overlay {
+      position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.65);
+      backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;
+    }
+    .fld-modal-overlay .fld-modal {
+      background:var(--ps-bg-surface); border-radius:12px;
+      border:1px solid var(--ps-border); display:flex; flex-direction:column;
+      max-height:90vh; overflow:hidden;
+    }
+    .fld-modal-header {
+      display:flex; align-items:center; gap:8px; padding:14px 16px;
+      border-bottom:1px solid var(--ps-border); font-size:15px; font-weight:600;
+    }
+    .fld-modal-body { overflow-y:auto; }
     .fld-cell-name { font-size:10px; color:var(--ps-text-muted); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
 
     /* Filmstrip view */

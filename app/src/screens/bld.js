@@ -15,6 +15,7 @@ import { registry, ImageProcessor } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 import { extractExif } from '../engine/exif-reader.js';
 import { renderParamField } from '../utils/param-fields.js';
+import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -425,37 +426,59 @@ export async function render(container, hash) {
     },
     onRender: async (file) => {
       const url = URL.createObjectURL(file);
-      const img = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      const isVideo = isVideoFile(file);
+
+      // For video files, extract a representative frame (~3s or 40% in) to use as
+      // the canvas base image. For images, load normally.
+      let imageSource;
+      if (isVideo) {
+        const frameCanvas = await extractVideoFrame(url);
+        imageSource = frameCanvas;
+      } else {
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+        imageSource = img;
+      }
 
       const exif = await extractExif(file);
-      const context = { filename: file.name, exif, meta: {}, variables: new Map() };
-      
+      const context = {
+        filename: file.name, exif, meta: {}, variables: new Map(),
+        originalFile: file,   // needed by video transforms
+        _previewMode: true,   // signals processor to use fast canvas path
+      };
+
       window._icBldTargetExif = exif;
       window._icBldTargetContext = context;
 
       const proc = new ImageProcessor();
-      const afterUrl = await proc.previewDataUrl(img, draft.nodes, context, bldPreviewNodeId);
+      const afterUrl = await proc.previewDataUrl(imageSource, draft.nodes, context, bldPreviewNodeId);
       window._icBldAfterUrl = afterUrl;
 
       const flat = flattenNodes(draft.nodes);
       const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
       const afterTitle = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
 
-      let beforeUrl = URL.createObjectURL(file);
+      let beforeUrl = isVideo && imageSource
+        ? (() => { const c = imageSource; const b = document.createElement('canvas'); b.width = c.width; b.height = c.height; b.getContext('2d').drawImage(c, 0, 0); return new Promise(r => b.toBlob(bl => r(URL.createObjectURL(bl)), 'image/jpeg', 0.9)); })()
+        : Promise.resolve(URL.createObjectURL(file));
+      beforeUrl = await beforeUrl;
       let beforeTitle = 'Original';
 
       if (bldCompareRef === 'prev') {
         const prevId = getPrevNodeId();
         if (prevId) {
           const proc2 = new ImageProcessor();
-          const ctx2 = { filename: file.name, exif, meta: {}, variables: new Map() };
-          beforeUrl = await proc2.previewDataUrl(img, draft.nodes, ctx2, prevId);
+          const ctx2 = {
+            filename: file.name, exif, meta: {}, variables: new Map(),
+            originalFile: file, _previewMode: true,
+          };
+          beforeUrl = await proc2.previewDataUrl(imageSource, draft.nodes, ctx2, prevId);
           const prevEnt = flat.find(f => f.node.id === prevId);
           beforeTitle = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : 'Prev Step';
         }
       }
 
+      URL.revokeObjectURL(url);
       return {
         beforeUrl,
         afterUrl,

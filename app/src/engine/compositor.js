@@ -3,6 +3,8 @@
  * Combines multiple processed image blobs into GIF, MP4, or contact sheets.
  */
 
+import { avcCodec } from './video-convert.js';
+
 /**
  * Create an animated GIF from an array of image Blobs.
  * @param {Blob[]}  frames
@@ -84,9 +86,9 @@ export async function createVideo(frames, { durationPerSlide = 2, fps = 30, widt
     });
 
     encoder.configure({
-      codec:     'avc1.64002a',
-      width:      w,
-      height:     h,
+      codec:     avcCodec(cw, ch),
+      width:      cw,
+      height:     ch,
       bitrate:    5_000_000,
       framerate:  fps,
     });
@@ -366,7 +368,7 @@ export async function createAnimatedStack(blobs, {
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
       error:  err => reject(new Error(`VideoEncoder: ${err.message}`)),
     });
-    encoder.configure({ codec: 'avc1.64002a', width: w, height: h, bitrate: 6_000_000, framerate: fps });
+    encoder.configure({ codec: avcCodec(w, h), width: w, height: h, bitrate: 6_000_000, framerate: fps });
     const framesPerScene = Math.max(1, Math.round(fps * frameDelay / 1000));
     let fi = 0;
 
@@ -676,7 +678,7 @@ export async function createPhotoStack(blobs, {
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
       error:  err => reject(new Error(`VideoEncoder: ${err.message}`)),
     });
-    encoder.configure({ codec: 'avc1.64002a', width: w, height: h, bitrate: 6_000_000, framerate: fps });
+    encoder.configure({ codec: avcCodec(w, h), width: w, height: h, bitrate: 6_000_000, framerate: fps });
 
     const framesPerScene = Math.max(1, Math.round(fps * frameDelay / 1000));
     let fi = 0;

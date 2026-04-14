@@ -10,6 +10,7 @@ import './transforms/overlays.js';
 import './transforms/ai.js';
 import './transforms/metadata.js';
 import './transforms/flow.js';
+import './transforms/video.js';
 
 export { registry }       from './registry.js';
 export { imageProcessor, ImageProcessor } from './processor.js';

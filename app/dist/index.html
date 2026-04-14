@@ -4,7 +4,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ImageChef</title>
+  <title>PicMachina — Pro Studio Batch Image Processor</title>
+  <meta name="description" content="Local-first, high-performance batch media processing with a visual node engine. Professional automation for creative workflows." />
+
+  <!-- Favicons & App Icons -->
+  <link rel="icon" type="image/png" href="/branding/favicon.png" />
+  <link rel="apple-touch-icon" href="/branding/apple-touch-icon.png" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://picmachina.netlify.app/" />
+  <meta property="og:title" content="PicMachina — Pro Studio Batch Image Processor" />
+  <meta property="og:description" content="Local-first, high-performance batch media processing with a visual node engine." />
+  <meta property="og:image" content="https://picmachina.netlify.app/branding/og-image.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://picmachina.netlify.app/" />
+  <meta property="twitter:title" content="PicMachina — Pro Studio Batch Image Processor" />
+  <meta property="twitter:description" content="Local-first, high-performance batch media processing with a visual node engine." />
+  <meta property="twitter:image" content="https://picmachina.netlify.app/branding/twitter-image.png" />
 
   <!-- Aurora Design System -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/amithc-projects/aurora-docs@main/static/css/aurora.css" />
@@ -22,9 +41,9 @@
   <!-- Pro Studio Theme (overrides Aurora tokens) -->
 
   <!-- App-level layout & utilities -->
-  <script type="module" crossorigin src="/assets/index-DpFMNAiN.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/ai-bgremoval-stlubUex.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-B9dHTdXV.css">
+  <script type="module" crossorigin src="/assets/index-Cvca53V-.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/ai-bgremoval-CLcXU_4U.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-B3Ki0sLy.css">
 </head>
 
 <body>
@@ -35,9 +54,9 @@
     <!-- Left Navigation Rail -->
     <nav id="app-nav" class="app-nav" aria-label="Main navigation">
       <div class="app-nav__brand">
-        <span class="app-nav__logo" aria-label="ImageChef">
-          <span class="material-symbols-outlined">restaurant</span>
-        </span>
+        <div class="app-nav__logo" aria-label="PicMachina">
+          <img src="/branding/logo.svg" alt="" style="width:24px;height:24px;display:block" />
+        </div>
         <span class="app-nav__wordmark">PicMachina</span>
       </div>
 
@@ -55,40 +74,48 @@
           </a>
         </li>
         <li>
-          <a href="#bld" class="app-nav__item" data-screen="bld" title="Recipe Builder">
-            <span class="material-symbols-outlined">format_list_numbered</span>
-            <span class="app-nav__label">Builder</span>
-          </a>
-        </li>
-        <li>
-          <a href="#ned" class="app-nav__item" data-screen="ned" title="Node Editor">
-            <span class="material-symbols-outlined">device_hub</span>
-            <span class="app-nav__label">Node Editor</span>
-          </a>
-        </li>
-        <li>
           <a href="#bkb" class="app-nav__item" data-screen="bkb" title="Block Builder">
             <span class="material-symbols-outlined">widgets</span>
             <span class="app-nav__label">Block Builder</span>
           </a>
         </li>
+        <li>
+          <a href="#tpl" class="app-nav__item" data-screen="tpl" title="Template Editor">
+            <span class="material-symbols-outlined">wallpaper</span>
+            <span class="app-nav__label">Templates</span>
+          </a>
+        </li>
         <li class="app-nav__divider"></li>
         <li>
-          <a href="#que" class="app-nav__item" data-screen="que" title="Processing Queue">
-            <span class="material-symbols-outlined">pending_actions</span>
-            <span class="app-nav__label">Queue</span>
+          <a href="#out" class="app-nav__item" data-screen="out" title="Output History">
+            <span class="material-symbols-outlined">history</span>
+            <span class="app-nav__label">History</span>
           </a>
         </li>
         <li>
-          <a href="#out" class="app-nav__item" data-screen="out" title="Output Browser">
-            <span class="material-symbols-outlined">photo_library</span>
-            <span class="app-nav__label">Outputs</span>
+          <a href="#fld" class="app-nav__item" data-screen="fld" title="Folder Viewer">
+            <span class="material-symbols-outlined">folder_open</span>
+            <span class="app-nav__label">Folder</span>
+          </a>
+        </li>
+
+        <li class="app-nav__divider"></li>
+        <li>
+          <a href="#" class="app-nav__item" id="nav-db-backup" title="Backup/Restore Database">
+            <span class="material-symbols-outlined">settings_backup_restore</span>
+            <span class="app-nav__label">Config Sync</span>
           </a>
         </li>
         <li>
-          <a href="#cmp" class="app-nav__item" data-screen="cmp" title="Comparison View">
-            <span class="material-symbols-outlined">compare</span>
-            <span class="app-nav__label">Compare</span>
+          <a href="#" class="app-nav__item" id="nav-help" title="Tutorial & Documentation">
+            <span class="material-symbols-outlined">help</span>
+            <span class="app-nav__label">Help</span>
+          </a>
+        </li>
+        <li>
+          <a href="#" class="app-nav__item" id="nav-settings" title="Global Preferences">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="app-nav__label">Settings</span>
           </a>
         </li>
       </ul>

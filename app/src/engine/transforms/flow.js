@@ -441,3 +441,167 @@ registry.register({
   ],
   apply() { /* handled by Processor as aggregation node */ }
 });
+
+// ─── Video: Convert Format ────────────────────────────────
+registry.register({
+  id: 'flow-video-convert', name: 'Video: Convert Format', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'video_settings',
+  description: 'Re-encode a video file to a different container format and/or codec. Skips non-video files.',
+  params: [
+    { name: 'format', label: 'Output Format', type: 'select',
+      options: [
+        { label: 'MP4',  value: 'mp4'  },
+        { label: 'WebM', value: 'webm' },
+        { label: 'MKV',  value: 'mkv'  },
+        { label: 'MOV',  value: 'mov'  },
+        { label: 'OGG',  value: 'ogg'  },
+      ],
+      defaultValue: 'mp4' },
+    { name: 'codec', label: 'Video Codec', type: 'select',
+      options: [
+        { label: 'Auto (recommended)', value: 'auto' },
+        { label: 'H.264 (AVC)',        value: 'avc'  },
+        { label: 'H.265 (HEVC)',       value: 'hevc' },
+        { label: 'AV1',                value: 'av1'  },
+        { label: 'VP8',                value: 'vp8'  },
+        { label: 'VP9',                value: 'vp9'  },
+      ],
+      defaultValue: 'auto' },
+    { name: 'audioCodec', label: 'Audio Codec', type: 'select',
+      options: [
+        { label: 'Auto (recommended)', value: 'auto'   },
+        { label: 'AAC',                value: 'aac'    },
+        { label: 'Opus',               value: 'opus'   },
+        { label: 'Vorbis',             value: 'vorbis' },
+        { label: 'MP3',                value: 'mp3'    },
+      ],
+      defaultValue: 'auto' },
+    { name: 'suffix', label: 'Filename Suffix', type: 'text', defaultValue: '' },
+  ],
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
+});
+
+// ─── Video: Trim ──────────────────────────────────────────
+registry.register({
+  id: 'flow-video-trim', name: 'Video: Trim', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'content_cut',
+  description: 'Cut a video to a specific time range (in seconds). Skips non-video files.',
+  params: [
+    { name: 'start',  label: 'Start Time (seconds)', type: 'number', defaultValue: 0    },
+    { name: 'end',    label: 'End Time (seconds — leave blank for end of file)', type: 'number', defaultValue: '' },
+    { name: 'suffix', label: 'Filename Suffix',      type: 'text',   defaultValue: '_trimmed' },
+  ],
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
+});
+
+// ─── Video: Compress ──────────────────────────────────────
+registry.register({
+  id: 'flow-video-compress', name: 'Video: Compress', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'compress',
+  description: 'Reduce video file size by lowering the output bitrate. Skips non-video files.',
+  params: [
+    { name: 'quality', label: 'Quality Preset', type: 'select',
+      options: [
+        { label: 'Low (smallest file)',  value: 'low'    },
+        { label: 'Medium',               value: 'medium' },
+        { label: 'High',                 value: 'high'   },
+        { label: 'Custom bitrate',       value: 'custom' },
+      ],
+      defaultValue: 'medium' },
+    { name: 'bitrate', label: 'Custom Bitrate (Mbps — only used when Custom is selected)', type: 'number', defaultValue: 4 },
+    { name: 'suffix',  label: 'Filename Suffix', type: 'text', defaultValue: '_compressed' },
+  ],
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
+});
+
+// ─── Video: Change Frame Rate ─────────────────────────────
+registry.register({
+  id: 'flow-video-change-fps', name: 'Video: Change Frame Rate', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'speed',
+  description: 'Change the frame rate of a video. Skips non-video files.',
+  params: [
+    { name: 'fps', label: 'Target Frame Rate', type: 'select',
+      options: [
+        { label: '12 fps', value: 12 },
+        { label: '24 fps', value: 24 },
+        { label: '25 fps', value: 25 },
+        { label: '30 fps', value: 30 },
+        { label: '60 fps', value: 60 },
+      ],
+      defaultValue: 30 },
+    { name: 'suffix', label: 'Filename Suffix', type: 'text', defaultValue: '' },
+  ],
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
+});
+
+// ─── Video: Strip Audio ───────────────────────────────────
+registry.register({
+  id: 'flow-video-strip-audio', name: 'Video: Strip Audio', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'volume_off',
+  description: 'Remove all audio tracks from a video file. Skips non-video files.',
+  params: [
+    { name: 'suffix', label: 'Filename Suffix', type: 'text', defaultValue: '_silent' },
+  ],
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
+});
+
+// ─── Video: Extract Audio ─────────────────────────────────
+registry.register({
+  id: 'flow-video-extract-audio', name: 'Video: Extract Audio', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'audio_file',
+  description: 'Export the audio track from a video as a standalone audio file. Skips non-video files.',
+  params: [
+    { name: 'format', label: 'Audio Format', type: 'select',
+      options: [
+        { label: 'MP3',  value: 'mp3'  },
+        { label: 'WAV',  value: 'wav'  },
+        { label: 'FLAC', value: 'flac' },
+        { label: 'Ogg',  value: 'ogg'  },
+        { label: 'AAC (M4A)', value: 'aac' },
+      ],
+      defaultValue: 'mp3' },
+    { name: 'suffix', label: 'Filename Suffix', type: 'text', defaultValue: '_audio' },
+  ],
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
+});
+
+// ─── Video: Remix Audio ───────────────────────────────────
+registry.register({
+  id: 'flow-video-remix-audio', name: 'Video: Remix Audio', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'tune',
+  description: 'Adjust the audio channel layout and/or sample rate of a video. Skips non-video files.',
+  params: [
+    { name: 'channels', label: 'Channel Layout', type: 'select',
+      options: [
+        { label: 'Keep original',    value: 'keep' },
+        { label: 'Stereo → Mono',    value: '1'    },
+        { label: 'Mono → Stereo',    value: '2'    },
+      ],
+      defaultValue: 'keep' },
+    { name: 'sampleRate', label: 'Sample Rate', type: 'select',
+      options: [
+        { label: 'Keep original', value: 'keep'  },
+        { label: '22050 Hz',      value: '22050' },
+        { label: '44100 Hz',      value: '44100' },
+        { label: '48000 Hz',      value: '48000' },
+      ],
+      defaultValue: 'keep' },
+    { name: 'suffix', label: 'Filename Suffix', type: 'text', defaultValue: '' },
+  ],
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
+});
+
+// ─── Video: Concatenate ───────────────────────────────────
+registry.register({
+  id: 'flow-video-concat', name: 'Video: Concatenate', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'playlist_add',
+  description: 'Join all selected video files end-to-end into a single output video. Input order follows file selection order.',
+  params: [
+    { name: 'filename', label: 'Output Filename',      type: 'text',   defaultValue: 'concatenated.mp4' },
+    { name: 'fps',      label: 'Output Frame Rate',    type: 'number', defaultValue: 30   },
+    { name: 'width',    label: 'Output Width (px — leave blank to use first video\'s width)',  type: 'number', defaultValue: '' },
+    { name: 'height',   label: 'Output Height (px — leave blank to use first video\'s height)', type: 'number', defaultValue: '' },
+    { name: 'bitrate',  label: 'Bitrate (bps)',        type: 'number', defaultValue: 8000000 },
+  ],
+  apply() { /* handled by Processor as aggregation node — collects files, then concatenates */ }
+});

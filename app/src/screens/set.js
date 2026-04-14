@@ -5,7 +5,9 @@
  * Uses File System Access API for persistent folder handles.
  */
 
-import { pickFolder, getFolder, listImages }        from '../data/folders.js';
+import { pickFolder, getFolder, listImages,
+         loadVideoPreviews, writeVideoPreview }     from '../data/folders.js';
+import { isVideoFile, extractVideoFrame }           from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { startBatch }                               from '../engine/batch.js';
 import { navigate }                                 from '../main.js';
@@ -26,6 +28,7 @@ export async function render(container, hash) {
   let inputHandle    = null;     // FileSystemDirectoryHandle
   let outputHandle   = null;
   let selectedFiles  = [];       // File[] from input folder
+  let setVideoPreviews = new Map(); // videoName → preview File
   let selectedIds    = new Map();// Map<filename, sequenceInt>
   let currentRecipe  = null;
   let allRecipes     = [];
@@ -332,6 +335,39 @@ export async function render(container, hash) {
     }, 50);
   });
 
+  // ── Background preview generation ────────────────────
+  let _setPreviewGenHandle = 0; // increment to cancel a running generation
+
+  async function scheduleSetPreviewGeneration(dirHandle) {
+    const runId = ++_setPreviewGenHandle;
+    const videosWithoutPreview = selectedFiles.filter(
+      f => isVideoFile(f) && !setVideoPreviews.has(f.name)
+    );
+    if (!videosWithoutPreview.length) return;
+
+    for (const file of videosWithoutPreview) {
+      if (_setPreviewGenHandle !== runId) return; // cancelled by new folder load
+      await new Promise(r => setTimeout(r, 50)); // yield to UI
+      try {
+        const canvas = await extractVideoFrame(file);
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
+        await writeVideoPreview(dirHandle, file.name, blob);
+        const previewFile = new File([blob], `.${file.name}.preview.jpg`, { type: 'image/jpeg' });
+        setVideoPreviews.set(file.name, previewFile);
+        // Update the thumbnail in the grid if still visible
+        const thumb = container.querySelector(`[data-file-name="${CSS.escape(file.name)}"]`);
+        if (thumb) {
+          const url = URL.createObjectURL(previewFile);
+          thumb.style.backgroundImage    = `url(${url})`;
+          thumb.style.backgroundSize     = 'cover';
+          thumb.style.backgroundPosition = 'center';
+          thumb.querySelector('.set-img-placeholder')?.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+      } catch { /* silently skip this video */ }
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────
   async function refreshImageGrid() {
     if (!inputHandle) return;
@@ -355,7 +391,10 @@ export async function render(container, hash) {
       }
 
       const previousSelection = new Map(selectedIds);
-      selectedFiles = await listImages(inputHandle, { includeVideo, onlyVideo });
+      [selectedFiles] = await Promise.all([
+        listImages(inputHandle, { includeVideo, onlyVideo }),
+        loadVideoPreviews(inputHandle).then(m => { setVideoPreviews = m; }),
+      ]);
       selectedIds.clear();
       
       if (previousSelection.size > 0 && selectedFiles.some(f => previousSelection.has(f.name))) {
@@ -367,7 +406,8 @@ export async function render(container, hash) {
       }
       
       renderImageGrid(onlyVideo, includeVideo);
-      
+      scheduleSetPreviewGeneration(inputHandle);
+
       // Sync preview window state
       window._icTestFolderFiles = [...selectedFiles];
       
@@ -408,10 +448,29 @@ export async function render(container, hash) {
         <div class="set-img-size">${formatBytes(f.size)}</div>
       </label>`).join('');
 
-    // Lazy-load thumbnails
+    // Lazy-load thumbnails (use preview JPEG for video files)
     grid.querySelectorAll('[data-file-name]').forEach(thumb => {
       const file = selectedFiles.find(f => f.name === thumb.dataset.fileName);
       if (!file) return;
+
+      // For video files, prefer the cached preview JPEG; fall back to movie icon
+      if (isVideoFile(file)) {
+        const previewFile = setVideoPreviews.get(file.name);
+        if (previewFile) {
+          const url = URL.createObjectURL(previewFile);
+          thumb.style.backgroundImage    = `url(${url})`;
+          thumb.style.backgroundSize     = 'cover';
+          thumb.style.backgroundPosition = 'center';
+          thumb.querySelector('.set-img-placeholder')?.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } else {
+          // No preview yet — show a video icon instead of a broken image
+          const ph = thumb.querySelector('.set-img-placeholder');
+          if (ph) { ph.textContent = 'movie'; ph.style.color = 'var(--ps-blue)'; }
+        }
+        return;
+      }
+
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
@@ -422,7 +481,6 @@ export async function render(container, hash) {
       };
       img.onerror = () => URL.revokeObjectURL(url);
       img.src = url;
-      // Clean up URL after 60s
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     });
 
