@@ -9,42 +9,75 @@ import { dbGet, dbPut } from './db.js';
 
 /**
  * Prompt the user to pick a directory and persist its handle.
- * @param {'input'|'output'} role
+ * 'input' and 'browse' are treated as the same "current folder" — picking
+ * either one saves to both so the selection is shared across all screens.
+ * @param {'input'|'output'|'browse'} role
  * @returns {FileSystemDirectoryHandle}
  */
 export async function pickFolder(role) {
-  const mode = (role === 'output' || role === 'browse') ? 'readwrite' : 'read';
-  const handle = await window.showDirectoryPicker({ mode });
-  await dbPut('folders', { key: role, handle });
+  const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+  if (role === 'input' || role === 'browse') {
+    // 'input' and 'browse' are the same "current folder" — always sync both
+    await setCurrentFolder(handle);
+  } else {
+    await dbPut('folders', { key: role, handle });
+  }
   return handle;
 }
 
 /**
  * Retrieve the persisted handle for a role, or null if not set.
  * Automatically requests permission if the handle exists but permission was revoked.
+ * 'input' and 'browse' fall back to each other — they are the same "current folder".
  */
 export async function getFolder(role) {
-  const record = await dbGet('folders', role);
-  if (!record) return null;
+  // Fallback chain: 'input' ↔ 'browse' are interchangeable
+  const fallback = role === 'input' ? 'browse' : role === 'browse' ? 'input' : null;
+  const keys = fallback ? [role, fallback] : [role];
 
-  const handle = record.handle;
-  const mode = (role === 'output' || role === 'browse') ? 'readwrite' : 'read';
+  for (const key of keys) {
+    const record = await dbGet('folders', key);
+    if (!record) continue;
 
-  // Verify (and re-request) permission
-  const permission = await handle.queryPermission({ mode });
-  if (permission === 'granted') return handle;
+    const handle = record.handle;
+    // Verify (and re-request) permission
+    const permission = await handle.queryPermission({ mode: 'readwrite' });
+    if (permission === 'granted') return handle;
 
-  const request = await handle.requestPermission({ mode });
-  if (request === 'granted') return handle;
+    const request = await handle.requestPermission({ mode: 'readwrite' });
+    if (request === 'granted') return handle;
 
-  // Permission denied — clear stored handle
-  await clearFolder(role);
+    // Permission denied for this key — clear it and try next
+    await clearFolder(key);
+  }
+
   return null;
 }
 
 export async function clearFolder(role) {
   const { dbDelete } = await import('./db.js');
   return dbDelete('folders', role);
+}
+
+/**
+ * Convert a recipe's inputType ('image' | 'video' | 'any' | undefined) to
+ * the { includeVideo, onlyVideo } flags accepted by listImages().
+ */
+export function fileFilterForRecipe(recipe) {
+  const t = recipe?.inputType;
+  if (t === 'video') return { includeVideo: true, onlyVideo: true };
+  if (t === 'any')   return { includeVideo: true, onlyVideo: false };
+  return { includeVideo: false, onlyVideo: false }; // default: images only
+}
+
+/**
+ * Persist a folder handle as the "current folder" — syncs both 'input' and 'browse'
+ * so the selection is shared across all screens regardless of which one set it.
+ * Use this whenever a folder handle is activated (button pick, MRU selection, etc).
+ */
+export async function setCurrentFolder(handle) {
+  await dbPut('folders', { key: 'input',  handle });
+  await dbPut('folders', { key: 'browse', handle });
 }
 
 /**

@@ -41,6 +41,10 @@ export class ImageWorkspace {
 
     this.initDOM();
     this.bindEvents();
+    // Auto-load the current shared folder if no files have been set yet
+    if (this.options.allowFolder && this.files.length === 0) {
+      this.loadCurrentFolder(this.options.fileFilter || {});
+    }
   }
 
   initDOM() {
@@ -83,10 +87,15 @@ export class ImageWorkspace {
                 </label>
               ` : ''}
               ${this.options.allowFolder ? `
-                <button class="btn-secondary iw-folder-btn" title="Select a test folder">
-                  <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
-                  Folder
-                </button>
+                <div style="display:flex;gap:0">
+                  <button class="btn-secondary iw-folder-btn" title="Select a test folder" style="border-radius:6px 0 0 6px;border-right:none">
+                    <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
+                    Folder
+                  </button>
+                  <select class="btn-secondary iw-folder-mru" title="Recent folders" style="border-radius:0 6px 6px 0;padding:0 6px;min-width:28px;cursor:pointer">
+                    <option value="">▾</option>
+                  </select>
+                </div>
               ` : ''}
             </div>
           </div>
@@ -217,14 +226,42 @@ export class ImageWorkspace {
 
     this.container.querySelector('.iw-folder-btn')?.addEventListener('click', async () => {
       try {
-        const handle = await window.showDirectoryPicker({ mode: 'read' });
-        const { listImages } = await import('../data/folders.js');
-        const files = await listImages(handle);
+        const { pickFolder, listImages } = await import('../data/folders.js');
+        const { dbSaveFolderHistory } = await import('../data/db.js');
+        const handle = await pickFolder('input');
+        await dbSaveFolderHistory('input', handle);
+        const files = await listImages(handle, this.options.fileFilter || {});
         if (files.length > 0) this.loadFiles(files);
+        this._loadFolderMRU();
       } catch (err) {
-         if (err.name !== 'AbortError') console.error(err);
+        if (err.name !== 'AbortError') console.error(err);
       }
     });
+
+    this.container.querySelector('.iw-folder-mru')?.addEventListener('change', async e => {
+      const idx = parseInt(e.target.value);
+      if (isNaN(idx)) return;
+      e.target.value = '';
+      try {
+        const { dbGetFolderHistory, dbSaveFolderHistory } = await import('../data/db.js');
+        const { setCurrentFolder, listImages } = await import('../data/folders.js');
+        const history = await dbGetFolderHistory('input');
+        const handle = history[idx];
+        if (!handle) return;
+        if ((await handle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+          if ((await handle.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
+        }
+        await setCurrentFolder(handle);
+        await dbSaveFolderHistory('input', handle);
+        const files = await listImages(handle, this.options.fileFilter || {});
+        if (files.length > 0) this.loadFiles(files);
+        this._loadFolderMRU();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    this._loadFolderMRU();
   }
 
   updateLayoutToggleUI() {
@@ -232,6 +269,29 @@ export class ImageWorkspace {
     this.container.querySelector('.iw-layout-slider')?.classList.toggle('is-active', this.compareMode && this.compareLayout === 'slider');
     this.container.querySelector('.iw-layout-side')?.classList.toggle('is-active', this.compareMode && this.compareLayout === 'side');
     this.container.querySelector('.ic-image-workspace')?.classList.toggle('is-single-mode', !this.compareMode);
+  }
+
+  async loadCurrentFolder(fileFilter = {}) {
+    try {
+      const { getFolder, listImages } = await import('../data/folders.js');
+      const handle = await getFolder('input');
+      if (!handle) return;
+      const files = await listImages(handle, fileFilter);
+      if (files.length > 0) this.loadFiles(files);
+    } catch { /* ignore — no folder set or permission denied */ }
+  }
+
+  async _loadFolderMRU() {
+    const select = this.container.querySelector('.iw-folder-mru');
+    if (!select) return;
+    try {
+      const { dbGetFolderHistory } = await import('../data/db.js');
+      const history = await dbGetFolderHistory('input');
+      if (!history.length) { select.style.display = 'none'; return; }
+      select.style.display = '';
+      select.innerHTML = '<option value="">▾</option>' +
+        history.map((h, i) => `<option value="${i}">${h.name}</option>`).join('');
+    } catch { /* ignore */ }
   }
 
   resetZoom() {
@@ -264,8 +324,23 @@ export class ImageWorkspace {
     
     try {
       this.lastRenderResult = await this.options.onRender(this.activeFile);
+
+      // Step does not support preview — show overlay instead of image
+      if (this.lastRenderResult?.noPreview) {
+        const reason = this.lastRenderResult.noPreviewReason || 'Preview is not available for this step.';
+        this.stage.innerHTML = `
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+            background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);gap:10px;z-index:10;pointer-events:none;">
+            <span class="material-symbols-outlined" style="font-size:36px;color:var(--ps-text-muted)">hide_image</span>
+            <div style="font-size:13px;color:var(--ps-text-muted);text-align:center;max-width:260px;line-height:1.5;">${reason}</div>
+          </div>`;
+        if (this.modeToggleGroup) this.modeToggleGroup.style.display = 'none';
+        this.cmpControls.style.display = 'none';
+        return;
+      }
+
       const canCompare = this.lastRenderResult?.canCompare ?? true;
-      
+
       if (this.modeToggleGroup) {
          this.modeToggleGroup.style.display = canCompare ? 'flex' : 'none';
       }
@@ -276,7 +351,7 @@ export class ImageWorkspace {
       } else {
          this._tempCompareMode = this.compareMode;
       }
-      
+
       this.cmpControls.style.display = 'flex';
       this.updateLayoutToggleUI();
       this.renderCurrentState();

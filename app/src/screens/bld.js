@@ -16,6 +16,7 @@ import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 import { extractExif } from '../engine/exif-reader.js';
 import { renderParamField } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
+import { fileFilterForRecipe } from '../data/folders.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -404,6 +405,7 @@ export async function render(container, hash) {
   const wsContainer = container.querySelector('#bld-workspace-container');
   
   const workspace = new ImageWorkspace(wsContainer, {
+    fileFilter: fileFilterForRecipe(draft),
     customControlsHtml: `
       <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:flex;gap:4px">
         <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>

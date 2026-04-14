@@ -17,6 +17,7 @@ import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }               from '../utils/image-info.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
+import { fileFilterForRecipe } from '../data/folders.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -166,16 +167,51 @@ export async function render(container, hash) {
   const wsContainer = container.querySelector('#ned-workspace-container');
   let testFile = null;
 
+  // For video-specific steps show only videos; otherwise follow the recipe's inputType.
+  // A step is video-specific if its transform ID starts with 'flow-video-' or it is a
+  // video-effect variant (sourceTransformId set).
+  const stepIsVideoOnly = node.transformId?.startsWith('flow-video-') || !!def?.sourceTransformId;
+  const stepFileFilter  = stepIsVideoOnly
+    ? { includeVideo: true, onlyVideo: true }
+    : fileFilterForRecipe(recipe);
+
   const workspace = new ImageWorkspace(wsContainer, {
     allowUpload: true,
-    allowFolder: true, // Display the folder carousel in node tuning view
+    allowFolder: true,
+    fileFilter: stepFileFilter,
     onFilesChange: (files, activeFile) => {
       window._icTestFolderFiles = files;
       window._icTestImage = { file: activeFile };
       testFile = activeFile;
     },
     onRender: async (file) => {
-      if (!def) return { beforeUrl: URL.createObjectURL(file), afterUrl: URL.createObjectURL(file) };
+      // Non-transform nodes (conditional, branch, block-ref) have no visual output
+      if (!def) return { noPreview: true };
+
+
+      // Transforms that produce no visual output or require full batch context
+      const NO_PREVIEW_IDS = new Set([
+        'flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx',
+        'flow-create-zip', 'flow-video-wall', 'flow-video-stitcher', 'flow-geo-timeline',
+        'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack',
+        'flow-template-aggregator', 'flow-face-swap', 'flow-gif-from-states',
+        'flow-video-concat',
+        // Video-only transforms (no canvas output, file is mutated via mediabunny)
+        'flow-video-convert', 'flow-video-trim', 'flow-video-compress',
+        'flow-video-change-fps', 'flow-video-strip-audio', 'flow-video-extract-audio',
+        'flow-video-remix-audio',
+      ]);
+      if (NO_PREVIEW_IDS.has(node.transformId)) {
+        return { noPreview: true };
+      }
+
+      // Video-only canvas transforms can't be applied to image files
+      const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+      const fileIsVideo = VIDEO_EXTS.has(file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase());
+      if (!fileIsVideo && def.sourceTransformId) {
+        // sourceTransformId marks a video-effect variant — skip on image files
+        return { noPreview: true, noPreviewReason: 'This step only applies to video files. Select a video to preview.' };
+      }
 
       const params = collectParams(container, def.params || [], 'ned');
       const exif   = await extractExif(file);

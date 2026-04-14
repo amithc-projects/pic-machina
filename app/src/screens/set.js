@@ -5,8 +5,8 @@
  * Uses File System Access API for persistent folder handles.
  */
 
-import { pickFolder, getFolder, listImages,
-         loadVideoPreviews, writeVideoPreview }     from '../data/folders.js';
+import { pickFolder, getFolder, setCurrentFolder, fileFilterForRecipe,
+         listImages, loadVideoPreviews, writeVideoPreview } from '../data/folders.js';
 import { isVideoFile, extractVideoFrame }           from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { startBatch }                               from '../engine/batch.js';
@@ -38,7 +38,7 @@ export async function render(container, hash) {
   let inputHistory   = [];
   let outputHistory  = [];
 
-  // ── Slot assignment state (declared early to avoid TDZ) ──
+  // ── State declared early to avoid temporal dead zone (TDZ) ──
   const BUILTIN_SLOT_COUNTS = {
     'grid-2x2': 4, 'grid-3x3': 9, 'grid-4x4': 16,
     'split-1x2': 2, 'custom-tv': 1,
@@ -46,6 +46,7 @@ export async function render(container, hash) {
     'pip-corner-tr': 2, 'pip-corner-tl': 2,
   };
   let _slotTemplate = null;
+  let _setPreviewGenHandle = 0;
 
   container.innerHTML = `
     <div class="screen set-screen">
@@ -203,6 +204,7 @@ export async function render(container, hash) {
       }
       inputHandle = h;
       container.querySelector('#set-input-path').textContent = inputHandle.name;
+      await setCurrentFolder(inputHandle);
       await dbSaveFolderHistory('input', inputHandle);
       await renderMRUs();
       await refreshImageGrid();
@@ -351,7 +353,6 @@ export async function render(container, hash) {
   });
 
   // ── Background preview generation ────────────────────
-  let _setPreviewGenHandle = 0; // increment to cancel a running generation
 
   async function scheduleSetPreviewGeneration(dirHandle) {
     const runId = ++_setPreviewGenHandle;
@@ -387,23 +388,7 @@ export async function render(container, hash) {
   async function refreshImageGrid() {
     if (!inputHandle) return;
     try {
-      let includeVideo = false;
-      let onlyVideo = false;
-      const rType = currentRecipe?.inputType;
-      
-      if (rType === 'video') {
-        onlyVideo = true;
-        includeVideo = true;
-      } else if (rType === 'any') {
-        includeVideo = true;
-      } else if (!rType) {
-        const VIDEO_TRANSFORMS = new Set(['flow-video-wall', 'video-extract-frame']);
-        const hasVideoReq = (currentRecipe?.nodes || []).some(n => VIDEO_TRANSFORMS.has(n.transformId));
-        if (hasVideoReq) {
-           includeVideo = true;
-           onlyVideo = true;
-        }
-      }
+      const { includeVideo, onlyVideo } = fileFilterForRecipe(currentRecipe);
 
       const previousSelection = new Map(selectedIds);
       [selectedFiles] = await Promise.all([
