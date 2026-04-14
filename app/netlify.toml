@@ -1,0 +1,27 @@
+# Netlify configuration for PicMachina
+
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# Required security headers — COOP + COEP enable SharedArrayBuffer
+# (used by WASM-based AI libs and mediabunny). These must be present
+# on every response for the service worker to function correctly.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "same-origin"
+
+# Service worker must not be cached by the browser — it needs to update immediately
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# SPA routing — redirect all paths to index.html so the hash router works on reload
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
