@@ -144,7 +144,11 @@ export class ImageProcessor {
         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio',
     ]);
     const nodeTreeHasExport = (ns) => ns.some(n => {
-      if (n.type === 'transform') return EXPORT_IDS.has(n.transformId);
+      if (n.type === 'transform') {
+        if (EXPORT_IDS.has(n.transformId)) return true;
+        // video-effect transforms produce their own output — suppress auto-export
+        return registry.get(n.transformId)?.categoryKey === 'video-effect';
+      }
       if (n.type === 'branch')   return (n.branches || []).some(b => nodeTreeHasExport(b.nodes || []));
       if (n.type === 'conditional') return nodeTreeHasExport(n.thenNodes || []) || nodeTreeHasExport(n.elseNodes || []);
       return false;
@@ -368,6 +372,36 @@ export class ImageProcessor {
                       : 'mp4';
         results.push({ blob, filename: `${base}${suffix}.${outExt}`, subfolder: context.outputSubfolder });
         context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.${outExt}`);
+      } catch (err) {
+        context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
+      }
+      return;
+    }
+
+    // ── video-effect transforms: per-frame mediabunny effects ──
+    // These apply a canvas image effect to every decoded video frame and re-encode.
+    const _videoEffectDef = registry.get(id);
+    if (_videoEffectDef?.categoryKey === 'video-effect') {
+      if (context._previewMode) return; // preview already shows a frame; skip full re-encode
+      const file = context.originalFile;
+      if (!file) { context.log?.('warn', `${id}: no source file — skipping`); return; }
+      const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+      if (!VIDEO_EXTS.has(ext)) { context.log?.('warn', `${id}: skipping non-video file "${file.name}"`); return; }
+      const sourceDef = registry.get(_videoEffectDef.sourceTransformId);
+      if (!sourceDef) { context.log?.('warn', `${id}: source transform "${_videoEffectDef.sourceTransformId}" not found`); return; }
+      try {
+        const { processVideoEffect } = await import('./video-convert.js');
+        const p = node.params || {};
+        const blob = await processVideoEffect(
+          file,
+          sourceDef.apply.bind(sourceDef),
+          p,
+          { bitrate: p.bitrate || 8_000_000, onLog: context.log }
+        );
+        const suffix = interpolate(p.suffix || '', context);
+        const base   = context.filename.replace(/\.[^.]+$/, '');
+        results.push({ blob, filename: `${base}${suffix}.mp4`, subfolder: context.outputSubfolder });
+        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.mp4`);
       } catch (err) {
         context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
       }

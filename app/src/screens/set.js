@@ -74,6 +74,19 @@ export async function render(container, hash) {
         </div>
       </div>
 
+      <!-- Image preview lightbox -->
+      <div id="set-lightbox" class="set-lightbox" style="display:none" role="dialog" aria-modal="true">
+        <div class="set-lightbox-bg" id="set-lb-bg"></div>
+        <button class="set-lb-close btn-icon" id="set-lb-close" title="Close (Esc)">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <div class="set-lb-label" id="set-lb-label"></div>
+        <div class="set-lb-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan &nbsp;·&nbsp; Double-click to reset</div>
+        <div class="set-lb-stage" id="set-lb-stage">
+          <img id="set-lb-img" class="set-lb-img" draggable="false" alt="">
+        </div>
+      </div>
+
       <div class="set-body">
         <!-- Left config panel -->
         <div class="set-config">
@@ -614,8 +627,97 @@ export async function render(container, hash) {
 
         renderSelectionState();
       });
+
+      // Double-click → open preview lightbox
+      cell.addEventListener('dblclick', e => {
+        e.preventDefault();
+        const name = cell.dataset.name;
+        const file = selectedFiles.find(f => f.name === name);
+        if (!file) return;
+        openSetLightbox(file);
+      });
     });
   }
+
+  // ── Lightbox ──────────────────────────────────────────────
+  let _lbUrl = null;
+
+  function openSetLightbox(file) {
+    const lb    = container.querySelector('#set-lightbox');
+    const img   = container.querySelector('#set-lb-img');
+    const label = container.querySelector('#set-lb-label');
+    if (!lb || !img) return;
+
+    if (_lbUrl) URL.revokeObjectURL(_lbUrl);
+
+    if (isVideoFile(file)) {
+      // For video files show the cached preview frame if available, else a placeholder
+      const previewFile = setVideoPreviews.get(file.name);
+      _lbUrl = previewFile ? URL.createObjectURL(previewFile) : null;
+    } else {
+      _lbUrl = URL.createObjectURL(file);
+    }
+
+    img.src = _lbUrl || '';
+    label.textContent = file.name;
+    resetLbTransform();
+    lb.style.display = 'flex';
+  }
+
+  function closeSetLightbox() {
+    const lb = container.querySelector('#set-lightbox');
+    if (lb) lb.style.display = 'none';
+    if (_lbUrl) { URL.revokeObjectURL(_lbUrl); _lbUrl = null; }
+    const img = container.querySelector('#set-lb-img');
+    if (img) img.src = '';
+  }
+
+  // Zoom / pan state
+  let _lbScale = 1, _lbX = 0, _lbY = 0;
+  let _lbDrag = null; // { startX, startY, originX, originY }
+
+  function resetLbTransform() {
+    _lbScale = 1; _lbX = 0; _lbY = 0;
+    applyLbTransform();
+  }
+
+  function applyLbTransform() {
+    const img = container.querySelector('#set-lb-img');
+    if (img) img.style.transform = `translate(${_lbX}px, ${_lbY}px) scale(${_lbScale})`;
+  }
+
+  // Wire up lightbox controls once
+  const _lb = container.querySelector('#set-lightbox');
+  container.querySelector('#set-lb-bg')?.addEventListener('click', closeSetLightbox);
+  container.querySelector('#set-lb-close')?.addEventListener('click', closeSetLightbox);
+
+  const _lbStage = container.querySelector('#set-lb-stage');
+  _lbStage?.addEventListener('wheel', e => {
+    if (_lb.style.display === 'none') return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    _lbScale = Math.max(0.2, Math.min(10, _lbScale * delta));
+    applyLbTransform();
+  }, { passive: false });
+
+  _lbStage?.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    _lbDrag = { startX: e.clientX, startY: e.clientY, originX: _lbX, originY: _lbY };
+    _lbStage.style.cursor = 'grabbing';
+  });
+  function _lbMouseMove(e) {
+    if (!_lbDrag) return;
+    _lbX = _lbDrag.originX + (e.clientX - _lbDrag.startX);
+    _lbY = _lbDrag.originY + (e.clientY - _lbDrag.startY);
+    applyLbTransform();
+  }
+  function _lbMouseUp() {
+    if (_lbDrag) { _lbDrag = null; _lbStage && (_lbStage.style.cursor = 'grab'); }
+  }
+  window.addEventListener('mousemove', _lbMouseMove);
+  window.addEventListener('mouseup', _lbMouseUp);
+
+  container.querySelector('#set-lb-img')?.addEventListener('dblclick', resetLbTransform);
 
   function renderSelectionState() {
     container.querySelectorAll('.set-img-cell').forEach(cell => {
@@ -868,6 +970,15 @@ export async function render(container, hash) {
     });
   }
 
+  // Escape closes lightbox
+  function _handleSetKeydown(e) {
+    if (e.key === 'Escape') {
+      const lb = container.querySelector('#set-lightbox');
+      if (lb?.style.display !== 'none') closeSetLightbox();
+    }
+  }
+  document.addEventListener('keydown', _handleSetKeydown);
+
   container.querySelector('#btn-edit-recipe')?.addEventListener('click', () => {
     if (currentRecipe) navigate(`#bld?id=${currentRecipe.id}`);
   });
@@ -925,6 +1036,13 @@ export async function render(container, hash) {
       });
     });
   }
+
+  return () => {
+    document.removeEventListener('keydown', _handleSetKeydown);
+    window.removeEventListener('mousemove', _lbMouseMove);
+    window.removeEventListener('mouseup', _lbMouseUp);
+    if (_lbUrl) { URL.revokeObjectURL(_lbUrl); _lbUrl = null; }
+  };
 
 }
 
@@ -1006,6 +1124,17 @@ function injectStyles() {
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
     .set-img-size { font-size:9px; color:var(--ps-text-faint); padding:0 5px 4px; font-family:var(--font-mono); }
+
+    /* Lightbox */
+    .set-lightbox { position:fixed; inset:0; z-index:600; display:flex; align-items:center; justify-content:center; flex-direction:column; }
+    .set-lightbox-bg { position:absolute; inset:0; background:rgba(0,0,0,0.88); }
+    .set-lb-close { position:absolute; top:16px; right:16px; z-index:2; background:rgba(255,255,255,0.1); border-radius:50%; width:36px; height:36px; }
+    .set-lb-close:hover { background:rgba(255,255,255,0.2); }
+    .set-lb-label { position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:2; font-size:13px; color:rgba(255,255,255,0.8); font-family:var(--font-mono); pointer-events:none; white-space:nowrap; max-width:60vw; overflow:hidden; text-overflow:ellipsis; }
+    .set-lb-hint { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); z-index:2; font-size:11px; color:rgba(255,255,255,0.35); pointer-events:none; white-space:nowrap; }
+    .set-lb-stage { position:relative; z-index:1; width:90vw; height:88vh; display:flex; align-items:center; justify-content:center; cursor:grab; overflow:hidden; }
+    .set-lb-stage:active { cursor:grabbing; }
+    .set-lb-img { max-width:100%; max-height:100%; object-fit:contain; transform-origin:center center; transition:transform 50ms linear; user-select:none; pointer-events:none; border-radius:4px; }
   `;
   document.head.appendChild(s);
 }

@@ -87,6 +87,7 @@ All transforms are registered by their `transformId` string.
 | `overlay-canvas-texture` | Canvas Texture | `intensity`, `scale`, `blendMode` | Procedural canvas/paper grain overlay |
 | `overlay-polaroid-frame` | Polaroid Frame | `borderColor`, `borderSide`, `borderBottom`, `caption` | Expands canvas with white border and caption; designed to precede `flow-animate-stack` |
 | `overlay-scanlines` | CRT Scanlines | `spacing`, `opacity`, `color` | Horizontal CRT-style scan line overlay |
+| `overlay-template` | Template Frame | `templateId` | Warps the current image into the primary slot of a saved Perspective Template; renders the template background around it |
 
 ---
 
@@ -126,7 +127,15 @@ Aggregation nodes collect one frame per input image then produce a single combin
 |---|---|---|---|
 | `flow-create-gif` | Animated GIF | `filename`, `delay` (ms), `loop` | Simple frame-by-frame GIF |
 | `flow-create-video` | MP4 Slideshow | `filename`, `durationPerSlide` (s), `fps` | MP4 via WebCodecs |
-| `flow-contact-sheet` | Contact Sheet | `columns`, `gap`, `filename` | Grid JPEG of all images |
+| `flow-contact-sheet` | Contact Sheet | `columns`, `gap`, `filename`, `groupBy1`, `groupBy2` | Grid JPEG of all images; optionally group by a metadata field (e.g. `{{sidecar.city}}`) with title/subtitle headers |
+| `flow-video-stitcher` | WebGL Video Stitcher | `filename`, `width`, `height`, `fps`, `durationPerSlide`, `transitionDuration`, `transitionMode`, `motionMode` | GPU-accelerated slideshow with crossfade/wipe/pixelize transitions and Ken Burns motion (zoom-in/out, pan). Aggregation node. |
+| `flow-geo-timeline` | Geotemporal Timeline | `filename`, `width`, `height`, `fps`, `durationPerPhoto`, `transitionDuration` | Assembles GPS-tagged images into a scrolling video charting a journey on a map. Aggregation node — requires `meta-geocode` upstream. |
+| `flow-title-slide` | Inject Title Slide | `triggerField`, `titleTemplate`, `bgColor`, `bgImage`, `fontFamily`, `fontSize`, `textColor` | Injects a generated title card into the aggregation stream whenever a structural variable (e.g. city or date) changes. Used before `flow-video-stitcher` or similar. |
+| `video-extract-frame` | Extract Video Frame | `atPercent` (0–100) | Seeks the input video to a position and draws that frame onto the canvas. Use resize/crop steps after to shape the frame. Runs on main thread. |
+| `flow-gif-from-states` | GIF from States | `panels`, `delay`, `loop`, `suffix` | Assembles named saved canvas states into an animated GIF within a single image's pipeline (not a batch aggregator). |
+| `flow-create-pdf` | Create PDF | `filename`, `orientation` (portrait/landscape), `format` (a4/letter/legal), `quality` | Assembles all processed images into a multi-page PDF. Aggregation node. |
+| `flow-create-pptx` | Create PowerPoint | `filename`, `layout` (16:9/4:3) | Assembles all processed images into a multi-slide PPTX presentation. Aggregation node. |
+| `flow-create-zip` | Create ZIP | `filename` | Packages all processed output images into a ZIP archive. Aggregation node. |
 | `flow-animate-stack` | Animate Stack | `filename`, `format`, `width`, `height`, `deskColor`, `frameDelay`, `maxRotation`, `overlap` | Each frame appears on a desk one by one, randomly rotated. Generic — use after `overlay-polaroid-frame` for a polaroid stack. |
 | `flow-photo-stack` | Photo Stack (Legacy) | All `flow-animate-stack` params + `borderColor`, `borderBottom`, `caption` | Combines polaroid framing + desk animation in a single node. Prefer the two-node pattern. |
 | `flow-face-swap` | Machina-Swap | `suffix` | Mesh interlock node that cross-swaps faces (2 images) or pastes source to all (3+ images). |

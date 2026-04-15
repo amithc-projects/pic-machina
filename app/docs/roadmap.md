@@ -76,6 +76,18 @@ Full video pipeline built on **mediabunny** (WebCodecs-based conversion engine).
 - [x] **Thumbnail picker in Recipe Builder** — browse for any image file directly from the recipe config panel; stored as base64 data URL in IndexedDB.
 - [x] **File-type filtering** — workspace carousel and folder picker respect `recipe.inputType` (image / video / any); Step Editor applies additional per-step video filtering.
 
+## Phase 5e: ShowCase Screen (PLANNED)
+
+A visual portfolio layer that lets users highlight and document their best runs.
+
+- [ ] **Task 5e.1: `showcases` IndexedDB store** — new store in `db.js`; CRUD helpers in `src/data/showcases.js`
+- [ ] **Task 5e.2: ShowCase screen (`src/screens/shc.js`)** — large-card grid list view; detail view with sample images, editable title/description, recipe link, and "Run Again" button
+- [ ] **Task 5e.3: Horizontal pipeline diagram** — recipe nodes rendered as a scrollable left-to-right card strip with step icons, names, and param pills; clicking a card shows all params in a popover
+- [ ] **Task 5e.4: "Add to ShowCase" entry points** — star button on completed run rows and gallery header in Output History (`out.js`); toolbar button in Folder Viewer when browsing a run's output (`fld.js`)
+- [ ] **Task 5e.5: In-ShowCase curation** — swap sample images (up to 5), edit title/description inline with auto-save debounce
+
+---
+
 ## Phase 6: The Master Exporter & Project Bundling
 - [ ] **Task 6.1: ZIP Bundling Engine (`fflate`)**
   - Streaming ZIP export including original media, `image.extension.json` sidecars, and the `manifest.json`.

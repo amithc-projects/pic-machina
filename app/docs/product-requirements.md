@@ -132,9 +132,10 @@ String-type params support `{{token}}` injection resolved per image at run time:
 | **INS** | Block Inspector | Detailed parameter editor for a single node with live preview. |
 | **PVW** | Recipe Preview | Before/after single-image preview. Clone or edit recipe. |
 | **QUE** | Processing Queue | Live batch progress with terminal-style log. Cancel in-flight batch. Navigate to output when complete. |
-| **OUT** | Output History | Searchable run history. View per-run logs. Browse output folder. |
+| **OUT** | Output History | Searchable run history. View per-run logs. Browse output folder. Add completed runs to ShowCase. |
 | **CMP** | Comparison View | Side-by-side or split-slider before/after comparison. |
 | **FLD** | Folder Viewer | Finder-style file browser. Two entry points: (1) from a specific batch run via Output History, (2) direct "open folder" mode that remembers the last browsed folder. Grid, filmstrip, and list views. Slideshow mode. Delete files. Before/after comparison with input folder. Video files show thumbnail preview from `.{videoname}.preview.jpg` sidecars (generated in background); user can set a custom preview frame via the camera button on any video card. |
+| **SHC** | ShowCase | Visual portfolio of highlighted runs. Large card grid list view; each entry captures up to 5 sample images/videos from a single run, a user-editable title and description, and a horizontal pipeline diagram of the recipe steps with parameters. Entry points: "Add to ShowCase" button in Output History run rows and gallery header, and in Folder Viewer when browsing a run's output. Curation (swap images, edit text) is done from within the ShowCase screen. |
 
 ---
 
@@ -145,6 +146,9 @@ Discovery [LIB] ──> Inspect [PVW] ──> Configure [SET] ──> Run [QUE]
      │                                      │                   │
      │                                      ▼                   ▼
      └──> Build/Edit [BLD/NED/BKB] <──> Test [CMP]     Review [OUT] ──> Browse [FLD]
+                                                               │
+                                                               ▼
+                                                        Highlight [SHC]
 ```
 
 **Typical flow for a new user:**
@@ -168,7 +172,7 @@ Discovery [LIB] ──> Inspect [PVW] ──> Configure [SET] ──> Run [QUE]
 
 - **Frontend**: Vanilla JS (ES modules), no framework
 - **Bundler**: Vite
-- **Storage**: IndexedDB (recipes, runs, blocks, folder handles, templates)
+- **Storage**: IndexedDB (recipes, runs, blocks, folder handles, templates, showcases)
 - **Processing**: Web Workers (non-AI), Main thread (AI + animation aggregation)
 - **AI**: MediaPipe (face detection, segmentation, pose); Tesseract.js (OCR); OpenCV.js (template slot auto-detection via WASM background worker)
 - **GIF encoding**: gif.js (requires HTMLCanvasElement, runs on main thread)

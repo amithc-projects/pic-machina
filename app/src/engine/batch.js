@@ -27,6 +27,7 @@ import './transforms/overlays.js';
 import './transforms/ai.js';
 import './transforms/metadata.js';
 import './transforms/flow.js';
+import './transforms/video.js';
 
 // ─── Transform IDs that require the main thread ──────────
 const MAIN_THREAD_TRANSFORMS = new Set([
@@ -106,6 +107,8 @@ const VIDEO_INPUT_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
 
 function recipeNeedsMainThread(recipe, files = []) {
   if (flattenNodes(recipe.nodes || []).some(n => MAIN_THREAD_TRANSFORMS.has(n.transformId))) return true;
+  // video-effect transforms (per-frame mediabunny effects) always need main thread
+  if (flattenNodes(recipe.nodes || []).some(n => registry.get(n.transformId)?.categoryKey === 'video-effect')) return true;
   // Canvas transforms applied to video files need main thread (mediabunny + WebCodecs)
   const hasVideoFiles = files.some(f => VIDEO_INPUT_EXTS.has(f.name.slice(f.name.lastIndexOf('.') + 1).toLowerCase()));
   if (hasVideoFiles || recipe.inputType === 'video') {
