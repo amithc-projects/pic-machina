@@ -1059,6 +1059,81 @@ export const SYSTEM_RECIPES = [
       { id: 'pm-7', type: 'transform', transformId: 'flow-export',
         params: { suffix: '_ID', format: 'image/jpeg', quality: 95 }, label: 'Export ID Card' }
     ]
+  },
+
+  // ── 48. Organise by Location ─────────────────────────────
+  {
+    id: 'sys-organise-by-location', name: 'Organise by Location',
+    description: 'Reverse-geocodes GPS coordinates and copies images into Country/City subfolders. Images without GPS go into "No Location". Geocode results are cached — repeat runs skip the API call.',
+    isSystem: true, coverColor: '#0f766e',
+    inputType: 'image',
+    tags: ['organise', 'location', 'gps', 'geocode', 'folder'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'loc-1', type: 'conditional',
+        label: 'Has GPS?',
+        condition: { field: 'HasGPS' },
+        thenNodes: [
+          {
+            id: 'loc-1a', type: 'transform', transformId: 'meta-geocode',
+            params: { template: '{city}, {country}', targetField: 'location' },
+            label: 'Reverse Geocode'
+          },
+          {
+            id: 'loc-1b', type: 'transform', transformId: 'flow-export',
+            params: {
+              subfolder: '{{country}}/{{city}}',
+              suffix: '', format: 'image/jpeg', quality: 100
+            },
+            label: 'Export to Country/City'
+          }
+        ],
+        elseNodes: [
+          {
+            id: 'loc-1c', type: 'transform', transformId: 'flow-export',
+            params: { subfolder: 'No Location', suffix: '', format: 'image/jpeg', quality: 100 },
+            label: 'Export to No Location'
+          }
+        ]
+      }
+    ]
+  },
+
+  // ── 49. Organise by Date ──────────────────────────────────
+  {
+    id: 'sys-organise-by-date', name: 'Organise by Date',
+    description: 'Copies images into date-based subfolders (YYYY/Month/Day) using the EXIF date taken. Images without EXIF dates go into an "Unknown Date" folder.',
+    isSystem: true, coverColor: '#0369a1',
+    inputType: 'image',
+    tags: ['organise', 'date', 'sort', 'exif', 'folder'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'org-1', type: 'conditional',
+        label: 'Has EXIF Date?',
+        condition: { field: 'exif.date', operator: 'exists' },
+        thenNodes: [
+          {
+            id: 'org-1a', type: 'transform', transformId: 'flow-export',
+            params: {
+              subfolder: '{{exif.date | date("YYYY")}}/{{exif.date | date("MMMM")}}/{{exif.date | date("D")}}',
+              suffix: '',
+              format: 'image/jpeg',
+              quality: 100
+            },
+            label: 'Export to Date Folder'
+          }
+        ],
+        elseNodes: [
+          {
+            id: 'org-1b', type: 'transform', transformId: 'flow-export',
+            params: { subfolder: 'Unknown Date', suffix: '', format: 'image/jpeg', quality: 100 },
+            label: 'Export to Unknown Date'
+          }
+        ]
+      }
+    ]
   }
 ];
 

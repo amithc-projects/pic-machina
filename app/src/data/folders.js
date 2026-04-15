@@ -164,7 +164,12 @@ export async function listImages(dirHandle, { includeVideo = false, onlyVideo = 
  * Ensure the /output subfolder exists and return its handle.
  */
 export async function getOrCreateOutputSubfolder(outputHandle, subfolderName = 'output') {
-  return outputHandle.getDirectoryHandle(subfolderName, { create: true });
+  const parts = subfolderName.split('/').filter(Boolean);
+  let handle = outputHandle;
+  for (const part of parts) {
+    handle = await handle.getDirectoryHandle(part, { create: true });
+  }
+  return handle;
 }
 
 /**

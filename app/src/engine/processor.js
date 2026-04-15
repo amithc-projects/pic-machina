@@ -143,8 +143,13 @@ export class ImageProcessor {
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio',
     ]);
-    const hasExports = nodes.some(n => n.type === 'transform' && EXPORT_IDS.has(n.transformId))
-      || nodes.some(n => n.type === 'branch' && n.branches?.some(b => b.nodes.some(bn => EXPORT_IDS.has(bn.transformId))));
+    const nodeTreeHasExport = (ns) => ns.some(n => {
+      if (n.type === 'transform') return EXPORT_IDS.has(n.transformId);
+      if (n.type === 'branch')   return (n.branches || []).some(b => nodeTreeHasExport(b.nodes || []));
+      if (n.type === 'conditional') return nodeTreeHasExport(n.thenNodes || []) || nodeTreeHasExport(n.elseNodes || []);
+      return false;
+    });
+    const hasExports = nodeTreeHasExport(nodes);
 
     if (!hasExports && targetNodeId === undefined) {
       if (context._videoTransformQueue?.length > 0) {
@@ -218,13 +223,17 @@ export class ImageProcessor {
       const fmt     = node.params?.format  || 'image/jpeg';
       const quality = (node.params?.quality ?? 90) / 100;
       const suffix  = interpolate(node.params?.suffix || '', context);
+      const nodeSubfolder = node.params?.subfolder ? interpolate(node.params.subfolder, context) : null;
+      const effectiveSubfolder = nodeSubfolder
+        ? `${context.outputSubfolder}/${nodeSubfolder}`
+        : context.outputSubfolder;
 
       let blob = await this._exportCanvas(ctx, fmt, quality);
       if (fmt === 'image/jpeg') blob = await injectExif(blob, context);
 
       const base = context.filename.replace(/\.[^.]+$/, '');
       const ext  = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[fmt] || 'jpg';
-      results.push({ blob, filename: `${base}${suffix}.${ext}`, subfolder: context.outputSubfolder });
+      results.push({ blob, filename: `${base}${suffix}.${ext}`, subfolder: effectiveSubfolder });
       return;
     }
 
@@ -448,7 +457,13 @@ export class ImageProcessor {
           blob = await new Promise(res => fallback.toBlob(res, 'image/jpeg', 0.9));
         }
       } else {
-        blob = await this._exportCanvas(ctx, 'image/jpeg', 0.9);
+        // flow-bg-swap subject (fileIndex 0) must be PNG to preserve alpha from ai-remove-bg
+        const isTransparentSubject = (id === 'flow-bg-swap' && (context.fileIndex ?? 0) === 0);
+        blob = await this._exportCanvas(
+          ctx,
+          isTransparentSubject ? 'image/png' : 'image/jpeg',
+          isTransparentSubject ? 1.0 : 0.9
+        );
       }
 
       const caption = interpolate(node.params?.caption || '', context);

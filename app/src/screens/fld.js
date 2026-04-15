@@ -52,6 +52,25 @@ async function listAllMedia(dirHandle) {
   return entries.sort((a, b) => a.file.name.localeCompare(b.file.name));
 }
 
+/** Read media files AND subdirectories from a directory handle. */
+async function listContents(dirHandle) {
+  const files = [], folders = [];
+  for await (const [name, entry] of dirHandle.entries()) {
+    if (name.startsWith('.')) continue;
+    if (entry.kind === 'directory') {
+      folders.push({ name, handle: entry });
+    } else {
+      const ext = extOf(name);
+      if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) {
+        files.push({ file: await entry.getFile(), handle: entry });
+      }
+    }
+  }
+  files.sort((a, b) => a.file.name.localeCompare(b.file.name));
+  folders.sort((a, b) => a.name.localeCompare(b.name));
+  return { files, folders };
+}
+
 export async function render(container, hash) {
   const params    = new URLSearchParams((hash || '').split('?')[1] || '');
   const runId     = params.get('run');
@@ -112,15 +131,10 @@ export async function render(container, hash) {
         <button class="btn-icon" id="fld-back" title="Back">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
-        <div class="fld-breadcrumb">
-          ${browseMode
-            ? `<span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-muted)">folder_open</span>
-               <span class="fld-crumb-recipe">${escHtml(browseHandle.name)}</span>`
-            : `<span class="fld-crumb-recipe">${escHtml(run?.recipeName || 'Output')}</span>
-               <span class="material-symbols-outlined fld-crumb-sep">chevron_right</span>
-               <span class="fld-crumb-folder">${escHtml(run?.outputFolder || 'output')}/</span>`
-          }
-        </div>
+        <button class="btn-icon" id="fld-up" title="Up one folder" style="display:none">
+          <span class="material-symbols-outlined">arrow_upward</span>
+        </button>
+        <div class="fld-breadcrumb" id="fld-breadcrumb"></div>
 
         <div style="flex:1"></div>
 
@@ -198,6 +212,7 @@ export async function render(container, hash) {
   injectImageInfoStyles();
 
   container.querySelector('#fld-back')?.addEventListener('click', () => navigate(`#${fromRoute}`));
+  container.querySelector('#fld-up')?.addEventListener('click', () => navigateTo(dirStack.length - 2));
 
   // ── Change Folder (browse mode) ─────────────────────────────
   container.querySelector('#fld-change-folder')?.addEventListener('click', async () => {
@@ -210,6 +225,10 @@ export async function render(container, hash) {
   // ── State ───────────────────────────────────────────────────
   let activeSubHandle = null; // used by deleteSelected
   let allEntries = [];   // { file: File, handle: FileSystemFileHandle }[]
+  let allFolders = [];   // { name: string, handle: FileSystemDirectoryHandle }[]
+  let filteredFolders = []; // currently visible folders
+  let currentHandle = null; // FileSystemDirectoryHandle being viewed
+  let dirStack = [];     // [{ handle, name }] — path from root to parent of currentHandle
   let videoPreviews = new Map(); // videoName → File (preview JPEG)
   let _previewGenRunning = false;
   let inputFiles = [];   // File[] from input folder for comparison
@@ -332,9 +351,9 @@ export async function render(container, hash) {
 
   // ── Load files ──────────────────────────────────────────────
   try {
-    let subHandle;
+    let rootHandle;
     if (browseMode) {
-      subHandle = browseHandle;
+      rootHandle = browseHandle;
     } else {
       let outputHandle = run?.outputHandleObj || await getFolder('output');
       if (!outputHandle) {
@@ -344,18 +363,14 @@ export async function render(container, hash) {
 
       const subfolder = run?.outputFolder || 'output';
       try {
-        subHandle = await outputHandle.getDirectoryHandle(subfolder);
+        rootHandle = await outputHandle.getDirectoryHandle(subfolder);
       } catch {
         showEmpty(`Subfolder "${subfolder}" not found.`);
         return;
       }
     }
 
-    activeSubHandle = subHandle;
-    [allEntries, videoPreviews] = await Promise.all([
-      listAllMedia(subHandle),
-      loadVideoPreviews(subHandle),
-    ]);
+    currentHandle = rootHandle;
 
     // Try to load input files for comparison
     const inputHandle = await getFolder('input').catch(() => null);
@@ -373,29 +388,86 @@ export async function render(container, hash) {
       } catch {}
     }
 
-    // Update filter chip counts
+    await reloadContents();
+  } catch (err) {
+    showEmpty(`Error: ${err.message}`);
+  }
+
+  // ── Folder navigation ───────────────────────────────────────
+  async function reloadContents() {
+    activeSubHandle = currentHandle;
+    const { files, folders } = await listContents(currentHandle);
+    allEntries = files;
+    allFolders = folders;
+    videoPreviews = await loadVideoPreviews(currentHandle);
+    selected = null;
+    selectedSet.clear();
+    lastIdx = -1;
+
+    // Update chip counts
     const counts = { image: 0, video: 0, other: 0 };
     allEntries.forEach(ent => { const t = fileType(ent.file.name); counts[t] = (counts[t] || 0) + 1; });
     container.querySelectorAll('[data-filter]').forEach(chip => {
       const t = chip.dataset.filter;
       if (t !== 'all') {
-        const badge = counts[t] || 0;
-        if (badge > 0) {
-          // Append count
-          const existing = chip.querySelector('.fld-chip-count');
-          if (!existing) {
-            const sp = document.createElement('span');
-            sp.className = 'fld-chip-count';
-            sp.textContent = badge;
-            chip.appendChild(sp);
-          }
-        }
+        const sp = chip.querySelector('.fld-chip-count') || document.createElement('span');
+        sp.className = 'fld-chip-count';
+        sp.textContent = counts[t] || 0;
+        if (!chip.contains(sp)) chip.appendChild(sp);
+        sp.style.display = counts[t] ? '' : 'none';
       }
     });
 
+    updateBreadcrumb();
     applyFilter();
-  } catch (err) {
-    showEmpty(`Error: ${err.message}`);
+  }
+
+  function updateBreadcrumb() {
+    const bc = container.querySelector('#fld-breadcrumb');
+    if (!bc) return;
+
+    // Full path: dirStack entries + current
+    const pathNames = [...dirStack.map(d => d.name), currentHandle.name];
+
+    let html = '';
+    if (!browseMode) {
+      html += `<span class="fld-crumb-recipe">${escHtml(run?.recipeName || 'Output')}</span>`;
+      html += `<span class="material-symbols-outlined fld-crumb-sep">chevron_right</span>`;
+    } else {
+      html += `<span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-muted)">folder_open</span>`;
+    }
+
+    pathNames.forEach((name, i) => {
+      const isLast = i === pathNames.length - 1;
+      if (i > 0 || browseMode) html += `<span class="material-symbols-outlined fld-crumb-sep">chevron_right</span>`;
+      if (isLast) {
+        html += `<span class="fld-crumb-folder">${escHtml(name)}/</span>`;
+      } else {
+        html += `<button class="fld-crumb-btn" data-crumb-idx="${i}">${escHtml(name)}/</button>`;
+      }
+    });
+
+    bc.innerHTML = html;
+    bc.querySelectorAll('[data-crumb-idx]').forEach(btn => {
+      btn.addEventListener('click', () => navigateTo(parseInt(btn.dataset.crumbIdx)));
+    });
+
+    // Show/hide up button
+    const upBtn = container.querySelector('#fld-up');
+    if (upBtn) upBtn.style.display = dirStack.length > 0 ? '' : 'none';
+  }
+
+  async function enterFolder(folder) {
+    dirStack.push({ handle: currentHandle, name: currentHandle.name });
+    currentHandle = folder.handle;
+    await reloadContents();
+  }
+
+  async function navigateTo(stackIdx) {
+    if (stackIdx < 0 || stackIdx >= dirStack.length) return;
+    currentHandle = dirStack[stackIdx].handle;
+    dirStack = dirStack.slice(0, stackIdx);
+    await reloadContents();
   }
 
   function showEmpty(msg) {
@@ -409,12 +481,14 @@ export async function render(container, hash) {
 
   function applyFilter() {
     filtered = allEntries.filter(ent => filterType === 'all' || fileType(ent.file.name) === filterType);
-    // Sort
+    // Sort files
     filtered.sort((a, b) => {
-      if (sortKey === 'type') return fileType(a.file.name).localeCompare(fileType(b.file.name)) || a.file.name.compare(b.file.name);
+      if (sortKey === 'type') return fileType(a.file.name).localeCompare(fileType(b.file.name)) || a.file.name.localeCompare(b.file.name);
       if (sortKey === 'size') return b.file.size - a.file.size;
       return a.file.name.localeCompare(b.file.name);
     });
+    // Folders always shown after files, sorted by name
+    filteredFolders = [...allFolders].sort((a, b) => a.name.localeCompare(b.name));
     renderMain();
   }
   // ── Render main area ────────────────────────────────────────
@@ -423,7 +497,7 @@ export async function render(container, hash) {
     const main = container.querySelector('#fld-main');
     if (!main) return;
 
-    if (!filtered.length) {
+    if (!filtered.length && !filteredFolders.length) {
       main.innerHTML = `<div class="empty-state" style="height:100%">
         <span class="material-symbols-outlined">filter_none</span>
         <div class="empty-state-title">No files match</div>
@@ -743,6 +817,31 @@ export async function render(container, hash) {
       });
       grid.appendChild(cell);
     });
+
+    // ".." up entry + folders after files
+    if (dirStack.length > 0) {
+      const upCell = document.createElement('div');
+      upCell.className = 'fld-cell fld-cell--folder fld-cell--up';
+      upCell.title = `Up to ${dirStack[dirStack.length - 1].name}`;
+      upCell.innerHTML = `
+        <div class="fld-thumb fld-thumb--folder">
+          <span class="material-symbols-outlined">drive_folder_upload</span>
+        </div>
+        <div class="fld-cell-name">..</div>`;
+      upCell.addEventListener('click', () => navigateTo(dirStack.length - 2));
+      grid.appendChild(upCell);
+    }
+    filteredFolders.forEach(folder => {
+      const cell = document.createElement('div');
+      cell.className = 'fld-cell fld-cell--folder';
+      cell.innerHTML = `
+        <div class="fld-thumb fld-thumb--folder">
+          <span class="material-symbols-outlined">folder</span>
+        </div>
+        <div class="fld-cell-name">${escHtml(folder.name)}</div>`;
+      cell.addEventListener('click', () => enterFolder(folder));
+      grid.appendChild(cell);
+    });
   }
 
   // ── Filmstrip view ──────────────────────────────────────────
@@ -792,6 +891,18 @@ export async function render(container, hash) {
       thumb.addEventListener('click', e => {
         handleFileClick(ent, i, e);
       });
+      strip.appendChild(thumb);
+    });
+
+    // Folders after files
+    filteredFolders.forEach(folder => {
+      const thumb = document.createElement('div');
+      thumb.className = 'fld-fs-thumb fld-fs-thumb--folder';
+      thumb.title = folder.name;
+      thumb.innerHTML = `
+        <span class="material-symbols-outlined" style="font-size:32px;color:var(--ps-blue)">folder</span>
+        <span class="fld-fs-folder-name">${escHtml(folder.name)}</span>`;
+      thumb.addEventListener('click', () => enterFolder(folder));
       strip.appendChild(thumb);
     });
 
@@ -872,6 +983,22 @@ export async function render(container, hash) {
         e.stopPropagation();
         downloadFile(ent.file);
       });
+      tbody.appendChild(tr);
+    });
+
+    // Folders after files
+    filteredFolders.forEach(folder => {
+      const tr = document.createElement('tr');
+      tr.className = 'fld-list-row fld-list-row--folder';
+      tr.innerHTML = `
+        <td class="fld-list-td">
+          <div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue);font-size:22px">folder</span></div>
+        </td>
+        <td class="fld-list-td"><span class="fld-list-name">${escHtml(folder.name)}</span></td>
+        <td class="fld-list-td"><span class="ic-badge" style="background:rgba(0,119,255,.12);color:var(--ps-blue)">Folder</span></td>
+        <td class="fld-list-td"></td>
+        <td class="fld-list-td"></td>`;
+      tr.addEventListener('click', () => enterFolder(folder));
       tbody.appendChild(tr);
     });
   }
@@ -1288,6 +1415,8 @@ function injectFldStyles() {
     .fld-crumb-recipe { font-size:13px; font-weight:600; color:var(--ps-text); white-space:nowrap; max-width:180px; overflow:hidden; text-overflow:ellipsis; }
     .fld-crumb-sep { font-size:16px; color:var(--ps-text-faint); flex-shrink:0; }
     .fld-crumb-folder { font-size:12px; font-family:var(--font-mono); color:var(--ps-blue); white-space:nowrap; }
+    .fld-crumb-btn { font-size:12px; font-family:var(--font-mono); color:var(--ps-text-muted); white-space:nowrap; background:none; border:none; cursor:pointer; padding:2px 4px; border-radius:4px; transition:background 100ms,color 100ms; }
+    .fld-crumb-btn:hover { background:var(--ps-bg-hover); color:var(--ps-blue); }
     .fld-view-toggle { display:flex; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:8px; overflow:hidden; }
     .fld-view-btn { display:flex; align-items:center; padding:6px 9px; background:transparent; border:none; color:var(--ps-text-muted); cursor:pointer; transition:background 150ms,color 150ms; }
     .fld-view-btn .material-symbols-outlined { font-size:16px; }
@@ -1322,6 +1451,10 @@ function injectFldStyles() {
       transition:background 100ms, border-color 150ms;
     }
     .fld-cell:hover { background:var(--ps-bg-hover); }
+    .fld-cell--folder { background:rgba(0,119,255,0.04); }
+    .fld-cell--folder:hover { background:rgba(0,119,255,0.10); }
+    .fld-thumb--folder { display:flex; align-items:center; justify-content:center; background:rgba(0,119,255,0.08); border-color:rgba(0,119,255,0.2); }
+    .fld-thumb--folder .material-symbols-outlined { font-size:48px; color:var(--ps-blue); }
     .fld-cell.is-selected  { border-color:var(--ps-blue); background:rgba(0,119,255,0.06); }
     .fld-cell.is-multiselected { border-color:#f59e0b; background:rgba(245,158,11,0.13); }
     .fld-cell.is-selected.is-multiselected { border-color:var(--ps-blue); background:rgba(0,119,255,0.10); }
@@ -1393,6 +1526,9 @@ function injectFldStyles() {
     .fld-fs-thumb.is-selected { border-color:var(--ps-blue); }
     .fld-fs-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
     .fld-fs-video-badge { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:28px; color:rgba(255,255,255,0.9); background:rgba(0,0,0,0.35); }
+    .fld-fs-thumb--folder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; background:rgba(0,119,255,0.06); border-color:rgba(0,119,255,0.2); }
+    .fld-fs-thumb--folder:hover { border-color:var(--ps-blue); background:rgba(0,119,255,0.12); }
+    .fld-fs-folder-name { font-size:9px; color:var(--ps-text-muted); text-align:center; padding:0 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; }
 
     /* List view */
     .fld-main--list { padding:0; }

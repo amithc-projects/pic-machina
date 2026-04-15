@@ -126,7 +126,8 @@ export function resolveParams(params, context) {
 
 /**
  * Format a date value (EXIF string "YYYY:MM:DD HH:MM:SS" or epoch) using a simple template.
- * Supported tokens: YYYY, MM, DD, MMM (month abbrev), HH, mm, SS
+ * Supported tokens: YYYY, MMMM (full month), MMM (abbrev), MM, DD, D (unpadded), HH, mm, SS
+ * Single-pass regex ensures longer tokens (MMMM, DD) are matched before shorter ones (MM, D).
  */
 export function formatDateValue(raw, fmt) {
   if (!raw) return '';
@@ -145,14 +146,21 @@ export function formatDateValue(raw, fmt) {
 
   if (isNaN(d.getTime())) return String(raw);
 
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MONTHS      = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  return fmt
-    .replace('YYYY', String(d.getFullYear()))
-    .replace('MM',   String(d.getMonth() + 1).padStart(2, '0'))
-    .replace('DD',   String(d.getDate()).padStart(2, '0'))
-    .replace('MMM',  MONTHS[d.getMonth()])
-    .replace('HH',   String(d.getHours()).padStart(2, '0'))
-    .replace('mm',   String(d.getMinutes()).padStart(2, '0'))
-    .replace('SS',   String(d.getSeconds()).padStart(2, '0'));
+  // Single-pass replace: alternation order ensures MMMM > MMM > MM and DD > D
+  return fmt.replace(/YYYY|MMMM|MMM|MM|DD|D|HH|mm|SS/g, token => {
+    switch (token) {
+      case 'YYYY': return String(d.getFullYear());
+      case 'MMMM': return FULL_MONTHS[d.getMonth()];
+      case 'MMM':  return MONTHS[d.getMonth()];
+      case 'MM':   return String(d.getMonth() + 1).padStart(2, '0');
+      case 'DD':   return String(d.getDate()).padStart(2, '0');
+      case 'D':    return String(d.getDate());
+      case 'HH':   return String(d.getHours()).padStart(2, '0');
+      case 'mm':   return String(d.getMinutes()).padStart(2, '0');
+      case 'SS':   return String(d.getSeconds()).padStart(2, '0');
+    }
+  });
 }

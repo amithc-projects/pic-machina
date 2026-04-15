@@ -65,14 +65,44 @@ registry.register({
     const gps = context.exif?.gps || context.meta?.gps;
     if (!gps?.lat || !gps?.lng) return;
 
+    if (!context.meta)      context.meta      = {};
+    if (!context.variables) context.variables = new Map();
+
+    // Use cached geo data from a previous run (saved to asset store as sidecar.geo)
+    if (context.sidecar?.geocodedAt) {
+      const cached = {
+        city:         context.sidecar.city         || '',
+        county:       context.sidecar.county        || '',
+        state:        context.sidecar.state         || '',
+        country:      context.sidecar.country       || '',
+        country_code: context.sidecar.country_code  || '',
+        postcode:     context.sidecar.postcode       || '',
+        suburb:       context.sidecar.suburb         || '',
+        road:         context.sidecar.road           || '',
+      };
+      for (const [k, v] of Object.entries(cached)) {
+        context.meta[k] = v;
+        context.variables.set(k, v);
+      }
+      const location = (p.template || '{city}, {country}')
+        .replace('{city}',         cached.city)
+        .replace('{county}',       cached.county)
+        .replace('{state}',        cached.state)
+        .replace('{country}',      cached.country)
+        .replace('{country_code}', cached.country_code)
+        .replace('{postcode}',     cached.postcode)
+        .replace('{suburb}',       cached.suburb)
+        .replace('{road}',         cached.road);
+      context.meta[p.targetField || 'location'] = location;
+      context.variables.set(p.targetField || 'location', location);
+      return;
+    }
+
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${gps.lat}&lon=${gps.lng}&format=json`;
       const resp = await fetch(url, { headers: { 'User-Agent': 'ImageChef/1.0' } });
       const data = await resp.json();
       const addr = data.address || {};
-
-      if (!context.meta)      context.meta      = {};
-      if (!context.variables) context.variables = new Map();
 
       // Store each address field individually so {{country}}, {{city}} etc. work
       const components = {

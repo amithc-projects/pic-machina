@@ -12,8 +12,9 @@ registry.register({
   icon: 'file_download',
   description: 'Save a snapshot of the current canvas as an image file.',
   params: [
-    { name: 'suffix',  label: 'Filename Suffix', type: 'text',   defaultValue: '' },
-    { name: 'format',  label: 'Format',          type: 'select',
+    { name: 'suffix',    label: 'Filename Suffix',                 type: 'text',   defaultValue: '' },
+    { name: 'subfolder', label: 'Output Subfolder ({{vars}} ok)',  type: 'text',   defaultValue: '' },
+    { name: 'format',    label: 'Format',                          type: 'select',
       options: [
         { label: 'JPEG',  value: 'image/jpeg' },
         { label: 'PNG',   value: 'image/png'  },
