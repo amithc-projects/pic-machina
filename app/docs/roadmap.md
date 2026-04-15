@@ -30,9 +30,11 @@
 - [x] Video Wall (Hardcoded + Template Layouts)
 - [x] WebGL Slideshow Stitcher (`flow-video-stitcher`) with GPU crossfades and cinematic motion
 - [x] Metadata Timeline Sequencer (`flow-title-slide`) — injects interstitial title slides on structural metadata changes
-- [ ] **Task 4.6: Recipe — The Comic Book**
-  - Layout engine using `color-posterize` and `ai-face-privacy`.
-  - Automated speech bubble rendering using OCR text or annotations.
+- [x] **Task 4.6: Recipe — Graphic Novel / Comic Style**
+  - `sys-graphic-novel`: Kuwahara smooth → colour boost → inverted Sobel edge detect (multiply blend) → ink-line portrait.
+  - `sys-graphic-novel-bold`: as above with posterisation for a harder comic-book panel look.
+  - `filter-edge-detect` extended: added `invertEdges` toggle and `multiply` blend mode specifically for ink-line compositing.
+  - [ ] Automated speech bubble rendering using OCR text or annotations (future).
 - [ ] **Task 4.7: Recipe — Geotemporal Timeline**
   - Scrolling narrative view using `meta-geocode` data and `exif.date` to map a trip's progression.
 - [ ] **Task 4.8: Recipe — The Photomosaic**
@@ -63,6 +65,16 @@ Full video pipeline built on **mediabunny** (WebCodecs-based conversion engine).
 - [x] Progress logging with frame count and ETA during batch runs
 - [x] Frame preview in Recipe Builder and Step Editor (no re-encode needed)
 - [x] Video thumbnail sidecars (`.{videoname}.preview.jpg`) — generated in background in Folder Viewer and Batch Setup; user can set custom preview frame via camera button
+
+## Phase 5d: Creative Effects & Persistence (COMPLETE)
+
+- [x] **`filter-relight`** — up to 3 independent point lights via ambient darkening + screen-mode radial gradients. Configurable colour, intensity, position (X/Y %), and radius per light.
+- [x] **`ai-glow-eyes`** — BlazeFace detects eye-centre keypoints; replaces irises with coloured glow (iris fill + dark pupil + screen radial falloff). Used by `sys-vampire-gfx`.
+- [x] **`sys-vampire-gfx`** — chalk-white pallor via near-full desaturation, cold colour grade, Kuwahara skin smoothing, bloom glow, and AI glowing red eyes.
+- [x] **File System Shadow Persistence** — after every mutation to recipes/blocks/templates, JSON shadow files are written fire-and-forget to `.PicMachina/data/` inside the project root. On startup, if IndexedDB is empty, data is silently restored from these files.
+- [x] **Shared current folder** — input folder is synchronised across all four active screens (Batch Setup, Recipe Builder, Step Editor, Folder Viewer); MRU dropdown in Recipe Builder toolbar.
+- [x] **Thumbnail picker in Recipe Builder** — browse for any image file directly from the recipe config panel; stored as base64 data URL in IndexedDB.
+- [x] **File-type filtering** — workspace carousel and folder picker respect `recipe.inputType` (image / video / any); Step Editor applies additional per-step video filtering.
 
 ## Phase 6: The Master Exporter & Project Bundling
 - [ ] **Task 6.1: ZIP Bundling Engine (`fflate`)**

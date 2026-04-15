@@ -114,41 +114,33 @@ export async function setRecipeThumbnail(recipeId, file) {
 
   const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
 
-  // 2. Try to save to local filesystem if project root is linked
-  let savedToFs = false;
+  // 2. Always store as base64 data URL for reliable in-app display
+  recipe.thumbnail = canvas.toDataURL('image/jpeg', 0.8);
+
+  // 3. Also write to filesystem if project root is linked (for project organisation)
   try {
     const rootRecord = await dbGet('folders', 'project_root');
     if (rootRecord && rootRecord.handle) {
       const rootHandle = rootRecord.handle;
       const subDirType = recipe.isSystem ? 'samples' : 'user-samples';
-      const storagePath = `public/${subDirType}`;
-      
+
       // Ensure we have permission
       if ((await rootHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
-         await rootHandle.requestPermission({ mode: 'readwrite' });
+        await rootHandle.requestPermission({ mode: 'readwrite' });
       }
 
       // Navigate to public then to the specific subfolder
       const publicHandle = await rootHandle.getDirectoryHandle('public', { create: true });
       const dirHandle = await publicHandle.getDirectoryHandle(subDirType, { create: true });
-      
+
       const fileName = `${recipe.id}.jpg`;
       const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
       const writable = await fileHandle.createWritable();
       await writable.write(blob);
       await writable.close();
-
-      // Store the relative path as the thumbnail (Vite serves public/ at /)
-      recipe.thumbnail = `./${subDirType}/${fileName}`;
-      savedToFs = true;
     }
   } catch (err) {
-    console.warn('Failed to save thumbnail to filesystem, falling back to base64:', err);
-  }
-
-  // 3. Fallback to base64 if FS save failed or wasn't attempted
-  if (!savedToFs) {
-    recipe.thumbnail = canvas.toDataURL('image/jpeg', 0.8);
+    console.warn('Failed to save thumbnail to filesystem:', err);
   }
 
   await saveRecipe(recipe);

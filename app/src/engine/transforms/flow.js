@@ -431,6 +431,32 @@ registry.register({
   apply() { /* handled by Processor as aggregation node */ }
 });
 
+// ─── Background Swap ─────────────────────────────────────
+registry.register({
+  id: 'flow-bg-swap', name: 'Composite onto Background', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'background_replace',
+  description: 'Aggregation node. Image 1 is the foreground subject — place an ai-remove-bg step before this to cut it out. Images 2+ are used as backgrounds (original, unprocessed). The cutout subject is composited onto each background scene. One output file per background.',
+  aggregation: true,
+  mainThread: true,
+  params: [
+    { name: 'suffix',  label: 'Filename Suffix',     type: 'text',   defaultValue: '_bgswap' },
+    { name: 'format',  label: 'Output Format',       type: 'select',
+      options: [
+        { label: 'JPEG',  value: 'image/jpeg' },
+        { label: 'PNG',   value: 'image/png'  },
+        { label: 'WebP',  value: 'image/webp' },
+      ], defaultValue: 'image/jpeg' },
+    { name: 'quality', label: 'Quality (JPEG/WebP)', type: 'range', min: 60, max: 100, defaultValue: 92 },
+    { name: 'scale',   label: 'Subject Scaling',     type: 'select',
+      options: [
+        { label: 'Fit inside background (letterbox)', value: 'fit'  },
+        { label: 'Fill background (may crop subject)', value: 'fill' },
+        { label: 'Original size (centred)',            value: 'none' },
+      ], defaultValue: 'fit' },
+  ],
+  apply() { /* handled by batch.js as aggregation node */ }
+});
+
 // ─── Create ZIP Archive ───────────────────────────────────
 registry.register({
   id: 'flow-create-zip', name: 'Create ZIP', category: 'Flow Control', categoryKey: 'flow',

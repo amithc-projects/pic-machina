@@ -326,8 +326,13 @@ registry.register({
     { name: 'softEdges',    label: 'Soft Edges',          type: 'boolean', defaultValue: false },
     { name: 'blurBefore',   label: 'Pre-blur (px)',        type: 'range',   min: 0, max: 5, step: 0.5, defaultValue: 0 },
     { name: 'blendMode',    label: 'Blend Mode',           type: 'select',
-      options: [{ label: 'Replace (Edge Map)', value: 'none' }, { label: 'Darken (Overlay)', value: 'darken' }],
+      options: [
+        { label: 'Replace (Edge Map)',   value: 'none' },
+        { label: 'Multiply (Ink Lines)', value: 'multiply' },
+        { label: 'Darken (Overlay)',     value: 'darken' },
+      ],
       defaultValue: 'none' },
+    { name: 'invertEdges',  label: 'Invert (dark lines on light)', type: 'boolean', defaultValue: false },
     { name: 'edgeStrength', label: 'Edge Strength (%)',    type: 'range',   min: 0, max: 100, defaultValue: 100 },
   ],
   apply(ctx, p) {
@@ -357,8 +362,9 @@ registry.register({
     const Gx = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
     const Gy = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
 
-    const thresh    = (p.threshold ?? 15) / 100 * 255;
-    const softEdges = p.softEdges || false;
+    const thresh      = (p.threshold ?? 15) / 100 * 255;
+    const softEdges   = p.softEdges || false;
+    const invertEdges = p.invertEdges || false;
 
     for (let y = 1; y < H - 1; y++) {
       for (let x = 1; x < W - 1; x++) {
@@ -374,10 +380,11 @@ registry.register({
         }
         // L1 magnitude — faster than sqrt, visually equivalent for thresholding
         const mag = Math.min(Math.abs(gx) + Math.abs(gy), 255);
-        const val = mag < thresh ? 0 : softEdges ? clamp(mag, 0, 255) : 255;
+        let val = mag < thresh ? 0 : softEdges ? clamp(mag, 0, 255) : 255;
+        if (invertEdges) val = 255 - val;
         const idx = (y * W + x) * 4;
         d[idx] = d[idx + 1] = d[idx + 2] = val;
-        // alpha untouched
+        d[idx + 3] = 255; // ensure fully opaque for correct multiply
       }
     }
 
@@ -393,10 +400,94 @@ registry.register({
       ctx.drawImage(origSnapshot, 0, 0);
       ctx.save();
       ctx.globalAlpha = (p.edgeStrength ?? 100) / 100;
-      ctx.globalCompositeOperation = 'darken';
+      ctx.globalCompositeOperation = blendMode;
       ctx.drawImage(edgeCanvas, 0, 0);
       ctx.restore();
     }
+  }
+});
+
+// ─── Relight ──────────────────────────────────────────────
+registry.register({
+  id: 'filter-relight', name: 'Relight', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'wb_incandescent',
+  description: 'Simulate repositionable point lights. Darken ambient light then add up to 3 independent colour lights using screen compositing.',
+  params: [
+    { name: 'ambient',     label: 'Ambient Light (%)',      type: 'range', min: 0, max: 100, defaultValue: 15 },
+    // Light 1
+    { name: 'l1On',        label: 'Light 1 Enabled',        type: 'boolean', defaultValue: true },
+    { name: 'l1X',         label: 'Light 1 — X (%)',        type: 'range', min: 0, max: 100, defaultValue: 35 },
+    { name: 'l1Y',         label: 'Light 1 — Y (%)',        type: 'range', min: 0, max: 100, defaultValue: 25 },
+    { name: 'l1Color',     label: 'Light 1 — Color',        type: 'color', defaultValue: '#ffffff' },
+    { name: 'l1Intensity', label: 'Light 1 — Intensity (%)',type: 'range', min: 0, max: 100, defaultValue: 85 },
+    { name: 'l1Radius',    label: 'Light 1 — Radius (%)',   type: 'range', min: 5, max: 150, defaultValue: 65 },
+    // Light 2
+    { name: 'l2On',        label: 'Light 2 Enabled',        type: 'boolean', defaultValue: false },
+    { name: 'l2X',         label: 'Light 2 — X (%)',        type: 'range', min: 0, max: 100, defaultValue: 70 },
+    { name: 'l2Y',         label: 'Light 2 — Y (%)',        type: 'range', min: 0, max: 100, defaultValue: 55 },
+    { name: 'l2Color',     label: 'Light 2 — Color',        type: 'color', defaultValue: '#ffe4a0' },
+    { name: 'l2Intensity', label: 'Light 2 — Intensity (%)',type: 'range', min: 0, max: 100, defaultValue: 60 },
+    { name: 'l2Radius',    label: 'Light 2 — Radius (%)',   type: 'range', min: 5, max: 150, defaultValue: 50 },
+    // Light 3
+    { name: 'l3On',        label: 'Light 3 Enabled',        type: 'boolean', defaultValue: false },
+    { name: 'l3X',         label: 'Light 3 — X (%)',        type: 'range', min: 0, max: 100, defaultValue: 20 },
+    { name: 'l3Y',         label: 'Light 3 — Y (%)',        type: 'range', min: 0, max: 100, defaultValue: 75 },
+    { name: 'l3Color',     label: 'Light 3 — Color',        type: 'color', defaultValue: '#a0c8ff' },
+    { name: 'l3Intensity', label: 'Light 3 — Intensity (%)',type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'l3Radius',    label: 'Light 3 — Radius (%)',   type: 'range', min: 5, max: 150, defaultValue: 45 },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const diagonal = Math.sqrt(W * W + H * H);
+
+    // Step 1: Darken entire image to ambient level
+    const ambient = (p.ambient ?? 15) / 100;
+    const id = ctx.getImageData(0, 0, W, H);
+    const d  = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i]   = d[i]   * ambient;
+      d[i+1] = d[i+1] * ambient;
+      d[i+2] = d[i+2] * ambient;
+    }
+    ctx.putImageData(id, 0, 0);
+
+    function hexToRgb(hex) {
+      const h = hex.replace('#', '');
+      return {
+        r: parseInt(h.slice(0, 2), 16),
+        g: parseInt(h.slice(2, 4), 16),
+        b: parseInt(h.slice(4, 6), 16),
+      };
+    }
+
+    // Step 2: Add each enabled light via screen blend
+    const lights = [
+      { on: p.l1On !== false, x: p.l1X ?? 35, y: p.l1Y ?? 25, color: p.l1Color || '#ffffff', intensity: p.l1Intensity ?? 85, radius: p.l1Radius ?? 65 },
+      { on: p.l2On === true,  x: p.l2X ?? 70, y: p.l2Y ?? 55, color: p.l2Color || '#ffe4a0', intensity: p.l2Intensity ?? 60, radius: p.l2Radius ?? 50 },
+      { on: p.l3On === true,  x: p.l3X ?? 20, y: p.l3Y ?? 75, color: p.l3Color || '#a0c8ff', intensity: p.l3Intensity ?? 50, radius: p.l3Radius ?? 45 },
+    ];
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+
+    for (const light of lights) {
+      if (!light.on || light.intensity === 0) continue;
+      const lx = (light.x / 100) * W;
+      const ly = (light.y / 100) * H;
+      const r  = (light.radius / 100) * diagonal;
+      const { r: cr, g: cg, b: cb } = hexToRgb(light.color);
+      const alpha = light.intensity / 100;
+
+      const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, r);
+      grad.addColorStop(0,   `rgba(${cr},${cg},${cb},${alpha})`);
+      grad.addColorStop(0.4, `rgba(${cr},${cg},${cb},${alpha * 0.45})`);
+      grad.addColorStop(1,   `rgba(0,0,0,0)`);
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.restore();
   }
 });
 

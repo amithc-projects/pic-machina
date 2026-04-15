@@ -50,7 +50,7 @@ All transforms are registered by their `transformId` string.
 | `color-tint` | Color Tint | `color`, `strength` (0–100), `blendMode` | Overlays a hue at given blend mode |
 | `color-duotone` | Duotone | `darkColor`, `lightColor` | Maps luminance to two colours |
 | `color-vignette` | Vignette | `amount` (0–100), `radius` (0–100) | Darkens/softens edges |
-| `color-posterize` | Posterize | `levels` (2–8) | Reduces tonal levels |
+| `color-posterize` | Posterize | `levels` (2–10) | Reduces tonal levels |
 | `color-channel-swap` | Channel Swap | `redSource`, `greenSource`, `blueSource` (R/G/B) | Remaps colour channels — use for infrared simulation (R←G, G←R) |
 
 ---
@@ -63,12 +63,13 @@ All transforms are registered by their `transformId` string.
 | `filter-bloom` | Bloom / Glow | `threshold`, `blurRadius`, `strength` | Bright-area glow; useful for halation |
 | `filter-chromatic-aberration` | Chromatic Aberration | `offset` (1–30), `direction` | RGB channel fringe; glitch/lo-fi aesthetic |
 | `filter-color-grade` | Colour Grade | `lift`, `shadowColor`, `shadowStrength`, `highlightColor`, `highlightStrength` | Split-tone shadow/highlight grading |
-| `filter-edge-detect` | Edge Detection | `threshold`, `softEdges`, `blurBefore`, `blendMode`, `edgeStrength` | Sobel-based; use `blendMode: darken` to overlay edges |
+| `filter-edge-detect` | Edge Detection | `threshold`, `softEdges`, `blurBefore`, `blendMode` (none/multiply/darken), `invertEdges`, `edgeStrength` | Sobel-based; `invertEdges: true` + `blendMode: multiply` draws black ink lines over the image (graphic novel style) |
 | `filter-halftone` | Halftone | `dotSpacing`, `dotColor`, `opacity`, `invert` | Dot-grid print simulation |
 | `filter-kuwahara` | Kuwahara / Oil Paint | `radius` (1–8), `passes` (1–3) | Edge-preserving paint smoothing |
 | `filter-tilt-shift` | Tilt-Shift | `centerY`, `bandWidth`, `blurAmount`, `feather` | Miniature blur — blurs top and bottom bands |
 | `filter-pixel-sort` | Pixel Sort | `threshold` (0–255), `direction`, `stripHeight` | Sorts pixels by luminance within strips — data-corruption glitch effect |
 | `filter-dither` | Dither | `palette` (mono/cga/gameboy/c64), `dithering` (bool) | Floyd-Steinberg error diffusion to limited palette |
+| `filter-relight` | Relight | `ambient` (0–100), `l1On/l2On/l3On`, `l1X/l1Y` (0–100%), `l1Color`, `l1Intensity`, `l1Radius` | Up to 3 independent point lights via screen compositing. Darkens image to `ambient`% then adds coloured radial lights. Supports warm/cool multi-light setups. |
 
 ---
 
@@ -102,6 +103,7 @@ All transforms are registered by their `transformId` string.
 | `ai-ocr-tag` | OCR Tag Extractor | `minLength` | Extracts tags from OCR text (needs Smart Redact Extract mode) |
 | `ai-analyse-people` | Analyse People | `faceConfidence`, `poseConfidence`, `maxPoses` | MediaPipe pose & face detection to asset store |
 | `ai-clipping-mask` | Clipping Mask | `shape` (Circle/RoundedRect/Diamond), `feathering` | Shape-based mask using AI segmentation |
+| `ai-glow-eyes` | Glowing Eyes | `color`, `intensity` (0–100), `irisScale` (60–200%), `glowSpread` (150–600%), `darkPupil`, `confidence` | FaceLandmarker iris landmarks (468/473) for pixel-accurate iris centre; screen-mode additive glow with hot-white core + outer diffuse skin illumination. Used in Vampire GFX recipe. |
 
 ---
 
@@ -128,6 +130,7 @@ Aggregation nodes collect one frame per input image then produce a single combin
 | `flow-animate-stack` | Animate Stack | `filename`, `format`, `width`, `height`, `deskColor`, `frameDelay`, `maxRotation`, `overlap` | Each frame appears on a desk one by one, randomly rotated. Generic — use after `overlay-polaroid-frame` for a polaroid stack. |
 | `flow-photo-stack` | Photo Stack (Legacy) | All `flow-animate-stack` params + `borderColor`, `borderBottom`, `caption` | Combines polaroid framing + desk animation in a single node. Prefer the two-node pattern. |
 | `flow-face-swap` | Machina-Swap | `suffix` | Mesh interlock node that cross-swaps faces (2 images) or pastes source to all (3+ images). |
+| `flow-bg-swap` | Composite onto Background | `suffix`, `format`, `quality`, `scale` (fit/fill/none) | Aggregation. Image 1 = foreground subject (place `ai-remove-bg` upstream to cut it out). Images 2+ = background scenes (used original, unprocessed). Composites the cutout subject onto each background, producing one output per background. Use with ordered selection. |
 | `flow-template-aggregator` | Template Render | `templateId`, `filename`, `quality` | Maps batch images sequentially into defined template placeholder slots using OpenCV-detected bounds. If placeholders < images, it chunk-processes them into multiple numbered template composites. |
 | `flow-video-wall` | Video Wall | `layout`, `filename`, `outputWidth`, `outputHeight`, `fps` | Composites multiple input videos into a multi-stream MP4 grid. `layout` accepts system ids (`grid-2x2`, `custom-tv`) AND custom `templateId`s. Hardware accelerated. Supports Native `.mp4` file handle background looping. |
 | `flow-video-concat` | Video Concatenate | `filename`, `fps`, `width`, `height`, `bitrate` | Joins all selected video files end-to-end into a single output MP4. |

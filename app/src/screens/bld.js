@@ -6,7 +6,7 @@
  * Accessed via #bld?id=<recipeId>
  */
 
-import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave } from '../data/recipes.js';
+import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave, setRecipeThumbnail, clearRecipeThumbnail } from '../data/recipes.js';
 import { getAllBlocks } from '../data/blocks.js';
 import { navigate } from '../main.js';
 import { showConfirm } from '../utils/dialogs.js';
@@ -282,7 +282,19 @@ export async function render(container, hash) {
           </div>
 
           <div class="bld-config-form">
-            <label class="ic-label">Name</label>
+            <label class="ic-label">Thumbnail</label>
+            <div id="bld-thumb-preview" style="width:100%;height:80px;border-radius:6px;border:1px solid var(--ps-border);background:var(--ps-bg-overlay);margin-bottom:6px;overflow:hidden;${draft.thumbnail ? `background-image:url(${draft.thumbnail});background-size:cover;background-position:center;` : ''}"></div>
+            <div style="display:flex;gap:6px">
+              <label class="btn-secondary" style="flex:1;justify-content:center;cursor:pointer;font-size:12px;">
+                <span class="material-symbols-outlined" style="font-size:14px;margin-right:4px">upload</span>Browse
+                <input type="file" id="bld-thumb-input" accept="image/*" style="display:none">
+              </label>
+              <button class="btn-ghost" id="bld-thumb-clear" style="font-size:12px;color:var(--ps-red);${draft.thumbnail ? '' : 'display:none'}">
+                <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+              </button>
+            </div>
+
+            <label class="ic-label" style="margin-top:12px">Name</label>
             <input type="text" id="bld-name" class="ic-input" value="${escHtml(draft.name)}" placeholder="Recipe name…">
 
             <label class="ic-label" style="margin-top:12px">Description</label>
@@ -603,6 +615,39 @@ export async function render(container, hash) {
       if (cp) cp.style.background = getCoverGradient(draft.coverColor);
       markDirty();
     });
+  });
+
+  // ── Thumbnail picker ──────────────────────────────────────
+  container.querySelector('#bld-thumb-input')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await setRecipeThumbnail(draft.id, file);
+      const saved = await getRecipe(draft.id);
+      draft.thumbnail = saved.thumbnail;
+      const preview = container.querySelector('#bld-thumb-preview');
+      if (preview) {
+        preview.style.backgroundImage = `url(${draft.thumbnail})`;
+        preview.style.backgroundSize = 'cover';
+        preview.style.backgroundPosition = 'center';
+      }
+      const clearBtn = container.querySelector('#bld-thumb-clear');
+      if (clearBtn) clearBtn.style.display = '';
+    } catch (err) {
+      console.error('Failed to set thumbnail:', err);
+    }
+    e.target.value = '';
+  });
+
+  container.querySelector('#bld-thumb-clear')?.addEventListener('click', async () => {
+    await clearRecipeThumbnail(draft.id);
+    draft.thumbnail = null;
+    const preview = container.querySelector('#bld-thumb-preview');
+    if (preview) {
+      preview.style.backgroundImage = '';
+    }
+    const clearBtn = container.querySelector('#bld-thumb-clear');
+    if (clearBtn) clearBtn.style.display = 'none';
   });
 
   // ── Add node modal ────────────────────────────────────────

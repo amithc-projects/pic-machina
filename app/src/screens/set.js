@@ -37,6 +37,7 @@ export async function render(container, hash) {
 
   let inputHistory   = [];
   let outputHistory  = [];
+  let gridSearchTerm = '';
 
   // ── State declared early to avoid temporal dead zone (TDZ) ──
   const BUILTIN_SLOT_COUNTS = {
@@ -59,6 +60,8 @@ export async function render(container, hash) {
           <span id="set-order-hint" style="display:none; font-size:12px; margin-right:4px; font-style:italic;" class="text-muted">Select photos in sequence</span>
           <span id="set-sel-count" class="ic-badge"></span>
           <span id="set-run-warning" style="color:var(--ps-danger);display:none;font-size:12px;font-weight:500;padding-right:8px;"></span>
+          <button class="btn-secondary" id="btn-select-none" style="display:none">Select None</button>
+          <button class="btn-secondary" id="btn-select-filtered" style="display:none">Select Filtered</button>
           <button class="btn-secondary" id="btn-select-all">Select All</button>
           <button class="btn-secondary" id="btn-edit-recipe" style="display:none" title="Edit selected recipe">
             <span class="material-symbols-outlined">edit</span>
@@ -148,11 +151,21 @@ export async function render(container, hash) {
 
         <!-- Right: image grid -->
         <div class="set-grid-area">
-          <div id="set-image-grid" class="set-image-grid">
-            <div class="empty-state" style="grid-column:1/-1">
-              <span class="material-symbols-outlined">photo_library</span>
-              <div class="empty-state-title">No input folder selected</div>
-              <div class="empty-state-desc">Pick an input folder to see images here.</div>
+          <div class="set-grid-search-bar">
+            <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-text-muted)">search</span>
+            <input id="set-grid-search" type="text" placeholder="Filter by filename…" autocomplete="off"
+              style="flex:1;background:none;border:none;outline:none;color:var(--ps-text);font-size:13px;">
+            <button id="set-grid-search-clear" class="btn-icon" style="display:none" title="Clear search">
+              <span class="material-symbols-outlined" style="font-size:16px">close</span>
+            </button>
+          </div>
+          <div class="set-grid-scroll">
+            <div id="set-image-grid" class="set-image-grid">
+              <div class="empty-state" style="grid-column:1/-1">
+                <span class="material-symbols-outlined">photo_library</span>
+                <div class="empty-state-title">No input folder selected</div>
+                <div class="empty-state-desc">Pick an input folder to see images here.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -238,6 +251,23 @@ export async function render(container, hash) {
 
   updateRunButton();
 
+  // ── Grid search ──────────────────────────────────────
+  container.querySelector('#set-grid-search').addEventListener('input', e => {
+    gridSearchTerm = e.target.value.trim().toLowerCase();
+    container.querySelector('#set-grid-search-clear').style.display = gridSearchTerm ? '' : 'none';
+    const { includeVideo, onlyVideo } = fileFilterForRecipe(currentRecipe);
+    renderImageGrid(onlyVideo, includeVideo);
+    updateSelCount();
+  });
+  container.querySelector('#set-grid-search-clear').addEventListener('click', () => {
+    gridSearchTerm = '';
+    container.querySelector('#set-grid-search').value = '';
+    container.querySelector('#set-grid-search-clear').style.display = 'none';
+    const { includeVideo, onlyVideo } = fileFilterForRecipe(currentRecipe);
+    renderImageGrid(onlyVideo, includeVideo);
+    updateSelCount();
+  });
+
   // ── Pick recipe button ────────────────────────────────
   container.querySelector('#btn-pick-recipe').addEventListener('click', () => showRecipePicker());
 
@@ -264,13 +294,30 @@ export async function render(container, hash) {
     } catch (e) { if (e.name !== 'AbortError') console.error(e); }
   });
 
-  // ── Select all / none ────────────────────────────────
+  // ── Select all / none / filtered ─────────────────────
   container.querySelector('#btn-select-all').addEventListener('click', () => {
-    const allSelected = selectedIds.size === selectedFiles.length && selectedFiles.length > 0;
     selectedIds.clear();
-    if (!allSelected) {
-      selectedFiles.forEach((f, i) => selectedIds.set(f.name, i + 1));
-    }
+    selectedFiles.forEach((f, i) => selectedIds.set(f.name, i + 1));
+    lastClickedIdx = -1;
+    renderSelectionState();
+  });
+
+  container.querySelector('#btn-select-none').addEventListener('click', () => {
+    selectedIds.clear();
+    lastClickedIdx = -1;
+    renderSelectionState();
+  });
+
+  container.querySelector('#btn-select-filtered').addEventListener('click', () => {
+    const visible = gridSearchTerm
+      ? selectedFiles.filter(f => f.name.toLowerCase().includes(gridSearchTerm))
+      : selectedFiles;
+    // Assign sequence numbers continuing from the highest already-used number
+    const maxExisting = selectedIds.size > 0 ? Math.max(...selectedIds.values()) : 0;
+    let seq = maxExisting;
+    visible.forEach(f => {
+      if (!selectedIds.has(f.name)) selectedIds.set(f.name, ++seq);
+    });
     lastClickedIdx = -1;
     renderSelectionState();
   });
@@ -437,7 +484,18 @@ export async function render(container, hash) {
       </div>`;
       return;
     }
-    grid.innerHTML = selectedFiles.map(f => `
+    const visibleFiles = gridSearchTerm
+      ? selectedFiles.filter(f => f.name.toLowerCase().includes(gridSearchTerm))
+      : selectedFiles;
+    if (!visibleFiles.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <span class="material-symbols-outlined">search_off</span>
+        <div class="empty-state-title">No matches</div>
+        <div class="empty-state-desc">No files match &ldquo;${gridSearchTerm}&rdquo;.</div>
+      </div>`;
+      return;
+    }
+    grid.innerHTML = visibleFiles.map(f => `
       <label class="set-img-cell ${selectedIds.has(f.name) ? 'is-selected' : ''}" data-name="${f.name}">
         ${currentRecipe?.isOrdered 
           ? `<div class="set-img-seq" style="display: ${selectedIds.has(f.name) ? 'flex' : 'none'}">${selectedIds.has(f.name) ? selectedIds.get(f.name) : ''}</div>`
@@ -591,9 +649,17 @@ export async function render(container, hash) {
     c.textContent = n ? `${n} / ${total} selected` : 'None selected';
     c.className = `ic-badge ${n ? 'ic-badge--blue' : ''}`;
 
-    // Update Select All button label
-    const selAllBtn = container.querySelector('#btn-select-all');
-    if (selAllBtn) selAllBtn.textContent = (n === total && total > 0) ? 'Select None' : 'Select All';
+    // Show/hide selection buttons based on state and active filter
+    const hasFilter  = gridSearchTerm.length > 0;
+    const hasFiles   = total > 0;
+    const hasSelection = n > 0;
+
+    const btnNone     = container.querySelector('#btn-select-none');
+    const btnFiltered = container.querySelector('#btn-select-filtered');
+    const btnAll      = container.querySelector('#btn-select-all');
+    if (btnNone)     btnNone.style.display     = hasSelection ? '' : 'none';
+    if (btnFiltered) btnFiltered.style.display = hasFilter && hasFiles ? '' : 'none';
+    if (btnAll)      btnAll.style.display      = hasFiles ? '' : 'none';
   }
 
   function updateRunButton() {
@@ -900,7 +966,14 @@ function injectStyles() {
     .set-subfolder-row .ic-label { white-space:nowrap; margin-bottom:0; }
     .set-checkbox-row { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ps-text); cursor:pointer; }
 
-    .set-grid-area { flex:1; overflow-y:auto; padding:16px; }
+    .set-grid-area { flex:1; display:flex; flex-direction:column; min-height:0; }
+    .set-grid-search-bar {
+      display:flex; align-items:center; gap:8px;
+      background:var(--ps-bg-raised); border-bottom:1px solid var(--ps-border);
+      padding:8px 16px; flex-shrink:0;
+    }
+    .set-grid-search-bar input::placeholder { color:var(--ps-text-faint); }
+    .set-grid-scroll { flex:1; overflow-y:auto; padding:16px; }
     .set-image-grid {
       display:grid;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));

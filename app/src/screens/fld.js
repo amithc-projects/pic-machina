@@ -136,6 +136,9 @@ export async function render(container, hash) {
           <button class="btn-secondary btn-sm" id="fld-btn-deselect-all" title="Deselect all">
             Deselect
           </button>
+          <button class="btn-secondary btn-sm" id="fld-btn-download-sel" title="Download selected items">
+            <span class="material-symbols-outlined" style="font-size:18px">download</span>
+          </button>
           <button class="btn-secondary btn-sm" id="fld-btn-delete-sel" title="Delete selected items from disk">
             <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-red)">delete</span>
           </button>
@@ -270,6 +273,7 @@ export async function render(container, hash) {
     updateSelectionUI();
   });
 
+  container.querySelector('#fld-btn-download-sel')?.addEventListener('click', downloadSelected);
   container.querySelector('#fld-btn-delete-sel')?.addEventListener('click', deleteSelected);
 
   // ── Resizable detail panel ──────────────────────────────────
@@ -669,11 +673,20 @@ export async function render(container, hash) {
 
     const selectAllBtn = container.querySelector('#fld-btn-select-all');
     const deselectBtn  = container.querySelector('#fld-btn-deselect-all');
+    const dlBtn        = container.querySelector('#fld-btn-download-sel');
     const delBtn       = container.querySelector('#fld-btn-delete-sel');
 
     if (selectAllBtn) selectAllBtn.style.display = selCount < filtered.length ? '' : 'none';
     if (deselectBtn)  deselectBtn.style.display  = selCount > 0 ? '' : 'none';
-    if (delBtn)       delBtn.disabled             = selCount === 0;
+    if (dlBtn)        dlBtn.disabled             = selCount === 0;
+    if (delBtn)       delBtn.disabled            = selCount === 0;
+
+    // Update detail-panel download button label to reflect selection count
+    container.querySelectorAll('.fld-detail-dl-btn').forEach(btn => {
+      btn.innerHTML = selCount > 1
+        ? `<span class="material-symbols-outlined">download</span> Download ${selCount} files`
+        : `<span class="material-symbols-outlined">download</span> Download`;
+    });
 
     container.querySelectorAll('[data-fld-ent-name]').forEach(el => {
       el.classList.toggle('is-multiselected', selectedSet.has(el.dataset.fldEntName));
@@ -965,11 +978,15 @@ export async function render(container, hash) {
           </div>
           ${!fullSize ? `
           <div class="fld-detail-footer">
-            <button class="btn-secondary" style="width:100%" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
+            <button class="btn-secondary fld-detail-dl-btn" style="width:100%">
               <span class="material-symbols-outlined">download</span> Download
             </button>
           </div>` : ''}
         </div>`;
+      el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
+        if (selectedSet.size > 1) downloadSelected();
+        else downloadFile(file);
+      });
     } else {
       const ws = await ensureWorkspace();
       
@@ -986,7 +1003,7 @@ export async function render(container, hash) {
           <div class="fld-detail-preview" id="fld-ws-mount" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>
           ${!fullSize ? `
           <div class="fld-detail-footer">
-            <button class="btn-secondary" style="flex:1" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
+            <button class="btn-secondary fld-detail-dl-btn" style="flex:1">
               <span class="material-symbols-outlined">download</span> Download
             </button>
             ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
@@ -995,10 +1012,14 @@ export async function render(container, hash) {
           </div>` : ''}
         </div>`;
 
+      el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
+        if (selectedSet.size > 1) downloadSelected();
+        else downloadFile(file);
+      });
       const mountNode = el.querySelector('#fld-ws-mount');
       mountNode.appendChild(ws.container);
       el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
-      
+
       ws.setFiles([file]);
 
     }
@@ -1027,7 +1048,7 @@ export async function render(container, hash) {
           </div>
         </div>
         <div class="fld-detail-footer">
-          <button class="btn-secondary" style="flex:1" onclick="(function(u,n){const a=document.createElement('a');a.href=u;a.download=n;a.click()})('${fileUrl}','${escHtml(file.name)}')">
+          <button class="btn-secondary fld-detail-dl-btn" style="flex:1">
             <span class="material-symbols-outlined">download</span> Download
           </button>
           ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
@@ -1035,6 +1056,10 @@ export async function render(container, hash) {
           </button>` : ''}
         </div>
       </div>`;
+    el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
+      if (selectedSet.size > 1) downloadSelected();
+      else downloadFile(file);
+    });
     el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
     const view = el.querySelector('#fld-info-panel-view');
     if (!view) return;
@@ -1051,6 +1076,45 @@ export async function render(container, hash) {
     const a   = document.createElement('a');
     a.href = url; a.download = file.name; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  async function downloadSelected() {
+    const names = Array.from(selectedSet);
+    if (!names.length) return;
+
+    // Single file — direct download
+    if (names.length === 1) {
+      const ent = allEntries.find(e => e.file.name === names[0]);
+      if (ent) downloadFile(ent.file);
+      return;
+    }
+
+    // Multiple files — build a ZIP using fflate
+    const btn = container.querySelector('#fld-btn-download-sel');
+    if (btn) { btn.disabled = true; btn.querySelector('span').textContent = 'hourglass_empty'; }
+
+    try {
+      const { zipSync } = await import('fflate');
+      const fileMap = {};
+      for (const name of names) {
+        const ent = allEntries.find(e => e.file.name === name);
+        if (!ent) continue;
+        const buf = await ent.file.arrayBuffer();
+        fileMap[ent.file.name] = new Uint8Array(buf);
+      }
+      if (!Object.keys(fileMap).length) return;
+      const zipped = zipSync(fileMap, { level: 0 }); // store-only: images don't compress, avoids blocking
+      const blob   = new Blob([zipped], { type: 'application/zip' });
+      const url    = URL.createObjectURL(blob);
+      const a      = document.createElement('a');
+      a.href = url; a.download = 'picmachina-export.zip';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      console.error('[fld] downloadSelected failed:', err);
+    } finally {
+      if (btn) { btn.disabled = false; btn.querySelector('span').textContent = 'download'; }
+    }
   }
 
   async function wireThumbBtn(file, btn) {
@@ -1258,9 +1322,15 @@ function injectFldStyles() {
       transition:background 100ms, border-color 150ms;
     }
     .fld-cell:hover { background:var(--ps-bg-hover); }
-    .fld-cell.is-selected { border-color:var(--ps-blue); background:rgba(0,119,255,0.06); }
-    .fld-cell.is-multiselected, .fld-fs-thumb.is-multiselected, .fld-list-row.is-multiselected { background:rgba(0,119,255,0.12) !important; color:var(--ps-text) !important; }
-    .fld-cell.is-multiselected { border-color:var(--ps-blue); }
+    .fld-cell.is-selected  { border-color:var(--ps-blue); background:rgba(0,119,255,0.06); }
+    .fld-cell.is-multiselected { border-color:#f59e0b; background:rgba(245,158,11,0.13); }
+    .fld-cell.is-selected.is-multiselected { border-color:var(--ps-blue); background:rgba(0,119,255,0.10); }
+
+    .fld-fs-thumb.is-multiselected { border-color:#f59e0b; }
+    .fld-fs-thumb.is-selected.is-multiselected { border-color:var(--ps-blue); }
+
+    .fld-list-row.is-multiselected { background:rgba(245,158,11,0.10); outline:1px solid rgba(245,158,11,0.5); outline-offset:-1px; }
+    .fld-list-row.is-selected.is-multiselected { background:rgba(0,119,255,0.10); outline:1px solid rgba(0,119,255,0.5); outline-offset:-1px; }
 
     .fld-thumb {
       aspect-ratio:1; border-radius:8px; overflow:hidden;

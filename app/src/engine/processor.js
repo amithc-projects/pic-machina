@@ -138,7 +138,7 @@ export class ImageProcessor {
     const EXPORT_IDS = new Set([
         'flow-export', 'flow-gif-from-states', 'flow-video-wall',
         'flow-create-gif', 'flow-create-video', 'flow-video-stitcher', 'flow-contact-sheet',
-        'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap',
+        'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap',
         'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip',
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio',
@@ -421,7 +421,7 @@ export class ImageProcessor {
       return;
     }
 
-    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'].includes(id)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap'].includes(id)) {
       if (context.runState?.injectedSlides?.length > 0) {
         for (const slideBlob of context.runState.injectedSlides) {
           results.push({ blob: slideBlob, filename: `_injected_${node.id}.jpg`, aggregationId: node.id, subfolder: context.outputSubfolder, caption: '', metadata: { exif: context.exif, sidecar: context.sidecar } });

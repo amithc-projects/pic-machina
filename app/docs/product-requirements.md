@@ -31,6 +31,9 @@ The application targets photographers, content teams, and power users who need r
 - **Local-only operation**: all transforms execute on-device via Canvas API and Web Workers
 - **File System Access API**: users grant access to input and output directories; handles are persisted in IndexedDB and re-verified on next launch
 - **Non-destructive**: original files are never modified; outputs saved to a configurable subfolder
+- **File System Shadow Persistence**: after every recipe/block/template save, JSON shadow files are written to `.PicMachina/data/` inside the linked project root folder. On startup, if IndexedDB is empty, data is silently restored from these shadow files — surviving browser storage clears
+- **Shared current folder**: the selected input folder is synchronised across the Recipe Library, Batch Setup, Recipe Builder, and Step Editor screens. Changing the folder in any one screen updates all others
+- **Project Root Linking**: users can link their project root directory in Settings. This enables thumbnail storage to `public/user-samples/` and shadow persistence. Thumbnails are always stored as base64 in IndexedDB for reliable display regardless of server configuration
 - **Format support**: JPEG, PNG, WebP, HEIC, TIFF, BMP, GIF (image input); MP4, MOV, WebM (video input); JPEG, PNG, WebP (image output); GIF, MP4 (aggregation output); MP3, WAV, FLAC, Ogg, AAC (audio extraction output)
 - **Folder Viewer**: direct folder browsing mode — user can open any local folder and browse/delete contents, independent of a batch run
 
@@ -47,7 +50,7 @@ The application targets photographers, content teams, and power users who need r
 - **80+ registered transforms** across 9 categories (see `transformations.md` for full catalogue)
 - Transforms run in a **Web Worker** for non-AI, non-video recipes (keeps UI responsive)
 - **AI transforms** (`ai-*`) run on the main thread (require DOM/MediaPipe APIs unavailable in workers):
-  - `ai-face-privacy`, `ai-remove-bg`, `ai-silhouette`, `ai-smart-redact`, `ai-ocr-tag`, `ai-analyse-people`, `ai-clipping-mask`
+  - `ai-face-privacy`, `ai-remove-bg`, `ai-silhouette`, `ai-smart-redact`, `ai-ocr-tag`, `ai-analyse-people`, `ai-clipping-mask`, `ai-glow-eyes`
 - **Video transforms** (`flow-video-*`, `video-*`) run on the main thread (WebCodecs + mediabunny library)
 - **Aggregation pipeline**: `flow-photo-stack`, `flow-animate-stack` also run on main thread (gif.js requires HTMLCanvasElement)
 
@@ -124,7 +127,7 @@ String-type params support `{{token}}` injection resolved per image at run time:
 | **LIB** | Recipe Library | Visual card grid of all recipes (system + user). Search, filter by tag. Clone, delete, preview. Import/export JSON. |
 | **SET** | Batch Setup | Select input folder, output folder, recipe. View/select images. Configure output subfolder (defaults to recipe name). Show inline run parameters. Run batch. |
 | **NED** | Node Editor | Visual drag-and-drop canvas editor. Categorised node palette. Live preview of a single image through the recipe. |
-| **BLD** | Recipe Builder | List-based step editor. Add/reorder/delete nodes. Configure node params. Declare recipe-level run parameters. |
+| **BLD** | Recipe Builder | List-based step editor. Add/reorder/delete nodes. Configure node params. Declare recipe-level run parameters. Config panel includes thumbnail picker (browse for image file; stored as base64, also written to `public/user-samples/` if project root is linked). |
 | **BKB** | Block Builder | Build reusable node groups (Blocks) that can be referenced in any recipe. |
 | **INS** | Block Inspector | Detailed parameter editor for a single node with live preview. |
 | **PVW** | Recipe Preview | Before/after single-image preview. Clone or edit recipe. |
@@ -219,3 +222,6 @@ Discovery [LIB] ──> Inspect [PVW] ──> Configure [SET] ──> Run [QUE]
 | `sys-aerochrome` | Aerochrome (Infrared) | Kodak Aerochrome infrared simulation — foliage turns pink/red |
 | `sys-glitch` | Digital Glitch | Chromatic aberration + pixel sort + CRT scanlines |
 | `sys-8bit` | Retro 8-Bit | Nearest-neighbour pixelate + CGA dither (PNG output) |
+| `sys-graphic-novel` | Graphic Novel | Kuwahara smooth + colour boost + ink-line edge detection (subtle, photo-realistic) |
+| `sys-graphic-novel-bold` | Graphic Novel — Bold | As above with posterisation and heavier ink lines for a comic-book panel look |
+| `sys-vampire-gfx` | Vampire GFX | Chalk-white pallor, cold colour grade, skin bloom glow and AI red glowing eyes (BlazeFace) |

@@ -562,6 +562,148 @@ function avgLandmark(a, b) {
   };
 }
 
+// ─── Glowing Eyes ─────────────────────────────────────────
+registry.register({
+  id: 'ai-glow-eyes', name: 'Glowing Eyes', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'visibility',
+  description: 'Detect faces and replace irises with supernatural glowing eyes. Uses FaceLandmarker iris landmarks (468/473) for pixel-accurate iris centre and radius.',
+  params: [
+    { name: 'color',      label: 'Glow Color',                  type: 'color',   defaultValue: '#ff2200' },
+    { name: 'intensity',  label: 'Intensity (%)',                type: 'range',   min: 10, max: 100, defaultValue: 88 },
+    { name: 'irisScale',  label: 'Iris Size (%)',                type: 'range',   min: 60, max: 200, defaultValue: 110 },
+    { name: 'glowSpread', label: 'Glow Spread (× iris radius)', type: 'range',   min: 150, max: 600, defaultValue: 320 },
+    { name: 'darkPupil',  label: 'Dark Pupil',                  type: 'boolean', defaultValue: true },
+    { name: 'confidence', label: 'Min Detection Confidence (%)', type: 'range',   min: 10, max: 100, defaultValue: 50 },
+  ],
+  async apply(ctx, p) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-glow-eyes] Skipping — MediaPipe requires the main thread.');
+      return;
+    }
+    try {
+      const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
+      const vision = await FilesetResolver.forVisionTasks(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
+      );
+      const landmarker = await FaceLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',
+          delegate: 'CPU',
+        },
+        runningMode: 'IMAGE',
+        numFaces: 5,
+        minFaceDetectionConfidence: (p.confidence || 50) / 100,
+        minFacePresenceConfidence:  0.5,
+        minTrackingConfidence:      0.5,
+        outputFaceBlendshapes:               false,
+        outputFacialTransformationMatrixes:  false,
+      });
+
+      const result = landmarker.detect(ctx.canvas);
+      landmarker.close();
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const intensity   = (p.intensity  ?? 88)  / 100;
+      const irisScale   = (p.irisScale  ?? 110) / 100;
+      const glowSpread  = (p.glowSpread ?? 320) / 100;
+      const color       = p.color || '#ff2200';
+      const darkPupil   = p.darkPupil !== false;
+
+      function hexToRgb(hex) {
+        const h = hex.replace('#', '');
+        return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+      }
+      const { r, g, b } = hexToRgb(color);
+
+      // MediaPipe FaceLandmarker iris landmark indices (normalised 0–1):
+      //   468 = left iris centre,  469–472 = left iris boundary
+      //   473 = right iris centre, 474–477 = right iris boundary
+      for (const landmarks of result.faceLandmarks) {
+        const irisGroups = [
+          { centre: landmarks[468], boundary: landmarks[469] },  // left iris
+          { centre: landmarks[473], boundary: landmarks[474] },  // right iris
+        ];
+
+        ctx.save();
+
+        for (const { centre, boundary } of irisGroups) {
+          if (!centre || !boundary) continue;
+
+          const cx = centre.x   * W;
+          const cy = centre.y   * H;
+          const bx = boundary.x * W;
+          const by = boundary.y * H;
+
+          // Pixel-accurate iris radius from landmark geometry
+          const irisR  = Math.hypot(bx - cx, by - cy) * irisScale;
+          const glowR  = irisR * glowSpread;
+
+          // 1. Subtle multiply darkening — deepens existing shadows without pasting black
+          ctx.globalCompositeOperation = 'multiply';
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = '#000000';
+          ctx.beginPath(); ctx.arc(cx, cy, irisR * 1.1, 0, Math.PI * 2); ctx.fill();
+
+          // 2. Screen-mode iris color fill — luminous, additive, blends with underlying texture
+          ctx.globalCompositeOperation = 'screen';
+          ctx.globalAlpha = intensity * 0.85;
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(cx, cy, irisR * 0.95, 0, Math.PI * 2); ctx.fill();
+
+          // 3. Hot bright core — radial gradient bright center fading to color (screen)
+          const irisGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, irisR);
+          irisGrad.addColorStop(0,   `rgba(255,255,255,${intensity * 0.7})`); // hot white centre
+          irisGrad.addColorStop(0.4, `rgba(${r},${g},${b},${intensity * 0.8})`);
+          irisGrad.addColorStop(1,   `rgba(0,0,0,0)`);
+          ctx.globalCompositeOperation = 'screen';
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = irisGrad;
+          ctx.beginPath(); ctx.arc(cx, cy, irisR, 0, Math.PI * 2); ctx.fill();
+
+          // 4. Dark pupil (source-over — physical black centre)
+          if (darkPupil) {
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 0.92;
+            ctx.fillStyle = '#000000';
+            ctx.beginPath(); ctx.arc(cx, cy, irisR * 0.28, 0, Math.PI * 2); ctx.fill();
+          }
+
+          // 5. Specular highlight — tiny white catch-light top-right
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 0.85;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath(); ctx.arc(cx + irisR * 0.22, cy - irisR * 0.28, irisR * 0.10, 0, Math.PI * 2); ctx.fill();
+
+          // 6. Inner tight glow — screen, wraps just beyond iris edge
+          ctx.globalCompositeOperation = 'screen';
+          ctx.globalAlpha = 1;
+          const innerGrad = ctx.createRadialGradient(cx, cy, irisR * 0.3, cx, cy, irisR * 1.8);
+          innerGrad.addColorStop(0,   `rgba(${r},${g},${b},${intensity * 0.9})`);
+          innerGrad.addColorStop(0.5, `rgba(${r},${g},${b},${intensity * 0.5})`);
+          innerGrad.addColorStop(1,   `rgba(0,0,0,0)`);
+          ctx.fillStyle = innerGrad;
+          ctx.beginPath(); ctx.arc(cx, cy, irisR * 1.8, 0, Math.PI * 2); ctx.fill();
+
+          // 7. Outer diffuse glow — screen, large radius, illuminates surrounding skin
+          ctx.globalCompositeOperation = 'screen';
+          ctx.globalAlpha = 0.75;
+          const outerGrad = ctx.createRadialGradient(cx, cy, irisR, cx, cy, glowR);
+          outerGrad.addColorStop(0,   `rgba(${r},${g},${b},${intensity * 0.5})`);
+          outerGrad.addColorStop(0.35, `rgba(${r},${g},${b},${intensity * 0.2})`);
+          outerGrad.addColorStop(0.7,  `rgba(${r},${g},${b},${intensity * 0.06})`);
+          outerGrad.addColorStop(1,    `rgba(0,0,0,0)`);
+          ctx.fillStyle = outerGrad;
+          ctx.beginPath(); ctx.arc(cx, cy, glowR, 0, Math.PI * 2); ctx.fill();
+        }
+
+        ctx.restore();
+      }
+    } catch (err) {
+      console.warn('[ai-glow-eyes] failed:', err);
+    }
+  }
+});
+
 // ─── Clipping Mask ────────────────────────────────────────
 registry.register({
   id: 'ai-clipping-mask', name: 'Clipping Mask', category: 'AI & Composition', categoryKey: 'ai',

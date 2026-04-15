@@ -892,7 +892,150 @@ export const SYSTEM_RECIPES = [
     ]
   },
 
-  // ── 43. PM Solutions ID Card ──────────────────────────────
+  // ── 43. Graphic Novel ─────────────────────────────────────
+  {
+    id: 'sys-graphic-novel', name: 'Graphic Novel',
+    description: 'Turns a photo into a bold graphic-novel illustration — flat posterised colour, painterly smoothing, and crisp ink-line edges.',
+    isSystem: true, coverColor: '#1e1b4b',
+    inputType: 'image',
+    tags: ['creative', 'comic', 'illustration', 'artistic', 'effect'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'gn-1', type: 'transform', transformId: 'filter-kuwahara',
+        params: { radius: 2, passes: 1 },
+        label: 'Painterly Smooth'
+      },
+      {
+        id: 'gn-2', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 15, saturation: 20, vibrance: 10 },
+        label: 'Boost Colour'
+      },
+      {
+        id: 'gn-3', type: 'transform', transformId: 'filter-edge-detect',
+        params: { threshold: 30, softEdges: true, blurBefore: 2, blendMode: 'multiply', invertEdges: true, edgeStrength: 65 },
+        label: 'Ink Lines'
+      },
+      {
+        id: 'gn-6', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_novel', format: 'image/jpeg', quality: 92 },
+        label: 'Export'
+      }
+    ]
+  },
+
+  // ── 44. Graphic Novel — Bold ──────────────────────────────
+  {
+    id: 'sys-graphic-novel-bold', name: 'Graphic Novel — Bold',
+    description: 'A bolder graphic-novel variant with stronger posterisation, heavier ink lines and more vivid colour — closer to a hand-inked comic-book panel.',
+    isSystem: true, coverColor: '#312e81',
+    inputType: 'image',
+    tags: ['creative', 'comic', 'illustration', 'artistic', 'effect', 'bold'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'gnb-1', type: 'transform', transformId: 'filter-kuwahara',
+        params: { radius: 2, passes: 2 },
+        label: 'Painterly Smooth'
+      },
+      {
+        id: 'gnb-2', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 20, saturation: 30, vibrance: 15 },
+        label: 'Boost Colour'
+      },
+      {
+        id: 'gnb-3', type: 'transform', transformId: 'color-posterize',
+        params: { levels: 9 },
+        label: 'Posterize'
+      },
+      {
+        id: 'gnb-4', type: 'transform', transformId: 'filter-edge-detect',
+        params: { threshold: 22, softEdges: true, blurBefore: 1.5, blendMode: 'multiply', invertEdges: true, edgeStrength: 80 },
+        label: 'Ink Lines'
+      },
+      {
+        id: 'gnb-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_novel_bold', format: 'image/jpeg', quality: 92 },
+        label: 'Export'
+      }
+    ]
+  },
+
+  // ── 45. Vampire GFX ───────────────────────────────────────
+  {
+    id: 'sys-vampire-gfx', name: 'Vampire GFX',
+    description: 'Drains colour from the skin, adds cold purple shadows, icy highlights and a crushing vignette for a cinematic vampire portrait look.',
+    isSystem: true, coverColor: '#3b0764',
+    inputType: 'image',
+    tags: ['creative', 'portrait', 'fantasy', 'horror', 'effect'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'vmp-1', type: 'transform', transformId: 'filter-kuwahara',
+        params: { radius: 2, passes: 1 },
+        label: 'Smooth Skin'
+      },
+      {
+        id: 'vmp-2', type: 'transform', transformId: 'color-tuning',
+        params: { saturation: -92, contrast: 25, vibrance: 0 },
+        label: 'Drain Colour'
+      },
+      {
+        id: 'vmp-3', type: 'transform', transformId: 'filter-color-grade',
+        params: { lift: 8, shadowColor: '#1a1a2e', shadowStrength: 20, highlightColor: '#f0f4ff', highlightStrength: 40 },
+        label: 'Chalk Pallor'
+      },
+      {
+        id: 'vmp-4', type: 'transform', transformId: 'color-vignette',
+        params: { amount: 55, radius: 55 },
+        label: 'Vignette'
+      },
+      {
+        id: 'vmp-5b', type: 'transform', transformId: 'filter-bloom',
+        params: { threshold: 55, blurRadius: 20, strength: 35 },
+        label: 'Skin Glow'
+      },
+      {
+        id: 'vmp-5c', type: 'transform', transformId: 'ai-glow-eyes',
+        params: { color: '#ff2200', intensity: 88, irisScale: 105, glowSpread: 300, darkPupil: true, confidence: 50 },
+        label: 'Glowing Eyes'
+      },
+    ]
+  },
+
+  // ── 46. Background Swap ───────────────────────────────────
+  {
+    id: 'sys-bg-swap', name: 'Background Swap',
+    description: 'Select your SUBJECT (foreground) as image 1 first. Select background scenes as images 2, 3, 4… AI removes image 1\'s background then composites it onto each background scene, producing one output per background.',
+    isSystem: true, coverColor: '#065f46',
+    inputType: 'image',
+    isOrdered: true,
+    minItems: 2,
+    tags: ['ai', 'composite', 'background', 'portrait', 'creative'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'bgs-1', type: 'conditional',
+        label: 'Remove BG (subject only)',
+        condition: { field: 'fileIndex', operator: 'eq', value: 0 },
+        thenNodes: [
+          {
+            id: 'bgs-1a', type: 'transform', transformId: 'ai-remove-bg',
+            params: { mode: 'Transparent', edgeSmoothing: true },
+            label: 'Remove Background'
+          }
+        ],
+        elseNodes: []
+      },
+      {
+        id: 'bgs-2', type: 'transform', transformId: 'flow-bg-swap',
+        params: { suffix: '_bgswap', format: 'image/jpeg', quality: 92, scale: 'fit' },
+        label: 'Composite onto Background'
+      }
+    ]
+  },
+
+  // ── 47. PM Solutions ID Card ──────────────────────────────
   {
     id: 'sys-pm-solutions-id', name: 'PM Solutions ID Card',
     description: 'Generates a corporate ID card using the PM Solutions template. Crops the input photo, places it in the template hole, and injects name and title from EXIF data.',

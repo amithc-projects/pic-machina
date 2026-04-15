@@ -54,6 +54,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'geo-body-crop',
   'geo-face-align',
   'flow-face-swap',
+  'flow-bg-swap',
   // Title slides need custom Web Fonts from the main thread document to render beautifully
   'flow-title-slide',
   // PDF, PPTX, and ZIP creation rely on DOM APIs or have large main thread dependencies
@@ -138,7 +139,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
   // Aggregation collector (GIF / video / contact sheet / zip)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -205,9 +206,10 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
             agg.files.push(result.file);
           } else {
             agg.blobs.push(result.blob);
-            (agg.captions ??= []).push(result.caption ?? '');
-            (agg.metadata ??= []).push(result.metadata ?? {});
-            (agg.originalNames ??= []).push(context.originalFile?.name ?? result.filename);
+            (agg.captions     ??= []).push(result.caption ?? '');
+            (agg.metadata     ??= []).push(result.metadata ?? {});
+            (agg.originalNames??= []).push(context.originalFile?.name ?? result.filename);
+            (agg.originalFiles??= []).push(context.originalFile ?? null);
           }
         } else {
           try {
@@ -451,6 +453,34 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
                 const bi = await createFaceSwap(agg.blobs[0], agg.blobs[i], p);
                 await writeFile(subHandle, `${getName(i)}${suffix}.jpg`, bi);
               } catch(e) { onLog('error', `Swap onto ${getName(i)} failed: ${e.message}`); }
+            }
+          }
+        }
+      } else if (agg.node.transformId === 'flow-bg-swap') {
+        const N = agg.blobs.length;
+        if (N < 2) {
+          onLog('warn', 'Background Swap needs at least 2 images (photo 1 = foreground subject, photos 2+ = backgrounds). Skipping.');
+        } else {
+          // blobs[0]         = Photo 1 after pipeline (ai-remove-bg ran only on this image → transparent subject)
+          // originalFiles[i] = Photos 2+ original files used as backgrounds (no pipeline processing done on them)
+          const fgBlob = agg.blobs[0];
+          const fgName = agg.originalNames?.[0] ?? 'subject';
+          onLog('info', `Background Swap: compositing "${fgName}" onto ${N - 1} background(s)…`);
+          const { createBgSwap } = await import('./bg-swap.js');
+          const suffix = p.suffix || '_bgswap';
+          const format = p.format || 'image/jpeg';
+          const ext    = format === 'image/png' ? 'png' : format === 'image/webp' ? 'webp' : 'jpg';
+          const getBgName = idx => (agg.originalNames?.[idx] || `bg_${idx}.jpg`).replace(/\.[^/.]+$/, '');
+          for (let i = 1; i < N; i++) {
+            try {
+              // Use original unprocessed file as background — bypass whatever the pipeline did to it
+              const bgBlob = agg.originalFiles?.[i] ?? agg.blobs[i];
+              onLog('info', `  → onto "${getBgName(i)}"…`);
+              const blob = await createBgSwap(bgBlob, fgBlob, p);
+              await writeFile(subHandle, `${getBgName(i)}${suffix}.${ext}`, blob);
+              onLog('success', `  Saved ${getBgName(i)}${suffix}.${ext}`);
+            } catch (e) {
+              onLog('error', `  Failed for "${getBgName(i)}": ${e.message}`);
             }
           }
         }

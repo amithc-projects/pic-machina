@@ -811,6 +811,9 @@ These recipes are read-only and available to every user. Users can clone them to
 | `sys-aerochrome` | Aerochrome (Infrared) | Kodak Aerochrome infrared film simulation — foliage turns pink | color-channel-swap → color-tuning → filter-bloom → flow-export |
 | `sys-glitch` | Digital Glitch | Chromatic aberration + pixel sort + CRT scanlines | filter-chromatic-aberration → filter-pixel-sort → overlay-scanlines → flow-export |
 | `sys-8bit` | Retro 8-Bit | Pixelate + CGA dither — classic 8-bit game aesthetic | geo-pixelate → filter-dither → flow-export (PNG) |
+| `sys-graphic-novel` | Graphic Novel | Photo-realistic with subtle ink outlines — Kuwahara smooth + colour boost + edge ink lines | filter-kuwahara → color-tuning → filter-edge-detect (multiply/invert) → flow-export |
+| `sys-graphic-novel-bold` | Graphic Novel — Bold | Bolder comic-book variant with posterisation and heavier ink lines | filter-kuwahara → color-tuning → color-posterize → filter-edge-detect (multiply/invert) → flow-export |
+| `sys-vampire-gfx` | Vampire GFX | Chalk-white pallor, cold shadows, skin glow and AI red glowing eyes | filter-kuwahara → color-tuning → filter-color-grade → color-vignette → filter-bloom → ai-glow-eyes → flow-export |
 
 ---
 
