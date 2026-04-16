@@ -141,6 +141,9 @@ export async function render(container, hash) {
         ${browseMode ? `<button class="btn-secondary btn-sm" id="fld-change-folder" style="margin-right:8px">
           <span class="material-symbols-outlined" style="font-size:16px">folder_open</span> Change Folder
         </button>` : ''}
+        ${runId ? `<button class="btn-secondary btn-sm" id="fld-btn-showcase" style="margin-right:8px">
+          <span class="material-symbols-outlined" style="font-size:16px">star</span> Add to ShowCase
+        </button>` : ''}
 
         <div id="fld-selection-actions" class="flex items-center gap-1" style="margin-right:8px">
           <button class="btn-secondary btn-sm" id="fld-btn-select-all" title="Select all visible items">
@@ -220,6 +223,43 @@ export async function render(container, hash) {
       await pickFolder('browse');
       navigate('#fld');
     } catch (e) { if (e.name !== 'AbortError') console.error(e); }
+  });
+
+  // ── Add to ShowCase (run mode) ───────────────────────────────
+  container.querySelector('#fld-btn-showcase')?.addEventListener('click', async () => {
+    if (!run) return;
+    try {
+      const { saveShowcase } = await import('../data/showcases.js');
+      const { listImages, getOrCreateOutputSubfolder } = await import('../data/folders.js');
+      let outputHandle = run.outputHandleObj || await getFolder('output');
+      if (!outputHandle) {
+        window.AuroraToast?.show({ variant: 'warning', title: 'Output folder not accessible' });
+        return;
+      }
+      const subHandle = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
+      const files = await listImages(subHandle, { includeVideo: true });
+      const sampleFileNames = files.slice(0, 5).map(f => f.name);
+      const entry = {
+        id:              crypto.randomUUID(),
+        runId:           run.id,
+        recipeId:        run.recipeId,
+        recipeName:      run.recipeName,
+        title:           run.recipeName,
+        description:     '',
+        sampleFileNames,
+        createdAt:       Date.now(),
+        updatedAt:       Date.now(),
+      };
+      await saveShowcase(entry);
+      window.AuroraToast?.show({
+        variant: 'success',
+        title: 'Added to ShowCase',
+        description: `<a href="#shc?id=${entry.id}" style="color:var(--ps-blue)">View entry →</a>`,
+      });
+    } catch (err) {
+      console.error('[fld showcase]', err);
+      window.AuroraToast?.show({ variant: 'danger', title: 'Failed to add to ShowCase', description: err.message });
+    }
   });
 
   // ── State ───────────────────────────────────────────────────
