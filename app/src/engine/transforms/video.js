@@ -12,6 +12,7 @@
  */
 
 import { registry } from '../registry.js';
+import { interpolate } from '../../utils/variables.js';
 
 const COMMON_PARAMS = [
   { name: 'suffix',  label: 'Filename Suffix', type: 'text',   defaultValue: '' },
@@ -349,10 +350,8 @@ registry.register({
   category: 'Video Effects',
   categoryKey: 'video-effect',
   icon: 'closed_caption',
-  sourceTransformId: 'overlay-rich-text',
   description: 'Burn styled text onto every frame — supports {{variable}} injection.',
   params: [
-    // Param names must exactly match overlay-rich-text so they pass through correctly
     { name: 'content',   label: 'Text ({{vars}} supported)', type: 'text',   defaultValue: '{{filename}}' },
     { name: 'font',      label: 'Font Family', type: 'select',
       options: [
@@ -364,19 +363,12 @@ registry.register({
         { label: 'Verdana',         value: 'Verdana' },
         { label: 'Impact',          value: 'Impact' },
       ], defaultValue: 'Inter' },
-    { name: 'sizeMode',  label: 'Size Mode', type: 'select',
-      options: [
-        { label: 'Fixed (px)',        value: 'px' },
-        { label: '% of video width',  value: 'pct-width' },
-        { label: '% of video height', value: 'pct-height' },
-      ], defaultValue: 'px' },
-    { name: 'size',      label: 'Font Size',   type: 'number', defaultValue: 48 },
-    { name: 'color',     label: 'Text Color',  type: 'color',  defaultValue: '#ffffff' },
-    { name: 'opacity',   label: 'Opacity (%)', type: 'range',  min: 0, max: 100, defaultValue: 100 },
-    { name: 'weight',    label: 'Font Weight', type: 'select',
+    { name: 'size',    label: 'Font Size (px)', type: 'number', defaultValue: 48 },
+    { name: 'color',   label: 'Text Color',     type: 'color',  defaultValue: '#ffffff' },
+    { name: 'weight',  label: 'Font Weight', type: 'select',
       options: [{ label: 'Normal', value: '400' }, { label: 'Bold', value: '700' }, { label: 'Light', value: '300' }],
       defaultValue: '400' },
-    { name: 'anchor',    label: 'Position',    type: 'select',
+    { name: 'anchor',  label: 'Position', type: 'select',
       options: [
         { label: 'Bottom Centre', value: 'bottom-center' },
         { label: 'Bottom Left',   value: 'bottom-left' },
@@ -386,9 +378,9 @@ registry.register({
         { label: 'Top Right',     value: 'top-right' },
         { label: 'Centre',        value: 'center' },
       ], defaultValue: 'bottom-center' },
-    { name: 'offsetX',   label: 'Offset X (px)', type: 'number', defaultValue: 20 },
-    { name: 'offsetY',   label: 'Offset Y (px)', type: 'number', defaultValue: 20 },
-    { name: 'bgBox',     label: 'Background Box', type: 'select',
+    { name: 'offsetX', label: 'Offset X (px)', type: 'number', defaultValue: 20 },
+    { name: 'offsetY', label: 'Offset Y (px)', type: 'number', defaultValue: 20 },
+    { name: 'bgBox',   label: 'Background Box', type: 'select',
       options: [
         { label: 'None',       value: 'none' },
         { label: 'Wrap text',  value: 'wrap' },
@@ -399,10 +391,80 @@ registry.register({
     { name: 'bgPadding', label: 'Box Padding (px)', type: 'number', defaultValue: 8 },
     { name: 'shadow',      label: 'Text Shadow',  type: 'boolean', defaultValue: true },
     { name: 'shadowColor', label: 'Shadow Color', type: 'color',   defaultValue: '#000000' },
-    { name: 'blendMode', label: 'Blend Mode', type: 'select',
-      options: [{ label: 'Normal', value: 'source-over' }, { label: 'Multiply', value: 'multiply' }, { label: 'Screen', value: 'screen' }],
-      defaultValue: 'source-over' },
     ...COMMON_PARAMS,
   ],
+  // Direct per-frame rendering — avoids any indirect overlay-rich-text delegation issues.
+  applyPerFrame(ctx, p, context) {
+    const text = interpolate(p.content || '{{filename}}', context);
+    if (!text) return;
+
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const size = p.size || 48;
+    const font = p.font || 'Inter';
+    const weight = p.weight || '400';
+
+    ctx.save();
+    ctx.font = `${weight} ${size}px ${font}, sans-serif`;
+    ctx.textBaseline = 'alphabetic';
+
+    const metrics = ctx.measureText(text);
+    const tw      = metrics.width;
+    const ascent  = metrics.actualBoundingBoxAscent  || size * 0.8;
+    const descent = metrics.actualBoundingBoxDescent || size * 0.2;
+
+    const anchor = p.anchor || 'bottom-center';
+    const ox     = Number(p.offsetX) || 20;
+    const oy     = Number(p.offsetY) || 20;
+    const pad    = Number(p.bgPadding) || 8;
+
+    // Horizontal origin
+    let x;
+    if (anchor === 'center' || anchor.endsWith('-center')) {
+      x = (W - tw) / 2;
+    } else if (anchor.endsWith('-right')) {
+      x = W - tw - ox;
+    } else {
+      x = ox;
+    }
+
+    // Vertical baseline
+    let y;
+    if (anchor === 'center') {
+      y = (H + ascent) / 2;
+    } else if (anchor.startsWith('bottom')) {
+      y = H - oy;
+    } else {
+      y = ascent + oy;
+    }
+
+    // Background box
+    const bgBox = p.bgBox || 'none';
+    if (bgBox !== 'none' && p.bgColor) {
+      ctx.save();
+      ctx.globalAlpha = (Number(p.bgOpacity) || 60) / 100;
+      ctx.fillStyle   = p.bgColor;
+      const boxY = y - ascent - pad;
+      const boxH = ascent + descent + pad * 2;
+      if (bgBox === 'full-width') {
+        ctx.fillRect(0, boxY, W, boxH);
+      } else {
+        ctx.fillRect(x - pad, boxY, tw + pad * 2, boxH);
+      }
+      ctx.restore();
+    }
+
+    // Shadow
+    if (p.shadow) {
+      ctx.shadowColor   = p.shadowColor || '#000000';
+      ctx.shadowBlur    = size * 0.3;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+    }
+
+    ctx.fillStyle = p.color || '#ffffff';
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  },
   apply() { /* handled by Processor */ },
 });

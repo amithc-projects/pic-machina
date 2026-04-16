@@ -380,21 +380,40 @@ export class ImageProcessor {
 
     // ── video-effect transforms: per-frame mediabunny effects ──
     // These apply a canvas image effect to every decoded video frame and re-encode.
+    // Transforms may declare either:
+    //   sourceTransformId — delegate to an existing image transform's apply()
+    //   applyPerFrame(ctx, params, context) — inline frame-level function (takes priority)
     const _videoEffectDef = registry.get(id);
     if (_videoEffectDef?.categoryKey === 'video-effect') {
-      if (context._previewMode) return; // preview already shows a frame; skip full re-encode
+      // Resolve the per-frame apply function
+      let _perFrameFn;
+      if (typeof _videoEffectDef.applyPerFrame === 'function') {
+        _perFrameFn = _videoEffectDef.applyPerFrame.bind(_videoEffectDef);
+      } else {
+        const _srcDef = registry.get(_videoEffectDef.sourceTransformId);
+        if (_srcDef) _perFrameFn = _srcDef.apply.bind(_srcDef);
+      }
+
+      if (context._previewMode) {
+        // In preview mode the processor canvas already holds a video frame —
+        // apply the per-frame function directly so the user sees the live effect.
+        if (_perFrameFn) {
+          try { await _perFrameFn(ctx, node.params || {}, context); } catch { /* ignore */ }
+        }
+        return;
+      }
+
       const file = context.originalFile;
       if (!file) { context.log?.('warn', `${id}: no source file — skipping`); return; }
       const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
       if (!VIDEO_EXTS.has(ext)) { context.log?.('warn', `${id}: skipping non-video file "${file.name}"`); return; }
-      const sourceDef = registry.get(_videoEffectDef.sourceTransformId);
-      if (!sourceDef) { context.log?.('warn', `${id}: source transform "${_videoEffectDef.sourceTransformId}" not found`); return; }
+      if (!_perFrameFn) { context.log?.('warn', `${id}: no applyPerFrame or sourceTransformId — skipping`); return; }
       try {
         const { processVideoEffect } = await import('./video-convert.js');
         const p = node.params || {};
         const blob = await processVideoEffect(
           file,
-          sourceDef.apply.bind(sourceDef),
+          _perFrameFn,
           p,
           { bitrate: p.bitrate || 8_000_000, onLog: context.log, fileContext: context }
         );
