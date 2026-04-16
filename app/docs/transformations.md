@@ -77,7 +77,7 @@ All transforms are registered by their `transformId` string.
 
 | Transform ID | Name | Key Params | Notes |
 |---|---|---|---|
-| `overlay-rich-text` | Rich Text | `content`, `font`, `size`, `sizeMode`, `color`, `opacity`, `anchor`, `bgBox`, `shadow`, `weight`, `blendMode` | Full-featured text overlay; supports `{{variable}}` |
+| `overlay-rich-text` | Rich Text | `content`, `font`, `size`, `sizeMode`, `color`, `opacity`, `anchor`, `bgBox`, `shadow`, `weight`, `blendMode` | Full-featured text overlay; supports `{{variable}}`. Set `Blend Mode` to `Mask: Cut In` to clip the image inside the text letters, or `Mask: Cut Out` to punch letters out of the image. |
 | `overlay-watermark` | Diagonal Watermark | `text`, `font`, `size`, `color`, `opacity`, `angle` | Tiled diagonal text |
 | `overlay-ribbon` | Ribbon / Badge | `text`, `position` (TL/TR/BL/BR), `bgColor`, `textColor`, `size` | Corner badge overlay |
 | `overlay-qrcode` | QR Code | `content`, `size`, `anchor`, `margin`, `errorCorrection` | Generates QR code from any URL or text |

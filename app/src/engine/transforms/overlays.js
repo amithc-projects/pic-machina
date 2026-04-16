@@ -64,82 +64,168 @@ registry.register({
     { name: 'weight',      label: 'Font Weight',    type: 'select',
       options: [{ label: 'Normal', value: '400' }, { label: 'Bold', value: '700' }, { label: 'Light', value: '300' }],
       defaultValue: '400' },
-    { name: 'blendMode',   label: 'Blend Mode',     type: 'select',
-      options: [{ label: 'Normal', value: 'source-over' }, { label: 'Multiply', value: 'multiply' }, { label: 'Screen', value: 'screen' }],
+    { name: 'blendMode',   label: 'Blend Mode / Mask', type: 'select',
+      options: [
+        { label: 'Normal', value: 'source-over' },
+        { label: 'Multiply', value: 'multiply' },
+        { label: 'Screen', value: 'screen' },
+        { label: 'Overlay', value: 'overlay' },
+        { label: 'Difference', value: 'difference' },
+        { label: 'Mask: Cut In', value: 'destination-in' },
+        { label: 'Mask: Cut Out', value: 'destination-out' }
+      ],
       defaultValue: 'source-over' },
   ],
   apply(ctx, p, context) {
     const text = interpolate(p.content || '{{filename}}', context);
     const W = ctx.canvas.width, H = ctx.canvas.height;
 
-    // Resolve font size — fixed px or relative to image dimension
+    // Resolve base font size
     let size;
     if (p.sizeMode === 'pct-width')  size = Math.max(1, Math.round(W * (p.size || 3) / 100));
     else if (p.sizeMode === 'pct-height') size = Math.max(1, Math.round(H * (p.size || 3) / 100));
     else size = p.size || 32;
 
+    const ox     = p.offsetX ?? 20;
+    const oy     = p.offsetY ?? 20;
+    const maxW   = W - (ox * 2); // Keep padding on both edges
+
     ctx.save();
     ctx.globalAlpha = (p.opacity ?? 100) / 100;
     ctx.globalCompositeOperation = p.blendMode || 'source-over';
-    ctx.font = `${p.weight || 400} ${size}px ${p.font || 'Inter'}, sans-serif`;
+    
+    let currentSize = size;
+    ctx.font = `${p.weight || 400} ${currentSize}px ${p.font || 'Inter'}, sans-serif`;
     ctx.textBaseline = 'alphabetic';
 
-    // Measure text before positioning
-    const metrics = ctx.measureText(text);
-    const tw      = metrics.width;
-    const ascent  = metrics.actualBoundingBoxAscent  || size;
-    const descent = metrics.actualBoundingBoxDescent || size * 0.2;
+    const paragraphs = text.split('\n');
+    
+    // Scale Down: Ensure the longest unbroken word fits within maxW
+    let longestWordW = 0;
+    for (const pText of paragraphs) {
+      const words = pText.split(' ');
+      for (const w of words) {
+        const wWidth = ctx.measureText(w).width;
+        if (wWidth > longestWordW) longestWordW = wWidth;
+      }
+    }
+    
+    if (longestWordW > maxW && maxW > 0) {
+      const scaleBy = maxW / longestWordW;
+      currentSize = Math.floor(currentSize * scaleBy);
+      ctx.font = `${p.weight || 400} ${currentSize}px ${p.font || 'Inter'}, sans-serif`;
+    }
+
+    // Wrap into lines
+    const lines = [];
+    for (const pText of paragraphs) {
+      const words = pText.split(' ');
+      let currentLine = words[0] || '';
+      for (let i = 1; i < words.length; i++) {
+        const word = words[i];
+        const testLine = currentLine + ' ' + word;
+        if (ctx.measureText(testLine).width > maxW) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      lines.push(currentLine);
+    }
+
+    const metrics = ctx.measureText('M');
+    const ascent  = metrics.actualBoundingBoxAscent  || currentSize;
+    const descent = metrics.actualBoundingBoxDescent || currentSize * 0.2;
+    const lineHeight = ascent + descent + (currentSize * 0.2);
+    
+    const blockHeight = (lines.length * lineHeight) - (currentSize * 0.2);
+    
+    let tw = 0;
+    const lineMetrics = [];
+    for (const line of lines) {
+      const lw = ctx.measureText(line).width;
+      if (lw > tw) tw = lw;
+      lineMetrics.push({ text: line, width: lw });
+    }
 
     const anchor = p.anchor || 'bottom-right';
-    const ox     = p.offsetX ?? 20;
-    const oy     = p.offsetY ?? 20;
-    const pad    = p.bgPadding ?? 8;
-
-    let x, y;
     const [va, ha]   = anchor.split('-');
     const hPart      = ha || va;
 
-    // Horizontal text origin
-    if (anchor === 'center' || hPart === 'center') x = (W - tw) / 2;
-    else if (hPart === 'right') x = W - tw - ox;
-    else x = ox;
+    // Horizontal block origin
+    let blockX;
+    if (anchor === 'center' || hPart === 'center') blockX = (W - tw) / 2;
+    else if (hPart === 'right') blockX = W - tw - ox;
+    else blockX = ox;
 
-    // Vertical baseline
-    if (anchor === 'center' || va === 'center') y = (H + ascent) / 2;
-    else if (va === 'bottom') y = H - oy;
-    else y = ascent + oy;
+    // Vertical block origin
+    let blockY;
+    if (anchor === 'center' || va === 'center') blockY = (H - blockHeight) / 2;
+    else if (va === 'bottom') blockY = H - blockHeight - oy;
+    else blockY = oy;
+
+    // -- Setup rendering target --
+    const isMask = p.blendMode === 'destination-in' || p.blendMode === 'destination-out';
+    let targetCtx = ctx;
+    let tmpCanvas = null;
+    
+    if (isMask) {
+      // Render text to an offscreen buffer first so the mask applies simultaneously
+      tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = W; 
+      tmpCanvas.height = H;
+      targetCtx = tmpCanvas.getContext('2d');
+      targetCtx.font = ctx.font;
+      targetCtx.textBaseline = ctx.textBaseline;
+    }
 
     // ── Background box ──────────────────────────────────
     const bgBox = p.bgBox || 'none';
+    const pad   = p.bgPadding ?? 8;
     if (bgBox !== 'none' && p.bgColor) {
-      ctx.save();
-      ctx.globalAlpha    = (p.bgOpacity ?? 60) / 100;
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.shadowColor    = 'transparent';
-      ctx.shadowBlur     = 0;
-      ctx.shadowOffsetX  = 0;
-      ctx.shadowOffsetY  = 0;
-      ctx.fillStyle      = p.bgColor;
+      targetCtx.save();
+      targetCtx.globalAlpha    = (p.bgOpacity ?? 60) / 100;
+      targetCtx.globalCompositeOperation = 'source-over';
+      targetCtx.shadowColor    = 'transparent';
+      targetCtx.fillStyle      = p.bgColor;
 
-      const boxY = y - ascent - pad;
-      const boxH = ascent + descent + pad * 2;
+      const boxY = blockY - pad;
+      const boxH = blockHeight + pad * 2;
       if (bgBox === 'full-width') {
-        ctx.fillRect(0, boxY, W, boxH);
+        targetCtx.fillRect(0, boxY, W, boxH);
       } else {
-        ctx.fillRect(x - pad, boxY, tw + pad * 2, boxH);
+        targetCtx.fillRect(blockX - pad, boxY, tw + pad * 2, boxH);
       }
-      ctx.restore();
+      targetCtx.restore();
     }
 
     // ── Text ────────────────────────────────────────────
-    ctx.fillStyle = p.color || '#ffffff';
-    if (p.shadow) {
-      ctx.shadowColor   = p.shadowColor || 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur    = size * 0.3;
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
+    targetCtx.fillStyle = p.color || '#ffffff';
+    if (p.shadow && !isMask) {
+      targetCtx.shadowColor   = p.shadowColor || 'rgba(0,0,0,0.6)';
+      targetCtx.shadowBlur    = currentSize * 0.3;
+      targetCtx.shadowOffsetX = 1;
+      targetCtx.shadowOffsetY = 1;
     }
-    ctx.fillText(text, x, y);
+    
+    let currentY = blockY + ascent;
+    for (const lm of lineMetrics) {
+      let lineX;
+      if (anchor === 'center' || hPart === 'center') lineX = blockX + (tw - lm.width) / 2;
+      else if (hPart === 'right') lineX = blockX + (tw - lm.width);
+      else lineX = blockX;
+      
+      targetCtx.fillText(lm.text, lineX, currentY);
+      currentY += lineHeight;
+    }
+    
+    if (isMask) {
+      // Apply the composited text layer as a single mask to the original canvas
+      ctx.globalCompositeOperation = p.blendMode;
+      ctx.drawImage(tmpCanvas, 0, 0);
+    }
+
     ctx.restore();
   }
 });

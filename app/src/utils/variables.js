@@ -23,13 +23,16 @@ const TOKEN_RE = /\{\{([^}]+)\}\}/g;
 export function interpolate(template, context = {}) {
   if (typeof template !== 'string') return String(template ?? '');
 
-  return template.replace(TOKEN_RE, (_, expr) => {
+  let result = template.replace(TOKEN_RE, (_, expr) => {
     try {
       return resolveExpr(expr.trim(), context);
     } catch {
       return `{{${expr}}}`;
     }
   });
+
+  // Allow explicit literal \n in UI inputs to act as newlines
+  return result.replace(/\\n/g, '\n');
 }
 
 function resolveExpr(expr, ctx) {
@@ -45,6 +48,7 @@ function resolveExpr(expr, ctx) {
 }
 
 function resolveKey(key, ctx) {
+  if (key === 'br' || key === 'break' || key === 'newline') return '\n';
   if (key === 'filename') return ctx.filename ?? '';
   if (key === 'ext')      return ctx.ext ?? '';
 
