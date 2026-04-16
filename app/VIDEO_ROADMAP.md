@@ -147,6 +147,130 @@ Embed a video into a perspective-corrected slot within a scene, using the existi
 
 ---
 
+## Phase 6: Time-Ranged & Transitional Video Effects
+
+Gives per-frame video-effect nodes finer control over *when* their effect is applied, with smooth fade-in/fade-out transitions and an optional Freeze mode that inserts new duration into the timeline.
+
+---
+
+### 6.1 Duration Modes
+
+| Mode | Behaviour | Use Case |
+|---|---|---|
+| **Standard** | Applies the effect to a slice of the existing video. Total duration is unchanged. | Fades, colour shifts, temporary blur. |
+| **Freeze** | Extracts a single frame and inserts new duration into the timeline. Total duration increases. | Intro/outro transitions; dramatic mid-video pauses. |
+
+---
+
+### 6.2 Data Model Extension
+
+Every video-effect transform node gains an optional `timeRange` object. If absent, the effect applies to the full video (backwards-compatible with all existing recipes).
+
+```javascript
+{
+  id: 'node-uuid',
+  type: 'transform',
+  transformId: 'video-blur',
+  params: { blurRadius: 45 },
+  timeRange: {
+    mode: 'standard',      // 'standard' | 'freeze'
+    start: 0,              // standard: window start (s) | freeze: frame to capture (s)
+    end: 4,                // standard: window end (s)   | freeze: null (not used)
+    insertDuration: 2.0,   // freeze only: seconds of new video to insert
+    fadeIn: 0,             // ramp-up duration (s) — strength goes 0 → 1
+    fadeOut: 2,            // ramp-down duration (s) — strength goes 1 → 0
+    easing: 'linear'       // 'linear' | 'ease-in' | 'ease-out'
+  }
+}
+```
+
+**Timestamp reference**: `start` and `end` refer to the video *at that point in the node pipeline*. If an earlier node trims the video, timestamps are relative to the trimmed duration.
+
+**Overlapping ranges**: When two video-effect nodes have overlapping time windows, they are applied in node order (sequentially composited per frame).
+
+---
+
+### 6.3 Effect Strength
+
+Each video-effect transform declares a `strengthParam` field in its definition, naming the single parameter that is interpolated by the time range engine:
+
+```javascript
+// Example in video.js transform definition
+{
+  id: 'video-blur',
+  strengthParam: 'blurRadius',   // ← this param is scaled by the 0–1 strength envelope
+  params: [ ... ]
+}
+```
+
+At each frame, the engine computes a `strength` scalar (0–1) from the time position and easing curve, then scales the declared param from `0` (no effect) to its configured value (full effect). All other params are passed through unchanged.
+
+**Easing functions**:
+- `linear` — constant rate
+- `ease-in` — starts slow, accelerates (`t²`)
+- `ease-out` — starts fast, decelerates (`1 - (1-t)²`)
+
+---
+
+### 6.4 Processing Logic
+
+#### Standard Mode
+The engine computes `strength` for each frame timestamp:
+1. If `timestamp < start` or `timestamp > end` → `strength = 0` (skip effect entirely)
+2. If inside `fadeIn` window → `strength = eased(elapsed / fadeIn)`
+3. If inside `fadeOut` window → `strength = eased(1 - elapsed / fadeOut)`
+4. Otherwise → `strength = 1`
+
+The `strengthParam` value is temporarily overridden to `configuredValue × strength` before calling the transform's `applyPerFrame`.
+
+#### Freeze Mode
+1. At `start`, extract the current decoded frame to a buffer canvas.
+2. For `insertDuration` seconds, emit copies of the buffered frame instead of advancing the source decode position.
+3. Audio during the frozen period is **silenced** (replaced with empty PCM samples).
+4. `strength` is computed relative to `insertDuration` (not the source timestamp) — so `fadeOut: 2` with `insertDuration: 2` fades from full effect to clear across the entire inserted segment.
+5. After the freeze, normal decoding resumes from the frame immediately following `start`.
+
+---
+
+### 6.5 UI: Node-Level Time Strip (NED Screen)
+
+Each video-effect node gains an interactive **Time Strip** in the NED inspector below the parameter fields.
+
+**Controls:**
+- **Mode toggle**: Standard / Freeze switch
+- **Timeline bar**: A horizontal strip with a filmstrip background (5–10 thumbnail frames extracted from the loaded test video at evenly-spaced timestamps using `extractVideoFrame`)
+- **Standard handles**: Draggable left/right edges for `start`/`end`; inner gradient handles for `fadeIn`/`fadeOut`
+- **Freeze handle**: A single pin marker for the capture frame; a duration input for `insertDuration`
+- **Easing selector**: Dropdown (Linear / Ease In / Ease Out)
+- **Strength label**: Read-only badge showing which param is being animated (e.g. "animating: blur radius")
+
+The filmstrip is generated once when a test video is loaded in the workspace, and cached for the session.
+
+---
+
+### 6.6 UI: Global Timeline (SET Screen)
+
+A read-only multi-track timeline appears below the batch setup preview, **only when the selected file set contains at least one video**.
+
+- One horizontal track per recipe node that has a `timeRange`
+- Tracks labelled with the transform name and the animated param
+- **Freeze** nodes rendered as distinct coloured blocks that visually extend the total duration bar
+- **Standard** nodes rendered as gradient-filled bands showing the fade envelope
+- Hovering a track highlights the corresponding node in the recipe list
+
+---
+
+### 6.7 Verification Scenarios
+
+| Scenario | Setup | Expected Output |
+|---|---|---|
+| **Freeze intro** | `mode: freeze`, `start: 0`, `insertDuration: 2`, `fadeOut: 2`, blur | Output 2 s longer; starts blurry, sharpens over 2 s |
+| **Standard segment** | `mode: standard`, `start: 0`, `end: 2`, `fadeOut: 2`, blur | Original duration; starts blurry, clears over 2 s |
+| **Mid-video colour shift** | `mode: standard`, `start: 5`, `end: 10`, `fadeIn: 1`, `fadeOut: 1` | Effect ramps in at 5 s, holds, ramps out at 9 s |
+| **No timeRange** | existing recipe node without `timeRange` | Effect applies to full video — unchanged behaviour |
+
+---
+
 ## Implementation Architecture
 
 All new transforms integrate with the existing engine without structural changes:
@@ -154,9 +278,10 @@ All new transforms integrate with the existing engine without structural changes
 ```
 src/engine/
 ├── transforms/
-│   ├── video.js          ← NEW: per-frame effect transforms (Phase 3 + 4 + 5)
+│   ├── video.js          ← EXTEND: add strengthParam to each video-effect transform (Phase 6)
 │   └── flow.js           ← EXTEND: format/audio/concat transforms (Phase 1 + 2)
 ├── compositor.js         ← EXTEND: video concat logic alongside existing GIF/PDF
+├── video-convert.js      ← EXTEND: timeRange strength envelope + freeze frame insertion (Phase 6)
 └── worker.js             ← no changes needed
 ```
 
