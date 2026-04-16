@@ -1,5 +1,5 @@
 /**
- * PicMachina — SHC: ShowCase Screen
+ * PicMachina — SHC: Showcase Screen
  *
  * List view: searchable, filterable grid of curated run outputs.
  * Detail view: before/after thumbnails, editable title/description, pipeline diagram.
@@ -51,7 +51,7 @@ async function renderList(container) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">star</span>
-          ShowCase
+          Showcase
         </div>
       </div>
       <div class="shc-list-toolbar">
@@ -235,12 +235,12 @@ async function renderDetail(container, showcaseId) {
   container.innerHTML = `
     <div class="screen shc-screen">
       <div class="screen-header">
-        <button class="btn-icon" id="shc-back" title="Back to ShowCase">
+        <button class="btn-icon" id="shc-back" title="Back to Showcase">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
         <div class="screen-title">
           <span class="material-symbols-outlined">star</span>
-          ShowCase
+          Showcase
         </div>
       </div>
       <div id="shc-detail-body" class="shc-detail-body">
@@ -256,7 +256,7 @@ async function renderDetail(container, showcaseId) {
       <div class="empty-state" style="padding-top:60px">
         <span class="material-symbols-outlined" style="font-size:48px">error_outline</span>
         <div class="empty-state-title">Showcase entry not found</div>
-        <button class="btn-secondary" id="shc-back2">Back to ShowCase</button>
+        <button class="btn-secondary" id="shc-back2">Back to Showcase</button>
       </div>`;
     container.querySelector('#shc-back2')?.addEventListener('click', () => navigate('#shc'));
     return;

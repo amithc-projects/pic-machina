@@ -50,6 +50,18 @@ export async function render(container, hash) {
           Clear All
         </button>
       </div>
+      <div class="out-filter-bar" id="out-filter-bar">
+        <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-text-faint);flex-shrink:0">filter_list</span>
+        <select id="out-filter-recipe" class="out-filter-select">
+          <option value="">All recipes</option>
+        </select>
+        <input type="date" id="out-filter-from" class="out-filter-date" title="From date">
+        <span class="text-sm text-muted" style="flex-shrink:0">to</span>
+        <input type="date" id="out-filter-to" class="out-filter-date" title="To date">
+        <button class="btn-secondary btn-sm" id="out-filter-clear" style="display:none">
+          <span class="material-symbols-outlined" style="font-size:14px">close</span> Clear
+        </button>
+      </div>
       <div id="out-body" class="out-body">
         <div class="spinner spinner--lg" style="margin:40px auto;display:block"></div>
       </div>
@@ -211,6 +223,7 @@ export async function render(container, hash) {
       </div>`;
 
     bindRunActions();
+    initFilters(runs);
 
     // Auto-open run from ?run= query param (e.g. navigated from QUE "View Results")
     if (autoRunId) {
@@ -564,6 +577,56 @@ export async function render(container, hash) {
   return () => document.removeEventListener('keydown', handleKeydown);
 }
 
+// ── Filter bar ────────────────────────────────────────────────────────────────
+function initFilters(runs) {
+  const recipeSelect = container.querySelector('#out-filter-recipe');
+  const fromInput    = container.querySelector('#out-filter-from');
+  const toInput      = container.querySelector('#out-filter-to');
+  const clearBtn     = container.querySelector('#out-filter-clear');
+  if (!recipeSelect) return;
+
+  // Populate unique recipe names (sorted)
+  const recipeNames = [...new Set(runs.map(r => r.recipeName).filter(Boolean))].sort();
+  recipeNames.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    recipeSelect.appendChild(opt);
+  });
+
+  function isFiltered() {
+    return recipeSelect.value || fromInput.value || toInput.value;
+  }
+
+  function applyFilters() {
+    const recipe  = recipeSelect.value;
+    const fromMs  = fromInput.value  ? new Date(fromInput.value).setHours(0,0,0,0)   : null;
+    const toMs    = toInput.value    ? new Date(toInput.value).setHours(23,59,59,999) : null;
+
+    container.querySelectorAll('.out-run-row').forEach(row => {
+      const run = runs.find(r => r.id === row.dataset.id);
+      if (!run) return;
+      const recipeMatch = !recipe || run.recipeName === recipe;
+      const fromMatch   = !fromMs || (run.startedAt || 0) >= fromMs;
+      const toMatch     = !toMs   || (run.startedAt || 0) <= toMs;
+      row.style.display = (recipeMatch && fromMatch && toMatch) ? '' : 'none';
+    });
+
+    clearBtn.style.display = isFiltered() ? '' : 'none';
+  }
+
+  recipeSelect.addEventListener('change', applyFilters);
+  fromInput.addEventListener('change', applyFilters);
+  toInput.addEventListener('change', applyFilters);
+
+  clearBtn.addEventListener('click', () => {
+    recipeSelect.value = '';
+    fromInput.value    = '';
+    toInput.value      = '';
+    applyFilters();
+  });
+}
+
 // ── Add to ShowCase helper ────────────────────────────────────────────────────
 async function addRunToShowcase(run, preloadedFiles) {
   try {
@@ -637,6 +700,10 @@ function injectOutStyles() {
   const s = document.createElement('style');
   s.textContent = `
     .out-screen { display:flex; flex-direction:column; height:100%; }
+    .out-filter-bar { display:flex; align-items:center; gap:8px; padding:8px 20px; border-bottom:1px solid var(--ps-border); flex-wrap:wrap; }
+    .out-filter-select { padding:5px 8px; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:7px; color:var(--ps-text); font-size:13px; cursor:pointer; max-width:200px; }
+    .out-filter-date { padding:5px 8px; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:7px; color:var(--ps-text); font-size:13px; }
+    .out-filter-select:focus, .out-filter-date:focus { outline:none; border-color:var(--ps-blue); }
     .out-body { flex:1; overflow-y:auto; padding:16px 20px; }
 
     .out-stats-bar { display:flex; gap:12px; margin-bottom:20px; }
