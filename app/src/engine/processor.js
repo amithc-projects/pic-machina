@@ -415,7 +415,13 @@ export class ImageProcessor {
           file,
           _perFrameFn,
           p,
-          { bitrate: p.bitrate || 8_000_000, onLog: context.log, fileContext: context }
+          {
+            bitrate: p.bitrate || 8_000_000,
+            onLog: context.log,
+            fileContext: context,
+            timeRange: node.timeRange || null,
+            strengthParam: _videoEffectDef.strengthParam || null,
+          }
         );
         const suffix = interpolate(p.suffix || '', context);
         const base   = context.filename.replace(/\.[^.]+$/, '');

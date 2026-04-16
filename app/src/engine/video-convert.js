@@ -72,30 +72,80 @@ async function runConversion(input, outputFormat, OutputFormatClass, mime, conve
   return new Blob([target.buffer], { type: mime });
 }
 
-// ─── Per-frame effect processing ─────────────────────────
+// ─── Phase 6: Time-range strength envelope ───────────────────────────────────
 
 /**
- * Apply a per-frame image effect to every video frame using mediabunny's
- * process callback. The applyFn receives the same (ctx, params, context)
- * signature as a normal Pic-Machina transform's apply() function.
- *
- * @param {File} file
- * @param {Function} applyFn - async (ctx, params, context) => void
- * @param {object} params
- * @param {{ bitrate?: number, onLog?: function }} options
- * @returns {Promise<Blob>}
+ * Apply an easing curve to a linear 0–1 progress value.
  */
+function applyEasing(t, easing) {
+  if (easing === 'ease-in')  return t * t;
+  if (easing === 'ease-out') return 1 - (1 - t) * (1 - t);
+  return t; // linear
+}
+
+/**
+ * Compute the effect strength (0–1) for a given timestamp based on a timeRange
+ * config. Returns 1 when timeRange is null (full-strength, always-on).
+ *
+ * For 'standard' mode the envelope is:
+ *   outside [start, end] → 0
+ *   inside fadeIn  → ease 0→1
+ *   inside fadeOut → ease 1→0
+ *   otherwise      → 1
+ *
+ * For 'freeze' mode this function is also used, but with the freeze window
+ * remapped so that t=0 is the first frozen frame and t=insertDuration is the last.
+ */
+export function computeStrength(ts, timeRange) {
+  if (!timeRange) return 1;
+  const { start = 0, end = null, fadeIn = 0, fadeOut = 0, easing = 'linear' } = timeRange;
+
+  if (ts < start) return 0;
+  if (end !== null && end !== undefined && ts > end) return 0;
+
+  const elapsed   = ts - start;
+  const remaining = (end !== null && end !== undefined) ? end - ts : Infinity;
+
+  if (fadeIn  > 0 && elapsed   < fadeIn)  return applyEasing(elapsed / fadeIn, easing);
+  if (fadeOut > 0 && remaining < fadeOut) return applyEasing(remaining / fadeOut, easing);
+  return 1;
+}
+
+/**
+ * Scale the strengthParam of a params object by the given strength scalar (0–1).
+ * Returns the same object reference if no scaling is needed.
+ */
+function scaleParams(stepParams, strengthParam, strength) {
+  if (strength >= 1 || !strengthParam || stepParams[strengthParam] === undefined) {
+    return stepParams;
+  }
+  return { ...stepParams, [strengthParam]: (Number(stepParams[strengthParam]) || 0) * strength };
+}
+
+// ─── Per-frame effect processing ─────────────────────────────────────────────
+
 /**
  * Apply one or more canvas-based image transforms to every frame of a video.
  *
+ * Supports Phase 6 time-range envelopes via the `timeRange` and `strengthParam`
+ * options. If `timeRange.mode === 'freeze'`, delegates to processVideoEffectFreeze.
+ *
  * @param {File} file
  * @param {Function|Array<{fn:Function, params:object}>} applyFnOrSteps
- *   - Single function (legacy): called as fn(ctx, params, {}) per frame.
- *   - Array of steps: each step is { fn, params }; all applied in sequence per frame.
  * @param {object} params   Only used when applyFnOrSteps is a single function.
- * @param {{ bitrate?: number, onLog?: function }} options
+ * @param {{ bitrate?, onLog?, fileContext?, timeRange?, strengthParam? }} options
  */
-export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bitrate = 8_000_000, onLog, fileContext = {} } = {}) {
+export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
+  bitrate = 8_000_000, onLog, fileContext = {},
+  timeRange = null, strengthParam = null,
+} = {}) {
+  // Freeze mode requires a separate code path (frame insertion)
+  if (timeRange?.mode === 'freeze') {
+    return processVideoEffectFreeze(file, applyFnOrSteps, params, {
+      bitrate, onLog, fileContext, timeRange, strengthParam,
+    });
+  }
+
   // Normalise to array of steps
   const steps = Array.isArray(applyFnOrSteps)
     ? applyFnOrSteps
@@ -114,8 +164,7 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bi
   const rawW = videoTrack.displayWidth;
   const rawH = videoTrack.displayHeight;
 
-  // Determine OUTPUT dimensions via a dry-run: run all transforms on a blank canvas
-  // at the video's natural dimensions so geo-resize/crop compute final size correctly.
+  // Determine OUTPUT dimensions via a dry-run at full strength (no envelope scaling)
   const dimCanvas = document.createElement('canvas');
   dimCanvas.width = rawW; dimCanvas.height = rawH;
   const dimCtx = dimCanvas.getContext('2d');
@@ -126,7 +175,7 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bi
   const outW = dimCanvas.width  % 2 === 0 ? dimCanvas.width  : dimCanvas.width  + 1;
   const outH = dimCanvas.height % 2 === 0 ? dimCanvas.height : dimCanvas.height + 1;
 
-  // Working canvas (reused across all frames — reset to rawW×rawH before each frame)
+  // Working canvas (reused across all frames)
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
@@ -153,18 +202,25 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bi
           const dimStr = outW !== rawW || outH !== rawH
             ? `${rawW}×${rawH}→${outW}×${outH}`
             : `${rawW}×${rawH}`;
-          log(`Processing ${dimStr} video (${totalDuration.toFixed(1)}s, ~${estimatedTotal} frames)`);
+          const trStr = timeRange ? ` [time-range: ${timeRange.start}s–${timeRange.end ?? '∞'}s]` : '';
+          log(`Processing ${dimStr} video (${totalDuration.toFixed(1)}s, ~${estimatedTotal} frames)${trStr}`);
         }
 
-        // Reset to input dimensions so transforms that resize start from the video frame size
         canvas.width  = rawW;
         canvas.height = rawH;
         sample.draw(ctx, 0, 0, rawW, rawH);
 
-        // Apply all transforms in sequence
-        for (const step of steps) {
-          await step.fn(ctx, step.params || {}, fileContext);
+        // Phase 6: compute strength for this frame's timestamp
+        const strength = computeStrength(sample.timestamp, timeRange);
+
+        // Apply all transforms with strength-scaled params
+        if (strength > 0 || !strengthParam) {
+          for (const step of steps) {
+            const p = scaleParams(step.params || {}, strengthParam, strength);
+            await step.fn(ctx, p, fileContext);
+          }
         }
+        // strength === 0 with a strengthParam → skip effect, pass frame through as-is
 
         frameCount++;
 
@@ -188,6 +244,157 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bi
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   log(`Done — ${frameCount} frames in ${elapsed}s`);
   return new Blob([target.buffer], { type: mime });
+}
+
+// ─── Phase 6: Freeze mode — frame insertion ───────────────────────────────────
+
+/**
+ * Freeze mode: extract a single frame at `timeRange.start`, insert
+ * `insertDuration` seconds of that frozen frame (with the effect envelope
+ * applied), then continue with the rest of the video.
+ *
+ * Uses HTMLVideoElement seek + VideoEncoder (same approach as concatVideos)
+ * because mediabunny's process() callback cannot emit multiple output frames
+ * per input frame.
+ *
+ * Audio during the frozen segment is silenced (omitted from the mux).
+ */
+async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
+  bitrate = 8_000_000, onLog, fileContext = {},
+  timeRange, strengthParam,
+}) {
+  const steps = Array.isArray(applyFnOrSteps)
+    ? applyFnOrSteps
+    : [{ fn: applyFnOrSteps, params }];
+
+  const { start = 0, insertDuration = 2, fadeIn = 0, fadeOut = 0, easing = 'linear' } = timeRange;
+  const log = (msg) => onLog?.('info', msg);
+
+  const ext = getInputExt(file);
+  const mime = 'video/mp4'; // freeze mode always outputs MP4
+
+  const info = await getVideoInfo(file);
+  const fps  = 30;
+  const rawW = info.width;
+  const rawH = info.height;
+  const encW = rawW % 2 === 0 ? rawW : rawW + 1;
+  const encH = rawH % 2 === 0 ? rawH : rawH + 1;
+
+  const url   = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  document.body.appendChild(video);
+
+  try {
+    await new Promise((res, rej) => {
+      video.onloadedmetadata = res;
+      video.onerror = () => rej(new Error(`Failed to load: ${file.name}`));
+      video.src = url;
+      video.load();
+    });
+
+    const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+    const target = new ArrayBufferTarget();
+    const muxer  = new Muxer({
+      target,
+      video: { codec: 'avc', width: encW, height: encH },
+      fastStart: 'in-memory',
+    });
+
+    let encoderReject;
+    const encoderError = new Promise((_, rej) => { encoderReject = rej; });
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error:  (e) => encoderReject(new Error(`VideoEncoder error: ${e.message ?? e}`)),
+    });
+    encoder.configure({ codec: avcCodec(encW, encH), width: encW, height: encH, bitrate: parseInt(bitrate) || 8_000_000 });
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = encW;
+    canvas.height = encH;
+    const ctx = canvas.getContext('2d');
+    let frameIndex = 0;
+
+    const seekTo = (t) => new Promise((res, rej) => {
+      video.onseeked = res;
+      video.onerror  = () => rej(new Error('Seek failed'));
+      video.currentTime = t;
+    });
+
+    const encodeCanvas = async (keyFrame = false) => {
+      while (encoder.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 0));
+      const ts = frameIndex * (1_000_000 / fps);
+      const vf = new VideoFrame(canvas, { timestamp: ts });
+      encoder.encode(vf, { keyFrame });
+      vf.close();
+      frameIndex++;
+    };
+
+    const encodeWork = async () => {
+      // ── Phase A: frames before the freeze point ──
+      const framesBeforeFreeze = Math.ceil(start * fps);
+      log(`Freeze encode — pre-segment: ${framesBeforeFreeze} frames (0 – ${start.toFixed(2)}s)`);
+      for (let f = 0; f < framesBeforeFreeze; f++) {
+        const t = f / fps;
+        if (t >= info.duration) break;
+        await seekTo(t);
+        ctx.drawImage(video, 0, 0, encW, encH);
+        await encodeCanvas(f === 0);
+      }
+
+      // ── Phase B: frozen frames with strength envelope ──
+      const frozenFrames = Math.round(insertDuration * fps);
+      log(`Freeze encode — frozen segment: ${frozenFrames} frames (${insertDuration.toFixed(2)}s inserted)`);
+      await seekTo(Math.min(start, info.duration - 0.001));
+      ctx.drawImage(video, 0, 0, encW, encH);
+
+      // Save clean base frame
+      const baseCanvas = document.createElement('canvas');
+      baseCanvas.width = encW; baseCanvas.height = encH;
+      baseCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+      for (let f = 0; f < frozenFrames; f++) {
+        const t        = f / fps; // time within the frozen window
+        const strength = computeStrength(t, {
+          start: 0, end: insertDuration, fadeIn, fadeOut, easing,
+        });
+
+        // Restore clean frame then apply effect
+        ctx.drawImage(baseCanvas, 0, 0);
+        if (strength > 0 || !strengthParam) {
+          for (const step of steps) {
+            const p = scaleParams(step.params || {}, strengthParam, strength);
+            await step.fn(ctx, p, fileContext);
+          }
+        }
+        await encodeCanvas(f === 0);
+      }
+
+      // ── Phase C: frames after the freeze point ──
+      const postStart   = start;
+      const framesAfter = Math.ceil((info.duration - postStart) * fps);
+      log(`Freeze encode — post-segment: ~${framesAfter} frames (${postStart.toFixed(2)}s – end)`);
+      for (let f = 0; f < framesAfter; f++) {
+        const t = postStart + f / fps;
+        if (t >= info.duration) break;
+        await seekTo(t);
+        ctx.drawImage(video, 0, 0, encW, encH);
+        await encodeCanvas(f === 0);
+      }
+
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+    };
+
+    await Promise.race([encodeWork(), encoderError]);
+    log(`Freeze encode done — ${frameIndex} frames (source ${info.duration.toFixed(1)}s + ${insertDuration}s inserted)`);
+    return new Blob([target.buffer], { type: mime });
+  } finally {
+    document.body.removeChild(video);
+    URL.revokeObjectURL(url);
+  }
 }
 
 // ─── Per-file video transforms ────────────────────────────

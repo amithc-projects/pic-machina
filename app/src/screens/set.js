@@ -18,6 +18,8 @@ import { renderParamField, collectParams,
          bindParamFieldEvents,
          injectParamFieldStyles }                   from '../utils/param-fields.js';
 import { showThreeWayConfirm }                      from '../utils/dialogs.js';
+import { registry }                                 from '../engine/index.js';
+import { computeStrength }                          from '../engine/video-convert.js';
 
 export async function render(container, hash) {
   injectStyles();
@@ -182,6 +184,15 @@ export async function render(container, hash) {
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Phase 6: read-only multi-track timeline for video-effect time ranges -->
+      <div class="set-timeline" id="set-timeline" style="display:none">
+        <div class="set-timeline-header">
+          <span class="material-symbols-outlined" style="font-size:14px">timeline</span>
+          Effect Timeline
+        </div>
+        <div class="set-timeline-tracks" id="set-timeline-tracks"></div>
       </div>
     </div>`;
 
@@ -816,8 +827,93 @@ export async function render(container, hash) {
     // Render inline recipe params and slot assignment
     renderInlineParams();
     loadSlotTemplate().then(renderSlotAssignment);
+    renderEffectTimeline();
     updateRunButton();
     refreshImageGrid();
+  }
+
+  // ── Phase 6: Read-only effect timeline ───────────────────
+  function renderEffectTimeline() {
+    const timelineEl = container.querySelector('#set-timeline');
+    const tracksEl   = container.querySelector('#set-timeline-tracks');
+    if (!timelineEl || !tracksEl) return;
+
+    if (!currentRecipe) { timelineEl.style.display = 'none'; return; }
+
+    // Collect video-effect nodes that have a timeRange
+    const allNodes = flattenRecipeNodes(currentRecipe.nodes);
+    const trNodes = allNodes.filter(n => {
+      if (!n.timeRange) return false;
+      const d = registry.get(n.transformId);
+      return d?.categoryKey === 'video-effect';
+    });
+
+    // Also check if any input files are video (heuristic: check window._icTestFolderFiles)
+    const files = window._icTestFolderFiles || [];
+    const hasVideo = files.some(f => isVideoFile(f));
+
+    if (!trNodes.length || !hasVideo) {
+      timelineEl.style.display = 'none';
+      return;
+    }
+
+    timelineEl.style.display = '';
+
+    // Estimate total duration: use the longest "end" or a default
+    let maxEnd = 10;
+    let totalInsert = 0;
+    for (const n of trNodes) {
+      const tr = n.timeRange;
+      if (tr.mode === 'standard' && tr.end > maxEnd) maxEnd = tr.end;
+      if (tr.mode === 'freeze') totalInsert += tr.insertDuration || 0;
+    }
+    const totalDur = maxEnd + totalInsert;
+
+    tracksEl.innerHTML = trNodes.map(n => {
+      const d  = registry.get(n.transformId);
+      const tr = n.timeRange;
+      const label = d?.name || n.transformId;
+      const spLabel = d?.strengthParam
+        ? (d.params || []).find(p => p.name === d.strengthParam)?.label || d.strengthParam
+        : '';
+
+      if (tr.mode === 'freeze') {
+        const left = ((tr.start || 0) / totalDur) * 100;
+        const width = ((tr.insertDuration || 2) / totalDur) * 100;
+        return `
+          <div class="set-tl-track">
+            <div class="set-tl-label">${label}${spLabel ? ` <span class="set-tl-param">${spLabel}</span>` : ''}</div>
+            <div class="set-tl-bar">
+              <div class="set-tl-range set-tl-freeze" style="left:${left}%;width:${width}%"
+                title="Freeze: ${tr.insertDuration}s inserted at ${tr.start}s"></div>
+            </div>
+          </div>`;
+      }
+
+      // Standard mode
+      const s = tr.start || 0;
+      const e = tr.end ?? totalDur;
+      const fi = tr.fadeIn || 0;
+      const fo = tr.fadeOut || 0;
+      const left  = (s / totalDur) * 100;
+      const width = ((e - s) / totalDur) * 100;
+      const relFI = fi > 0 ? (fi / (e - s)) * 100 : 0;
+      const relFO = fo > 0 ? (1 - fo / (e - s)) * 100 : 100;
+
+      return `
+        <div class="set-tl-track">
+          <div class="set-tl-label">${label}${spLabel ? ` <span class="set-tl-param">${spLabel}</span>` : ''}</div>
+          <div class="set-tl-bar">
+            <div class="set-tl-range set-tl-standard" style="left:${left}%;width:${width}%;
+              background:linear-gradient(to right,
+                rgba(59,130,246,0.1) 0%,
+                rgba(59,130,246,0.5) ${relFI}%,
+                rgba(59,130,246,0.5) ${relFO}%,
+                rgba(59,130,246,0.1) 100%
+              )" title="${s.toFixed(1)}s – ${e.toFixed(1)}s"></div>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   function renderInlineParams() {
@@ -1135,6 +1231,29 @@ function injectStyles() {
     .set-lb-stage { position:relative; z-index:1; width:90vw; height:88vh; display:flex; align-items:center; justify-content:center; cursor:grab; overflow:hidden; }
     .set-lb-stage:active { cursor:grabbing; }
     .set-lb-img { max-width:100%; max-height:100%; object-fit:contain; transform-origin:center center; transition:transform 50ms linear; user-select:none; pointer-events:none; border-radius:4px; }
+
+    /* Phase 6: effect timeline */
+    .set-timeline {
+      border-top:1px solid var(--ps-border);
+      padding:8px 16px 10px;
+      background:var(--ps-bg-surface);
+      flex-shrink:0;
+    }
+    .set-timeline-header {
+      display:flex; align-items:center; gap:6px;
+      font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;
+      color:var(--ps-text-faint); margin-bottom:6px;
+    }
+    .set-tl-track { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+    .set-tl-label { width:140px; flex-shrink:0; font-size:11px; color:var(--ps-text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .set-tl-param { color:var(--ps-text-faint); font-style:italic; }
+    .set-tl-bar { flex:1; height:20px; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:4px; position:relative; overflow:hidden; }
+    .set-tl-range { position:absolute; top:0; bottom:0; border-radius:3px; }
+    .set-tl-standard { border:1px solid rgba(59,130,246,0.4); }
+    .set-tl-freeze {
+      background:repeating-linear-gradient(45deg, rgba(251,146,60,0.3), rgba(251,146,60,0.3) 4px, rgba(251,146,60,0.15) 4px, rgba(251,146,60,0.15) 8px);
+      border:1px solid rgba(251,146,60,0.5);
+    }
   `;
   document.head.appendChild(s);
 }
