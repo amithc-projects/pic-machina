@@ -25,7 +25,7 @@ const SCREENS = {
   shc: () => import('./screens/shc.js'),
 };
 
-const DEFAULT_SCREEN = 'lib';
+const DEFAULT_SCREEN = 'shc';
 
 // ─── State ────────────────────────────────────────────────
 let currentScreen = null;
