@@ -454,10 +454,10 @@ registry.register({
       ctx.restore();
     }
 
-    // Shadow
-    if (p.shadow) {
+    // Shadow — on by default unless explicitly disabled
+    if (p.shadow !== false) {
       ctx.shadowColor   = p.shadowColor || '#000000';
-      ctx.shadowBlur    = size * 0.3;
+      ctx.shadowBlur    = Math.max(size * 0.3, 4);
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
     }
