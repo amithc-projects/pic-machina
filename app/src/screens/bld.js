@@ -293,6 +293,10 @@ export async function render(container, hash) {
                 <span class="material-symbols-outlined" style="font-size:14px">delete</span>
               </button>
             </div>
+            <div class="text-xs text-muted" style="margin-top:4px">
+              <span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">content_paste</span>
+              Paste image anywhere to set
+            </div>
 
             <label class="ic-label" style="margin-top:12px">Name</label>
             <input type="text" id="bld-name" class="ic-input" value="${escHtml(draft.name)}" placeholder="Recipe name…">
@@ -798,13 +802,13 @@ export async function render(container, hash) {
         e.stopPropagation();
         const id = btn.dataset.id;
         const info = findNodeAndParent(draft.nodes, id);
-        if (info?.node.type === 'block-ref') {
-          navigate(`#bkb?id=${info.node.blockId}`);
-        } else {
-          navigate(`#ned?recipe=${draft.id}&node=${id}`);
+        if (info) {
+          if (info.node.type === 'block-ref') navigate(`#bkb?id=${info.node.blockId}`);
+          else navigate(`#ned?recipe=${draft.id}&node=${id}`);
         }
       });
     });
+
 
     // Delete
     container.querySelectorAll('.bld-btn-delete').forEach(btn => {
@@ -1054,8 +1058,41 @@ export async function render(container, hash) {
   container.querySelector('#bld-add-param')?.addEventListener('click', () => showParamEditor(null, null));
   bindParamActions();
 
-  // ── Cleanup: flush autosave ───────────────────────────────
-  return async () => { await flushAutosave(draft); };
+  // ── Paste Logic ───────────────────────────────────────────
+  const onPaste = async (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          try {
+            await setRecipeThumbnail(draft.id, file);
+            const saved = await getRecipe(draft.id);
+            draft.thumbnail = saved.thumbnail;
+            const preview = container.querySelector('#bld-thumb-preview');
+            if (preview) {
+              preview.style.backgroundImage = `url(${draft.thumbnail})`;
+              preview.style.backgroundSize = 'cover';
+              preview.style.backgroundPosition = 'center';
+            }
+            const clearBtn = container.querySelector('#bld-thumb-clear');
+            if (clearBtn) clearBtn.style.display = '';
+            window.AuroraToast?.show({ variant: 'success', title: 'Recipe thumbnail updated from clipboard' });
+          } catch (err) {
+            console.error('Failed to set thumbnail via paste:', err);
+          }
+        }
+      }
+    }
+  };
+  window.addEventListener('paste', onPaste);
+
+  // ── Cleanup: flush autosave & remove listener ──────────────
+  return async () => {
+    window.removeEventListener('paste', onPaste);
+    await flushAutosave(draft);
+  };
 }
 
 function escHtml(s) {

@@ -9,7 +9,7 @@
  *   #shc?id=<id>  — detail view
  */
 
-import { getAllShowcases, getShowcase, saveShowcase, deleteShowcase } from '../data/showcases.js';
+import { getAllShowcases, getShowcase, saveShowcase, deleteShowcase, setShowcaseThumbnail, clearShowcaseThumbnail } from '../data/showcases.js';
 import { getRun }                        from '../data/runs.js';
 import { getRecipe }                     from '../data/recipes.js';
 import { getFolder, getOrCreateOutputSubfolder,
@@ -37,9 +37,9 @@ export async function render(container, hash) {
   injectShcStyles();
 
   if (showcaseId) {
-    await renderDetail(container, showcaseId);
+    return await renderDetail(container, showcaseId);
   } else {
-    await renderList(container);
+    return await renderList(container);
   }
 }
 
@@ -201,6 +201,13 @@ async function renderList(container) {
 
 async function loadCardHeroImage(card, entry) {
   const hero = card.querySelector('.shc-card-hero');
+  
+  if (entry.thumbnail) {
+    hero.innerHTML = `<img src="${entry.thumbnail}" class="shc-card-hero-img" alt="">`;
+    hero.classList.remove('shc-card-hero--loading');
+    return;
+  }
+
   if (!entry.sampleFileNames?.length) return;
 
   const run = await getRun(entry.runId);
@@ -275,6 +282,26 @@ async function renderDetail(container, showcaseId) {
           <div class="spinner" style="margin:20px auto"></div>
         </div>
 
+        <div class="shc-custom-thumb-section">
+          <label class="shc-field-label">Custom Cover Image</label>
+          <div class="shc-custom-thumb-preview ${entry.thumbnail ? '' : 'is-empty'}" id="shc-custom-thumb-preview">
+            ${entry.thumbnail ? `<img src="${entry.thumbnail}" alt="">` : '<span class="material-symbols-outlined">image</span>'}
+          </div>
+          <div class="flex gap-2 mt-2">
+            <button class="btn-secondary btn-sm" id="shc-custom-thumb-btn">
+              <span class="material-symbols-outlined" style="font-size:14px">upload</span>
+              Upload Cover
+            </button>
+            <button class="btn-ghost btn-sm" id="shc-custom-thumb-clear" style="${entry.thumbnail ? '' : 'display:none'}">
+              <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-red)">delete</span>
+            </button>
+          </div>
+          <div class="text-xs text-muted" style="margin-top:4px">
+            <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">content_paste</span>
+            Paste an image anywhere to set cover
+          </div>
+        </div>
+
         <div class="shc-meta-edit">
           <label class="shc-field-label">Title</label>
           <input id="shc-title" class="ic-input shc-title-input" value="${escHtml(entry.title || entry.recipeName || '')}" placeholder="Add a title…">
@@ -347,6 +374,65 @@ async function renderDetail(container, showcaseId) {
 
   loadDetailThumbs(container, entry, run);
   renderPipeline(container.querySelector('#shc-pipeline'), recipe);
+
+  // ── Paste Logic ───────────────────────────────────────────
+  const onPaste = async (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          await setShowcaseThumbnail(entry.id, file);
+          const updated = await getShowcase(entry.id);
+          entry.thumbnail = updated.thumbnail;
+          refreshCustomThumbUI();
+          window.AuroraToast?.show({ variant: 'success', title: 'Cover image updated from clipboard' });
+        }
+      }
+    }
+  };
+  window.addEventListener('paste', onPaste);
+
+  function refreshCustomThumbUI() {
+    const preview = container.querySelector('#shc-custom-thumb-preview');
+    const clear   = container.querySelector('#shc-custom-thumb-clear');
+    if (!preview) return;
+    if (entry.thumbnail) {
+      preview.innerHTML = `<img src="${entry.thumbnail}" alt="">`;
+      preview.classList.remove('is-empty');
+      if (clear) clear.style.display = '';
+    } else {
+      preview.innerHTML = `<span class="material-symbols-outlined">image</span>`;
+      preview.classList.add('is-empty');
+      if (clear) clear.style.display = 'none';
+    }
+  }
+
+  container.querySelector('#shc-custom-thumb-btn')?.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = async () => {
+      const file = inp.files[0];
+      if (file) {
+        await setShowcaseThumbnail(entry.id, file);
+        const updated = await getShowcase(entry.id);
+        entry.thumbnail = updated.thumbnail;
+        refreshCustomThumbUI();
+      }
+    };
+    inp.click();
+  });
+
+  container.querySelector('#shc-custom-thumb-clear')?.addEventListener('click', async () => {
+    await clearShowcaseThumbnail(entry.id);
+    entry.thumbnail = null;
+    refreshCustomThumbUI();
+  });
+
+  return () => {
+    window.removeEventListener('paste', onPaste);
+  };
 }
 
 // ─── Before / After two-strip section ────────────────────────────────────────
@@ -798,6 +884,13 @@ function injectShcStyles() {
     .shc-thumb-overlay { position:absolute; inset:0; background:rgba(0,0,0,0); display:flex; flex-direction:column; justify-content:flex-end; padding:6px; transition:background 150ms; }
     .shc-thumb:hover .shc-thumb-overlay { background:rgba(0,0,0,.55); }
     .shc-thumb-name { font-size:9px; color:#fff; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:0; transition:opacity 150ms; }
+
+    /* ── Custom Thumbnail ── */
+    .shc-custom-thumb-section { margin-top:20px; padding:12px; background:var(--ps-bg-overlay); border-radius:12px; border:1px solid var(--ps-border); }
+    .shc-custom-thumb-preview { width:100%; height:120px; border-radius:8px; border:1px solid var(--ps-border); background:var(--ps-bg-app); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .shc-custom-thumb-preview.is-empty { color:var(--ps-text-faint); }
+    .shc-custom-thumb-preview.is-empty .material-symbols-outlined { font-size:48px; opacity:.3; }
+    .shc-custom-thumb-preview img { width:100%; height:100%; object-fit:cover; }
     .shc-thumb:hover .shc-thumb-name { opacity:1; }
     /* Pin / cover button */
     .shc-thumb-pin { position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:5px; background:rgba(0,0,0,0.55); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0; transition:opacity 150ms, background 150ms; }

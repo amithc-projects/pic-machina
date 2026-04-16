@@ -21,6 +21,7 @@
 import { dbGet, dbGetAll, dbPut, dbDelete } from './db.js';
 import { uuid, now } from '../utils/misc.js';
 import { shadowWrite } from '../utils/backup.js';
+import { processImageThumbnail } from '../utils/images.js';
 
 // ─── Read ─────────────────────────────────────────────────
 
@@ -102,20 +103,10 @@ export async function setRecipeThumbnail(recipeId, file) {
   if (!recipe) throw new Error(`Recipe ${recipeId} not found`);
 
   // 1. Resize image
-  const bitmap = await createImageBitmap(file);
-  const MAX_W = 480, MAX_H = 300;
-  const scale = Math.min(MAX_W / bitmap.width, MAX_H / bitmap.height, 1);
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
-  const canvas = document.createElement('canvas');
-  canvas.width = w; canvas.height = h;
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
-  bitmap.close();
-
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+  const { dataUrl, blob } = await processImageThumbnail(file);
 
   // 2. Always store as base64 data URL for reliable in-app display
-  recipe.thumbnail = canvas.toDataURL('image/jpeg', 0.8);
+  recipe.thumbnail = dataUrl;
 
   // 3. Also write to filesystem if project root is linked (for project organisation)
   try {
