@@ -11,7 +11,7 @@ import { showConfirm } from './dialogs.js';
 // the project_root folder. On startup, if IDB is empty, they are silently
 // restored. This survives browser storage clears.
 
-const SHADOW_STORES = ['recipes', 'blocks', 'templates'];
+const SHADOW_STORES = ['recipes', 'blocks', 'templates', 'showcases'];
 
 async function getShadowDir() {
   try {
@@ -98,7 +98,7 @@ export async function shadowRestore() {
 
 export async function exportAll() {
   const db = getDB();
-  const stores = ['recipes', 'blocks', 'templates'];
+  const stores = ['recipes', 'blocks', 'templates', 'showcases'];
   const snapshot = { version: 1, checksum: 'PicMachinaExport', metadata: { exportedAt: new Date().toISOString() }, data: {} };
   
   try {
@@ -132,7 +132,7 @@ export async function importAll(file, { wipeFirst = true, silent = false } = {})
     }
 
     const db = getDB();
-    const stores = ['recipes', 'blocks', 'templates'];
+    const stores = ['recipes', 'blocks', 'templates', 'showcases'];
     let count = 0;
 
     for (const store of stores) {
@@ -186,7 +186,7 @@ export function showBackupModal() {
       <div style="display: flex; flex-direction: column; gap: 24px; padding: 24px;">
         <div style="border:1px solid var(--ps-border); border-radius:6px; padding: 16px; background:rgba(0,0,0,0.1);">
           <h4 style="margin-top: 0; margin-bottom:8px;">Export Database</h4>
-          <p class="text-xs text-muted" style="margin-bottom: 16px; line-height:1.4;">Download a JSON snapshot of all your local Recipes, UI Blocks, and Templates. This file can be used to migrate your configurations to another browser.</p>
+          <p class="text-xs text-muted" style="margin-bottom: 16px; line-height:1.4;">Download a JSON snapshot of all your local Recipes, UI Blocks, Templates, and Showcase entries. This file can be used to migrate your configurations to another browser.</p>
           <button class="btn-primary" id="db-bk-export" style="width: 100%; justify-content:center;">
             <span class="material-symbols-outlined" style="font-size:16px; margin-right:8px;">download</span> Download Backup
           </button>
@@ -194,7 +194,7 @@ export function showBackupModal() {
         
         <div style="border:1px solid rgba(239, 68, 68, 0.4); border-radius:6px; padding: 16px; background:rgba(239, 68, 68, 0.05);">
           <h4 style="margin-top: 0; margin-bottom:8px; color: var(--ps-red);">Restore from File</h4>
-          <p class="text-xs text-muted" style="margin-bottom: 16px; line-height:1.4;">Upload a previously exported JSON backup file. <strong style="color:var(--ps-red);">Warning: This is a destructive action.</strong> All existing recipes will be wiped and replaced by the imported file's contents.</p>
+          <p class="text-xs text-muted" style="margin-bottom: 16px; line-height:1.4;">Upload a previously exported JSON backup file. <strong style="color:var(--ps-red);">Warning: This is a destructive action.</strong> All existing recipes, blocks, templates, and showcase entries will be wiped and replaced by the imported file's contents.</p>
           
           <label class="btn-secondary" style="width: 100%; justify-content: center; cursor: pointer; color: var(--ps-red); border-color: rgba(239,68,68,0.3);">
             <span class="material-symbols-outlined" style="font-size:16px; margin-right:8px;">upload</span> Select Backup File
