@@ -171,3 +171,212 @@ registry.register({
   ],
   apply() { /* handled by Processor */ },
 });
+
+registry.register({
+  id: 'video-posterize',
+  name: 'Video Posterize',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'gradient',
+  sourceTransformId: 'color-posterize',
+  description: 'Quantise each colour channel to a fixed number of levels — applied to every frame.',
+  params: [
+    { name: 'levels', label: 'Levels', type: 'range', min: 2, max: 8, defaultValue: 4 },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-auto-levels',
+  name: 'Video Auto Levels',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'brightness_auto',
+  sourceTransformId: 'color-auto-levels',
+  description: 'Normalise exposure by stretching the histogram — applied to every frame.',
+  params: [
+    { name: 'tolerance', label: 'Clipping Tolerance (%)', type: 'range', min: 0, max: 10, step: 0.1, defaultValue: 0.5 },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-channel-swap',
+  name: 'Video Channel Swap',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'swap_horiz',
+  sourceTransformId: 'color-channel-swap',
+  description: 'Reassign RGB channels on every frame. Swap R↔G to simulate infrared film.',
+  params: [
+    { name: 'redSource',   label: 'Red ← Source',   type: 'select',
+      options: [{ label: 'Red', value: 'R' }, { label: 'Green', value: 'G' }, { label: 'Blue', value: 'B' }],
+      defaultValue: 'G' },
+    { name: 'greenSource', label: 'Green ← Source', type: 'select',
+      options: [{ label: 'Red', value: 'R' }, { label: 'Green', value: 'G' }, { label: 'Blue', value: 'B' }],
+      defaultValue: 'R' },
+    { name: 'blueSource',  label: 'Blue ← Source',  type: 'select',
+      options: [{ label: 'Red', value: 'R' }, { label: 'Green', value: 'G' }, { label: 'Blue', value: 'B' }],
+      defaultValue: 'B' },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-halftone',
+  name: 'Video Halftone',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'blur_on',
+  sourceTransformId: 'filter-halftone',
+  description: 'Overlay a halftone dot screen on every frame — dot size varies with brightness.',
+  params: [
+    { name: 'dotSpacing', label: 'Dot Spacing (px)', type: 'range',   min: 4, max: 40, defaultValue: 10 },
+    { name: 'dotColor',   label: 'Dot Color',        type: 'color',   defaultValue: '#000000' },
+    { name: 'opacity',    label: 'Opacity (%)',       type: 'range',   min: 5, max: 100, defaultValue: 40 },
+    { name: 'invert',     label: 'Invert (bright = big dots)', type: 'boolean', defaultValue: false },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-tilt-shift',
+  name: 'Video Tilt-Shift',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'filter_center_focus',
+  sourceTransformId: 'filter-tilt-shift',
+  description: 'Miniature/tilt-shift effect — sharp horizontal band, blurred top and bottom.',
+  params: [
+    { name: 'centerY',    label: 'Focus Centre (%)',  type: 'range', min: 10, max: 90, defaultValue: 50 },
+    { name: 'bandWidth',  label: 'Sharp Band (%)',     type: 'range', min: 5,  max: 80, defaultValue: 25 },
+    { name: 'blurAmount', label: 'Blur Amount (px)',   type: 'range', min: 2,  max: 40, defaultValue: 12 },
+    { name: 'feather',    label: 'Feather (%)',        type: 'range', min: 0,  max: 50, defaultValue: 30 },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-dither',
+  name: 'Video Dither',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'grain',
+  sourceTransformId: 'filter-dither',
+  description: 'Floyd-Steinberg palette dithering on every frame — retro 8-bit look.',
+  params: [
+    { name: 'palette', label: 'Palette', type: 'select',
+      options: [
+        { label: 'Mono (2 colors)',     value: 'mono'    },
+        { label: 'CGA (16 colors)',     value: 'cga'     },
+        { label: 'Game Boy (4 greens)', value: 'gameboy' },
+        { label: 'C64 (16 colors)',     value: 'c64'     },
+      ], defaultValue: 'mono' },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-kuwahara',
+  name: 'Video Oil Paint (Kuwahara)',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'brush',
+  sourceTransformId: 'filter-kuwahara',
+  description: 'Kuwahara filter — painterly oil effect — applied to every frame. Intensive.',
+  params: [
+    { name: 'radius', label: 'Radius (stroke size)', type: 'range', min: 1, max: 5, defaultValue: 3 },
+    { name: 'passes', label: 'Passes (intensity)',    type: 'range', min: 1, max: 2, defaultValue: 1 },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-pixel-sort',
+  name: 'Video Pixel Sort',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'sort',
+  sourceTransformId: 'filter-pixel-sort',
+  description: 'Sort pixels by luminance within horizontal strips — digital glitch aesthetic.',
+  params: [
+    { name: 'threshold',   label: 'Threshold (0–255)', type: 'range',  min: 0, max: 255, defaultValue: 80 },
+    { name: 'direction',   label: 'Sort Direction',     type: 'select',
+      options: [{ label: 'Light to Dark', value: 'light-to-dark' }, { label: 'Dark to Light', value: 'dark-to-light' }],
+      defaultValue: 'light-to-dark' },
+    { name: 'stripHeight', label: 'Strip Height (px)',  type: 'number', defaultValue: 1 },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+// ─── Overlay / Compositing Effects ───────────────────────────────────────────
+
+registry.register({
+  id: 'video-watermark',
+  name: 'Video Watermark',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'branding_watermark',
+  sourceTransformId: 'overlay-watermark',
+  description: 'Burn a watermark onto every frame of a video.',
+  params: [
+    { name: 'type',    label: 'Watermark Type', type: 'select',
+      options: [{ label: 'Text', value: 'text' }, { label: 'Image', value: 'image' }], defaultValue: 'text' },
+    { name: 'imageUrl', label: 'Image File',    type: 'file',    defaultValue: '' },
+    { name: 'repeat',  label: 'Repeat Pattern', type: 'boolean', defaultValue: true },
+    { name: 'text',    label: 'Text',           type: 'text',    defaultValue: '© PicMachina' },
+    { name: 'font',    label: 'Font',           type: 'text',    defaultValue: 'Inter' },
+    { name: 'size',    label: 'Size (px)',       type: 'number',  defaultValue: 28 },
+    { name: 'color',   label: 'Color',          type: 'color',   defaultValue: '#ffffff' },
+    { name: 'opacity', label: 'Opacity (%)',     type: 'range',   min: 0, max: 100, defaultValue: 25 },
+    { name: 'angle',   label: 'Angle (°)',       type: 'range',   min: -90, max: 90, defaultValue: -35 },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
+
+registry.register({
+  id: 'video-caption',
+  name: 'Video Caption / Text',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'closed_caption',
+  sourceTransformId: 'overlay-rich-text',
+  description: 'Burn styled text onto every frame — supports {{variable}} injection.',
+  params: [
+    { name: 'content',     label: 'Text ({{vars}} supported)', type: 'text',    defaultValue: '{{filename}}' },
+    { name: 'font',        label: 'Font Family',  type: 'select',
+      options: [
+        { label: 'Inter',           value: 'Inter' },
+        { label: 'Arial',           value: 'Arial' },
+        { label: 'Times New Roman', value: '"Times New Roman"' },
+        { label: 'Courier New',     value: '"Courier New"' },
+        { label: 'Georgia',         value: 'Georgia' },
+        { label: 'Impact',          value: 'Impact' },
+      ], defaultValue: 'Inter' },
+    { name: 'size',        label: 'Size (px)',    type: 'number',  defaultValue: 48 },
+    { name: 'color',       label: 'Color',        type: 'color',   defaultValue: '#ffffff' },
+    { name: 'bold',        label: 'Bold',         type: 'boolean', defaultValue: false },
+    { name: 'italic',      label: 'Italic',       type: 'boolean', defaultValue: false },
+    { name: 'align',       label: 'Align',        type: 'select',
+      options: [{ label: 'Left', value: 'left' }, { label: 'Center', value: 'center' }, { label: 'Right', value: 'right' }],
+      defaultValue: 'center' },
+    { name: 'positionX',   label: 'X Position (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'positionY',   label: 'Y Position (%)', type: 'range', min: 0, max: 100, defaultValue: 90 },
+    { name: 'shadowColor', label: 'Shadow Color',   type: 'color',   defaultValue: '#000000' },
+    { name: 'shadowBlur',  label: 'Shadow Blur',    type: 'range', min: 0, max: 20, defaultValue: 4 },
+    { name: 'bgColor',     label: 'Background Color', type: 'color',  defaultValue: '#000000' },
+    { name: 'bgOpacity',   label: 'Background Opacity (%)', type: 'range', min: 0, max: 100, defaultValue: 0 },
+    { name: 'bgPadding',   label: 'Background Padding (px)', type: 'number', defaultValue: 8 },
+    ...COMMON_PARAMS,
+  ],
+  apply() { /* handled by Processor */ },
+});
