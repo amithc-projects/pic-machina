@@ -578,18 +578,44 @@ async function addRunToShowcase(run, preloadedFiles) {
       files = await listImages(subHandle, { includeVideo: true });
     }
 
-    const sampleFileNames = files.slice(0, 5).map(f => f.name);
+    const sampleFiles     = files.slice(0, 5);
+    const sampleFileNames = sampleFiles.map(f => f.name);
+
+    // Capture matching input filenames so the showcase can show before/after
+    let sampleInputFileNames = [];
+    try {
+      const inputHandle = await getFolder('input');
+      if (inputHandle) {
+        const inputFiles = await listImages(inputHandle, { includeVideo: true });
+        const inputByBase = new Map();
+        for (const f of inputFiles) {
+          inputByBase.set(f.name.replace(/\.[^.]+$/, ''), f.name);
+          inputByBase.set(f.name, f.name);
+        }
+        // Try 1:1 match for each output filename
+        sampleInputFileNames = sampleFiles.map(outFile => {
+          const base     = outFile.name.replace(/\.[^.]+$/, '');
+          const stripped = base.replace(/[-_][a-z0-9]+$/i, '');
+          return inputByBase.get(base) || inputByBase.get(stripped) || null;
+        }).filter(Boolean);
+        // Fallback: take the first 5 inputs when no name matches found
+        if (!sampleInputFileNames.length && inputFiles.length) {
+          sampleInputFileNames = inputFiles.slice(0, 5).map(f => f.name);
+        }
+      }
+    } catch {}
 
     const entry = {
-      id:              uuid(),
-      runId:           run.id,
-      recipeId:        run.recipeId,
-      recipeName:      run.recipeName,
-      title:           run.recipeName,
-      description:     '',
+      id:                   uuid(),
+      runId:                run.id,
+      recipeId:             run.recipeId,
+      recipeName:           run.recipeName,
+      title:                run.recipeName,
+      description:          '',
       sampleFileNames,
-      createdAt:       now(),
-      updatedAt:       now(),
+      sampleInputFileNames,
+      createdAt:            now(),
+      updatedAt:            now(),
     };
     await saveShowcase(entry);
 

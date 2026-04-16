@@ -236,19 +236,44 @@ export async function render(container, hash) {
         window.AuroraToast?.show({ variant: 'warning', title: 'Output folder not accessible' });
         return;
       }
-      const subHandle = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
-      const files = await listImages(subHandle, { includeVideo: true });
-      const sampleFileNames = files.slice(0, 5).map(f => f.name);
+      const subHandle   = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
+      const allFiles    = await listImages(subHandle, { includeVideo: true });
+      const sampleFiles = allFiles.slice(0, 5);
+      const sampleFileNames = sampleFiles.map(f => f.name);
+
+      // Capture matching input filenames
+      let sampleInputFileNames = [];
+      try {
+        const inputHandle = await getFolder('input');
+        if (inputHandle) {
+          const inputFiles = await listImages(inputHandle, { includeVideo: true });
+          const inputByBase = new Map();
+          for (const f of inputFiles) {
+            inputByBase.set(f.name.replace(/\.[^.]+$/, ''), f.name);
+            inputByBase.set(f.name, f.name);
+          }
+          sampleInputFileNames = sampleFiles.map(outFile => {
+            const base     = outFile.name.replace(/\.[^.]+$/, '');
+            const stripped = base.replace(/[-_][a-z0-9]+$/i, '');
+            return inputByBase.get(base) || inputByBase.get(stripped) || null;
+          }).filter(Boolean);
+          if (!sampleInputFileNames.length && inputFiles.length) {
+            sampleInputFileNames = inputFiles.slice(0, 5).map(f => f.name);
+          }
+        }
+      } catch {}
+
       const entry = {
-        id:              crypto.randomUUID(),
-        runId:           run.id,
-        recipeId:        run.recipeId,
-        recipeName:      run.recipeName,
-        title:           run.recipeName,
-        description:     '',
+        id:                   crypto.randomUUID(),
+        runId:                run.id,
+        recipeId:             run.recipeId,
+        recipeName:           run.recipeName,
+        title:                run.recipeName,
+        description:          '',
         sampleFileNames,
-        createdAt:       Date.now(),
-        updatedAt:       Date.now(),
+        sampleInputFileNames,
+        createdAt:            Date.now(),
+        updatedAt:            Date.now(),
       };
       await saveShowcase(entry);
       window.AuroraToast?.show({

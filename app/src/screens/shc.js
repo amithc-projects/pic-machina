@@ -271,11 +271,8 @@ async function renderDetail(container, showcaseId) {
   body.innerHTML = `
     <div class="shc-detail-layout">
       <div class="shc-detail-left">
-        <div class="shc-thumb-section">
-          <div class="shc-thumb-label text-sm text-muted" id="shc-thumb-label">Sample outputs</div>
-          <div class="shc-thumb-strip" id="shc-thumb-strip">
-            <div class="spinner" style="margin:20px auto"></div>
-          </div>
+        <div class="shc-thumb-section" id="shc-thumb-section">
+          <div class="spinner" style="margin:20px auto"></div>
         </div>
 
         <div class="shc-meta-edit">
@@ -352,112 +349,154 @@ async function renderDetail(container, showcaseId) {
   renderPipeline(container.querySelector('#shc-pipeline'), recipe);
 }
 
-// ─── Thumbnail strip with before/after ───────────────────────────────────────
+// ─── Before / After two-strip section ────────────────────────────────────────
 
 async function loadDetailThumbs(container, entry, run) {
-  const strip = container.querySelector('#shc-thumb-strip');
-  const label = container.querySelector('#shc-thumb-label');
-  if (!strip) return;
+  const section = container.querySelector('#shc-thumb-section');
+  if (!section) return;
 
   if (!entry.sampleFileNames?.length || !run?.outputHandleObj) {
-    strip.innerHTML = `<div class="text-sm text-muted" style="padding:12px">No sample images available.</div>`;
+    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">No sample images available.</div>`;
     return;
   }
 
+  // ── Load output files ──────────────────────────────────────
   let subHandle;
   try {
     subHandle = await getOrCreateOutputSubfolder(run.outputHandleObj, run.outputFolder || 'output');
   } catch {
-    strip.innerHTML = `<div class="text-sm text-muted" style="padding:12px">Output folder not accessible.</div>`;
+    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">Output folder not accessible.</div>`;
     return;
   }
 
-  // Collect output files
   const outputFileMap = new Map();
-  for await (const [name, fileEntry] of subHandle.entries()) {
-    if (fileEntry.kind === 'file' && entry.sampleFileNames.includes(name)) {
-      outputFileMap.set(name, await fileEntry.getFile());
-    }
+  for await (const [name, fe] of subHandle.entries()) {
+    if (fe.kind === 'file' && entry.sampleFileNames.includes(name))
+      outputFileMap.set(name, await fe.getFile());
   }
-
   const outputFiles = entry.sampleFileNames.map(n => outputFileMap.get(n)).filter(Boolean);
+
   if (!outputFiles.length) {
-    strip.innerHTML = `<div class="text-sm text-muted" style="padding:12px">Sample files not found.</div>`;
+    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">Output files not found.</div>`;
     return;
   }
 
-  // Try to find matching input files
-  const inputFileMap = new Map();
+  // ── Load input files ───────────────────────────────────────
+  // Prefer stored sampleInputFileNames; fall back to name-matching at render time
+  let inputFiles = [];
   try {
     const inputHandle = await getFolder('input');
     if (inputHandle) {
-      const inputFiles = await listImages(inputHandle, { includeVideo: true });
-      for (const f of inputFiles) {
-        const base = f.name.replace(/\.[^.]+$/, '');
-        inputFileMap.set(base, f);
-        inputFileMap.set(f.name, f);
+      if (entry.sampleInputFileNames?.length) {
+        // Load exactly the stored filenames
+        for await (const [name, fe] of inputHandle.entries()) {
+          if (fe.kind === 'file' && entry.sampleInputFileNames.includes(name))
+            inputFiles.push(await fe.getFile());
+        }
+        // Preserve stored order
+        const ordered = new Map(inputFiles.map(f => [f.name, f]));
+        inputFiles = entry.sampleInputFileNames.map(n => ordered.get(n)).filter(Boolean);
+      } else {
+        // Legacy: match by filename heuristic against output files
+        const allInputs = await listImages(inputHandle, { includeVideo: true });
+        const inputByBase = new Map();
+        for (const f of allInputs) {
+          inputByBase.set(f.name.replace(/\.[^.]+$/, ''), f);
+          inputByBase.set(f.name, f);
+        }
+        for (const outFile of outputFiles) {
+          const base     = outFile.name.replace(/\.[^.]+$/, '');
+          const stripped = base.replace(/[-_][a-z0-9]+$/i, '');
+          const match    = inputByBase.get(base) || inputByBase.get(stripped);
+          if (match) inputFiles.push(match);
+        }
+        // Fallback: first 5 inputs
+        if (!inputFiles.length) inputFiles = allInputs.slice(0, 5);
       }
     }
   } catch {}
 
-  // Build pairs
-  const pairs = outputFiles.map(outFile => {
-    const withoutExt    = outFile.name.replace(/\.[^.]+$/, '');
-    const withoutSuffix = withoutExt.replace(/[-_][a-z0-9]+$/i, '');
-    const inFile = inputFileMap.get(withoutExt)
-                || inputFileMap.get(withoutSuffix)
-                || null;
-    return { outFile, inFile };
-  });
+  // ── Render two-strip layout ────────────────────────────────
+  const lbBlobUrls = [];
 
-  const hasInputs = pairs.some(p => p.inFile);
-  if (label) {
-    label.textContent = hasInputs
-      ? 'Sample outputs — click to compare with original'
-      : 'Sample outputs';
+  function thumbHTML(files, stripId) {
+    return files.map((f, i) => {
+      const isVideo = VIDEO_EXTS.has(f.name.slice(f.name.lastIndexOf('.')).toLowerCase());
+      const url = isVideo ? null : URL.createObjectURL(f);
+      if (url) lbBlobUrls.push(url);
+      return `<div class="shc-thumb" data-strip="${stripId}" data-idx="${i}" title="${escHtml(f.name)}">
+        ${isVideo
+          ? `<span class="material-symbols-outlined" style="font-size:32px;color:var(--ps-text-muted)">play_circle</span>`
+          : `<img src="${url}" class="shc-thumb-img" alt="">`}
+        <div class="shc-thumb-overlay">
+          <div class="shc-thumb-name">${escHtml(f.name)}</div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
-  // Pre-create blob URLs for output images
-  const outUrls = outputFiles.map(f =>
-    VIDEO_EXTS.has(f.name.slice(f.name.lastIndexOf('.')).toLowerCase()) ? null : URL.createObjectURL(f)
-  );
+  const showInputStrip = inputFiles.length > 0;
 
-  strip.innerHTML = pairs.map((pair, i) => {
-    const isVideo = VIDEO_EXTS.has(pair.outFile.name.slice(pair.outFile.name.lastIndexOf('.')).toLowerCase());
-    return `<div class="shc-thumb" data-idx="${i}" title="${escHtml(pair.outFile.name)}">
-      ${isVideo
-        ? `<span class="material-symbols-outlined" style="font-size:32px;color:var(--ps-text-muted)">play_circle</span>`
-        : `<img src="${outUrls[i]}" class="shc-thumb-img" alt="">`}
-      <div class="shc-thumb-overlay">
-        <div class="shc-thumb-name">${escHtml(pair.outFile.name)}</div>
-        ${pair.inFile ? `<div class="shc-thumb-compare-badge">
-          <span class="material-symbols-outlined" style="font-size:12px">compare</span> compare
-        </div>` : ''}
+  section.innerHTML = `
+    ${showInputStrip ? `
+    <div class="shc-strip-block">
+      <div class="shc-strip-header">
+        <span class="material-symbols-outlined shc-strip-icon shc-strip-icon--before">photo_camera</span>
+        <span class="shc-strip-label">Before</span>
+        <span class="text-sm text-muted">(${inputFiles.length} input${inputFiles.length !== 1 ? 's' : ''})</span>
       </div>
+      <div class="shc-thumb-strip" id="shc-strip-before">${thumbHTML(inputFiles, 'before')}</div>
+    </div>
+    <div class="shc-strip-arrow">
+      <span class="material-symbols-outlined">arrow_downward</span>
+      <span class="shc-strip-arrow-label">transformed by ${escHtml(entry.recipeName || 'recipe')}</span>
+      <span class="material-symbols-outlined">arrow_downward</span>
+    </div>` : ''}
+    <div class="shc-strip-block">
+      <div class="shc-strip-header">
+        <span class="material-symbols-outlined shc-strip-icon shc-strip-icon--after">auto_fix_high</span>
+        <span class="shc-strip-label">After</span>
+        <span class="text-sm text-muted">(${outputFiles.length} output${outputFiles.length !== 1 ? 's' : ''})</span>
+        ${showInputStrip ? `<button class="btn-secondary btn-sm shc-compare-all-btn" style="margin-left:auto;font-size:11px;padding:3px 10px">
+          <span class="material-symbols-outlined" style="font-size:13px">compare</span> Compare side by side
+        </button>` : ''}
+      </div>
+      <div class="shc-thumb-strip" id="shc-strip-after">${thumbHTML(outputFiles, 'after')}</div>
     </div>`;
-  }).join('');
 
-  // Lightbox
-  let lbWorkspace = null;
-  let lbBlobUrls  = [];
-  let lbEl        = null;
+  // ── Click handlers ─────────────────────────────────────────
+  // Build pairs for the compare lightbox (output[i] paired with input[i] or null)
+  const pairs = outputFiles.map((outFile, i) => ({
+    outFile,
+    inFile: inputFiles[i] || null,
+  }));
 
-  strip.querySelectorAll('.shc-thumb').forEach(thumb => {
+  // Input strip: simple lightbox
+  section.querySelector('#shc-strip-before')?.querySelectorAll('.shc-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      const f = inputFiles[parseInt(thumb.dataset.idx)];
+      if (f) openSimpleLight(f);
+    });
+  });
+
+  // Output strip: compare if pair exists, else simple
+  section.querySelector('#shc-strip-after')?.querySelectorAll('.shc-thumb').forEach(thumb => {
     thumb.addEventListener('click', async () => {
       const idx  = parseInt(thumb.dataset.idx);
       const pair = pairs[idx];
       if (!pair) return;
-
       const isVideo = VIDEO_EXTS.has(pair.outFile.name.slice(pair.outFile.name.lastIndexOf('.')).toLowerCase());
-
       if (pair.inFile && !isVideo) {
-        // Before/after compare using ImageWorkspace
         await openCompareLight(container, pairs, idx, lbBlobUrls);
       } else {
-        // Simple fullscreen lightbox
-        openSimpleLight(pair.outFile, outUrls[idx]);
+        openSimpleLight(pair.outFile);
       }
     });
+  });
+
+  // "Compare side by side" opens ImageWorkspace at idx 0
+  section.querySelector('.shc-compare-all-btn')?.addEventListener('click', async () => {
+    await openCompareLight(container, pairs, 0, lbBlobUrls);
   });
 }
 
@@ -525,10 +564,10 @@ async function openCompareLight(container, pairs, startIdx, blobUrls) {
   ws.setFiles(imageFiles, Math.min(startIdx, imageFiles.length - 1));
 }
 
-function openSimpleLight(file, existingUrl) {
+function openSimpleLight(file) {
   document.querySelector('.shc-simple-lightbox')?.remove();
 
-  const url = existingUrl || URL.createObjectURL(file);
+  const url = URL.createObjectURL(file);
   const isVideo = VIDEO_EXTS.has(file.name.slice(file.name.lastIndexOf('.')).toLowerCase());
 
   const lb = document.createElement('div');
@@ -548,7 +587,7 @@ function openSimpleLight(file, existingUrl) {
 
   function close() {
     lb.remove();
-    if (!existingUrl) URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);
     document.removeEventListener('keydown', onKey);
   }
   function onKey(e) { if (e.key === 'Escape') close(); }
@@ -684,9 +723,17 @@ function injectShcStyles() {
     .shc-detail-left { flex:1; min-width:280px; max-width:520px; display:flex; flex-direction:column; gap:12px; }
     .shc-detail-right { flex:1; min-width:280px; }
 
-    /* ── Thumbnail strip ── */
-    .shc-thumb-section { display:flex; flex-direction:column; gap:6px; }
-    .shc-thumb-label { }
+    /* ── Before/After strips ── */
+    .shc-thumb-section { display:flex; flex-direction:column; gap:10px; }
+    .shc-strip-block { display:flex; flex-direction:column; gap:8px; }
+    .shc-strip-header { display:flex; align-items:center; gap:6px; }
+    .shc-strip-label { font-size:13px; font-weight:600; }
+    .shc-strip-icon { font-size:16px; }
+    .shc-strip-icon--before { color:#60a5fa; }
+    .shc-strip-icon--after  { color:#4ade80; }
+    .shc-strip-arrow { display:flex; align-items:center; gap:8px; color:var(--ps-text-faint); padding:2px 4px; }
+    .shc-strip-arrow .material-symbols-outlined { font-size:16px; }
+    .shc-strip-arrow-label { font-size:11px; font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px; }
     .shc-thumb-strip { display:flex; gap:8px; flex-wrap:wrap; }
     .shc-thumb { position:relative; width:110px; height:110px; border-radius:8px; overflow:hidden; cursor:pointer; border:1px solid var(--ps-border); background:var(--ps-bg-app); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; transition:border-color 150ms,box-shadow 150ms; }
     .shc-thumb:hover { border-color:var(--ps-blue); box-shadow:0 2px 12px rgba(0,0,0,0.3); }
