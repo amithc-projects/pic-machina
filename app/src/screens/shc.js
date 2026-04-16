@@ -419,18 +419,41 @@ async function loadDetailThumbs(container, entry, run) {
   // ── Render two-strip layout ────────────────────────────────
   const lbBlobUrls = [];
 
-  function thumbHTML(files, stripId) {
+  // Before strip: simple thumbnails
+  function beforeThumbHTML(files) {
     return files.map((f, i) => {
       const isVideo = VIDEO_EXTS.has(f.name.slice(f.name.lastIndexOf('.')).toLowerCase());
       const url = isVideo ? null : URL.createObjectURL(f);
       if (url) lbBlobUrls.push(url);
-      return `<div class="shc-thumb" data-strip="${stripId}" data-idx="${i}" title="${escHtml(f.name)}">
+      return `<div class="shc-thumb" data-strip="before" data-idx="${i}" title="${escHtml(f.name)}">
         ${isVideo
           ? `<span class="material-symbols-outlined" style="font-size:32px;color:var(--ps-text-muted)">play_circle</span>`
           : `<img src="${url}" class="shc-thumb-img" alt="">`}
         <div class="shc-thumb-overlay">
           <div class="shc-thumb-name">${escHtml(f.name)}</div>
         </div>
+      </div>`;
+    }).join('');
+  }
+
+  // After strip: thumbnails with "Set as cover" pin button
+  // outputFiles is ordered by sampleFileNames, so index 0 is the current cover
+  function afterThumbHTML(files) {
+    return files.map((f, i) => {
+      const isVideo  = VIDEO_EXTS.has(f.name.slice(f.name.lastIndexOf('.')).toLowerCase());
+      const url      = isVideo ? null : URL.createObjectURL(f);
+      const isCover  = i === 0;
+      if (url) lbBlobUrls.push(url);
+      return `<div class="shc-thumb ${isCover ? 'shc-thumb--cover' : ''}" data-strip="after" data-idx="${i}" title="${escHtml(f.name)}">
+        ${isVideo
+          ? `<span class="material-symbols-outlined" style="font-size:32px;color:var(--ps-text-muted)">play_circle</span>`
+          : `<img src="${url}" class="shc-thumb-img" alt="">`}
+        <div class="shc-thumb-overlay">
+          <div class="shc-thumb-name">${escHtml(f.name)}</div>
+        </div>
+        ${!isVideo ? `<button class="shc-thumb-pin ${isCover ? 'shc-thumb-pin--active' : ''}" data-idx="${i}" title="${isCover ? 'Card cover image' : 'Set as card cover'}">
+          <span class="material-symbols-outlined">${isCover ? 'push_pin' : 'push_pin'}</span>
+        </button>` : ''}
       </div>`;
     }).join('');
   }
@@ -445,7 +468,7 @@ async function loadDetailThumbs(container, entry, run) {
         <span class="shc-strip-label">Before</span>
         <span class="text-sm text-muted">(${inputFiles.length} input${inputFiles.length !== 1 ? 's' : ''})</span>
       </div>
-      <div class="shc-thumb-strip" id="shc-strip-before">${thumbHTML(inputFiles, 'before')}</div>
+      <div class="shc-thumb-strip" id="shc-strip-before">${beforeThumbHTML(inputFiles)}</div>
     </div>
     <div class="shc-strip-arrow">
       <span class="material-symbols-outlined">arrow_downward</span>
@@ -461,11 +484,14 @@ async function loadDetailThumbs(container, entry, run) {
           <span class="material-symbols-outlined" style="font-size:13px">compare</span> Compare side by side
         </button>` : ''}
       </div>
-      <div class="shc-thumb-strip" id="shc-strip-after">${thumbHTML(outputFiles, 'after')}</div>
+      <div class="shc-thumb-strip" id="shc-strip-after">${afterThumbHTML(outputFiles)}</div>
+      <div class="shc-cover-hint text-sm text-muted" id="shc-cover-hint">
+        <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">push_pin</span>
+        Pin an image to use it as the card thumbnail
+      </div>
     </div>`;
 
   // ── Click handlers ─────────────────────────────────────────
-  // Build pairs for the compare lightbox (output[i] paired with input[i] or null)
   const pairs = outputFiles.map((outFile, i) => ({
     outFile,
     inFile: inputFiles[i] || null,
@@ -479,9 +505,39 @@ async function loadDetailThumbs(container, entry, run) {
     });
   });
 
-  // Output strip: compare if pair exists, else simple
-  section.querySelector('#shc-strip-after')?.querySelectorAll('.shc-thumb').forEach(thumb => {
-    thumb.addEventListener('click', async () => {
+  // After strip: pin button sets cover; thumb click opens lightbox/compare
+  const afterStrip = section.querySelector('#shc-strip-after');
+
+  afterStrip?.querySelectorAll('.shc-thumb-pin').forEach(pin => {
+    pin.addEventListener('click', async e => {
+      e.stopPropagation();
+      const idx = parseInt(pin.dataset.idx);
+      if (idx === 0) return; // already cover
+
+      // Move selected filename to front of sampleFileNames
+      const selected = entry.sampleFileNames[idx];
+      entry.sampleFileNames = [
+        selected,
+        ...entry.sampleFileNames.filter((_, i) => i !== idx),
+      ];
+      await saveShowcase(entry);
+
+      // Update UI: shift cover indicator
+      afterStrip.querySelectorAll('.shc-thumb').forEach(t => t.classList.remove('shc-thumb--cover'));
+      afterStrip.querySelectorAll('.shc-thumb-pin').forEach(p => p.classList.remove('shc-thumb-pin--active'));
+      pin.closest('.shc-thumb').classList.add('shc-thumb--cover');
+      pin.classList.add('shc-thumb-pin--active');
+
+      // Hide the hint now that user has pinned
+      section.querySelector('#shc-cover-hint')?.remove();
+
+      window.AuroraToast?.show({ variant: 'success', title: 'Card thumbnail updated' });
+    });
+  });
+
+  afterStrip?.querySelectorAll('.shc-thumb').forEach(thumb => {
+    thumb.addEventListener('click', async e => {
+      if (e.target.closest('.shc-thumb-pin')) return;
       const idx  = parseInt(thumb.dataset.idx);
       const pair = pairs[idx];
       if (!pair) return;
@@ -737,13 +793,19 @@ function injectShcStyles() {
     .shc-thumb-strip { display:flex; gap:8px; flex-wrap:wrap; }
     .shc-thumb { position:relative; width:110px; height:110px; border-radius:8px; overflow:hidden; cursor:pointer; border:1px solid var(--ps-border); background:var(--ps-bg-app); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:4px; transition:border-color 150ms,box-shadow 150ms; }
     .shc-thumb:hover { border-color:var(--ps-blue); box-shadow:0 2px 12px rgba(0,0,0,0.3); }
+    .shc-thumb--cover { border-color:var(--ps-blue); box-shadow:0 0 0 2px var(--ps-blue); }
     .shc-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
     .shc-thumb-overlay { position:absolute; inset:0; background:rgba(0,0,0,0); display:flex; flex-direction:column; justify-content:flex-end; padding:6px; transition:background 150ms; }
     .shc-thumb:hover .shc-thumb-overlay { background:rgba(0,0,0,.55); }
     .shc-thumb-name { font-size:9px; color:#fff; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:0; transition:opacity 150ms; }
     .shc-thumb:hover .shc-thumb-name { opacity:1; }
-    .shc-thumb-compare-badge { display:flex; align-items:center; gap:3px; font-size:10px; color:var(--ps-blue); margin-top:3px; opacity:0; transition:opacity 150ms; }
-    .shc-thumb:hover .shc-thumb-compare-badge { opacity:1; }
+    /* Pin / cover button */
+    .shc-thumb-pin { position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:5px; background:rgba(0,0,0,0.55); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0; transition:opacity 150ms, background 150ms; }
+    .shc-thumb-pin .material-symbols-outlined { font-size:13px; color:rgba(255,255,255,0.7); }
+    .shc-thumb:hover .shc-thumb-pin { opacity:1; }
+    .shc-thumb-pin--active { opacity:1 !important; background:var(--ps-blue) !important; }
+    .shc-thumb-pin--active .material-symbols-outlined { color:#fff !important; }
+    .shc-cover-hint { display:flex; align-items:center; gap:4px; margin-top:2px; opacity:.55; font-size:11px; }
 
     /* ── Meta edit ── */
     .shc-meta-edit { display:flex; flex-direction:column; gap:6px; }
