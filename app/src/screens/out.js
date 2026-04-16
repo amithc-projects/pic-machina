@@ -8,10 +8,11 @@
 import { getAllRuns, deleteRun, getRun }       from '../data/runs.js';
 import { getFolder, listImages,
          getOrCreateOutputSubfolder }          from '../data/folders.js';
+import { saveShowcase }                        from '../data/showcases.js';
 import { navigate }                            from '../main.js';
-import { formatDateTime, formatBytes }         from '../utils/misc.js';
-import { showConfirm }                         from '../utils/dialogs.js';
-import { getSettings }                         from '../utils/settings.js';
+import { formatDateTime, formatBytes, uuid, now } from '../utils/misc.js';
+import { showConfirm }                            from '../utils/dialogs.js';
+import { getSettings }                            from '../utils/settings.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -255,6 +256,9 @@ export async function render(container, hash) {
             <button class="btn-secondary out-btn-browse" data-run-id="${run.id}" title="Browse in Folder Viewer" style="font-size:12px;padding:5px 10px">
               <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
               Browse
+            </button>
+            <button class="btn-icon out-btn-showcase" data-run-id="${run.id}" title="Add to ShowCase">
+              <span class="material-symbols-outlined">star</span>
             </button>` : ''}
             <button class="btn-icon out-btn-edit" data-recipe-id="${run.recipeId}" title="Edit recipe">
               <span class="material-symbols-outlined">edit</span>
@@ -401,6 +405,9 @@ export async function render(container, hash) {
               <button class="btn-secondary out-btn-browse-gallery" data-run-id="${runId}" style="font-size:11px;padding:4px 8px;margin-left:8px">
                 <span class="material-symbols-outlined" style="font-size:13px">folder_open</span> Browse Folder
               </button>
+              <button class="btn-secondary out-btn-showcase-gallery" data-run-id="${runId}" style="font-size:11px;padding:4px 8px;margin-left:4px">
+                <span class="material-symbols-outlined" style="font-size:13px">star</span> Add to ShowCase
+              </button>
               ${matchCount
                 ? `<span class="text-sm text-muted" style="margin-left:6px">&nbsp;·&nbsp; ${matchCount} originals matched for comparison</span>`
                 : `<span style="margin-left:8px;display:flex;align-items:center;gap:6px">
@@ -420,6 +427,15 @@ export async function render(container, hash) {
             browseBtn.addEventListener('click', e => {
               e.stopPropagation();
               navigate(`#fld?run=${browseBtn.dataset.runId}&from=out`);
+            });
+          });
+
+          // Add to ShowCase button in gallery header
+          galleryEl.querySelectorAll('.out-btn-showcase-gallery').forEach(shcBtn => {
+            shcBtn.addEventListener('click', async e => {
+              e.stopPropagation();
+              const r = await getRun(shcBtn.dataset.runId);
+              if (r) await addRunToShowcase(r, outputFiles);
             });
           });
 
@@ -501,6 +517,15 @@ export async function render(container, hash) {
       });
     });
 
+    // Add to ShowCase (from run row)
+    container.querySelectorAll('.out-btn-showcase').forEach(btn => {
+      btn.addEventListener('click', async e => {
+        e.stopPropagation();
+        const run = await getRun(btn.dataset.runId);
+        if (run) await addRunToShowcase(run);
+      });
+    });
+
     // Delete run
     container.querySelectorAll('.out-btn-delete').forEach(btn => {
       btn.addEventListener('click', async e => {
@@ -537,6 +562,46 @@ export async function render(container, hash) {
   });
 
   return () => document.removeEventListener('keydown', handleKeydown);
+}
+
+// ── Add to ShowCase helper ────────────────────────────────────────────────────
+async function addRunToShowcase(run, preloadedFiles) {
+  try {
+    let files = preloadedFiles;
+    if (!files) {
+      let outputHandle = run.outputHandleObj || await getFolder('output');
+      if (!outputHandle) {
+        window.AuroraToast?.show({ variant: 'warning', title: 'Output folder not accessible' });
+        return;
+      }
+      const subHandle = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
+      files = await listImages(subHandle, { includeVideo: true });
+    }
+
+    const sampleFileNames = files.slice(0, 5).map(f => f.name);
+
+    const entry = {
+      id:              uuid(),
+      runId:           run.id,
+      recipeId:        run.recipeId,
+      recipeName:      run.recipeName,
+      title:           run.recipeName,
+      description:     '',
+      sampleFileNames,
+      createdAt:       now(),
+      updatedAt:       now(),
+    };
+    await saveShowcase(entry);
+
+    window.AuroraToast?.show({
+      variant: 'success',
+      title: 'Added to ShowCase',
+      description: `<a href="#shc?id=${entry.id}" style="color:var(--ps-blue)">View entry →</a>`,
+    });
+  } catch (err) {
+    console.error('[addRunToShowcase]', err);
+    window.AuroraToast?.show({ variant: 'danger', title: 'Failed to add to ShowCase', description: err.message });
+  }
 }
 
 let _outStyles = false;

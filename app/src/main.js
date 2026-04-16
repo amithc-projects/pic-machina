@@ -22,6 +22,7 @@ const SCREENS = {
   out: () => import('./screens/out.js'),
   cmp: () => import('./screens/cmp.js'),
   fld: () => import('./screens/fld.js'),
+  shc: () => import('./screens/shc.js'),
 };
 
 const DEFAULT_SCREEN = 'lib';

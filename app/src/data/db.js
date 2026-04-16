@@ -7,10 +7,11 @@
  * Store: blocks       keyPath: id   indexes: name, updatedAt
  * Store: runs         keyPath: id   indexes: recipeId, startedAt
  * Store: folders      keyPath: key  (singleton key per role: 'input' | 'output')
+ * Store: showcases    keyPath: id   indexes: createdAt
  */
 
 const DB_NAME = 'PicMachina';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let _db = null;
 
@@ -68,6 +69,12 @@ export function initDB() {
         const tStore = db.createObjectStore('templates', { keyPath: 'id' });
         tStore.createIndex('name', 'name', { unique: false });
         tStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+
+      // showcases (v4)
+      if (!db.objectStoreNames.contains('showcases')) {
+        const shcStore = db.createObjectStore('showcases', { keyPath: 'id' });
+        shcStore.createIndex('createdAt', 'createdAt', { unique: false });
       }
     };
 
