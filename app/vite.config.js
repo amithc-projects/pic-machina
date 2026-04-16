@@ -10,6 +10,7 @@ export default defineConfig({
           // Keep WASM-heavy AI libs in their own chunks for lazy loading
           'ai-bgremoval': ['@imgly/background-removal'],
           'ai-mediapipe': ['@mediapipe/tasks-vision'],
+          'ai-onnx': ['onnxruntime-web'],
           'ai-ocr': ['tesseract.js'],
           // Media output
           'media': ['mp4-muxer', 'gif.js'],
@@ -24,7 +25,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     // These ship their own WASM bundles - exclude from Vite's pre-bundling
-    exclude: ['@imgly/background-removal', '@mediapipe/tasks-vision'],
+    exclude: ['@imgly/background-removal', '@mediapipe/tasks-vision', 'onnxruntime-web'],
   },
   server: {
     // Respect PORT/HOST set by portless (or other proxy tools)

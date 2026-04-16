@@ -260,6 +260,94 @@ registry.register({
   }
 });
 
+// ─── Remove Background (High Quality / InSPyReNet) ───────
+registry.register({
+  id: 'ai-remove-bg-hq', name: 'Remove BG (High Quality)', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'auto_awesome_motion',
+  description: 'High-quality background removal using InSPyReNet (SwinB). Requires a one-time ~200 MB model download (see #mdl).',
+  params: [
+    { name: 'mode', label: 'Mode', type: 'select',
+      options: [{ label: 'Transparent BG', value: 'Transparent' }, { label: 'Silhouette (Black Subject)', value: 'Silhouette' }],
+      defaultValue: 'Transparent' },
+    { name: 'edgeSmoothing', label: 'Edge Smoothing (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'bgFill', label: 'Background Fill', type: 'select',
+      options: [
+        { label: 'None (Transparent)', value: 'none' },
+        { label: 'Solid Colour',       value: 'color' },
+        { label: 'Image File',         value: 'image' },
+      ],
+      defaultValue: 'none' },
+    { name: 'bgColor', label: 'Fill Colour', type: 'color', defaultValue: '#ffffff' },
+    { name: 'bgImage', label: 'Background Image', type: 'file', defaultValue: '' },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-remove-bg-hq] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    try {
+      const { isModelReady, runInspyrenet } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-remove-bg-hq] ${msg}`);
+        console.warn(`[ai-remove-bg-hq] ${msg}`);
+        return;
+      }
+
+      await runInspyrenet(ctx, {
+        mode: p.mode || 'Transparent',
+        edgeSmoothing: p.edgeSmoothing ?? 50,
+      }, context?.log);
+
+      if (context?.assetHash) {
+        try {
+          const { patchAsset } = await import('../../data/assets.js');
+          await patchAsset(context.assetHash, {
+            vision: { bgRemoved: { model: 'inspyrenet-swinb-fp16', at: Date.now() } }
+          });
+        } catch { /* non-fatal */ }
+      }
+
+      // ── Background fill (shares behaviour with ai-remove-bg) ─
+      const bgFill = p.bgFill || 'none';
+      if (bgFill !== 'none') {
+        const W = ctx.canvas.width, H = ctx.canvas.height;
+        const subjectCanvas = document.createElement('canvas');
+        subjectCanvas.width = W; subjectCanvas.height = H;
+        subjectCanvas.getContext('2d').drawImage(ctx.canvas, 0, 0);
+
+        ctx.clearRect(0, 0, W, H);
+
+        if (bgFill === 'color') {
+          ctx.fillStyle = p.bgColor || '#ffffff';
+          ctx.fillRect(0, 0, W, H);
+        } else if (bgFill === 'image' && p.bgImage) {
+          try {
+            const resp = await fetch(p.bgImage);
+            const blob = await resp.blob();
+            const bitmap = await createImageBitmap(blob);
+            const scale = Math.max(W / bitmap.width, H / bitmap.height);
+            const dw = bitmap.width  * scale;
+            const dh = bitmap.height * scale;
+            ctx.drawImage(bitmap, (W - dw) / 2, (H - dh) / 2, dw, dh);
+            bitmap.close?.();
+          } catch (imgErr) {
+            console.warn('[ai-remove-bg-hq] Could not load background image:', p.bgImage, imgErr);
+          }
+        }
+
+        ctx.drawImage(subjectCanvas, 0, 0);
+      }
+
+    } catch (err) {
+      console.warn('[ai-remove-bg-hq] failed:', err);
+      context?.log?.('warn', `[ai-remove-bg-hq] failed: ${err.message || err}`);
+    }
+  }
+});
+
 // ─── Silhouette ───────────────────────────────────────────
 registry.register({
   id: 'ai-silhouette', name: 'Silhouette', category: 'AI & Composition', categoryKey: 'ai',

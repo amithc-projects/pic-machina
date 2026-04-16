@@ -8,10 +8,11 @@
  * Store: runs         keyPath: id   indexes: recipeId, startedAt
  * Store: folders      keyPath: key  (singleton key per role: 'input' | 'output')
  * Store: showcases    keyPath: id   indexes: createdAt
+ * Store: models       keyPath: id   (ONNX model blobs for local inference)
  */
 
 const DB_NAME = 'PicMachina';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let _db = null;
 
@@ -75,6 +76,11 @@ export function initDB() {
       if (!db.objectStoreNames.contains('showcases')) {
         const shcStore = db.createObjectStore('showcases', { keyPath: 'id' });
         shcStore.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+
+      // models (v5) — ONNX model blobs for local inference (InSPyReNet, etc.)
+      if (!db.objectStoreNames.contains('models')) {
+        db.createObjectStore('models', { keyPath: 'id' });
       }
     };
 
