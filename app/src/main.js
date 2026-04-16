@@ -23,6 +23,7 @@ const SCREENS = {
   cmp: () => import('./screens/cmp.js'),
   fld: () => import('./screens/fld.js'),
   shc: () => import('./screens/shc.js'),
+  mdl: () => import('./screens/mdl.js'),
 };
 
 const DEFAULT_SCREEN = 'shc';

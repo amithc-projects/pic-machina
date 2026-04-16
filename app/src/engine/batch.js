@@ -32,6 +32,7 @@ import './transforms/video.js';
 // ─── Transform IDs that require the main thread ──────────
 const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-remove-bg',
+  'ai-remove-bg-hq',
   'ai-face-privacy',
   'ai-silhouette',
   'ai-smart-redact',
