@@ -396,7 +396,7 @@ export class ImageProcessor {
           file,
           sourceDef.apply.bind(sourceDef),
           p,
-          { bitrate: p.bitrate || 8_000_000, onLog: context.log }
+          { bitrate: p.bitrate || 8_000_000, onLog: context.log, fileContext: context }
         );
         const suffix = interpolate(p.suffix || '', context);
         const base   = context.filename.replace(/\.[^.]+$/, '');

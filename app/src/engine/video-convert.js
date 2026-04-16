@@ -95,7 +95,7 @@ async function runConversion(input, outputFormat, OutputFormatClass, mime, conve
  * @param {object} params   Only used when applyFnOrSteps is a single function.
  * @param {{ bitrate?: number, onLog?: function }} options
  */
-export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bitrate = 8_000_000, onLog } = {}) {
+export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bitrate = 8_000_000, onLog, fileContext = {} } = {}) {
   // Normalise to array of steps
   const steps = Array.isArray(applyFnOrSteps)
     ? applyFnOrSteps
@@ -120,7 +120,7 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bi
   dimCanvas.width = rawW; dimCanvas.height = rawH;
   const dimCtx = dimCanvas.getContext('2d');
   for (const step of steps) {
-    try { await step.fn(dimCtx, step.params || {}, {}); } catch { /* ignore */ }
+    try { await step.fn(dimCtx, step.params || {}, fileContext); } catch { /* ignore */ }
   }
   // H.264 requires even dimensions — round up by 1px if needed
   const outW = dimCanvas.width  % 2 === 0 ? dimCanvas.width  : dimCanvas.width  + 1;
@@ -163,7 +163,7 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, { bi
 
         // Apply all transforms in sequence
         for (const step of steps) {
-          await step.fn(ctx, step.params || {}, {});
+          await step.fn(ctx, step.params || {}, fileContext);
         }
 
         frameCount++;
