@@ -1,5 +1,5 @@
 /**
- * PicMachina — Per-Frame Video Effect Transforms (Phase 3)
+ * PicMachina — Per-Frame Video Effect Transforms (Phase 3 + 4)
  *
  * Each transform here wraps an existing image effect transform and applies it
  * to every frame of a video via mediabunny's process callback.
@@ -7,6 +7,12 @@
  * The `sourceTransformId` field tells processor.js which image transform's
  * apply() function to call per frame. Params are passed through unchanged, so
  * each video transform uses the same param definitions as its source transform.
+ *
+ * `strengthParam` (Phase 6): names the single param that the timeRange envelope
+ * will scale from 0 → configured value. Params that naturally represent "no
+ * effect" at 0 are ideal (blurRadius, strength, opacity, offset, etc.).
+ * Transforms without a sensible scalar param omit this field — their timeRange
+ * envelope is binary (effect on / off).
  *
  * Handled by Processor._runTransformNode (main-thread only — WebCodecs + DOM).
  */
@@ -28,6 +34,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'tune',
   sourceTransformId: 'color-tuning',
+  strengthParam: 'saturation',
   description: 'Adjust contrast, saturation, vibrance and invert — applied to every video frame.',
   params: [
     { name: 'contrast',   label: 'Contrast',   type: 'range', min: -100, max: 100, defaultValue: 0 },
@@ -62,6 +69,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'format_color_fill',
   sourceTransformId: 'color-tint',
+  strengthParam: 'strength',
   description: 'Overlay a colour tint over every video frame.',
   params: [
     { name: 'color',     label: 'Tint Color',   type: 'color',  defaultValue: '#ff8800' },
@@ -87,6 +95,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'vignette',
   sourceTransformId: 'color-vignette',
+  strengthParam: 'amount',
   description: 'Darken the edges of every video frame for a cinematic look.',
   params: [
     { name: 'amount', label: 'Strength (%)',    type: 'range', min: 0, max: 100, defaultValue: 40 },
@@ -105,6 +114,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'filter_vintage',
   sourceTransformId: 'filter-advanced',
+  strengthParam: 'blurRadius',
   description: 'Apply blur, sharpen, film grain, or pixelation to every video frame.',
   params: [
     { name: 'blurRadius',    label: 'Blur Radius (px)',   type: 'range', min: 0, max: 40, defaultValue: 0 },
@@ -123,6 +133,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'flare',
   sourceTransformId: 'filter-bloom',
+  strengthParam: 'strength',
   description: 'Add a cinematic glow by blooming the bright highlights of every frame.',
   params: [
     { name: 'threshold',  label: 'Highlight Threshold (%)', type: 'range', min: 0, max: 100, defaultValue: 75 },
@@ -159,6 +170,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'lens_blur',
   sourceTransformId: 'filter-chromatic-aberration',
+  strengthParam: 'offset',
   description: 'Split R/B channels to simulate lens chromatic aberration on every frame.',
   params: [
     { name: 'offset',    label: 'Channel Offset (px)', type: 'range', min: 1, max: 30, defaultValue: 8 },
@@ -233,6 +245,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'blur_on',
   sourceTransformId: 'filter-halftone',
+  strengthParam: 'opacity',
   description: 'Overlay a halftone dot screen on every frame — dot size varies with brightness.',
   params: [
     { name: 'dotSpacing', label: 'Dot Spacing (px)', type: 'range',   min: 4, max: 40, defaultValue: 10 },
@@ -251,6 +264,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'filter_center_focus',
   sourceTransformId: 'filter-tilt-shift',
+  strengthParam: 'blurAmount',
   description: 'Miniature/tilt-shift effect — sharp horizontal band, blurred top and bottom.',
   params: [
     { name: 'centerY',    label: 'Focus Centre (%)',  type: 'range', min: 10, max: 90, defaultValue: 50 },
@@ -290,6 +304,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'brush',
   sourceTransformId: 'filter-kuwahara',
+  strengthParam: 'radius',
   description: 'Kuwahara filter — painterly oil effect — applied to every frame. Intensive.',
   params: [
     { name: 'radius', label: 'Radius (stroke size)', type: 'range', min: 1, max: 5, defaultValue: 3 },
@@ -327,6 +342,7 @@ registry.register({
   categoryKey: 'video-effect',
   icon: 'branding_watermark',
   sourceTransformId: 'overlay-watermark',
+  strengthParam: 'opacity',
   description: 'Burn a watermark onto every frame of a video.',
   params: [
     { name: 'type',    label: 'Watermark Type', type: 'select',

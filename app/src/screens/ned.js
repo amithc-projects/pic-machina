@@ -18,6 +18,7 @@ import { getImageInfo, renderImageInfoPanel,
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 import { fileFilterForRecipe } from '../data/folders.js';
+import { renderTimeRangeSection, bindTimeRangeControls, injectTimeRangeStyles } from '../utils/time-range-strip.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -81,6 +82,8 @@ export async function render(container, hash) {
   const conditionHtml = isConditional ? buildConditionEditor(node.condition) : '';
   const branchHtml    = isBranch      ? buildBranchEditor(node)              : '';
   const paramsHtml    = def ? (def.params || []).map(p => renderParamField(p, node.params?.[p.name], 'ned')).join('') : '';
+  const isVideoEffect = def?.categoryKey === 'video-effect';
+  const timeRangeHtml = isVideoEffect ? renderTimeRangeSection(node, def) : '';
 
   container.innerHTML = `
     <div class="screen ned-screen">
@@ -127,6 +130,8 @@ export async function render(container, hash) {
             ${branchHtml}
           </div>
 
+          ${timeRangeHtml}
+
           <!-- Label override -->
           <div class="ned-section-title" style="margin-top:16px">
             <span class="material-symbols-outlined" style="font-size:14px">label</span>
@@ -149,6 +154,7 @@ export async function render(container, hash) {
     </div>`;
 
   injectNedStyles();
+  if (isVideoEffect) injectTimeRangeStyles();
 
   if (def && def.params) {
     // Provide recipe variable names for autocomplete in variable-bind mode
@@ -161,6 +167,11 @@ export async function render(container, hash) {
     clearTimeout(_previewTimer);
     _previewTimer = setTimeout(() => workspace?.triggerProcess(), 300);
   }
+
+  // ── Time Range controls (video-effect only) ──────────────
+  const trControls = isVideoEffect
+    ? bindTimeRangeControls(container, node, def, { onChange: schedulePreview })
+    : null;
 
   // ── Unified Image Workspace ───────────────────────────────
   const { ImageWorkspace } = await import('../components/image-workspace.js');
@@ -183,6 +194,10 @@ export async function render(container, hash) {
       window._icTestFolderFiles = files;
       window._icTestImage = { file: activeFile };
       testFile = activeFile;
+      // Load filmstrip thumbnails for the time-range strip
+      if (trControls && activeFile && isVideoFile(activeFile)) {
+        trControls.loadFilmstrip(activeFile);
+      }
     },
     onRender: async (file) => {
       // Non-transform nodes (conditional, branch, block-ref) have no visual output
