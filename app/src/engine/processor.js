@@ -1,5 +1,5 @@
 /**
- * ImageChef — Image Processor
+ * PicMachina — Image Processor
  *
  * Executes a recipe's node tree against a single image.
  * Supports:
@@ -317,7 +317,7 @@ export class ImageProcessor {
           tCtx.textBaseline = 'middle';
 
           // Basic multiline support just wrapping on newlines
-          const lines = titleText.split('\\n');
+          const lines = titleText.split('\n');
           const lineHeight = fontSize * 1.2;
           const startY = (ch / 2) - ((lines.length - 1) * lineHeight) / 2;
           for (let i = 0; i < lines.length; i++) {
@@ -614,3 +614,7 @@ export class ImageProcessor {
 
 // Only instantiate singleton on the main thread — workers have no document at import time.
 export const imageProcessor = typeof document !== 'undefined' ? new ImageProcessor() : null;
+
+
+
+
