@@ -55,6 +55,7 @@ export async function render(container, hash) {
         <select id="out-filter-recipe" class="out-filter-select">
           <option value="">All recipes</option>
         </select>
+        <span class="text-sm text-muted" style="flex-shrink:0">From</span>
         <input type="date" id="out-filter-from" class="out-filter-date" title="From date">
         <span class="text-sm text-muted" style="flex-shrink:0">to</span>
         <input type="date" id="out-filter-to" class="out-filter-date" title="To date">
@@ -223,7 +224,7 @@ export async function render(container, hash) {
       </div>`;
 
     bindRunActions();
-    initFilters(runs);
+    initFilters(runs, container);
 
     // Auto-open run from ?run= query param (e.g. navigated from QUE "View Results")
     if (autoRunId) {
@@ -578,7 +579,7 @@ export async function render(container, hash) {
 }
 
 // ── Filter bar ────────────────────────────────────────────────────────────────
-function initFilters(runs) {
+function initFilters(runs, container) {
   const recipeSelect = container.querySelector('#out-filter-recipe');
   const fromInput    = container.querySelector('#out-filter-from');
   const toInput      = container.querySelector('#out-filter-to');
@@ -700,9 +701,9 @@ function injectOutStyles() {
   const s = document.createElement('style');
   s.textContent = `
     .out-screen { display:flex; flex-direction:column; height:100%; }
-    .out-filter-bar { display:flex; align-items:center; gap:8px; padding:8px 20px; border-bottom:1px solid var(--ps-border); flex-wrap:wrap; }
-    .out-filter-select { padding:5px 8px; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:7px; color:var(--ps-text); font-size:13px; cursor:pointer; max-width:200px; }
-    .out-filter-date { padding:5px 8px; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:7px; color:var(--ps-text); font-size:13px; }
+    .out-filter-bar { display:flex; align-items:center; gap:8px; padding:6px 20px; border-bottom:1px solid var(--ps-border); flex-wrap:nowrap; overflow-x:auto; }
+    .out-filter-select { padding:5px 8px; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:7px; color:var(--ps-text); font-size:13px; cursor:pointer; max-width:200px; flex-shrink:0; }
+    .out-filter-date { padding:5px 8px; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:7px; color:var(--ps-text); font-size:13px; width:140px; flex-shrink:0; }
     .out-filter-select:focus, .out-filter-date:focus { outline:none; border-color:var(--ps-blue); }
     .out-body { flex:1; overflow-y:auto; padding:16px 20px; }
 

@@ -170,7 +170,7 @@ export async function render(container, hash) {
   // For video-specific steps show only videos; otherwise follow the recipe's inputType.
   // A step is video-specific if its transform ID starts with 'flow-video-' or it is a
   // video-effect variant (sourceTransformId set).
-  const stepIsVideoOnly = node.transformId?.startsWith('flow-video-') || !!def?.sourceTransformId;
+  const stepIsVideoOnly = node.transformId?.startsWith('flow-video-') || !!def?.sourceTransformId || def?.categoryKey === 'video-effect';
   const stepFileFilter  = stepIsVideoOnly
     ? { includeVideo: true, onlyVideo: true }
     : fileFilterForRecipe(recipe);
@@ -208,8 +208,8 @@ export async function render(container, hash) {
       // Video-only canvas transforms can't be applied to image files
       const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
       const fileIsVideo = VIDEO_EXTS.has(file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase());
-      if (!fileIsVideo && def.sourceTransformId) {
-        // sourceTransformId marks a video-effect variant — skip on image files
+      if (!fileIsVideo && (def.sourceTransformId || def.categoryKey === 'video-effect')) {
+        // video-effect transforms — skip on image files
         return { noPreview: true, noPreviewReason: 'This step only applies to video files. Select a video to preview.' };
       }
 
@@ -254,11 +254,17 @@ export async function render(container, hash) {
       proc.canvas.height = imageSource.height ?? imageSource.naturalHeight;
       proc.ctx.drawImage(imageSource, 0, 0);
 
-      // Video effect transforms delegate to their source image transform's apply().
+      // Video-effect transforms: use applyPerFrame if defined, else delegate to sourceTransformId.
       // Other transforms call their own apply() as usual.
-      const applyDef = def.sourceTransformId ? registry.get(def.sourceTransformId) : def;
-      if (applyDef?.apply) {
-        try { await applyDef.apply(proc.ctx, params, context); } catch (err) { /* ignore */ }
+      let applyFn;
+      if (typeof def.applyPerFrame === 'function') {
+        applyFn = (ctx, p, c) => def.applyPerFrame(ctx, p, c);
+      } else {
+        const applyDef = def.sourceTransformId ? registry.get(def.sourceTransformId) : def;
+        if (applyDef?.apply) applyFn = (ctx, p, c) => applyDef.apply(ctx, p, c);
+      }
+      if (applyFn) {
+        try { await applyFn(proc.ctx, params, context); } catch (err) { /* ignore */ }
       }
 
       const afterUrl = await new Promise(res => proc.canvas.toBlob(b => {
