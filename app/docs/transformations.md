@@ -37,6 +37,7 @@ All transforms are registered by their `transformId` string.
 | `geo-face-crop` | Face Crop | `padding`, `faceIndex`, `confidence` | AI — falls back to pose detection |
 | `geo-body-crop` | Body Crop | `mode` (Full/Portrait), `padding` | AI — uses pose landmarks |
 | `geo-face-align` | Face Align | `eyeLevel`, `centerNose`, `targetScale` | AI — 478-landmark normalisation |
+| `ai-subject-crop` | Subject Crop | `aspectRatio` (original/1:1/4:5/3:4/4:3/16:9/9:16/custom), `customRatio`, `padding` (0–50%), `anchor` (center/top/bottom/thirds-tl/tr/bl/br), `threshold` (10–90%) | Saliency-aware crop using InSPyReNet (#mdl). Reads cached `vision.subjectBBox` when available; falls back to centre crop if model not downloaded. |
 
 ---
 
@@ -98,13 +99,26 @@ All transforms are registered by their `transformId` string.
 | Transform ID | Name | Key Params | Notes |
 |---|---|---|---|
 | `ai-face-privacy` | Face Privacy | `mode` (Blur/Pixelate/Bar), `confidence`, `padding` | MediaPipe face detection |
-| `ai-remove-bg` | Remove Background | `mode` (Transparent/Silhouette), `edgeSmoothing`, `bgFill`, `bgColor` | AI subject segmentation |
+| `ai-remove-bg` | Remove Background | `mode` (Transparent/Silhouette), `edgeSmoothing`, `bgFill`, `bgColor` | MediaPipe selfie segmentation (~5 MB, fast). Tuned for people. |
+| `ai-remove-bg-hq` | Remove BG (High Quality) | `mode` (Transparent/Silhouette), `edgeSmoothing`, `bgFill`, `bgColor`, `bgImage` | InSPyReNet SwinB saliency (~200 MB, see #mdl). Pixel-accurate edges for any subject — fur, hair, transparent objects, products. |
+| `ai-portrait-bokeh` | Portrait Bokeh | `blurRadius` (0–60), `edgeFeather` (0–30), `falloff` (flat/graduated) | InSPyReNet matte + Photon gaussian_blur. Large-aperture lens simulation. Graduated mode adds a mid-band blur for fake depth falloff. |
+| `ai-drop-shadow` | Subject Drop Shadow | `offsetX`, `offsetY`, `blur`, `opacity`, `color` | InSPyReNet matte. Works on both cut-outs (writes alpha) and photos (darkens visible background). |
+| `ai-sticker-outline` | Sticker Outline | `thickness`, `color`, `doubleOutline`, `secondColor`, `bgMode` (transparent/keep) | InSPyReNet matte dilated via blur-then-threshold. Optional second concentric ring for meme/double-border looks. |
 | `ai-silhouette` | Silhouette | `color`, `opacity` | Removes BG and fills subject with solid colour |
 | `ai-smart-redact` | Smart Redact | `mode` (redact/extract), `targets` (Text/Face), `method` (Blur/Bar) | OCR + face detection for privacy scrubbing |
 | `ai-ocr-tag` | OCR Tag Extractor | `minLength` | Extracts tags from OCR text (needs Smart Redact Extract mode) |
 | `ai-analyse-people` | Analyse People | `faceConfidence`, `poseConfidence`, `maxPoses` | MediaPipe pose & face detection to asset store |
 | `ai-clipping-mask` | Clipping Mask | `shape` (Circle/RoundedRect/Diamond), `feathering` | Shape-based mask using AI segmentation |
 | `ai-glow-eyes` | Glowing Eyes | `color`, `intensity` (0–100), `irisScale` (60–200%), `glowSpread` (150–600%), `darkPupil`, `confidence` | FaceLandmarker iris landmarks (468/473) for pixel-accurate iris centre; screen-mode additive glow with hot-white core + outer diffuse skin illumination. Used in Vampire GFX recipe. |
+
+### InSPyReNet-based transforms (requires `#mdl` download)
+
+`ai-remove-bg-hq`, `ai-portrait-bokeh`, `ai-subject-crop`, `ai-drop-shadow`, and `ai-sticker-outline` share the same ~200 MB InSPyReNet SwinB saliency model, managed on the **Models** screen (`#mdl`). All five:
+
+- **Share one inference per image per recipe** — the saliency matte is cached by canvas signature. Stacking Remove BG HQ + Portrait Bokeh + Drop Shadow + Sticker Outline + Subject Crop in a single recipe runs the model exactly once.
+- **Persist `vision.subjectBBox` / `subjectCentroid` / `subjectArea`** on the asset record, so a second batch run at a different aspect ratio or different shadow offset reads the cached bbox instead of re-running inference.
+- **Degrade gracefully** when the model isn't downloaded — they log a warning and leave the canvas untouched (except `ai-subject-crop`, which centre-crops to the target aspect).
+- Run on **main thread only** (onnxruntime-web + WebGPU). Batches containing any of them are routed via `MAIN_THREAD_TRANSFORMS` in `batch.js`.
 
 ---
 
