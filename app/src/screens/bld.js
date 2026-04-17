@@ -626,15 +626,19 @@ export async function render(container, hash) {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      await setRecipeThumbnail(draft.id, file);
-      const saved = await getRecipe(draft.id);
-      draft.thumbnail = saved.thumbnail;
       const preview = container.querySelector('#bld-thumb-preview');
-      if (preview) {
-        preview.style.backgroundImage = `url(${draft.thumbnail})`;
+      const paintPreview = (url) => {
+        if (!preview) return;
+        preview.style.backgroundImage = `url(${url})`;
         preview.style.backgroundSize = 'cover';
         preview.style.backgroundPosition = 'center';
-      }
+      };
+      // Progressive render: show the instant baseline crop first so the UI
+      // doesn't stall while the (optional) smart crop runs inference.
+      await setRecipeThumbnail(draft.id, file, { onBaseline: paintPreview });
+      const saved = await getRecipe(draft.id);
+      draft.thumbnail = saved.thumbnail;
+      paintPreview(draft.thumbnail);
       const clearBtn = container.querySelector('#bld-thumb-clear');
       if (clearBtn) clearBtn.style.display = '';
     } catch (err) {

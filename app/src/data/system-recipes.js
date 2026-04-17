@@ -1134,6 +1134,53 @@ export const SYSTEM_RECIPES = [
         ]
       }
     ]
+  },
+
+  // ─── Cinematic Portrait ───────────────────────────────
+  // Chains the new saliency-driven transforms (Phase 5) into a single
+  // "photo studio" look: subject-aware bokeh + vignette + subtle grade.
+  // Requires the InSPyReNet model (#mdl) — if missing, each AI node
+  // no-ops with a warning and the image passes through unchanged.
+  {
+    id:          'sys-cinematic-portrait',
+    name:        'Cinematic Portrait',
+    description: 'Saliency-driven portrait look: background bokeh, subject vignette, warm subject / cool background grade, and a gentle contrast lift. Requires the InSPyReNet model (#mdl).',
+    isSystem:    true,
+    coverColor:  '#7c3aed',
+    tags:        ['ai', 'portrait', 'cinematic', 'grade'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'cp-1', type: 'transform', transformId: 'ai-portrait-bokeh',
+        params: { blurRadius: 18, edgeFeather: 10, falloff: 'graduated' },
+        label: 'Portrait Bokeh'
+      },
+      {
+        id: 'cp-2', type: 'transform', transformId: 'ai-selective-grade',
+        params: {
+          subjectSaturation: 15, subjectTemperature: 15, subjectExposure: 5,
+          backgroundSaturation: -25, backgroundTemperature: -10, backgroundExposure: -5,
+          edgeFeather: 8
+        },
+        label: 'Warm Subject / Cool BG'
+      },
+      {
+        id: 'cp-3', type: 'transform', transformId: 'ai-subject-vignette',
+        params: { strength: 45, softness: 70, color: '#000000' },
+        label: 'Subject Vignette'
+      },
+      {
+        id: 'cp-4', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: 15, saturation: 0, vibrance: 0, invert: false },
+        label: 'Contrast Lift'
+      },
+      {
+        id: 'cp-5', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '-cinematic', format: 'image/jpeg', quality: 92 },
+        label: 'Export JPEG 92%'
+      }
+    ]
   }
 ];
 

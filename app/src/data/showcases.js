@@ -18,7 +18,8 @@
 import { dbGet, dbGetAll, dbPut, dbDelete } from './db.js';
 import { shadowWrite } from '../utils/backup.js';
 import { uuid, now }   from '../utils/misc.js';
-import { processImageThumbnail } from '../utils/images.js';
+import { generateBaselineThumbnail, generateSmartThumbnail } from '../utils/thumbnails.js';
+import { getSettings } from '../utils/settings.js';
 
 export function getAllShowcases() { return dbGetAll('showcases'); }
 export function getShowcase(id)  { return dbGet('showcases', id); }
@@ -40,13 +41,21 @@ export async function deleteShowcase(id) {
 /**
  * Resize a File and store as base64 in the showcase entry.
  */
-export async function setShowcaseThumbnail(showcaseId, file) {
+export async function setShowcaseThumbnail(showcaseId, file, opts = {}) {
   const entry = await getShowcase(showcaseId);
   if (!entry) throw new Error(`Showcase entry ${showcaseId} not found`);
 
-  const { dataUrl } = await processImageThumbnail(file, 640, 400); // slightly larger for showcase hero
-  entry.thumbnail = dataUrl;
+  // 1. Baseline cover-crop (fast, no inference).
+  let { dataUrl } = await generateBaselineThumbnail(file, { width: 640, height: 400 });
+  try { opts.onBaseline?.(dataUrl); } catch { /* non-fatal */ }
 
+  // 2. Optional subject-aware replacement (feature-flag + model must be ready).
+  if (getSettings()?.thumbnails?.smart) {
+    const smart = await generateSmartThumbnail(file, { width: 640, height: 400 });
+    if (smart) dataUrl = smart.dataUrl;
+  }
+
+  entry.thumbnail = dataUrl;
   return saveShowcase(entry);
 }
 

@@ -11,6 +11,13 @@ const DEFAULT_SETTINGS = {
   batch: {
     useInputForOutput: true // Output directly inside Input directory
   },
+  thumbnails: {
+    // Opt-in content-aware thumbnails. When true + the InSPyReNet model is
+    // downloaded, recipe/showcase covers are cropped around the detected
+    // subject instead of the image centre. Falls back to centre-crop if the
+    // model is missing or no subject is found. See utils/thumbnails.js.
+    smart: false
+  },
   palette: [
     { label: 'Black',  color: '#000000' },
     { label: 'White',  color: '#ffffff' },

@@ -6,6 +6,8 @@ import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
 import initPhoton, * as photon from '../vendor/photon/photon_rs.js';
 import photonWasmUrl from '../vendor/photon/photon_rs_bg.wasm?url';
+import { featherMaskChannel } from '../ai/matte-ops.js';
+import { persistSubjectVision } from '../ai/vision-metadata.js';
 
 let _photonInitialized = false;
 async function ensurePhoton() {
@@ -961,5 +963,119 @@ registry.register({
       }
     }
     ctx.putImageData(id, 0, 0);
+  }
+});
+
+// ─── Selective Color Grade (InSPyReNet + Photon) ────────
+// Grade the subject and background independently. Typical uses:
+//   • Subject: +saturation, +exposure, warmer temperature
+//   • Background: -saturation, -exposure, cooler temperature
+// The matte is feathered with `edgeFeather` so the transition is smooth.
+//
+// Photon has no native "temperature" primitive; we approximate by
+// simultaneously pushing the red and blue channels in opposite directions:
+//   warm (+)  => more red, less blue
+//   cool (-)  => less red, more blue
+// Mapping: temp ∈ [-100..100]  →  ±60 on the 8-bit channel.
+//
+// Exposure uses adjust_brightness in the range [-127..127].
+registry.register({
+  id: 'ai-selective-grade', name: 'Selective Color Grade', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'palette',
+  description: 'Grade the subject and background independently — saturation, temperature and exposure per scope. Requires the InSPyReNet model (#mdl).',
+  params: [
+    { name: 'subjectSaturation',    label: 'Subject Saturation',   type: 'range', min: -100, max: 100, defaultValue:  20 },
+    { name: 'subjectTemperature',   label: 'Subject Temperature',  type: 'range', min: -100, max: 100, defaultValue:  10 },
+    { name: 'subjectExposure',      label: 'Subject Exposure',     type: 'range', min: -100, max: 100, defaultValue:   5 },
+    { name: 'backgroundSaturation', label: 'Background Saturation',  type: 'range', min: -100, max: 100, defaultValue: -30 },
+    { name: 'backgroundTemperature', label: 'Background Temperature', type: 'range', min: -100, max: 100, defaultValue: -15 },
+    { name: 'backgroundExposure',   label: 'Background Exposure',   type: 'range', min: -100, max: 100, defaultValue: -10 },
+    { name: 'edgeFeather',          label: 'Edge Feather',         type: 'range', min:   0, max:  30, defaultValue:   6 },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-selective-grade] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    try {
+      const sSat = clamp(Math.round(p.subjectSaturation ?? 20), -100, 100);
+      const sTmp = clamp(Math.round(p.subjectTemperature ?? 10), -100, 100);
+      const sExp = clamp(Math.round(p.subjectExposure ?? 5), -100, 100);
+      const bSat = clamp(Math.round(p.backgroundSaturation ?? -30), -100, 100);
+      const bTmp = clamp(Math.round(p.backgroundTemperature ?? -15), -100, 100);
+      const bExp = clamp(Math.round(p.backgroundExposure ?? -10), -100, 100);
+      const edge = clamp(Math.round(p.edgeFeather ?? 6), 0, 30);
+
+      // Fast exit if all six dials are 0 — nothing to do.
+      if (!sSat && !sTmp && !sExp && !bSat && !bTmp && !bExp) return;
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-selective-grade] ${msg}`);
+        console.warn(`[ai-selective-grade] ${msg}`);
+        return;
+      }
+
+      await ensurePhoton();
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+      const matte = await featherMaskChannel(maskObj.mask, W, H, edge);
+
+      const idIn = ctx.getImageData(0, 0, W, H);
+      const srcBytes = new Uint8Array(idIn.data);
+
+      // Helper: produce a graded full-image Uint8Array by applying the supplied
+      // saturation / temperature / exposure to a fresh clone of the source.
+      const gradeOne = (sat, tmp, exp) => {
+        const pimg = new photon.PhotonImage(new Uint8Array(srcBytes), W, H);
+        if (sat > 0)      photon.saturate_hsl(pimg, sat / 100);
+        else if (sat < 0) photon.desaturate_hsl(pimg, Math.abs(sat) / 100);
+        if (tmp !== 0) {
+          const shift = Math.round((tmp / 100) * 60);
+          photon.alter_red_channel(pimg,  shift);
+          photon.alter_blue_channel(pimg, -shift);
+        }
+        if (exp !== 0) {
+          photon.adjust_brightness(pimg, Math.round((exp / 100) * 127));
+        }
+        const out = pimg.get_raw_pixels();
+        pimg.free();
+        return out;
+      };
+
+      const subjBytes = gradeOne(sSat, sTmp, sExp);
+      const bgBytes   = gradeOne(bSat, bTmp, bExp);
+
+      // Composite: mask=1 → subject grade, mask=0 → background grade.
+      const out = idIn.data;
+      for (let i = 0, j = 0; i < matte.length; i++, j += 4) {
+        const m = matte[i] / 255;
+        const inv = 1 - m;
+        out[j]     = subjBytes[j]     * m + bgBytes[j]     * inv;
+        out[j + 1] = subjBytes[j + 1] * m + bgBytes[j + 1] * inv;
+        out[j + 2] = subjBytes[j + 2] * m + bgBytes[j + 2] * inv;
+        // alpha preserved from source
+      }
+      ctx.putImageData(idIn, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        selectiveGrade: {
+          subject: { saturation: sSat, temperature: sTmp, exposure: sExp },
+          background: { saturation: bSat, temperature: bTmp, exposure: bExp },
+          edgeFeather: edge,
+          at: Date.now(),
+        }
+      });
+
+      context?.log?.('info', `[ai-selective-grade] ${Math.round(performance.now() - t0)}ms`);
+    } catch (err) {
+      console.warn('[ai-selective-grade] failed:', err);
+      context?.log?.('warn', `[ai-selective-grade] failed: ${err.message || err}`);
+    }
   }
 });
