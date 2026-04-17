@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PicMachinaRecipeBundle",
+  "description": "A self-contained Pic Machina recipe bundle including the main recipe and optional nested blocks.",
+  "type": "object",
+  "required": ["type", "version", "recipe"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "PicMachinaRecipeBundle"
+    },
+    "version": {
+      "type": "number",
+      "default": 1
+    },
+    "recipe": {
+      "$ref": "#/definitions/Recipe"
+    },
+    "blocks": {
+      "type": "object",
+      "description": "Optional map of nested workflow blocks",
+      "additionalProperties": {
+        "$ref": "#/definitions/Block"
+      }
+    }
+  },
+  "definitions": {
+    "Recipe": {
+      "type": "object",
+      "required": ["id", "name", "nodes"],
+      "properties": {
+        "id": { "type": "string", "description": "UUID of the recipe" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "isSystem": { "type": "boolean", "default": false },
+        "coverColor": { "type": "string", "description": "Fallback gradient colour hex" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/RecipeNode" },
+          "description": "Ordered tree of nodes in the recipe"
+        },
+        "createdAt": { "type": "number", "description": "Epoch ms" },
+        "updatedAt": { "type": "number", "description": "Epoch ms" }
+      }
+    },
+    "Block": {
+      "type": "object",
+      "required": ["id", "name", "nodes"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/RecipeNode" }
+        }
+      }
+    },
+    "RecipeNode": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "description": "UUID of the node" },
+        "type": {
+          "type": "string",
+          "enum": ["transform", "branch", "conditional", "block-ref"]
+        },
+        "transformId": { "type": "string", "description": "Required if type is 'transform'" },
+        "blockId": { "type": "string", "description": "Required if type is 'block-ref'" },
+        "params": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Map of parameters specific to the transformId"
+        },
+        "label": { "type": "string" },
+        "disabled": { "type": "boolean", "default": false },
+        "condition": {
+          "type": "object",
+          "description": "Required if type is 'conditional'",
+          "properties": {
+            "field": { "type": "string" },
+            "operator": { "type": "string", "enum": ["eq", "neq", "gt", "lt", "gte", "lte", "contains", "exists"] },
+            "value": {}
+          },
+          "required": ["field", "operator"]
+        },
+        "thenNodes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/RecipeNode" },
+          "description": "Executed if condition is true (conditional node)"
+        },
+        "elseNodes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/RecipeNode" },
+          "description": "Executed if condition is false (conditional node)"
+        },
+        "branches": {
+          "type": "array",
+          "description": "Executed in parallel if type is 'branch'",
+          "items": {
+            "type": "object",
+            "required": ["id", "nodes"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "nodes": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/RecipeNode" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

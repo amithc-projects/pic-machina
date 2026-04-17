@@ -1,0 +1,2409 @@
+[
+  {
+    "id": "ai-face-privacy",
+    "name": "Face Privacy",
+    "category": "AI & Composition",
+    "description": "Detect and obscure faces (blur, pixelate, or black bar).",
+    "icon": "hide_source",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-remove-bg",
+    "name": "Remove BG",
+    "category": "AI & Composition",
+    "description": "AI-powered background removal.",
+    "icon": "layers_clear",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-remove-bg-hq",
+    "name": "Remove BG (High Quality)",
+    "category": "AI & Composition",
+    "description": "High-quality background removal using InSPyReNet (SwinB). Requires a one-time ~200 MB model download (see #mdl).",
+    "icon": "auto_awesome_motion",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-silhouette",
+    "name": "Silhouette",
+    "category": "AI & Composition",
+    "description": "Black out subjects while keeping background.",
+    "icon": "person_off",
+    "params": [
+      {
+        "name": "color",
+        "label": "Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity",
+        "type": "range",
+        "defaultValue": 100
+      }
+    ]
+  },
+  {
+    "id": "ai-smart-redact",
+    "name": "Smart Redact",
+    "category": "AI & Composition",
+    "description": "Detect and blur licence plates, text, or faces using OCR. Use Extract mode to store OCR text without modifying the image.",
+    "icon": "shield_lock",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-ocr-tag",
+    "name": "OCR Tag Extractor",
+    "category": "AI & Composition",
+    "description": "Extract tags from stored OCR text (dates, prices, proper nouns). Requires Smart Redact (Extract mode) to have run first.",
+    "icon": "label",
+    "params": [
+      {
+        "name": "minLength",
+        "label": "Min word length",
+        "type": "range",
+        "defaultValue": 3
+      }
+    ]
+  },
+  {
+    "id": "ai-analyse-people",
+    "name": "Analyse People",
+    "category": "AI & Composition",
+    "description": "Detect and classify people using body pose landmarks and face detection. Stores results to asset metadata without modifying the image. Exposes {{sidecar.faceCount}}, {{sidecar.personCount}}, {{sidecar.poseLabel}}, {{sidecar.peopleLabel}}.",
+    "icon": "group",
+    "params": [
+      {
+        "name": "faceConfidence",
+        "label": "Min Face Confidence (%)",
+        "type": "range",
+        "defaultValue": 60
+      },
+      {
+        "name": "poseConfidence",
+        "label": "Min Pose Confidence (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "maxPoses",
+        "label": "Max people to detect",
+        "type": "range",
+        "defaultValue": 5
+      }
+    ]
+  },
+  {
+    "id": "ai-glow-eyes",
+    "name": "Glowing Eyes",
+    "category": "AI & Composition",
+    "description": "Detect faces and replace irises with supernatural glowing eyes. Uses FaceLandmarker iris landmarks (468/473) for pixel-accurate iris centre and radius.",
+    "icon": "visibility",
+    "params": [
+      {
+        "name": "color",
+        "label": "Glow Color",
+        "type": "color",
+        "defaultValue": "#ff2200"
+      },
+      {
+        "name": "intensity",
+        "label": "Intensity (%)",
+        "type": "range",
+        "defaultValue": 88
+      },
+      {
+        "name": "irisScale",
+        "label": "Iris Size (%)",
+        "type": "range",
+        "defaultValue": 110
+      },
+      {
+        "name": "glowSpread",
+        "label": "Glow Spread (\u00d7 iris radius)",
+        "type": "range",
+        "defaultValue": 320
+      },
+      {
+        "name": "darkPupil",
+        "label": "Dark Pupil",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "confidence",
+        "label": "Min Detection Confidence (%)",
+        "type": "range",
+        "defaultValue": 50
+      }
+    ]
+  },
+  {
+    "id": "ai-clipping-mask",
+    "name": "Clipping Mask",
+    "category": "AI & Composition",
+    "description": "Apply a shape-based clipping mask.",
+    "icon": "crop_free",
+    "params": [
+      {
+        "name": "shape",
+        "label": "Shape",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-export",
+    "name": "Export File",
+    "category": "Flow Control",
+    "description": "Save a snapshot of the current canvas as an image file.",
+    "icon": "file_download",
+    "params": [
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": ""
+      },
+      {
+        "name": "subfolder",
+        "label": "",
+        "type": "text"
+      },
+      {
+        "name": "format",
+        "label": "Format",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-save",
+    "name": "Save State",
+    "category": "Flow Control",
+    "description": "Store the current canvas pixel state for later use.",
+    "icon": "save",
+    "params": [
+      {
+        "name": "label",
+        "label": "Label",
+        "type": "text",
+        "defaultValue": "state-1"
+      }
+    ]
+  },
+  {
+    "id": "flow-load",
+    "name": "Load State",
+    "category": "Flow Control",
+    "description": "Restore a previously saved canvas state.",
+    "icon": "restore",
+    "params": [
+      {
+        "name": "label",
+        "label": "Label",
+        "type": "text",
+        "defaultValue": "state-1"
+      }
+    ]
+  },
+  {
+    "id": "flow-create-gif",
+    "name": "Create GIF",
+    "category": "Flow Control",
+    "description": "Collect frames and render an animated GIF at the end of the batch.",
+    "icon": "gif",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "animation.gif"
+      },
+      {
+        "name": "delay",
+        "label": "Frame Delay (ms)",
+        "type": "number",
+        "defaultValue": 200
+      },
+      {
+        "name": "loop",
+        "label": "Loop",
+        "type": "boolean",
+        "defaultValue": true
+      }
+    ]
+  },
+  {
+    "id": "flow-create-video",
+    "name": "Create Video",
+    "category": "Flow Control",
+    "description": "Render images as an MP4 slideshow.",
+    "icon": "movie",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "slideshow.mp4"
+      },
+      {
+        "name": "width",
+        "label": "Output Width (px)",
+        "type": "number",
+        "defaultValue": 1920
+      },
+      {
+        "name": "height",
+        "label": "Output Height (px)",
+        "type": "number",
+        "defaultValue": 1080
+      },
+      {
+        "name": "durationPerSlide",
+        "label": "Duration/Slide (sec)",
+        "type": "number",
+        "defaultValue": 2
+      },
+      {
+        "name": "fps",
+        "label": "FPS",
+        "type": "number",
+        "defaultValue": 30
+      }
+    ]
+  },
+  {
+    "id": "flow-video-stitcher",
+    "name": "WebGL Video Stitcher",
+    "category": "Flow Control",
+    "description": "Combine processed images/videos into an advanced timeline using GPU crossfades, wipes, and cinematic motion.",
+    "icon": "animation",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "stitcher.mp4"
+      },
+      {
+        "name": "width",
+        "label": "Output Width (px)",
+        "type": "number",
+        "defaultValue": 1920
+      },
+      {
+        "name": "height",
+        "label": "Output Height (px)",
+        "type": "number",
+        "defaultValue": 1080
+      },
+      {
+        "name": "fps",
+        "label": "FPS",
+        "type": "number",
+        "defaultValue": 30
+      },
+      {
+        "name": "durationPerSlide",
+        "label": "Duration/Slide (sec)",
+        "type": "number",
+        "defaultValue": 3
+      },
+      {
+        "name": "transitionDuration",
+        "label": "Transition Duration (sec)",
+        "type": "number",
+        "defaultValue": 1
+      },
+      {
+        "name": "transitionMode",
+        "label": "Transition Effect",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-geo-timeline",
+    "name": "Geotemporal Timeline",
+    "category": "Flow Control",
+    "description": "Assemble GPS-mapped images into a continuous scrolling video charting a geographical journey on a map canvas.",
+    "icon": "map",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "geo-timeline.mp4"
+      },
+      {
+        "name": "width",
+        "label": "Output Width (px)",
+        "type": "number",
+        "defaultValue": 1920
+      },
+      {
+        "name": "height",
+        "label": "Output Height (px)",
+        "type": "number",
+        "defaultValue": 1080
+      },
+      {
+        "name": "fps",
+        "label": "FPS",
+        "type": "number",
+        "defaultValue": 30
+      },
+      {
+        "name": "durationPerPhoto",
+        "label": "Duration/Photo (sec)",
+        "type": "number",
+        "defaultValue": 3
+      },
+      {
+        "name": "transitionDuration",
+        "label": "Crossfade Duration (sec)",
+        "type": "number",
+        "defaultValue": 1
+      }
+    ]
+  },
+  {
+    "id": "flow-title-slide",
+    "name": "Inject Title Slide",
+    "category": "Flow Control",
+    "description": "Automatically injects a generated title slide into the aggregator stream when a structural variable (like City or Date) changes.",
+    "icon": "title",
+    "params": [
+      {
+        "name": "triggerField",
+        "label": "Trigger Field",
+        "type": "text",
+        "defaultValue": "'{{sidecar.city"
+      },
+      {
+        "name": "titleTemplate",
+        "label": "Title Text",
+        "type": "text",
+        "defaultValue": "'{{sidecar.city"
+      },
+      {
+        "name": "bgColor",
+        "label": "Background Color",
+        "type": "color",
+        "defaultValue": "#111111"
+      },
+      {
+        "name": "bgImage",
+        "label": "Background File (Optional)",
+        "type": "file",
+        "defaultValue": ""
+      },
+      {
+        "name": "fontFamily",
+        "label": "Font Family",
+        "type": "text",
+        "defaultValue": "Inter"
+      },
+      {
+        "name": "fontSize",
+        "label": "Font Size (px)",
+        "type": "number",
+        "defaultValue": 120
+      },
+      {
+        "name": "textColor",
+        "label": "Text Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      }
+    ]
+  },
+  {
+    "id": "flow-contact-sheet",
+    "name": "Contact Sheet",
+    "category": "Flow Control",
+    "description": "Combine images into a single grid sheet. Can optionally group by metadata.",
+    "icon": "grid_view",
+    "params": [
+      {
+        "name": "columns",
+        "label": "Columns",
+        "type": "number",
+        "defaultValue": 4
+      },
+      {
+        "name": "gap",
+        "label": "Gap (px)",
+        "type": "number",
+        "defaultValue": 8
+      },
+      {
+        "name": "groupBy1",
+        "label": "Group By 1 (Title)",
+        "type": "text",
+        "defaultValue": ""
+      },
+      {
+        "name": "groupBy2",
+        "label": "Group By 2 (Subtitle)",
+        "type": "text",
+        "defaultValue": ""
+      },
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "contact-sheet.jpg"
+      }
+    ]
+  },
+  {
+    "id": "flow-photo-stack",
+    "name": "Photo Stack Animation",
+    "category": "Flow Control",
+    "description": "Collect all photos and compose an animated polaroid stack \u2014 each photo appears on a desk in sequence. Outputs GIF or MP4.",
+    "icon": "photo_library",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "photo-stack"
+      },
+      {
+        "name": "format",
+        "label": "Output Format",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-compose-grid",
+    "name": "Compose Grid",
+    "category": "Flow Control",
+    "description": "Assemble saved canvas states into a grid. Works within a single image \u2014 not a batch aggregator.",
+    "icon": "grid_on",
+    "params": [
+      {
+        "name": "panels",
+        "label": "Panel Labels (comma-separated)",
+        "type": "text",
+        "defaultValue": "'panel-1"
+      },
+      {
+        "name": "columns",
+        "label": "Columns",
+        "type": "number",
+        "defaultValue": 2
+      },
+      {
+        "name": "gap",
+        "label": "Gap (px)",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "name": "bgColor",
+        "label": "Background Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      }
+    ]
+  },
+  {
+    "id": "video-extract-frame",
+    "name": "Extract Video Frame",
+    "category": "Flow Control",
+    "description": "Seek the input video to a position and draw that frame onto the canvas. Use resize/crop steps after to shape the frame.",
+    "icon": "movie_filter",
+    "params": [
+      {
+        "name": "atPercent",
+        "label": "Position (%)",
+        "type": "range",
+        "defaultValue": 0
+      }
+    ]
+  },
+  {
+    "id": "flow-gif-from-states",
+    "name": "GIF from States",
+    "category": "Flow Control",
+    "description": "Assemble saved canvas states into an animated GIF. Use after a series of Extract Frame \u2192 Process \u2192 Save State steps.",
+    "icon": "gif_box",
+    "params": [
+      {
+        "name": "panels",
+        "label": "State Labels (comma-separated)",
+        "type": "text",
+        "defaultValue": "'frame-0"
+      },
+      {
+        "name": "delay",
+        "label": "Frame Delay (ms)",
+        "type": "number",
+        "defaultValue": 500
+      },
+      {
+        "name": "loop",
+        "label": "Loop",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": "_preview"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-wall",
+    "name": "Video Wall",
+    "category": "Flow Control",
+    "description": "Composite multiple input videos into a single grid-layout MP4 (security camera wall style). Inputs are sorted by filename.",
+    "icon": "view_comfy",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "video-wall.mp4"
+      },
+      {
+        "name": "layout",
+        "label": "Layout",
+        "type": "video-layout-select"
+      }
+    ]
+  },
+  {
+    "id": "flow-template-aggregator",
+    "name": "Template Render",
+    "category": "Flow Control",
+    "description": "Composite multiple input images into a pre-defined Perspective Template.",
+    "icon": "wallpaper",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "render.jpg"
+      },
+      {
+        "name": "templateId",
+        "label": "Template",
+        "type": "template-select",
+        "defaultValue": ""
+      },
+      {
+        "name": "quality",
+        "label": "Quality (0-100)",
+        "type": "range",
+        "defaultValue": 90
+      }
+    ]
+  },
+  {
+    "id": "flow-animate-stack",
+    "name": "Animate Stack",
+    "category": "Flow Control",
+    "description": "Collect frames and animate them appearing on a desk surface one by one. Add overlay-polaroid-frame upstream to get polaroid borders.",
+    "icon": "layers",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "stack"
+      },
+      {
+        "name": "format",
+        "label": "Output Format",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-create-pdf",
+    "name": "Create PDF",
+    "category": "Flow Control",
+    "description": "Assemble all processed images into a multi-page PDF document at the end of the batch.",
+    "icon": "picture_as_pdf",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "document.pdf"
+      },
+      {
+        "name": "orientation",
+        "label": "Orientation",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-create-pptx",
+    "name": "Create PowerPoint",
+    "category": "Flow Control",
+    "description": "Assemble all processed images into a multi-slide PowerPoint presentation at the end of the batch.",
+    "icon": "present_to_all",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "presentation.pptx"
+      },
+      {
+        "name": "layout",
+        "label": "Slide Layout",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-bg-swap",
+    "name": "Composite onto Background",
+    "category": "Flow Control",
+    "description": "Aggregation node. Image 1 is the foreground subject \u2014 place an ai-remove-bg step before this to cut it out. Images 2+ are used as backgrounds (original, unprocessed). The cutout subject is composited onto each background scene. One output file per background.",
+    "icon": "background_replace",
+    "params": [
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": "_bgswap"
+      },
+      {
+        "name": "format",
+        "label": "Output Format",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-create-zip",
+    "name": "Create ZIP",
+    "category": "Flow Control",
+    "description": "Assemble all processed images into a ZIP archive at the end of the batch.",
+    "icon": "folder_zip",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "archive.zip"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-convert",
+    "name": "Video: Convert Format",
+    "category": "Flow Control",
+    "description": "Re-encode a video file to a different container format and/or codec. Skips non-video files.",
+    "icon": "video_settings",
+    "params": [
+      {
+        "name": "format",
+        "label": "Output Format",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-trim",
+    "name": "Video: Trim",
+    "category": "Flow Control",
+    "description": "Cut a video to a specific time range (in seconds). Skips non-video files.",
+    "icon": "content_cut",
+    "params": [
+      {
+        "name": "start",
+        "label": "Start Time (seconds)",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "name": "end",
+        "label": "End Time (seconds \u2014 leave blank for end of file)",
+        "type": "number",
+        "defaultValue": ""
+      },
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": "_trimmed"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-compress",
+    "name": "Video: Compress",
+    "category": "Flow Control",
+    "description": "Reduce video file size by lowering the output bitrate. Skips non-video files.",
+    "icon": "compress",
+    "params": [
+      {
+        "name": "quality",
+        "label": "Quality Preset",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-change-fps",
+    "name": "Video: Change Frame Rate",
+    "category": "Flow Control",
+    "description": "Change the frame rate of a video. Skips non-video files.",
+    "icon": "speed",
+    "params": [
+      {
+        "name": "fps",
+        "label": "Target Frame Rate",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-strip-audio",
+    "name": "Video: Strip Audio",
+    "category": "Flow Control",
+    "description": "Remove all audio tracks from a video file. Skips non-video files.",
+    "icon": "volume_off",
+    "params": [
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": "_silent"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-extract-audio",
+    "name": "Video: Extract Audio",
+    "category": "Flow Control",
+    "description": "Export the audio track from a video as a standalone audio file. Skips non-video files.",
+    "icon": "audio_file",
+    "params": [
+      {
+        "name": "format",
+        "label": "Audio Format",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-remix-audio",
+    "name": "Video: Remix Audio",
+    "category": "Flow Control",
+    "description": "Adjust the audio channel layout and/or sample rate of a video. Skips non-video files.",
+    "icon": "tune",
+    "params": [
+      {
+        "name": "channels",
+        "label": "Channel Layout",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-concat",
+    "name": "Video: Concatenate",
+    "category": "Flow Control",
+    "description": "Join all selected video files end-to-end into a single output video. Input order follows file selection order.",
+    "icon": "playlist_add",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "concatenated.mp4"
+      },
+      {
+        "name": "fps",
+        "label": "Output Frame Rate",
+        "type": "number",
+        "defaultValue": 30
+      },
+      {
+        "name": "width",
+        "label": "Output Width (px \u2014 leave blank to use first video\\",
+        "type": "number",
+        "defaultValue": ""
+      },
+      {
+        "name": "height",
+        "label": "Output Height (px \u2014 leave blank to use first video\\",
+        "type": "number",
+        "defaultValue": ""
+      },
+      {
+        "name": "bitrate",
+        "label": "Bitrate (bps)",
+        "type": "number",
+        "defaultValue": 8000000
+      }
+    ]
+  },
+  {
+    "id": "meta-strip",
+    "name": "Strip Metadata",
+    "category": "Metadata",
+    "description": "Remove EXIF/GPS metadata from output JPEG.",
+    "icon": "layers_clear",
+    "params": [
+      {
+        "name": "level",
+        "label": "Level",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "meta-set-exif",
+    "name": "Set EXIF Info",
+    "category": "Metadata",
+    "description": "Write custom EXIF fields to the output file.",
+    "icon": "database",
+    "params": [
+      {
+        "name": "field",
+        "label": "Field",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "meta-geocode",
+    "name": "Geocode",
+    "category": "Metadata",
+    "description": "Reverse-geocode GPS coords via Nominatim. Sets {{city}}, {{country}}, {{state}}, {{county}}, {{postcode}}, {{country_code}}, {{suburb}}, {{road}} \u2014 plus a combined {{location}} string.",
+    "icon": "location_on",
+    "params": [
+      {
+        "name": "template",
+        "label": "Combined template",
+        "type": "text",
+        "defaultValue": "'{city"
+      },
+      {
+        "name": "targetField",
+        "label": "Combined var name",
+        "type": "text",
+        "defaultValue": "location"
+      }
+    ]
+  },
+  {
+    "id": "color-tuning",
+    "name": "Standard Tuning",
+    "category": "Color & Tone",
+    "description": "Adjust contrast, saturation, vibrance and invert.",
+    "icon": "tune",
+    "params": [
+      {
+        "name": "contrast",
+        "label": "Contrast",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "saturation",
+        "label": "Saturation",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "vibrance",
+        "label": "Vibrance",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "invert",
+        "label": "Invert",
+        "type": "boolean",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
+    "id": "color-auto-levels",
+    "name": "Auto Levels",
+    "category": "Color & Tone",
+    "description": "Normalise exposure by stretching the histogram.",
+    "icon": "brightness_auto",
+    "params": [
+      {
+        "name": "tolerance",
+        "label": "Clipping Tolerance (%)",
+        "type": "range",
+        "defaultValue": 0.5
+      }
+    ]
+  },
+  {
+    "id": "color-opacity",
+    "name": "Opacity",
+    "category": "Color & Tone",
+    "description": "Set global transparency.",
+    "icon": "opacity",
+    "params": [
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 100
+      }
+    ]
+  },
+  {
+    "id": "color-tint",
+    "name": "Color Tint",
+    "category": "Color & Tone",
+    "description": "Overlay a hue over the image.",
+    "icon": "format_color_fill",
+    "params": [
+      {
+        "name": "color",
+        "label": "Tint Color",
+        "type": "color",
+        "defaultValue": "#ff8800"
+      },
+      {
+        "name": "strength",
+        "label": "Strength (%)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "color-duotone",
+    "name": "Duotone",
+    "category": "Color & Tone",
+    "description": "Replace tones with two colours.",
+    "icon": "tonality",
+    "params": [
+      {
+        "name": "darkColor",
+        "label": "Shadow Color",
+        "type": "color",
+        "defaultValue": "#1a0533"
+      },
+      {
+        "name": "lightColor",
+        "label": "Highlight Color",
+        "type": "color",
+        "defaultValue": "#e8f4d4"
+      }
+    ]
+  },
+  {
+    "id": "color-vignette",
+    "name": "Vignette",
+    "category": "Color & Tone",
+    "description": "Darken or soften image edges.",
+    "icon": "vignette",
+    "params": [
+      {
+        "name": "amount",
+        "label": "Strength (%)",
+        "type": "range",
+        "defaultValue": 40
+      },
+      {
+        "name": "radius",
+        "label": "Inner Radius (%)",
+        "type": "range",
+        "defaultValue": 65
+      }
+    ]
+  },
+  {
+    "id": "filter-advanced",
+    "name": "Advanced Effects",
+    "category": "Color & Tone",
+    "description": "Blur, sharpen, noise, and pixelation.",
+    "icon": "filter_vintage",
+    "params": [
+      {
+        "name": "blurRadius",
+        "label": "Blur Radius (px)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "sharpenAmount",
+        "label": "Sharpen Amount (%)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "noiseLevel",
+        "label": "Noise Level (%)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "pixelSize",
+        "label": "Pixel Size (px)",
+        "type": "range",
+        "defaultValue": 1
+      }
+    ]
+  },
+  {
+    "id": "color-posterize",
+    "name": "Posterize",
+    "category": "Color & Tone",
+    "description": "Quantise each colour channel to a fixed number of levels for a flat, silkscreen look.",
+    "icon": "gradient",
+    "params": [
+      {
+        "name": "levels",
+        "label": "Levels",
+        "type": "range",
+        "defaultValue": 4
+      }
+    ]
+  },
+  {
+    "id": "filter-edge-detect",
+    "name": "Edge Detection",
+    "category": "Color & Tone",
+    "description": "Sobel edge detection \u2014 extracts outlines as white lines on a black background.",
+    "icon": "filter_center_focus",
+    "params": [
+      {
+        "name": "threshold",
+        "label": "Edge Threshold (%)",
+        "type": "range",
+        "defaultValue": 15
+      },
+      {
+        "name": "softEdges",
+        "label": "Soft Edges",
+        "type": "boolean",
+        "defaultValue": false
+      },
+      {
+        "name": "blurBefore",
+        "label": "Pre-blur (px)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "filter-relight",
+    "name": "Relight",
+    "category": "Color & Tone",
+    "description": "Simulate repositionable point lights. Darken ambient light then add up to 3 independent colour lights using screen compositing.",
+    "icon": "wb_incandescent",
+    "params": [
+      {
+        "name": "ambient",
+        "label": "Ambient Light (%)",
+        "type": "range",
+        "defaultValue": 15
+      },
+      {
+        "name": "l1On",
+        "label": "Light 1 Enabled",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "l1X",
+        "label": "Light 1 \u2014 X (%)",
+        "type": "range",
+        "defaultValue": 35
+      },
+      {
+        "name": "l1Y",
+        "label": "Light 1 \u2014 Y (%)",
+        "type": "range",
+        "defaultValue": 25
+      },
+      {
+        "name": "l1Color",
+        "label": "Light 1 \u2014 Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "l1Intensity",
+        "label": "Light 1 \u2014 Intensity (%)",
+        "type": "range",
+        "defaultValue": 85
+      },
+      {
+        "name": "l1Radius",
+        "label": "Light 1 \u2014 Radius (%)",
+        "type": "range",
+        "defaultValue": 65
+      },
+      {
+        "name": "l2On",
+        "label": "Light 2 Enabled",
+        "type": "boolean",
+        "defaultValue": false
+      },
+      {
+        "name": "l2X",
+        "label": "Light 2 \u2014 X (%)",
+        "type": "range",
+        "defaultValue": 70
+      },
+      {
+        "name": "l2Y",
+        "label": "Light 2 \u2014 Y (%)",
+        "type": "range",
+        "defaultValue": 55
+      },
+      {
+        "name": "l2Color",
+        "label": "Light 2 \u2014 Color",
+        "type": "color",
+        "defaultValue": "#ffe4a0"
+      },
+      {
+        "name": "l2Intensity",
+        "label": "Light 2 \u2014 Intensity (%)",
+        "type": "range",
+        "defaultValue": 60
+      },
+      {
+        "name": "l2Radius",
+        "label": "Light 2 \u2014 Radius (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "l3On",
+        "label": "Light 3 Enabled",
+        "type": "boolean",
+        "defaultValue": false
+      },
+      {
+        "name": "l3X",
+        "label": "Light 3 \u2014 X (%)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "l3Y",
+        "label": "Light 3 \u2014 Y (%)",
+        "type": "range",
+        "defaultValue": 75
+      },
+      {
+        "name": "l3Color",
+        "label": "Light 3 \u2014 Color",
+        "type": "color",
+        "defaultValue": "#a0c8ff"
+      },
+      {
+        "name": "l3Intensity",
+        "label": "Light 3 \u2014 Intensity (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "l3Radius",
+        "label": "Light 3 \u2014 Radius (%)",
+        "type": "range",
+        "defaultValue": 45
+      }
+    ]
+  },
+  {
+    "id": "filter-halftone",
+    "name": "Halftone",
+    "category": "Color & Tone",
+    "description": "Overlay a halftone dot screen \u2014 dot size varies with image brightness.",
+    "icon": "blur_on",
+    "params": [
+      {
+        "name": "dotSpacing",
+        "label": "Dot Spacing (px)",
+        "type": "range",
+        "defaultValue": 10
+      },
+      {
+        "name": "dotColor",
+        "label": "Dot Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 40
+      },
+      {
+        "name": "invert",
+        "label": "Invert (bright = big dots)",
+        "type": "boolean",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
+    "id": "filter-bloom",
+    "name": "Bloom / Glow",
+    "category": "Color & Tone",
+    "description": "Extracts bright highlights, blurs them, and screen-blends back for a glow effect.",
+    "icon": "flare",
+    "params": [
+      {
+        "name": "threshold",
+        "label": "Highlight Threshold (%)",
+        "type": "range",
+        "defaultValue": 75
+      },
+      {
+        "name": "blurRadius",
+        "label": "Blur Radius (px)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "strength",
+        "label": "Strength (%)",
+        "type": "range",
+        "defaultValue": 70
+      }
+    ]
+  },
+  {
+    "id": "filter-chromatic-aberration",
+    "name": "Chromatic Aberration",
+    "category": "Color & Tone",
+    "description": "Splits R and B channels to simulate lens chromatic aberration.",
+    "icon": "lens_blur",
+    "params": [
+      {
+        "name": "offset",
+        "label": "Channel Offset (px)",
+        "type": "range",
+        "defaultValue": 8
+      },
+      {
+        "name": "direction",
+        "label": "Direction",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "filter-color-grade",
+    "name": "Color Grade",
+    "category": "Color & Tone",
+    "description": "Cinematic colour grading \u2014 lift (black point), shadow tint, and highlight tint.",
+    "icon": "palette",
+    "params": [
+      {
+        "name": "lift",
+        "label": "Lift (Black Point)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "shadowColor",
+        "label": "Shadow Tint",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "shadowStrength",
+        "label": "Shadow Tint (%)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "highlightColor",
+        "label": "Highlight Tint",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "highlightStrength",
+        "label": "Highlight Tint (%)",
+        "type": "range",
+        "defaultValue": 0
+      }
+    ]
+  },
+  {
+    "id": "filter-kuwahara",
+    "name": "Kuwahara (Oil Paint)",
+    "category": "Color & Tone",
+    "description": "Kuwahara filter \u2014 non-linear edge-preserving smoothing that creates a painterly oil effect. Very intensive, optimized parameters applied.",
+    "icon": "brush",
+    "params": [
+      {
+        "name": "radius",
+        "label": "Radius (stroke size)",
+        "type": "range",
+        "defaultValue": 3
+      },
+      {
+        "name": "passes",
+        "label": "Passes (intensity)",
+        "type": "range",
+        "defaultValue": 1
+      }
+    ]
+  },
+  {
+    "id": "filter-tilt-shift",
+    "name": "Tilt-Shift",
+    "category": "Color & Tone",
+    "description": "Miniature/tilt-shift effect \u2014 leaves a sharp horizontal band, blurs top and bottom.",
+    "icon": "filter_center_focus",
+    "params": [
+      {
+        "name": "centerY",
+        "label": "Focus Centre (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "bandWidth",
+        "label": "Sharp Band (%)",
+        "type": "range",
+        "defaultValue": 25
+      },
+      {
+        "name": "blurAmount",
+        "label": "Blur Amount (px)",
+        "type": "range",
+        "defaultValue": 12
+      },
+      {
+        "name": "feather",
+        "label": "Feather (%)",
+        "type": "range",
+        "defaultValue": 30
+      }
+    ]
+  },
+  {
+    "id": "color-channel-swap",
+    "name": "Channel Swap",
+    "category": "Color & Tone",
+    "description": "Reassign RGB channels. Swap R\u2194G to simulate Kodak Aerochrome infrared film.",
+    "icon": "swap_horiz",
+    "params": [
+      {
+        "name": "redSource",
+        "label": "Red \u2190 Source",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "filter-pixel-sort",
+    "name": "Pixel Sort",
+    "category": "Color & Tone",
+    "description": "Sorts pixels within horizontal strips by luminance \u2014 digital glitch aesthetic.",
+    "icon": "sort",
+    "params": [
+      {
+        "name": "threshold",
+        "label": "Threshold (0-255)",
+        "type": "range",
+        "defaultValue": 80
+      },
+      {
+        "name": "direction",
+        "label": "Sort Direction",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "filter-dither",
+    "name": "Dither",
+    "category": "Color & Tone",
+    "description": "Palette reduction with Floyd-Steinberg dithering \u2014 retro 8-bit look.",
+    "icon": "grain",
+    "params": [
+      {
+        "name": "palette",
+        "label": "Palette",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "video-tuning",
+    "name": "Video Tuning",
+    "category": "Video Effects",
+    "description": "Adjust contrast, saturation, vibrance and invert \u2014 applied to every video frame.",
+    "icon": "tune",
+    "params": [
+      {
+        "name": "contrast",
+        "label": "Contrast",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "saturation",
+        "label": "Saturation",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "vibrance",
+        "label": "Vibrance",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "invert",
+        "label": "Invert",
+        "type": "boolean",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
+    "id": "video-duotone",
+    "name": "Video Duotone",
+    "category": "Video Effects",
+    "description": "Replace tones with two colours \u2014 applied to every video frame.",
+    "icon": "tonality",
+    "params": [
+      {
+        "name": "darkColor",
+        "label": "Shadow Color",
+        "type": "color",
+        "defaultValue": "#1a0533"
+      },
+      {
+        "name": "lightColor",
+        "label": "Highlight Color",
+        "type": "color",
+        "defaultValue": "#e8f4d4"
+      }
+    ]
+  },
+  {
+    "id": "video-tint",
+    "name": "Video Tint",
+    "category": "Video Effects",
+    "description": "Overlay a colour tint over every video frame.",
+    "icon": "format_color_fill",
+    "params": [
+      {
+        "name": "color",
+        "label": "Tint Color",
+        "type": "color",
+        "defaultValue": "#ff8800"
+      },
+      {
+        "name": "strength",
+        "label": "Strength (%)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "video-vignette",
+    "name": "Video Vignette",
+    "category": "Video Effects",
+    "description": "Darken the edges of every video frame for a cinematic look.",
+    "icon": "vignette",
+    "params": [
+      {
+        "name": "amount",
+        "label": "Strength (%)",
+        "type": "range",
+        "defaultValue": 40
+      },
+      {
+        "name": "radius",
+        "label": "Inner Radius (%)",
+        "type": "range",
+        "defaultValue": 65
+      }
+    ]
+  },
+  {
+    "id": "video-advanced-effects",
+    "name": "Video Advanced Effects",
+    "category": "Video Effects",
+    "description": "Apply blur, sharpen, film grain, or pixelation to every video frame.",
+    "icon": "filter_vintage",
+    "params": [
+      {
+        "name": "blurRadius",
+        "label": "Blur Radius (px)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "sharpenAmount",
+        "label": "Sharpen Amount (%)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "noiseLevel",
+        "label": "Noise / Grain (%)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "pixelSize",
+        "label": "Pixel Size (px)",
+        "type": "range",
+        "defaultValue": 1
+      }
+    ]
+  },
+  {
+    "id": "video-bloom",
+    "name": "Video Bloom / Glow",
+    "category": "Video Effects",
+    "description": "Add a cinematic glow by blooming the bright highlights of every frame.",
+    "icon": "flare",
+    "params": [
+      {
+        "name": "threshold",
+        "label": "Highlight Threshold (%)",
+        "type": "range",
+        "defaultValue": 75
+      },
+      {
+        "name": "blurRadius",
+        "label": "Blur Radius (px)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "strength",
+        "label": "Strength (%)",
+        "type": "range",
+        "defaultValue": 70
+      }
+    ]
+  },
+  {
+    "id": "video-color-grade",
+    "name": "Video Color Grade",
+    "category": "Video Effects",
+    "description": "Cinematic colour grading \u2014 lift, shadow tint, and highlight tint \u2014 on every frame.",
+    "icon": "palette",
+    "params": [
+      {
+        "name": "lift",
+        "label": "Lift (Black Point)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "shadowColor",
+        "label": "Shadow Tint",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "shadowStrength",
+        "label": "Shadow Tint (%)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "highlightColor",
+        "label": "Highlight Tint",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "highlightStrength",
+        "label": "Highlight Tint (%)",
+        "type": "range",
+        "defaultValue": 0
+      }
+    ]
+  },
+  {
+    "id": "video-chromatic-aberration",
+    "name": "Video Chromatic Aberration",
+    "category": "Video Effects",
+    "description": "Split R/B channels to simulate lens chromatic aberration on every frame.",
+    "icon": "lens_blur",
+    "params": [
+      {
+        "name": "offset",
+        "label": "Channel Offset (px)",
+        "type": "range",
+        "defaultValue": 8
+      },
+      {
+        "name": "direction",
+        "label": "Direction",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "video-posterize",
+    "name": "Video Posterize",
+    "category": "Video Effects",
+    "description": "Quantise each colour channel to a fixed number of levels \u2014 applied to every frame.",
+    "icon": "gradient",
+    "params": [
+      {
+        "name": "levels",
+        "label": "Levels",
+        "type": "range",
+        "defaultValue": 4
+      }
+    ]
+  },
+  {
+    "id": "video-auto-levels",
+    "name": "Video Auto Levels",
+    "category": "Video Effects",
+    "description": "Normalise exposure by stretching the histogram \u2014 applied to every frame.",
+    "icon": "brightness_auto",
+    "params": [
+      {
+        "name": "tolerance",
+        "label": "Clipping Tolerance (%)",
+        "type": "range",
+        "defaultValue": 0.5
+      }
+    ]
+  },
+  {
+    "id": "video-channel-swap",
+    "name": "Video Channel Swap",
+    "category": "Video Effects",
+    "description": "Reassign RGB channels on every frame. Swap R\u2194G to simulate infrared film.",
+    "icon": "swap_horiz",
+    "params": [
+      {
+        "name": "redSource",
+        "label": "Red \u2190 Source",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "video-halftone",
+    "name": "Video Halftone",
+    "category": "Video Effects",
+    "description": "Overlay a halftone dot screen on every frame \u2014 dot size varies with brightness.",
+    "icon": "blur_on",
+    "params": [
+      {
+        "name": "dotSpacing",
+        "label": "Dot Spacing (px)",
+        "type": "range",
+        "defaultValue": 10
+      },
+      {
+        "name": "dotColor",
+        "label": "Dot Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 40
+      },
+      {
+        "name": "invert",
+        "label": "Invert (bright = big dots)",
+        "type": "boolean",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
+    "id": "video-tilt-shift",
+    "name": "Video Tilt-Shift",
+    "category": "Video Effects",
+    "description": "Miniature/tilt-shift effect \u2014 sharp horizontal band, blurred top and bottom.",
+    "icon": "filter_center_focus",
+    "params": [
+      {
+        "name": "centerY",
+        "label": "Focus Centre (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "bandWidth",
+        "label": "Sharp Band (%)",
+        "type": "range",
+        "defaultValue": 25
+      },
+      {
+        "name": "blurAmount",
+        "label": "Blur Amount (px)",
+        "type": "range",
+        "defaultValue": 12
+      },
+      {
+        "name": "feather",
+        "label": "Feather (%)",
+        "type": "range",
+        "defaultValue": 30
+      }
+    ]
+  },
+  {
+    "id": "video-dither",
+    "name": "Video Dither",
+    "category": "Video Effects",
+    "description": "Floyd-Steinberg palette dithering on every frame \u2014 retro 8-bit look.",
+    "icon": "grain",
+    "params": [
+      {
+        "name": "palette",
+        "label": "Palette",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "video-kuwahara",
+    "name": "Video Oil Paint (Kuwahara)",
+    "category": "Video Effects",
+    "description": "Kuwahara filter \u2014 painterly oil effect \u2014 applied to every frame. Intensive.",
+    "icon": "brush",
+    "params": [
+      {
+        "name": "radius",
+        "label": "Radius (stroke size)",
+        "type": "range",
+        "defaultValue": 3
+      },
+      {
+        "name": "passes",
+        "label": "Passes (intensity)",
+        "type": "range",
+        "defaultValue": 1
+      }
+    ]
+  },
+  {
+    "id": "video-pixel-sort",
+    "name": "Video Pixel Sort",
+    "category": "Video Effects",
+    "description": "Sort pixels by luminance within horizontal strips \u2014 digital glitch aesthetic.",
+    "icon": "sort",
+    "params": [
+      {
+        "name": "threshold",
+        "label": "Threshold (0\u2013255)",
+        "type": "range",
+        "defaultValue": 80
+      },
+      {
+        "name": "direction",
+        "label": "Sort Direction",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "video-watermark",
+    "name": "Video Watermark",
+    "category": "Video Effects",
+    "description": "Burn a watermark onto every frame of a video.",
+    "icon": "branding_watermark",
+    "params": [
+      {
+        "name": "type",
+        "label": "Watermark Type",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "video-caption",
+    "name": "Video Caption / Text",
+    "category": "Video Effects",
+    "description": "Burn styled text onto every frame \u2014 supports {{variable}} injection.",
+    "icon": "closed_caption",
+    "params": [
+      {
+        "name": "content",
+        "label": "",
+        "type": "text"
+      },
+      {
+        "name": "font",
+        "label": "Font Family",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-rich-text",
+    "name": "Rich Text",
+    "category": "Overlays & Typography",
+    "description": "Render styled text over the image. Supports {{variable}} injection.",
+    "icon": "text_fields",
+    "params": [
+      {
+        "name": "content",
+        "label": "",
+        "type": "text"
+      },
+      {
+        "name": "font",
+        "label": "Font Family",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-watermark",
+    "name": "Watermark",
+    "category": "Overlays & Typography",
+    "description": "Repeat a text watermark diagonally across the image.",
+    "icon": "branding_watermark",
+    "params": [
+      {
+        "name": "type",
+        "label": "Watermark Type",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-ribbon",
+    "name": "Ribbon/Badge",
+    "category": "Overlays & Typography",
+    "description": "Add a corner ribbon or badge.",
+    "icon": "bookmark",
+    "params": [
+      {
+        "name": "text",
+        "label": "Text",
+        "type": "text",
+        "defaultValue": "NEW"
+      },
+      {
+        "name": "position",
+        "label": "Position",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-qrcode",
+    "name": "QR Code",
+    "category": "Overlays & Typography",
+    "description": "Generate and stamp a QR code onto the image.",
+    "icon": "qr_code_2",
+    "params": [
+      {
+        "name": "content",
+        "label": "",
+        "type": "text"
+      },
+      {
+        "name": "size",
+        "label": "Size (px)",
+        "type": "number",
+        "defaultValue": 150
+      },
+      {
+        "name": "anchor",
+        "label": "Anchor",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-grid",
+    "name": "Grid Overlay",
+    "category": "Overlays & Typography",
+    "description": "Draw an evenly-spaced grid of lines over the image.",
+    "icon": "grid_4x4",
+    "params": [
+      {
+        "name": "spacingX",
+        "label": "Spacing X (px or %)",
+        "type": "text",
+        "defaultValue": "10%"
+      },
+      {
+        "name": "spacingY",
+        "label": "Spacing Y (px or %)",
+        "type": "text",
+        "defaultValue": "10%"
+      },
+      {
+        "name": "color",
+        "label": "Line Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "lineWidth",
+        "label": "Line Width (px)",
+        "type": "number",
+        "defaultValue": 1
+      }
+    ]
+  },
+  {
+    "id": "overlay-map",
+    "name": "Map View",
+    "category": "Overlays & Typography",
+    "description": "Render an OpenStreetMap tile from GPS EXIF data and overlay it on the image.",
+    "icon": "map",
+    "params": [
+      {
+        "name": "zoom",
+        "label": "Zoom Level",
+        "type": "range",
+        "defaultValue": 14
+      },
+      {
+        "name": "style",
+        "label": "Map Style",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-light-leak",
+    "name": "Light Leak",
+    "category": "Overlays & Typography",
+    "description": "Warm or cool light leak gradient from an edge \u2014 classic analog film effect.",
+    "icon": "light_mode",
+    "params": [
+      {
+        "name": "edge",
+        "label": "Edge",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-canvas-texture",
+    "name": "Canvas Texture",
+    "category": "Overlays & Typography",
+    "description": "Procedural woven-fiber texture overlay \u2014 adds the look of painting on canvas or linen.",
+    "icon": "texture",
+    "params": [
+      {
+        "name": "intensity",
+        "label": "Intensity (%)",
+        "type": "range",
+        "defaultValue": 18
+      },
+      {
+        "name": "scale",
+        "label": "Fiber Scale (px)",
+        "type": "range",
+        "defaultValue": 4
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-polaroid-frame",
+    "name": "Polaroid Frame",
+    "category": "Overlays & Typography",
+    "description": "Adds a polaroid-style white border with optional handwritten caption in the bottom margin.",
+    "icon": "photo_camera",
+    "params": [
+      {
+        "name": "borderColor",
+        "label": "Border Color",
+        "type": "color",
+        "defaultValue": "#f5f5f0"
+      },
+      {
+        "name": "borderSide",
+        "label": "Side Border (px)",
+        "type": "number",
+        "defaultValue": 20
+      },
+      {
+        "name": "borderBottom",
+        "label": "Bottom Border (px)",
+        "type": "number",
+        "defaultValue": 60
+      },
+      {
+        "name": "caption",
+        "label": "",
+        "type": "text"
+      }
+    ]
+  },
+  {
+    "id": "overlay-scanlines",
+    "name": "Scanlines",
+    "category": "Overlays & Typography",
+    "description": "Draw horizontal scanlines at regular intervals \u2014 CRT monitor / video effect.",
+    "icon": "horizontal_rule",
+    "params": [
+      {
+        "name": "spacing",
+        "label": "Line Spacing (px)",
+        "type": "number",
+        "defaultValue": 3
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "color",
+        "label": "Line Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      }
+    ]
+  },
+  {
+    "id": "overlay-template",
+    "name": "Template Frame",
+    "category": "Overlays & Typography",
+    "description": "Draw a Template around the current image. The image is seamlessly warped to fit the primary slot.",
+    "icon": "wallpaper",
+    "params": [
+      {
+        "name": "templateId",
+        "label": "Template",
+        "type": "template-select",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "geo-resize",
+    "name": "Resize",
+    "category": "Geometric & Framing",
+    "description": "Scale image to target dimensions.",
+    "icon": "aspect_ratio",
+    "params": [
+      {
+        "name": "width",
+        "label": "Width (px or %)",
+        "type": "text",
+        "defaultValue": "100%"
+      },
+      {
+        "name": "height",
+        "label": "Height (px or %)",
+        "type": "text",
+        "defaultValue": ""
+      },
+      {
+        "name": "maintainAspect",
+        "label": "Maintain Aspect",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "algo",
+        "label": "Algorithm",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "geo-crop",
+    "name": "Crop",
+    "category": "Geometric & Framing",
+    "description": "Trim to specified region.",
+    "icon": "crop",
+    "params": [
+      {
+        "name": "x",
+        "label": "X (px or %)",
+        "type": "text",
+        "defaultValue": "0"
+      },
+      {
+        "name": "y",
+        "label": "Y (px or %)",
+        "type": "text",
+        "defaultValue": "0"
+      },
+      {
+        "name": "width",
+        "label": "Width (px or %)",
+        "type": "text",
+        "defaultValue": "100%"
+      },
+      {
+        "name": "height",
+        "label": "Height (px or %)",
+        "type": "text",
+        "defaultValue": "100%"
+      }
+    ]
+  },
+  {
+    "id": "geo-smart-crop",
+    "name": "Smart Crop",
+    "category": "Geometric & Framing",
+    "description": "Content-aware crop to a target aspect ratio.",
+    "icon": "auto_fix_high",
+    "params": [
+      {
+        "name": "aspectRatio",
+        "label": "Aspect Ratio",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "geo-rotate",
+    "name": "Rotate/Flip",
+    "category": "Geometric & Framing",
+    "description": "Rotate 90/180/270\u00b0 or flip the image.",
+    "icon": "rotate_right",
+    "params": [
+      {
+        "name": "angle",
+        "label": "Rotate",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "geo-round",
+    "name": "Round Corners",
+    "category": "Geometric & Framing",
+    "description": "Round image corners or make circular.",
+    "icon": "rounded_corner",
+    "params": [
+      {
+        "name": "radius",
+        "label": "Radius (px or %)",
+        "type": "text",
+        "defaultValue": "5%"
+      },
+      {
+        "name": "circular",
+        "label": "Make Circular",
+        "type": "boolean",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
+    "id": "geo-padding",
+    "name": "Canvas Padding",
+    "category": "Geometric & Framing",
+    "description": "Add coloured margins around the image.",
+    "icon": "padding",
+    "params": [
+      {
+        "name": "top",
+        "label": "Top (px or %)",
+        "type": "text",
+        "defaultValue": "5%"
+      },
+      {
+        "name": "right",
+        "label": "Right (px or %)",
+        "type": "text",
+        "defaultValue": "5%"
+      },
+      {
+        "name": "bottom",
+        "label": "Bottom (px or %)",
+        "type": "text",
+        "defaultValue": "5%"
+      },
+      {
+        "name": "left",
+        "label": "Left (px or %)",
+        "type": "text",
+        "defaultValue": "5%"
+      },
+      {
+        "name": "color",
+        "label": "Background Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      }
+    ]
+  },
+  {
+    "id": "geo-trim",
+    "name": "Trim",
+    "category": "Geometric & Framing",
+    "description": "Remove solid-colour edges.",
+    "icon": "content_cut",
+    "params": [
+      {
+        "name": "tolerance",
+        "label": "Tolerance (0-100)",
+        "type": "range",
+        "defaultValue": 15
+      },
+      {
+        "name": "bgSource",
+        "label": "Background Source",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "geo-face-crop",
+    "name": "Face Crop",
+    "category": "Geometric & Framing",
+    "description": "Centre-crop around detected faces. Works best with portrait/close-up shots; lower confidence for group shots or full-body images.",
+    "icon": "face",
+    "params": [
+      {
+        "name": "padding",
+        "label": "Padding (%)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "faceIndex",
+        "label": "Face Index",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "name": "confidence",
+        "label": "Min confidence (%)",
+        "type": "range",
+        "defaultValue": 30
+      }
+    ]
+  },
+  {
+    "id": "geo-body-crop",
+    "name": "Body Crop",
+    "category": "Geometric & Framing",
+    "description": "Logic-based framing for full body or portraits using Pose detection.",
+    "icon": "accessibility_new",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "geo-face-align",
+    "name": "Face Align",
+    "category": "Geometric & Framing",
+    "description": "Normalize face position by leveling eyes and centering on nose.",
+    "icon": "face_retouching_natural",
+    "params": [
+      {
+        "name": "eyeLevel",
+        "label": "Horizontalize Eyes",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "centerNose",
+        "label": "Center on Nose",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "targetScale",
+        "label": "Face Scale (%)",
+        "type": "range",
+        "defaultValue": 100
+      }
+    ]
+  },
+  {
+    "id": "geo-pixelate",
+    "name": "Pixelate",
+    "category": "Geometric & Framing",
+    "description": "Downsample then upsample with nearest-neighbour for a retro pixel-block effect.",
+    "icon": "grid_3x3",
+    "params": [
+      {
+        "name": "blockSize",
+        "label": "Block Size (px)",
+        "type": "range",
+        "defaultValue": 8
+      }
+    ]
+  }
+]
