@@ -34,6 +34,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-remove-bg',
   'ai-remove-bg-hq',
   'ai-portrait-bokeh',
+  'ai-subject-crop',
   'ai-face-privacy',
   'ai-silhouette',
   'ai-smart-redact',

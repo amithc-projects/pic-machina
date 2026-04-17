@@ -5,6 +5,7 @@
 
 import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
+import { persistSubjectVision } from '../ai/vision-metadata.js';
 
 import photonWasmUrl from '../vendor/photon/photon_rs_bg.wasm?url';
 
@@ -18,38 +19,8 @@ async function ensurePhoton() {
 }
 
 // ─── Shared helpers for saliency-using transforms ────────
-
-/**
- * Persist subject metadata on an asset record after a saliency-using
- * transform so downstream transforms (smart crop, thumbnails, filters)
- * can skip the inference step.
- *
- * @param {string|undefined} assetHash
- * @param {{mask: Uint8ClampedArray, width: number, height: number}} maskObj
- * @param {Record<string, any>} [extraFields]  extra fields to merge into vision
- */
-async function persistSubjectVision(assetHash, maskObj, extraFields = {}) {
-  if (!assetHash) return;
-  try {
-    const { computeSubjectBBox } = await import('../ai/inspyrenet.js');
-    const bbox = computeSubjectBBox(maskObj.mask, maskObj.width, maskObj.height);
-    const { getAsset, patchAsset } = await import('../../data/assets.js');
-    const existing = await getAsset(assetHash);
-    // patchAsset replaces nested objects wholesale, so merge vision manually
-    // to preserve prior fields like faceCount, poseDetected, etc.
-    const nextVision = {
-      ...(existing?.vision ?? {}),
-      ...extraFields,
-      ...(bbox ? {
-        subjectBBox:     { x: bbox.x, y: bbox.y, w: bbox.w, h: bbox.h },
-        subjectCentroid: bbox.centroid,
-        subjectArea:     bbox.area,
-        matteAt:         Date.now(),
-      } : {})
-    };
-    await patchAsset(assetHash, { vision: nextVision });
-  } catch { /* non-fatal */ }
-}
+// `persistSubjectVision` lives in ../ai/vision-metadata.js so geometry
+// transforms (ai-subject-crop) can share it without circular imports.
 
 /**
  * Blur a single-channel mask using Photon's gaussian_blur. Staged through an
