@@ -21,7 +21,8 @@
 import { dbGet, dbGetAll, dbPut, dbDelete } from './db.js';
 import { uuid, now } from '../utils/misc.js';
 import { shadowWrite } from '../utils/backup.js';
-import { processImageThumbnail } from '../utils/images.js';
+import { generateBaselineThumbnail, generateSmartThumbnail } from '../utils/thumbnails.js';
+import { getSettings } from '../utils/settings.js';
 
 // ─── Read ─────────────────────────────────────────────────
 
@@ -98,14 +99,31 @@ export function flushAutosave(recipe) {
  * @param {string} recipeId
  * @param {File} file
  */
-export async function setRecipeThumbnail(recipeId, file) {
+export async function setRecipeThumbnail(recipeId, file, opts = {}) {
   const recipe = await getRecipe(recipeId);
   if (!recipe) throw new Error(`Recipe ${recipeId} not found`);
 
-  // 1. Resize image
-  const { dataUrl, blob } = await processImageThumbnail(file);
+  // 1. Baseline cover-crop thumbnail (fast, no inference).
+  let { dataUrl, blob } = await generateBaselineThumbnail(file, { width: 480, height: 300 });
 
-  // 2. Always store as base64 data URL for reliable in-app display
+  // Progressive-render hook: caller can update the DOM with this baseline
+  // data URL immediately, then swap to the smart version when the smart
+  // rebuild lands in IDB.
+  try { opts.onBaseline?.(dataUrl); } catch { /* non-fatal */ }
+
+  // 2. Optionally replace with a content-aware crop. Silently falls back if
+  //    the model isn't downloaded or no subject is found.
+  let smart = false;
+  if (getSettings()?.thumbnails?.smart) {
+    const smartResult = await generateSmartThumbnail(file, { width: 480, height: 300 });
+    if (smartResult) {
+      dataUrl = smartResult.dataUrl;
+      blob    = smartResult.blob;
+      smart   = true;
+    }
+  }
+
+  // 3. Always store as base64 data URL for reliable in-app display
   recipe.thumbnail = dataUrl;
 
   // 3. Also write to filesystem if project root is linked (for project organisation)
@@ -135,6 +153,7 @@ export async function setRecipeThumbnail(recipeId, file) {
   }
 
   await saveRecipe(recipe);
+  return { dataUrl, smart };
 }
 
 export async function clearRecipeThumbnail(recipeId) {

@@ -54,6 +54,32 @@ export async function showSettingsModal() {
           </div>
         </section>
 
+        <!-- Smart Thumbnails -->
+        <section style="display:flex; flex-direction:column; gap:12px;">
+          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Content-Aware Thumbnails</h4>
+          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-overlay); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+            <input type="checkbox" id="cfg-smart-thumbs" ${current.thumbnails?.smart ? 'checked' : ''} style="margin-top:2px;" />
+            <div style="display:flex; flex-direction:column;">
+              <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Crop recipe &amp; showcase covers around the subject</span>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">
+                Uses InSPyReNet saliency to detect the subject of each uploaded image and centre the thumbnail on it, instead of cropping to the image centre. Requires the AI model to be downloaded (see <code>#mdl</code>). Falls back to centre-crop silently when unavailable.
+              </span>
+            </div>
+          </label>
+          <div style="background:var(--ps-bg-overlay); padding:12px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div style="display:flex; flex-direction:column;">
+                <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Rebuild existing thumbnails</span>
+                <span id="rebuild-thumbs-status" style="font-size:11px; color:var(--ps-text-muted); margin-top:2px;">One-off pass that re-crops all existing recipe and showcase thumbnails using the smart crop.</span>
+              </div>
+              <button class="btn-secondary" id="btn-rebuild-thumbs" style="font-size:11px; padding:6px 12px; flex-shrink:0;">
+                <span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">refresh</span>
+                Rebuild
+              </button>
+            </div>
+          </div>
+        </section>
+
         <!-- Batch Core -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Batch Engine</h4>
@@ -150,6 +176,66 @@ export async function showSettingsModal() {
     }
   };
 
+  modal.querySelector('#btn-rebuild-thumbs').onclick = async (e) => {
+    const btn    = e.currentTarget;
+    const status = modal.querySelector('#rebuild-thumbs-status');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">hourglass_top</span> Working…';
+    try {
+      const { generateSmartThumbnail, dataUrlToBlob } = await import('./thumbnails.js');
+      const { isModelReady } = await import('../engine/ai/inspyrenet.js');
+      if (!(await isModelReady())) {
+        status.textContent = 'InSPyReNet model not downloaded — open #mdl to fetch it, then retry.';
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">refresh</span> Rebuild';
+        return;
+      }
+
+      const { getAllRecipes, saveRecipe } = await import('../data/recipes.js');
+      const { getAllShowcases, saveShowcase } = await import('../data/showcases.js');
+
+      const recipes = (await getAllRecipes()).filter(r => !!r.thumbnail);
+      const showcases = (await getAllShowcases()).filter(s => !!s.thumbnail);
+      const total = recipes.length + showcases.length;
+      let done = 0, skipped = 0;
+
+      status.textContent = `0 / ${total}…`;
+
+      for (const recipe of recipes) {
+        try {
+          const blob = await dataUrlToBlob(recipe.thumbnail);
+          const smart = await generateSmartThumbnail(blob, { width: 480, height: 300 });
+          if (smart) { recipe.thumbnail = smart.dataUrl; await saveRecipe(recipe); }
+          else skipped++;
+        } catch (err) { console.warn('rebuild recipe thumb failed', err); skipped++; }
+        done++;
+        status.textContent = `${done} / ${total}…`;
+      }
+
+      for (const entry of showcases) {
+        try {
+          const blob = await dataUrlToBlob(entry.thumbnail);
+          const smart = await generateSmartThumbnail(blob, { width: 640, height: 400 });
+          if (smart) { entry.thumbnail = smart.dataUrl; await saveShowcase(entry); }
+          else skipped++;
+        } catch (err) { console.warn('rebuild showcase thumb failed', err); skipped++; }
+        done++;
+        status.textContent = `${done} / ${total}…`;
+      }
+
+      const success = total - skipped;
+      status.textContent = `Done — ${success} updated, ${skipped} skipped (no subject / error).`;
+      showToast({ variant: 'success', title: 'Thumbnails rebuilt', description: `${success} updated, ${skipped} skipped.` });
+    } catch (err) {
+      console.error(err);
+      status.textContent = `Failed: ${err.message || err}`;
+      showToast({ variant: 'danger', title: 'Rebuild failed', description: err.message || String(err) });
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">refresh</span> Rebuild';
+    }
+  };
+
   modal.querySelector('#btn-add-swatch').onclick = () => {
       palette.push({ label: 'New Color', color: '#ff0000' });
       renderSwatches();
@@ -171,6 +257,9 @@ export async function showSettingsModal() {
     saveSettings({
       batch: {
         useInputForOutput: modal.querySelector('#cfg-batch-sync').checked
+      },
+      thumbnails: {
+        smart: modal.querySelector('#cfg-smart-thumbs').checked
       },
       palette: nextPalette
     });
