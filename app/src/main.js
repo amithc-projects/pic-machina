@@ -10,6 +10,7 @@ import { applyThemeColors } from './utils/settings.js';
 
 // Screen module map — lazy loaded on demand
 const SCREENS = {
+  get: () => import('./screens/get.js'),
   lib: () => import('./screens/lib.js'),
   set: () => import('./screens/set.js'),
   ned: () => import('./screens/ned.js'),

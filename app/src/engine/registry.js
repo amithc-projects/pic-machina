@@ -29,6 +29,37 @@ class Registry {
     }
     return groups;
   }
+
+  /**
+   * Dumps current state of all nodes (excluding the apply functions)
+   * into a JSON format for use with the Claude Skill prompt.
+   * Can be run via console: `await import('./src/engine/registry.js').then(m => m.registry.dumpMetadata())`
+   */
+  dumpMetadata() {
+    const data = this.getAll().map(def => {
+      return {
+        id: def.id,
+        name: def.name,
+        description: def.description,
+        category: def.category,
+        icon: def.icon,
+        params: (def.params || []).map(p => {
+          const pData = {
+            name: p.name,
+            label: p.label,
+            type: p.type
+          };
+          if ('defaultValue' in p) pData.defaultValue = p.defaultValue;
+          if ('options' in p) pData.options = p.options.map(o => ({ label: o.label, value: o.value }));
+          return pData;
+        })
+      };
+    });
+    const str = JSON.stringify(data, null, 2);
+    console.log(`Dumping ${data.length} nodes to console...`);
+    console.log(str);
+    return str;
+  }
 }
 
 export const registry = new Registry();

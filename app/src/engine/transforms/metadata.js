@@ -4,6 +4,7 @@
 
 import { registry } from '../registry.js';
 import { interpolate } from '../../utils/variables.js';
+import { getClosestColorName } from '../../utils/color-matcher.js';
 
 // ─── Strip Metadata ───────────────────────────────────────
 // Actual stripping happens in the processor at export time.
@@ -148,5 +149,106 @@ registry.register({
     } catch (err) {
       console.warn('[meta-geocode] failed:', err);
     }
+  }
+});
+
+// ─── Extract Dominant Colors ──────────────────────────────
+registry.register({
+  id: 'meta-dominant-color', name: 'Extract Dominant Color', category: 'Metadata', categoryKey: 'meta',
+  icon: 'palette',
+  description: 'Quickly analyses the image to extract the top 3 dominant colors. Can ignore near-transparent edges and solid black/white backgrounds.',
+  params: [
+    { name: 'ignoreNeutral', label: 'Ignore Black/White', type: 'boolean', defaultValue: true },
+    { name: 'minAlpha',      label: 'Min Opacity (0-255)', type: 'range',   min: 0, max: 255, defaultValue: 250 },
+  ],
+  apply(ctx, p, context) {
+    if (!context.meta) context.meta = {};
+    if (!context.variables) context.variables = new Map();
+
+    const ignoreNeutral = p.ignoreNeutral !== false;
+    const minAlpha = p.minAlpha ?? 250;
+
+    // Fast downsample to 32x32 for blazing fast dominant color extraction
+    const tmp = document.createElement('canvas');
+    tmp.width = 32;
+    tmp.height = 32;
+    const tctx = tmp.getContext('2d');
+    
+    // We draw from the current working canvas (ctx.canvas) to our 32x32 canvas
+    tctx.drawImage(ctx.canvas, 0, 0, 32, 32);
+    
+    const id = tctx.getImageData(0, 0, 32, 32);
+    const d = id.data;
+    
+    // Bucket pixels (5-bit truncation for better grouping/diversity)
+    const buckets = new Map();
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i+1], b = d[i+2], a = d[i+3];
+      
+      // Skip pixels that are below opacity threshold
+      if (a < minAlpha) continue;
+      
+      // Calculate center-weighting factor (Saliency)
+      // Images usually have the subject in the center. Center pixels get up to 2x weight.
+      const pxIndex = i / 4;
+      const x = pxIndex % 32;
+      const y = Math.floor(pxIndex / 32);
+      const dx = x - 16;
+      const dy = y - 16;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const weight = 1 + Math.max(0, (16 - dist) / 16);
+
+      // Slightly broader bucketing (step of 24) to group textured shades better
+      const rB = Math.round(r / 24) * 24;
+      const gB = Math.round(g / 24) * 24;
+      const bB = Math.round(b / 24) * 24;
+      const key = `${rB},${gB},${bB}`;
+      
+      const bkt = buckets.get(key) || { count: 0, r: 0, g: 0, b: 0 };
+      bkt.count += weight;
+      bkt.r += (r * weight); 
+      bkt.g += (g * weight); 
+      bkt.b += (b * weight);
+      buckets.set(key, bkt);
+    }
+    
+    // Sort buckets by weighted frequency
+    const sorted = [...buckets.values()].sort((a,b) => b.count - a.count);
+    
+    const hexArr = [];
+    const nameArr = [];
+    const nameSet = new Set();
+    
+    // Diversity Loop: Find top 3 colors that map to UNIQUE semantic names
+    // This prevents "tan tan tan" results if the background has slight noise/gradients
+    for (const bkt of sorted) {
+      const r = Math.round(bkt.r / bkt.count);
+      const g = Math.round(bkt.g / bkt.count);
+      const b = Math.round(bkt.b / bkt.count);
+      const name = getClosestColorName(r, g, b);
+      
+      // If ignoreNeutral is on, skip anything the matcher classified as black or white
+      if (ignoreNeutral && (name === 'black' || name === 'white')) continue;
+      
+      if (!nameSet.has(name)) {
+        nameSet.add(name);
+        nameArr.push(name);
+        hexArr.push('#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join(''));
+      }
+      
+      if (nameArr.length >= 3) break;
+    }
+    
+    // Inject arrays into meta
+    context.meta.dominantColors = nameArr;
+    context.meta.dominantHex = hexArr;
+    
+    // Expose dot-notation variables exactly as requested: {{dominantColors.0}} and {{dominantHex.0}}
+    nameArr.forEach((name, i) => {
+      context.variables.set(`dominantColors.${i}`, name);
+    });
+    hexArr.forEach((hex, i) => {
+      context.variables.set(`dominantHex.${i}`, hex);
+    });
   }
 });
