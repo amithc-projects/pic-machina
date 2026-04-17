@@ -863,6 +863,7 @@ These recipes are read-only and available to every user. Users can clone them to
 | `sys-graphic-novel` | Graphic Novel | Photo-realistic with subtle ink outlines — Kuwahara smooth + colour boost + edge ink lines | filter-kuwahara → color-tuning → filter-edge-detect (multiply/invert) → flow-export |
 | `sys-graphic-novel-bold` | Graphic Novel — Bold | Bolder comic-book variant with posterisation and heavier ink lines | filter-kuwahara → color-tuning → color-posterize → filter-edge-detect (multiply/invert) → flow-export |
 | `sys-vampire-gfx` | Vampire GFX | Chalk-white pallor, cold shadows, skin glow and AI red glowing eyes | filter-kuwahara → color-tuning → filter-color-grade → color-vignette → filter-bloom → ai-glow-eyes → flow-export |
+| `sys-cinematic-portrait` | Cinematic Portrait | Saliency-driven photo-studio look — bokeh + warm subject / cool BG grade + subject vignette + contrast lift. Requires the InSPyReNet model (#mdl). | ai-portrait-bokeh → ai-selective-grade → ai-subject-vignette → color-tuning → flow-export |
 
 ---
 

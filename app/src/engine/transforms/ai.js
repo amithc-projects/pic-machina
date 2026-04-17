@@ -6,69 +6,13 @@
 import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
 import { persistSubjectVision } from '../ai/vision-metadata.js';
-
-import photonWasmUrl from '../vendor/photon/photon_rs_bg.wasm?url';
-
-let photonLib = null;
-async function ensurePhoton() {
-  if (photonLib) return photonLib;
-  const initPhoton = (await import('../vendor/photon/photon_rs.js')).default;
-  await initPhoton(photonWasmUrl);
-  photonLib = await import('../vendor/photon/photon_rs.js');
-  return photonLib;
-}
+import { ensurePhoton, featherMaskChannel, blurImageDataPixels } from '../ai/matte-ops.js';
 
 // ─── Shared helpers for saliency-using transforms ────────
 // `persistSubjectVision` lives in ../ai/vision-metadata.js so geometry
 // transforms (ai-subject-crop) can share it without circular imports.
-
-/**
- * Blur a single-channel mask using Photon's gaussian_blur. Staged through an
- * RGBA buffer because Photon operates on RGBA images; the red channel of the
- * result is read back as the new mask.
- *
- * @param {Uint8ClampedArray} mask
- * @param {number} W
- * @param {number} H
- * @param {number} radius  blur radius in pixels (0 returns a copy)
- * @returns {Promise<Uint8ClampedArray>}
- */
-async function featherMaskChannel(mask, W, H, radius) {
-  const r = Math.max(0, Math.round(radius));
-  if (r === 0) return mask.slice();
-  const photon = await ensurePhoton();
-  const rgba = new Uint8Array(W * H * 4);
-  for (let i = 0, j = 0; i < mask.length; i++, j += 4) {
-    rgba[j]     = mask[i];
-    rgba[j + 1] = mask[i];
-    rgba[j + 2] = mask[i];
-    rgba[j + 3] = 255;
-  }
-  const img = new photon.PhotonImage(rgba, W, H);
-  photon.gaussian_blur(img, r);
-  const out = img.get_raw_pixels();
-  img.free();
-  const result = new Uint8ClampedArray(W * H);
-  for (let i = 0, j = 0; i < result.length; i++, j += 4) {
-    result[i] = out[j];
-  }
-  return result;
-}
-
-/**
- * Gaussian-blur the entire RGBA buffer of an ImageData and return the raw
- * pixel bytes. Caller owns the returned Uint8Array.
- */
-async function blurImageDataPixels(imageData, radius) {
-  const r = Math.max(0, Math.round(radius));
-  if (r === 0) return new Uint8Array(imageData.data);
-  const photon = await ensurePhoton();
-  const img = new photon.PhotonImage(new Uint8Array(imageData.data), imageData.width, imageData.height);
-  photon.gaussian_blur(img, r);
-  const out = img.get_raw_pixels();
-  img.free();
-  return out;
-}
+// Photon init + mask/image blur helpers live in ../ai/matte-ops.js so
+// color.js (ai-selective-grade) can reuse them without circular imports.
 
 // ─── Face Privacy ─────────────────────────────────────────
 registry.register({
@@ -702,6 +646,182 @@ registry.register({
     } catch (err) {
       console.warn('[ai-sticker-outline] failed:', err);
       context?.log?.('warn', `[ai-sticker-outline] failed: ${err.message || err}`);
+    }
+  }
+});
+
+// ─── Subject Vignette (InSPyReNet + Photon) ──────────────
+// Radial-style darkening that follows the saliency matte rather than the frame
+// centre. Unlike a geometric vignette, this reliably protects the actual
+// subject no matter where they sit in the composition.
+registry.register({
+  id: 'ai-subject-vignette', name: 'Subject Vignette', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'vignette',
+  description: 'Darken everything except the detected subject. Matte-driven vignette that stays locked to the subject. Requires the InSPyReNet model (#mdl).',
+  params: [
+    { name: 'strength', label: 'Strength',     type: 'range', min: 0,   max: 100, defaultValue: 60 },
+    { name: 'softness', label: 'Softness',     type: 'range', min: 0,   max: 100, defaultValue: 70 },
+    { name: 'color',    label: 'Vignette Color', type: 'color', defaultValue: '#000000' },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-subject-vignette] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    try {
+      const strength = clamp(Math.round(p.strength ?? 60), 0, 100) / 100;
+      const softness = clamp(Math.round(p.softness ?? 70), 0, 100);
+      const color    = p.color || '#000000';
+
+      if (strength === 0) return;
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-subject-vignette] ${msg}`);
+        console.warn(`[ai-subject-vignette] ${msg}`);
+        return;
+      }
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+
+      // Parse vignette color once
+      const hex = color.replace('#', '');
+      const cr = parseInt(hex.substring(0, 2), 16);
+      const cg = parseInt(hex.substring(2, 4), 16);
+      const cb = parseInt(hex.substring(4, 6), 16);
+
+      // 1) Saliency matte
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+
+      // 2) Feather the matte generously — softness controls the radial falloff
+      //    width. Scale by the shorter image edge so behaviour is resolution
+      //    independent.
+      const minEdge = Math.min(W, H);
+      const featherRadius = Math.max(1, Math.round((softness / 100) * (minEdge * 0.15)));
+      const softMask = await featherMaskChannel(maskObj.mask, W, H, featherRadius);
+
+      // 3) Composite: outside the matte, lerp toward the vignette colour by
+      //    `strength * (1 - mask)`. Inside the matte (mask=1) the image is
+      //    untouched.
+      const id = ctx.getImageData(0, 0, W, H);
+      const d  = id.data;
+      for (let i = 0, j = 0; i < softMask.length; i++, j += 4) {
+        const m = softMask[i] / 255;          // 1 = subject, 0 = background
+        const t = (1 - m) * strength;          // 0..strength
+        if (t === 0) continue;
+        d[j]     = d[j]     * (1 - t) + cr * t;
+        d[j + 1] = d[j + 1] * (1 - t) + cg * t;
+        d[j + 2] = d[j + 2] * (1 - t) + cb * t;
+      }
+      ctx.putImageData(id, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        subjectVignette: { strength: Math.round(strength * 100), softness, color, at: Date.now() }
+      });
+
+      context?.log?.('info', `[ai-subject-vignette] ${Math.round(performance.now() - t0)}ms`);
+    } catch (err) {
+      console.warn('[ai-subject-vignette] failed:', err);
+      context?.log?.('warn', `[ai-subject-vignette] failed: ${err.message || err}`);
+    }
+  }
+});
+
+// ─── Subject Sharpen / Denoise (InSPyReNet + Photon) ─────
+// Runs Photon's fixed-kernel sharpen or noise_reduction over a *full-image*
+// copy, then composites it back using the feathered matte so only the subject
+// (or, inversely, only the background) is affected.
+registry.register({
+  id: 'ai-subject-sharpen', name: 'Subject Sharpen', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'deblur',
+  description: 'Sharpen (or denoise) only the detected subject, leaving the background untouched. Requires the InSPyReNet model (#mdl).',
+  params: [
+    { name: 'mode',         label: 'Mode', type: 'select',
+      options: [
+        { label: 'Sharpen',       value: 'sharpen' },
+        { label: 'Denoise',       value: 'denoise' },
+        { label: 'Sharpen + Denoise', value: 'both' },
+      ],
+      defaultValue: 'sharpen' },
+    { name: 'amount',       label: 'Amount',       type: 'range', min: 0, max: 200, defaultValue: 80 },
+    { name: 'edgeFeather',  label: 'Edge Feather', type: 'range', min: 0, max: 20,  defaultValue: 4 },
+    { name: 'inverse',      label: 'Apply to Background Instead', type: 'boolean', defaultValue: false },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-subject-sharpen] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    try {
+      const mode        = p.mode || 'sharpen';
+      const amount      = clamp(Math.round(p.amount ?? 80), 0, 200);
+      const edgeFeather = clamp(Math.round(p.edgeFeather ?? 4), 0, 20);
+      const inverse     = !!p.inverse;
+
+      if (amount === 0) return;
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-subject-sharpen] ${msg}`);
+        console.warn(`[ai-subject-sharpen] ${msg}`);
+        return;
+      }
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+      const photon = await ensurePhoton();
+
+      // 1) Saliency matte + feather
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+      const matte = await featherMaskChannel(maskObj.mask, W, H, edgeFeather);
+
+      // 2) Build a full-image processed copy
+      const idIn = ctx.getImageData(0, 0, W, H);
+      const pimg = new photon.PhotonImage(new Uint8Array(idIn.data), W, H);
+
+      // Photon sharpen is a fixed 3×3 kernel — apply multiple passes to scale
+      // subjective strength. Denoise is similarly fixed.
+      const sharpenPasses = (mode === 'sharpen' || mode === 'both')
+        ? Math.max(1, Math.round(amount / 30))
+        : 0;
+      const denoisePasses = (mode === 'denoise' || mode === 'both')
+        ? Math.max(1, Math.round(amount / 60))
+        : 0;
+
+      for (let n = 0; n < denoisePasses; n++) photon.noise_reduction(pimg);
+      for (let n = 0; n < sharpenPasses; n++) photon.sharpen(pimg);
+
+      const processed = pimg.get_raw_pixels();
+      pimg.free();
+
+      // 3) Composite processed ⇄ original via the matte
+      const src = idIn.data;
+      for (let i = 0, j = 0; i < matte.length; i++, j += 4) {
+        let m = matte[i] / 255;
+        if (inverse) m = 1 - m;
+        if (m === 0) continue;
+        const inv = 1 - m;
+        src[j]     = src[j]     * inv + processed[j]     * m;
+        src[j + 1] = src[j + 1] * inv + processed[j + 1] * m;
+        src[j + 2] = src[j + 2] * inv + processed[j + 2] * m;
+      }
+      ctx.putImageData(idIn, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        subjectSharpen: { mode, amount, edgeFeather, inverse, at: Date.now() }
+      });
+
+      context?.log?.('info', `[ai-subject-sharpen] ${Math.round(performance.now() - t0)}ms (${mode}, ${sharpenPasses}s/${denoisePasses}d)`);
+    } catch (err) {
+      console.warn('[ai-subject-sharpen] failed:', err);
+      context?.log?.('warn', `[ai-subject-sharpen] failed: ${err.message || err}`);
     }
   }
 });

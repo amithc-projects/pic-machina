@@ -104,6 +104,9 @@ All transforms are registered by their `transformId` string.
 | `ai-portrait-bokeh` | Portrait Bokeh | `blurRadius` (0–60), `edgeFeather` (0–30), `falloff` (flat/graduated) | InSPyReNet matte + Photon gaussian_blur. Large-aperture lens simulation. Graduated mode adds a mid-band blur for fake depth falloff. |
 | `ai-drop-shadow` | Subject Drop Shadow | `offsetX`, `offsetY`, `blur`, `opacity`, `color` | InSPyReNet matte. Works on both cut-outs (writes alpha) and photos (darkens visible background). |
 | `ai-sticker-outline` | Sticker Outline | `thickness`, `color`, `doubleOutline`, `secondColor`, `bgMode` (transparent/keep) | InSPyReNet matte dilated via blur-then-threshold. Optional second concentric ring for meme/double-border looks. |
+| `ai-subject-vignette` | Subject Vignette | `strength` (0–100), `softness` (0–100), `color` | InSPyReNet matte feathered by `softness × 0.15 × min(W,H)`. Darkens (or tints) everything outside the matte, leaving the subject untouched. Unlike a geometric vignette, it stays locked to the subject no matter where they sit in frame. |
+| `ai-selective-grade` | Selective Color Grade | `subjectSaturation`/`subjectTemperature`/`subjectExposure`, `backgroundSaturation`/`backgroundTemperature`/`backgroundExposure` (all ±100), `edgeFeather` (0–30) | Two Photon-graded full-image copies composited via the feathered InSPyReNet matte. Temperature is modelled as a paired red/blue channel shift (±60 at the extremes); exposure maps to `adjust_brightness` (±127). Defaults: warm/bright subject, cool/darker background. |
+| `ai-subject-sharpen` | Subject Sharpen | `mode` (sharpen/denoise/both), `amount` (0–200), `edgeFeather` (0–20), `inverse` (bool) | Photon `sharpen` (pass count = amount/30) and/or `noise_reduction` (pass count = amount/60) applied to a full-image clone, composited back through the matte so only the subject (or, with `inverse`, only the background) is affected. |
 | `ai-silhouette` | Silhouette | `color`, `opacity` | Removes BG and fills subject with solid colour |
 | `ai-smart-redact` | Smart Redact | `mode` (redact/extract), `targets` (Text/Face), `method` (Blur/Bar) | OCR + face detection for privacy scrubbing |
 | `ai-ocr-tag` | OCR Tag Extractor | `minLength` | Extracts tags from OCR text (needs Smart Redact Extract mode) |
@@ -113,9 +116,9 @@ All transforms are registered by their `transformId` string.
 
 ### InSPyReNet-based transforms (requires `#mdl` download)
 
-`ai-remove-bg-hq`, `ai-portrait-bokeh`, `ai-subject-crop`, `ai-drop-shadow`, and `ai-sticker-outline` share the same ~200 MB InSPyReNet SwinB saliency model, managed on the **Models** screen (`#mdl`). All five:
+`ai-remove-bg-hq`, `ai-portrait-bokeh`, `ai-subject-crop`, `ai-drop-shadow`, `ai-sticker-outline`, `ai-subject-vignette`, `ai-selective-grade`, and `ai-subject-sharpen` share the same ~200 MB InSPyReNet SwinB saliency model, managed on the **Models** screen (`#mdl`). All of them:
 
-- **Share one inference per image per recipe** — the saliency matte is cached by canvas signature. Stacking Remove BG HQ + Portrait Bokeh + Drop Shadow + Sticker Outline + Subject Crop in a single recipe runs the model exactly once.
+- **Share one inference per image per recipe** — the saliency matte is cached by canvas signature. Stacking Remove BG HQ + Portrait Bokeh + Drop Shadow + Sticker Outline + Subject Crop + Vignette + Selective Grade + Subject Sharpen in a single recipe runs the model exactly once.
 - **Persist `vision.subjectBBox` / `subjectCentroid` / `subjectArea`** on the asset record, so a second batch run at a different aspect ratio or different shadow offset reads the cached bbox instead of re-running inference.
 - **Degrade gracefully** when the model isn't downloaded — they log a warning and leave the canvas untouched (except `ai-subject-crop`, which centre-crops to the target aspect).
 - Run on **main thread only** (onnxruntime-web + WebGPU). Batches containing any of them are routed via `MAIN_THREAD_TRANSFORMS` in `batch.js`.
