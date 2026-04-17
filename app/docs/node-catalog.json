@@ -909,20 +909,41 @@
     "id": "meta-geocode",
     "name": "Geocode",
     "category": "Metadata",
-    "description": "Reverse-geocode GPS coords via Nominatim. Sets {{city}}, {{country}}, {{state}}, {{county}}, {{postcode}}, {{country_code}}, {{suburb}}, {{road}} \u2014 plus a combined {{location}} string.",
+    "description": "Reverse-geocode GPS coords via Nominatim. Sets {{city}}, {{country}}, {{state}}, {{county}}, {{postcode}}, {{country_code}}, {{suburb}}, {{road}} — plus a combined {{location}} string.",
     "icon": "location_on",
     "params": [
       {
         "name": "template",
         "label": "Combined template",
         "type": "text",
-        "defaultValue": "'{city"
+        "defaultValue": "{city}, {country}"
       },
       {
         "name": "targetField",
         "label": "Combined var name",
         "type": "text",
         "defaultValue": "location"
+      }
+    ]
+  },
+  {
+    "id": "meta-dominant-color",
+    "name": "Extract Dominant Color",
+    "category": "Metadata",
+    "description": "Quickly analyses the image to extract the top 3 dominant colors and maps them to semantic keywords for searching or variable injection. Sets {{dominantColors.0}} and {{dominantHex.0}}.",
+    "icon": "palette",
+    "params": [
+      {
+        "name": "ignoreNeutral",
+        "label": "Ignore Black/White",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "minAlpha",
+        "label": "Min Opacity (0-255)",
+        "type": "range",
+        "defaultValue": 250
       }
     ]
   },

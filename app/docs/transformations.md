@@ -186,6 +186,7 @@ These transforms apply existing image effects to every frame of a video using th
 | `meta-strip` | Strip Metadata | `level` (All / GPS Only / EXIF Only) | Removes EXIF from output |
 | `meta-set-exif` | Set EXIF Info | `field` (artist/copyright/comment/description/software), `value` | Writes custom EXIF fields; supports `{{variable}}` |
 | `meta-geocode` | Reverse Geocode | `template` (`{city}, {country}`), `targetField` | Converts GPS coords to text and stores in metadata |
+| `meta-dominant-color` | Extract Dominant Color | - | Quickly analyses the image to extract the top 3 dominant colors and maps them to semantic keywords ({{dominantColors.0}}, {{dominantHex.0}}). |
 
 ---
 
@@ -202,4 +203,6 @@ Use `{{token}}` syntax in any text param (content, caption, suffix, watermark, E
 | `{{exif.model}}` | Camera model |
 | `{{exif.gps}}` | GPS coordinates string |
 | `{{meta.X}}` | Custom metadata field named X |
+| `{{dominantColors.0}}` | Primary semantic color name (e.g. 'navy') |
+| `{{dominantHex.0}}` | Primary exact hex color (e.g. '#000080') |
 | `{{recipe.X}}` | Value of recipe run parameter named X |
