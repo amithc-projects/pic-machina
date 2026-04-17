@@ -17,6 +17,88 @@ async function ensurePhoton() {
   return photonLib;
 }
 
+// ─── Shared helpers for saliency-using transforms ────────
+
+/**
+ * Persist subject metadata on an asset record after a saliency-using
+ * transform so downstream transforms (smart crop, thumbnails, filters)
+ * can skip the inference step.
+ *
+ * @param {string|undefined} assetHash
+ * @param {{mask: Uint8ClampedArray, width: number, height: number}} maskObj
+ * @param {Record<string, any>} [extraFields]  extra fields to merge into vision
+ */
+async function persistSubjectVision(assetHash, maskObj, extraFields = {}) {
+  if (!assetHash) return;
+  try {
+    const { computeSubjectBBox } = await import('../ai/inspyrenet.js');
+    const bbox = computeSubjectBBox(maskObj.mask, maskObj.width, maskObj.height);
+    const { getAsset, patchAsset } = await import('../../data/assets.js');
+    const existing = await getAsset(assetHash);
+    // patchAsset replaces nested objects wholesale, so merge vision manually
+    // to preserve prior fields like faceCount, poseDetected, etc.
+    const nextVision = {
+      ...(existing?.vision ?? {}),
+      ...extraFields,
+      ...(bbox ? {
+        subjectBBox:     { x: bbox.x, y: bbox.y, w: bbox.w, h: bbox.h },
+        subjectCentroid: bbox.centroid,
+        subjectArea:     bbox.area,
+        matteAt:         Date.now(),
+      } : {})
+    };
+    await patchAsset(assetHash, { vision: nextVision });
+  } catch { /* non-fatal */ }
+}
+
+/**
+ * Blur a single-channel mask using Photon's gaussian_blur. Staged through an
+ * RGBA buffer because Photon operates on RGBA images; the red channel of the
+ * result is read back as the new mask.
+ *
+ * @param {Uint8ClampedArray} mask
+ * @param {number} W
+ * @param {number} H
+ * @param {number} radius  blur radius in pixels (0 returns a copy)
+ * @returns {Promise<Uint8ClampedArray>}
+ */
+async function featherMaskChannel(mask, W, H, radius) {
+  const r = Math.max(0, Math.round(radius));
+  if (r === 0) return mask.slice();
+  const photon = await ensurePhoton();
+  const rgba = new Uint8Array(W * H * 4);
+  for (let i = 0, j = 0; i < mask.length; i++, j += 4) {
+    rgba[j]     = mask[i];
+    rgba[j + 1] = mask[i];
+    rgba[j + 2] = mask[i];
+    rgba[j + 3] = 255;
+  }
+  const img = new photon.PhotonImage(rgba, W, H);
+  photon.gaussian_blur(img, r);
+  const out = img.get_raw_pixels();
+  img.free();
+  const result = new Uint8ClampedArray(W * H);
+  for (let i = 0, j = 0; i < result.length; i++, j += 4) {
+    result[i] = out[j];
+  }
+  return result;
+}
+
+/**
+ * Gaussian-blur the entire RGBA buffer of an ImageData and return the raw
+ * pixel bytes. Caller owns the returned Uint8Array.
+ */
+async function blurImageDataPixels(imageData, radius) {
+  const r = Math.max(0, Math.round(radius));
+  if (r === 0) return new Uint8Array(imageData.data);
+  const photon = await ensurePhoton();
+  const img = new photon.PhotonImage(new Uint8Array(imageData.data), imageData.width, imageData.height);
+  photon.gaussian_blur(img, r);
+  const out = img.get_raw_pixels();
+  img.free();
+  return out;
+}
+
 // ─── Face Privacy ─────────────────────────────────────────
 registry.register({
   id: 'ai-face-privacy', name: 'Face Privacy', category: 'AI & Composition', categoryKey: 'ai',
@@ -287,7 +369,9 @@ registry.register({
     }
 
     try {
-      const { isModelReady, runInspyrenet } = await import('../ai/inspyrenet.js');
+      const {
+        isModelReady, getSaliencyMask, applyMaskAsAlpha
+      } = await import('../ai/inspyrenet.js');
       const ready = await isModelReady();
       if (!ready) {
         const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
@@ -296,19 +380,18 @@ registry.register({
         return;
       }
 
-      await runInspyrenet(ctx, {
+      // One saliency pass — cached internally by canvas signature, so other
+      // saliency-consuming transforms in the same recipe share this result.
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+
+      applyMaskAsAlpha(ctx, maskObj, {
         mode: p.mode || 'Transparent',
         edgeSmoothing: p.edgeSmoothing ?? 50,
-      }, context?.log);
+      });
 
-      if (context?.assetHash) {
-        try {
-          const { patchAsset } = await import('../../data/assets.js');
-          await patchAsset(context.assetHash, {
-            vision: { bgRemoved: { model: 'inspyrenet-swinb-fp16', at: Date.now() } }
-          });
-        } catch { /* non-fatal */ }
-      }
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        bgRemoved: { model: 'inspyrenet-swinb-fp16', at: Date.now() }
+      });
 
       // ── Background fill (shares behaviour with ai-remove-bg) ─
       const bgFill = p.bgFill || 'none';
@@ -344,6 +427,101 @@ registry.register({
     } catch (err) {
       console.warn('[ai-remove-bg-hq] failed:', err);
       context?.log?.('warn', `[ai-remove-bg-hq] failed: ${err.message || err}`);
+    }
+  }
+});
+
+// ─── Portrait Bokeh (InSPyReNet + Photon) ─────────────────
+registry.register({
+  id: 'ai-portrait-bokeh', name: 'Portrait Bokeh', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'blur_circular',
+  description: 'Large-aperture lens simulation: keeps the subject sharp and blurs the background. Requires the InSPyReNet model (#mdl).',
+  params: [
+    { name: 'blurRadius',   label: 'Blur Strength',   type: 'range', min: 0, max: 60, defaultValue: 15 },
+    { name: 'edgeFeather',  label: 'Edge Feather',    type: 'range', min: 0, max: 30, defaultValue: 8 },
+    { name: 'falloff',      label: 'Depth Falloff',   type: 'select',
+      options: [
+        { label: 'Flat (single blur)',        value: 'flat' },
+        { label: 'Graduated (two-band depth)', value: 'graduated' },
+      ],
+      defaultValue: 'flat' },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-portrait-bokeh] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    try {
+      const blurRadius  = clamp(Math.round(p.blurRadius  ?? 15), 0, 60);
+      const edgeFeather = clamp(Math.round(p.edgeFeather ?? 8),  0, 30);
+      const falloff     = p.falloff || 'flat';
+
+      if (blurRadius === 0) return;  // no-op
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-portrait-bokeh] ${msg}`);
+        console.warn(`[ai-portrait-bokeh] ${msg}`);
+        return;
+      }
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+
+      // 1) Shared saliency pass (cached by canvas signature)
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+
+      // 2) Feather the matte so subject→background transition isn't harsh
+      const tightMask = await featherMaskChannel(maskObj.mask, W, H, edgeFeather);
+
+      // 3) Blur the full image at the chosen radius
+      const sharpImageData = ctx.getImageData(0, 0, W, H);
+      const sharp = sharpImageData.data;
+      const fullBlur = await blurImageDataPixels(sharpImageData, blurRadius);
+
+      // 4) For graduated mode, compute a second half-radius blur + wider mask
+      let medBlur = null, wideMask = null;
+      if (falloff === 'graduated' && blurRadius >= 4) {
+        medBlur  = await blurImageDataPixels(sharpImageData, Math.max(1, Math.round(blurRadius / 2)));
+        wideMask = await featherMaskChannel(maskObj.mask, W, H, edgeFeather * 2);
+      }
+
+      // 5) Composite per-pixel: subject→sharp, background→blurred
+      const out = sharp;  // write back into the same buffer (no cross-pixel deps)
+      for (let i = 0, j = 0; i < tightMask.length; i++, j += 4) {
+        const mT = tightMask[i] / 255;
+
+        if (medBlur && wideMask) {
+          const mW = wideMask[i] / 255;
+          const near = mT;
+          const mid  = Math.max(0, mW - mT);
+          const far  = Math.max(0, 1 - mW);
+          out[j]     = sharp[j]     * near + medBlur[j]     * mid + fullBlur[j]     * far;
+          out[j + 1] = sharp[j + 1] * near + medBlur[j + 1] * mid + fullBlur[j + 1] * far;
+          out[j + 2] = sharp[j + 2] * near + medBlur[j + 2] * mid + fullBlur[j + 2] * far;
+        } else {
+          const m = mT, inv = 1 - mT;
+          out[j]     = sharp[j]     * m + fullBlur[j]     * inv;
+          out[j + 1] = sharp[j + 1] * m + fullBlur[j + 1] * inv;
+          out[j + 2] = sharp[j + 2] * m + fullBlur[j + 2] * inv;
+        }
+        // alpha (j+3) preserved
+      }
+
+      ctx.putImageData(sharpImageData, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        portraitBokeh: { blurRadius, edgeFeather, falloff, at: Date.now() }
+      });
+
+      context?.log?.('info', `[ai-portrait-bokeh] ${Math.round(performance.now() - t0)}ms (${falloff})`);
+
+    } catch (err) {
+      console.warn('[ai-portrait-bokeh] failed:', err);
+      context?.log?.('warn', `[ai-portrait-bokeh] failed: ${err.message || err}`);
     }
   }
 });
