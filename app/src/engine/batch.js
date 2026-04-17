@@ -410,28 +410,32 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       } else if (agg.node.transformId === 'flow-photo-stack') {
         const fmt  = p.format || 'gif';
         const blob = await createPhotoStack(agg.blobs, {
-          width:        p.width        || 1920,
-          height:       p.height       || 1080,
-          deskColor:    p.deskColor    || '#3d2b1a',
-          frameDelay:   p.frameDelay   || 800,
-          maxRotation:  p.maxRotation  ?? 35,
-          borderColor:  p.borderColor  || '#f5f5f0',
-          borderBottom: p.borderBottom || 60,
-          format:       fmt,
-          captions:     agg.captions   || [],
-          overlap:      p.overlap      ?? 0,
+          width:          p.width          || 1920,
+          height:         p.height         || 1080,
+          deskColor:      p.deskColor      || '#3d2b1a',
+          frameDelay:     p.frameDelay     || 800,
+          maxRotation:    p.maxRotation    ?? 35,
+          borderColor:    p.borderColor    || '#f5f5f0',
+          borderBottom:   p.borderBottom   || 60,
+          format:         fmt,
+          captions:       agg.captions     || [],
+          overlap:        p.overlap        ?? 0,
+          isolateSubject: !!p.isolateSubject,
+          log:            onLog,
         });
         const base = (p.filename || 'photo-stack').replace(/\.(gif|mp4)$/i, '');
         await writeFile(subHandle, `${base}.${fmt === 'mp4' ? 'mp4' : 'gif'}`, blob);
       } else if (agg.node.transformId === 'flow-animate-stack') {
         const blob = await createAnimatedStack(agg.blobs, {
           ...p,
-          width:        p.width        || 1920,
-          height:       p.height       || 1080,
-          fps:          p.fps          || 30,
+          width:          p.width          || 1920,
+          height:         p.height         || 1080,
+          fps:            p.fps            || 30,
           durationPerPhoto: p.durationPerPhoto || 1.5,
-          bgColor:      p.bgColor      || '#000000',
-          captions:     agg.captions   || [],
+          bgColor:        p.bgColor        || '#000000',
+          captions:       agg.captions     || [],
+          isolateSubject: !!p.isolateSubject,
+          log:            onLog,
         });
         const fmt = p.format || 'gif';
         const base = (p.filename || 'animated-stack').replace(/\.(gif|mp4)$/i, '');
@@ -621,7 +625,19 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
                    oldBmp.close();
                }
 
-               drawPerspectiveCell(ctx, bmp, cellQuad, 12);
+               // Per-slot subject isolation — bakes the saliency matte into
+               // alpha so the perspective cell shows a cut-out silhouette
+               // instead of a rectangle. Runs after fitMode so the matte
+               // matches the final on-screen pixels. Falls back to the
+               // original bitmap if the model isn't downloaded.
+               let drawable = bmp;
+               if (p.isolateSubject) {
+                 const { isolateSubjectBitmap } = await import('./ai/inspyrenet.js');
+                 const iso = await isolateSubjectBitmap(bmp, { log: onLog });
+                 if (iso) drawable = iso;
+               }
+
+               drawPerspectiveCell(ctx, drawable, cellQuad, 12);
                bmp.close();
             }
 
