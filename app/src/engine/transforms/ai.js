@@ -5,6 +5,7 @@
 
 import { registry } from '../registry.js';
 import { clamp } from '../../utils/misc.js';
+import { persistSubjectVision } from '../ai/vision-metadata.js';
 
 import photonWasmUrl from '../vendor/photon/photon_rs_bg.wasm?url';
 
@@ -18,38 +19,8 @@ async function ensurePhoton() {
 }
 
 // ─── Shared helpers for saliency-using transforms ────────
-
-/**
- * Persist subject metadata on an asset record after a saliency-using
- * transform so downstream transforms (smart crop, thumbnails, filters)
- * can skip the inference step.
- *
- * @param {string|undefined} assetHash
- * @param {{mask: Uint8ClampedArray, width: number, height: number}} maskObj
- * @param {Record<string, any>} [extraFields]  extra fields to merge into vision
- */
-async function persistSubjectVision(assetHash, maskObj, extraFields = {}) {
-  if (!assetHash) return;
-  try {
-    const { computeSubjectBBox } = await import('../ai/inspyrenet.js');
-    const bbox = computeSubjectBBox(maskObj.mask, maskObj.width, maskObj.height);
-    const { getAsset, patchAsset } = await import('../../data/assets.js');
-    const existing = await getAsset(assetHash);
-    // patchAsset replaces nested objects wholesale, so merge vision manually
-    // to preserve prior fields like faceCount, poseDetected, etc.
-    const nextVision = {
-      ...(existing?.vision ?? {}),
-      ...extraFields,
-      ...(bbox ? {
-        subjectBBox:     { x: bbox.x, y: bbox.y, w: bbox.w, h: bbox.h },
-        subjectCentroid: bbox.centroid,
-        subjectArea:     bbox.area,
-        matteAt:         Date.now(),
-      } : {})
-    };
-    await patchAsset(assetHash, { vision: nextVision });
-  } catch { /* non-fatal */ }
-}
+// `persistSubjectVision` lives in ../ai/vision-metadata.js so geometry
+// transforms (ai-subject-crop) can share it without circular imports.
 
 /**
  * Blur a single-channel mask using Photon's gaussian_blur. Staged through an
@@ -522,6 +493,215 @@ registry.register({
     } catch (err) {
       console.warn('[ai-portrait-bokeh] failed:', err);
       context?.log?.('warn', `[ai-portrait-bokeh] failed: ${err.message || err}`);
+    }
+  }
+});
+
+// ─── Subject Drop Shadow (InSPyReNet + Photon) ───────────
+registry.register({
+  id: 'ai-drop-shadow', name: 'Subject Drop Shadow', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'filter_drama',
+  description: 'Cast a soft shadow behind the detected subject. Works on both transparent cut-outs and photos (shadow darkens visible background). Requires the InSPyReNet model (#mdl).',
+  params: [
+    { name: 'offsetX', label: 'Offset X (px)',  type: 'range', min: -100, max: 100, defaultValue: 12 },
+    { name: 'offsetY', label: 'Offset Y (px)',  type: 'range', min: -100, max: 100, defaultValue: 18 },
+    { name: 'blur',    label: 'Shadow Blur',    type: 'range', min: 0,    max: 80,  defaultValue: 20 },
+    { name: 'opacity', label: 'Opacity (%)',    type: 'range', min: 0,    max: 100, defaultValue: 55 },
+    { name: 'color',   label: 'Shadow Color',   type: 'color', defaultValue: '#000000' },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-drop-shadow] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    try {
+      const offX    = clamp(Math.round(p.offsetX ?? 12), -100, 100);
+      const offY    = clamp(Math.round(p.offsetY ?? 18), -100, 100);
+      const blur    = clamp(Math.round(p.blur    ?? 20),  0,   80);
+      const opacity = clamp(Math.round(p.opacity ?? 55),  0,  100) / 100;
+      const color   = p.color || '#000000';
+
+      if (opacity === 0) return;  // nothing to draw
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-drop-shadow] ${msg}`);
+        console.warn(`[ai-drop-shadow] ${msg}`);
+        return;
+      }
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+      const shadowMask = await featherMaskChannel(maskObj.mask, W, H, blur);
+      const origMask = maskObj.mask;
+
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+
+      // Per-pixel: shadow shows where the offset matte exists AND the subject
+      // does NOT. We darken existing pixels toward shadow color, and for
+      // transparent pixels (cut-outs) we also write alpha so the shadow is
+      // visible.
+      const imageData = ctx.getImageData(0, 0, W, H);
+      const data = imageData.data;
+
+      for (let y = 0; y < H; y++) {
+        const sy = y - offY;
+        if (sy < 0 || sy >= H) {
+          // Whole row has no shadow contribution; still need to skip subject
+          continue;
+        }
+        for (let x = 0; x < W; x++) {
+          const sx = x - offX;
+          if (sx < 0 || sx >= W) continue;
+          const i  = y * W + x;
+          const si = sy * W + sx;
+          const subj = origMask[i] / 255;
+          const shadowCoverage = (shadowMask[si] / 255) * opacity * (1 - subj);
+          if (shadowCoverage <= 0) continue;
+
+          const p4  = i * 4;
+          const inv = 1 - shadowCoverage;
+          data[p4]     = data[p4]     * inv + r * shadowCoverage;
+          data[p4 + 1] = data[p4 + 1] * inv + g * shadowCoverage;
+          data[p4 + 2] = data[p4 + 2] * inv + b * shadowCoverage;
+          // For transparent backgrounds the shadow also needs to WRITE alpha.
+          // For opaque photos the max() leaves alpha=255 untouched.
+          const newA = Math.round(shadowCoverage * 255);
+          if (newA > data[p4 + 3]) data[p4 + 3] = newA;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        dropShadow: { offX, offY, blur, opacity, color, at: Date.now() }
+      });
+
+      context?.log?.('info', `[ai-drop-shadow] ${Math.round(performance.now() - t0)}ms`);
+
+    } catch (err) {
+      console.warn('[ai-drop-shadow] failed:', err);
+      context?.log?.('warn', `[ai-drop-shadow] failed: ${err.message || err}`);
+    }
+  }
+});
+
+// ─── Sticker Outline (InSPyReNet + Photon) ───────────────
+registry.register({
+  id: 'ai-sticker-outline', name: 'Sticker Outline', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'filter_frames',
+  description: 'Cut out the detected subject with a solid border, like a sticker. Optional second ring for a double-outline look. Requires the InSPyReNet model (#mdl).',
+  params: [
+    { name: 'thickness',     label: 'Outline Thickness (px)', type: 'range',   min: 1, max: 40, defaultValue: 8 },
+    { name: 'color',         label: 'Outline Color',          type: 'color',   defaultValue: '#ffffff' },
+    { name: 'doubleOutline', label: 'Double Outline',         type: 'boolean', defaultValue: false },
+    { name: 'secondColor',   label: 'Second Outline Color',   type: 'color',   defaultValue: '#000000' },
+    { name: 'bgMode',        label: 'Background', type: 'select',
+      options: [
+        { label: 'Transparent',   value: 'transparent' },
+        { label: 'Keep original', value: 'keep' },
+      ],
+      defaultValue: 'transparent' },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-sticker-outline] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    try {
+      const thickness = clamp(Math.round(p.thickness ?? 8), 1, 40);
+      const color1    = p.color        || '#ffffff';
+      const double    = !!p.doubleOutline;
+      const color2    = p.secondColor  || '#000000';
+      const bgMode    = p.bgMode       || 'transparent';
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-sticker-outline] ${msg}`);
+        console.warn(`[ai-sticker-outline] ${msg}`);
+        return;
+      }
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+      const origMask = maskObj.mask;
+
+      // Blur-then-threshold approximates morphological dilation. Blur radius
+      // ≈ thickness px means any pixel within ~thickness of the subject gets
+      // a non-trivial contribution.
+      const dil1 = await featherMaskChannel(origMask, W, H, thickness);
+      const dil2 = double ? await featherMaskChannel(origMask, W, H, thickness * 2) : null;
+
+      const parseHex = (hex) => ({
+        r: parseInt(hex.slice(1, 3), 16),
+        g: parseInt(hex.slice(3, 5), 16),
+        b: parseInt(hex.slice(5, 7), 16),
+      });
+      const c1 = parseHex(color1);
+      const c2 = parseHex(color2);
+
+      // Threshold for "is in the dilated region" — low value gives a wider,
+      // softer reach of the outline; higher gives a tighter ring. 40/255 is a
+      // good balance for thickness-sized blur kernels.
+      const DILATE_T = 40;
+      const SUBJ_T   = 127;  // 50% matte confidence
+
+      const imageData = ctx.getImageData(0, 0, W, H);
+      const data = imageData.data;
+
+      for (let i = 0, p4 = 0; i < origMask.length; i++, p4 += 4) {
+        const subj  = origMask[i];
+        const d1    = dil1[i];
+        const d2    = dil2 ? dil2[i] : 0;
+
+        if (subj > SUBJ_T) {
+          // Inside subject — keep original pixels, force opaque
+          data[p4 + 3] = 255;
+        } else if (d1 > DILATE_T) {
+          // First outline ring
+          data[p4]     = c1.r;
+          data[p4 + 1] = c1.g;
+          data[p4 + 2] = c1.b;
+          data[p4 + 3] = 255;
+        } else if (double && d2 > DILATE_T) {
+          // Second outline ring
+          data[p4]     = c2.r;
+          data[p4 + 1] = c2.g;
+          data[p4 + 2] = c2.b;
+          data[p4 + 3] = 255;
+        } else if (bgMode === 'transparent') {
+          data[p4 + 3] = 0;
+        }
+        // bgMode 'keep' → leave original pixel untouched
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        stickerOutline: {
+          thickness, color: color1,
+          double, secondColor: double ? color2 : null,
+          bgMode, at: Date.now(),
+        }
+      });
+
+      context?.log?.('info', `[ai-sticker-outline] ${Math.round(performance.now() - t0)}ms (${double ? 'double' : 'single'})`);
+
+    } catch (err) {
+      console.warn('[ai-sticker-outline] failed:', err);
+      context?.log?.('warn', `[ai-sticker-outline] failed: ${err.message || err}`);
     }
   }
 });

@@ -3,10 +3,76 @@
  */
 
 import { registry } from '../registry.js';
+import { clamp } from '../../utils/misc.js';
+import { persistSubjectVision, readCachedSubjectBBox } from '../ai/vision-metadata.js';
 
 function parseVal(val, ref) {
   const s = String(val);
   return s.endsWith('%') ? (parseFloat(s) / 100) * ref : parseFloat(s);
+}
+
+// Map the `aspectRatio` param to a numeric target. Returns null for 'original'.
+function resolveAspectRatio(aspectRatio, customRatio, W, H) {
+  if (!aspectRatio || aspectRatio === 'original') return W / H;
+  if (aspectRatio === 'custom') {
+    const n = parseFloat(customRatio);
+    return Number.isFinite(n) && n > 0 ? n : W / H;
+  }
+  const [rw, rh] = aspectRatio.split(':').map(Number);
+  if (!rw || !rh) return W / H;
+  return rw / rh;
+}
+
+/**
+ * Compute the largest rectangle of aspect ratio `target` that:
+ *   1. contains the inflated subject bbox `bb` if possible,
+ *   2. fits inside [0..W]×[0..H],
+ *   3. is positioned so the subject `centroid` lands on the requested anchor point
+ *      (thirds, center, top, bottom).
+ *
+ * Returns { cx, cy, cw, ch } in source pixels.
+ */
+function placeCropRect({ bb, centroid, W, H, targetAspect, anchor }) {
+  // Minimum size that contains the inflated bbox at the target aspect.
+  let cw = Math.max(bb.w, bb.h * targetAspect);
+  let ch = cw / targetAspect;
+
+  // Clamp to image bounds — if the aspect can't fit the subject, the clamp
+  // will shrink below the bbox; downstream will crop into the subject edges
+  // rather than fail outright.
+  if (cw > W) { cw = W; ch = cw / targetAspect; }
+  if (ch > H) { ch = H; cw = ch * targetAspect; }
+  cw = Math.round(cw);
+  ch = Math.round(ch);
+
+  // Anchor-relative target position of the centroid inside the crop.
+  // e.g. center → (0.5, 0.5); thirds-tl → (1/3, 1/3).
+  const A = {
+    'center':    [0.5,  0.5],
+    'top':       [0.5,  1 / 3],
+    'bottom':    [0.5,  2 / 3],
+    'thirds-tl': [1 / 3, 1 / 3],
+    'thirds-tr': [2 / 3, 1 / 3],
+    'thirds-bl': [1 / 3, 2 / 3],
+    'thirds-br': [2 / 3, 2 / 3],
+  }[anchor] || [0.5, 0.5];
+
+  let cx = centroid.x - cw * A[0];
+  let cy = centroid.y - ch * A[1];
+
+  // Clamp to image bounds.
+  cx = Math.round(clamp(cx, 0, W - cw));
+  cy = Math.round(clamp(cy, 0, H - ch));
+
+  return { cx, cy, cw, ch };
+}
+
+function applyCropRect(ctx, cx, cy, cw, ch) {
+  const tmp = document.createElement('canvas');
+  tmp.width = cw; tmp.height = ch;
+  tmp.getContext('2d').drawImage(ctx.canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+  ctx.canvas.width = cw; ctx.canvas.height = ch;
+  ctx.drawImage(tmp, 0, 0);
 }
 
 function tempCopy(canvas) {
@@ -432,6 +498,133 @@ registry.register({
 
     ctx.drawImage(tmp, -(tx), -(ty));
     ctx.restore();
+  }
+});
+
+// ─── Subject-Aware Crop (InSPyReNet saliency) ─────────────
+registry.register({
+  id: 'ai-subject-crop', name: 'Subject Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  icon: 'center_focus_strong',
+  description: 'Crop to a target aspect ratio while keeping the detected subject composed correctly. Uses InSPyReNet saliency (requires the model — see #mdl). Falls back to centre-crop if the model is unavailable.',
+  params: [
+    { name: 'aspectRatio', label: 'Aspect Ratio', type: 'select',
+      options: [
+        { label: 'Original',     value: 'original' },
+        { label: '1:1 (Square)', value: '1:1' },
+        { label: '4:5 (Portrait)', value: '4:5' },
+        { label: '3:4 (Portrait)', value: '3:4' },
+        { label: '4:3 (Landscape)', value: '4:3' },
+        { label: '16:9 (Wide)',  value: '16:9' },
+        { label: '9:16 (Tall)',  value: '9:16' },
+        { label: 'Custom…',      value: 'custom' },
+      ],
+      defaultValue: '1:1' },
+    { name: 'customRatio', label: 'Custom ratio (w/h, e.g. 1.618)', type: 'text', defaultValue: '1.618' },
+    { name: 'padding',     label: 'Padding (% of subject)',          type: 'range', min: 0, max: 50, defaultValue: 10 },
+    { name: 'anchor',      label: 'Anchor', type: 'select',
+      options: [
+        { label: 'Centre',         value: 'center' },
+        { label: 'Top',            value: 'top' },
+        { label: 'Bottom',         value: 'bottom' },
+        { label: 'Thirds — Top-Left',    value: 'thirds-tl' },
+        { label: 'Thirds — Top-Right',   value: 'thirds-tr' },
+        { label: 'Thirds — Bottom-Left', value: 'thirds-bl' },
+        { label: 'Thirds — Bottom-Right',value: 'thirds-br' },
+      ],
+      defaultValue: 'center' },
+    { name: 'threshold',   label: 'Matte Threshold (%)', type: 'range', min: 10, max: 90, defaultValue: 50 },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-subject-crop] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const targetAspect = resolveAspectRatio(p.aspectRatio, p.customRatio, W, H);
+    const padPct       = clamp(Number(p.padding) || 0, 0, 50) / 100;
+    const anchor       = p.anchor || 'center';
+    const threshold    = clamp(Number(p.threshold) || 50, 10, 90) / 100;
+
+    // Fallback used when we can't run (or don't need to run) inference.
+    const centreCropFallback = (reason) => {
+      if (reason) context?.log?.('warn', `[ai-subject-crop] ${reason} — falling back to centre crop.`);
+      let cw, ch;
+      if (W / H > targetAspect) { ch = H; cw = Math.round(ch * targetAspect); }
+      else                      { cw = W; ch = Math.round(cw / targetAspect); }
+      cw = Math.min(cw, W); ch = Math.min(ch, H);
+      const cx = Math.round((W - cw) / 2);
+      const cy = Math.round((H - ch) / 2);
+      applyCropRect(ctx, cx, cy, cw, ch);
+    };
+
+    try {
+      let bbox = null;
+      let maskObj = null;  // only set when we actually run inference (for metadata)
+
+      // 1) Prefer a previously-cached bbox from the asset record — lets a
+      //    recipe re-crop at a different aspect without re-running the model.
+      const cached = await readCachedSubjectBBox(context?.assetHash);
+      if (cached && cached.w > 0 && cached.h > 0) {
+        bbox = cached;
+        context?.log?.('info', '[ai-subject-crop] using cached subject bbox from asset vision metadata');
+      }
+
+      // 2) Otherwise, run inference (model must be downloaded).
+      if (!bbox) {
+        const { isModelReady, getSaliencyMask, computeSubjectBBox } =
+          await import('../ai/inspyrenet.js');
+        const ready = await isModelReady();
+        if (!ready) {
+          centreCropFallback('InSPyReNet model not downloaded (visit #mdl)');
+          return;
+        }
+        const t0 = performance.now();
+        maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+        bbox = computeSubjectBBox(maskObj.mask, maskObj.width, maskObj.height, { threshold });
+        context?.log?.('info', `[ai-subject-crop] saliency ${Math.round(performance.now() - t0)}ms`);
+      }
+
+      if (!bbox) {
+        centreCropFallback('no subject found above threshold');
+        return;
+      }
+
+      // 3) Inflate bbox by padding% of its own dimensions.
+      const padX = bbox.w * padPct;
+      const padY = bbox.h * padPct;
+      const inflated = {
+        x: Math.max(0, bbox.x - padX),
+        y: Math.max(0, bbox.y - padY),
+        w: Math.min(W, bbox.w + padX * 2),
+        h: Math.min(H, bbox.h + padY * 2),
+      };
+
+      // 4) Compute the crop rectangle and apply it.
+      const { cx, cy, cw, ch } = placeCropRect({
+        bb: inflated,
+        centroid: bbox.centroid,
+        W, H, targetAspect, anchor,
+      });
+
+      if (cw <= 0 || ch <= 0) {
+        centreCropFallback('computed crop rectangle was empty');
+        return;
+      }
+
+      applyCropRect(ctx, cx, cy, cw, ch);
+
+      // 5) Persist vision metadata only if we actually ran inference.
+      if (maskObj) {
+        await persistSubjectVision(context?.assetHash, maskObj, {
+          subjectCrop: { aspectRatio: p.aspectRatio, anchor, padding: p.padding, at: Date.now() }
+        });
+      }
+    } catch (err) {
+      console.warn('[ai-subject-crop] failed:', err);
+      context?.log?.('warn', `[ai-subject-crop] failed: ${err.message || err}`);
+      centreCropFallback('transform errored');
+    }
   }
 });
 
