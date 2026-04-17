@@ -25,9 +25,10 @@ const SCREENS = {
   fld: () => import('./screens/fld.js'),
   shc: () => import('./screens/shc.js'),
   mdl: () => import('./screens/mdl.js'),
+  gsd: () => import('./screens/gsd.js'),
 };
 
-const DEFAULT_SCREEN = 'shc';
+const DEFAULT_SCREEN = 'gsd';
 
 // ─── State ────────────────────────────────────────────────
 let currentScreen = null;
