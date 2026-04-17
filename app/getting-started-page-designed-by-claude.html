@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Getting Started — PicMachina</title>
+<meta name="viewport" content="width=1440" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --bg:#0a0f1c;
+    --bg-2:#0f1626;
+    --panel:#141c2e;
+    --panel-2:#182236;
+    --line:rgba(255,255,255,0.07);
+    --line-2:rgba(255,255,255,0.12);
+    --text:#e7ecf5;
+    --text-dim:#98a3b8;
+    --text-mute:#6a7590;
+    --primary:#3b82f6;
+    --primary-2:#60a5fa;
+    --teal:#2dd4bf;
+    --orange:#fb923c;
+    --pink:#f472b6;
+    --amber:#fbbf24;
+    --violet:#a78bfa;
+    --cyan:#22d3ee;
+    --green:#34d399;
+    --red:#f87171;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  body{overflow-x:hidden}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .serif{font-family:'Instrument Serif',serif;font-weight:400}
+  button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+  ::selection{background:rgba(59,130,246,0.35)}
+  /* Subtle grid backdrop */
+  .gridbg{
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-position: -1px -1px;
+  }
+  /* Animated dashed line in pipeline */
+  @keyframes march { to { stroke-dashoffset: -24; } }
+  .march { stroke-dasharray: 6 6; animation: march 1.2s linear infinite; }
+  @keyframes pulseDot { 0%,100%{opacity:.4} 50%{opacity:1} }
+  .pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  .float-slow { animation: float 3.2s ease-in-out infinite; }
+  @keyframes shimmer {
+    0%{background-position:-200% 0}
+    100%{background-position:200% 0}
+  }
+  .shimmer{
+    background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2.4s linear infinite;
+  }
+  @keyframes caret { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+  .caret{ animation: caret 1s step-end infinite; }
+  /* tour progress bar grow */
+  @keyframes fillbar { from{width:0} to{width:var(--target,100%)} }
+  .scroll-hide::-webkit-scrollbar{display:none}
+  .scroll-hide{scrollbar-width:none}
+  /* Hover lift */
+  .lift{transition:transform .2s ease, border-color .2s ease, background .2s ease}
+  .lift:hover{transform:translateY(-2px)}
+  /* Tweaks panel */
+  .tweaks{
+    position:fixed; right:20px; bottom:20px; z-index:80;
+    background:rgba(20,28,46,0.92); backdrop-filter: blur(12px);
+    border:1px solid var(--line-2); border-radius:14px; padding:14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    min-width:260px;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+/*EDITMODE-BEGIN*/
+const TWEAK_DEFAULTS = {
+  "heroVariant": "pipeline"
+};
+/*EDITMODE-END*/
+
+/* ===================== ICONS (inline lucide-style) ===================== */
+const Icon = ({d, size=16, stroke=1.75, fill="none", style}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor"
+       strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style}>
+    {d}
+  </svg>
+);
+const I = {
+  rocket: <Icon d={<><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></>}/>,
+  star: <Icon d={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>}/>,
+  library: <Icon d={<><path d="M16 6l-4-3-4 3"/><rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 10v11M16 10v11"/></>}/>,
+  blocks: <Icon d={<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>}/>,
+  template: <Icon d={<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></>}/>,
+  history: <Icon d={<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></>}/>,
+  folder: <Icon d={<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z"/>}/>,
+  models: <Icon d={<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"/></>}/>,
+  sync: <Icon d={<><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></>}/>,
+  help: <Icon d={<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></>}/>,
+  settings: <Icon d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></>}/>,
+  plus: <Icon d={<><path d="M12 5v14M5 12h14"/></>}/>,
+  play: <Icon d={<polygon points="5 3 19 12 5 21 5 3"/>} fill="currentColor"/>,
+  arrowRight: <Icon d={<><path d="M5 12h14M13 5l7 7-7 7"/></>}/>,
+  upload: <Icon d={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>}/>,
+  image: <Icon d={<><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></>}/>,
+  sparkle: <Icon d={<><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></>}/>,
+  wand: <Icon d={<><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M15 9h0M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5"/></>}/>,
+  check: <Icon d={<polyline points="20 6 9 17 4 12"/>}/>,
+  chevronR: <Icon d={<polyline points="9 18 15 12 9 6"/>}/>,
+  chevronL: <Icon d={<polyline points="15 18 9 12 15 6"/>}/>,
+  command: <Icon d={<path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>}/>,
+  code: <Icon d={<><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></>}/>,
+  tag: <Icon d={<><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>}/>,
+  layers: <Icon d={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>}/>,
+  scan: <Icon d={<><path d="M3 7V5a2 2 0 0 1 2-2h2M21 7V5a2 2 0 0 0-2-2h-2M3 17v2a2 2 0 0 0 2 2h2M21 17v2a2 2 0 0 1-2 2h-2M7 12h10"/></>}/>,
+  slider: <Icon d={<><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></>}/>,
+  type: <Icon d={<><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></>}/>,
+  grid: <Icon d={<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></>}/>,
+  route: <Icon d={<><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></>}/>,
+  download: <Icon d={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>}/>,
+  x: <Icon d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>}/>,
+  user: <Icon d={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>}/>,
+  camera: <Icon d={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>}/>,
+  video: <Icon d={<><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></>}/>,
+  building: <Icon d={<><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></>}/>,
+  moon: <Icon d={<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>}/>,
+};
+
+/* ===================== SIDEBAR ===================== */
+function Sidebar({active="started"}){
+  const items = [
+    {id:"started", label:"Get Started", icon:I.rocket, active:true},
+    {id:"showcase", label:"Showcase", icon:I.star},
+    {group:true},
+    {id:"library", label:"Library", icon:I.library},
+    {id:"blocks", label:"Block Builder", icon:I.blocks},
+    {id:"templates", label:"Templates", icon:I.template},
+    {group:true},
+    {id:"history", label:"History", icon:I.history},
+    {id:"folder", label:"Folder", icon:I.folder},
+    {group:true},
+    {id:"models", label:"Models", icon:I.models},
+    {id:"sync", label:"Config Sync", icon:I.sync},
+    {id:"help", label:"Help", icon:I.help},
+    {id:"settings", label:"Settings", icon:I.settings},
+  ];
+  return (
+    <aside style={{
+      width:220, flex:"0 0 220px", background:"#0b1322",
+      borderRight:"1px solid var(--line)", padding:"18px 14px",
+      display:"flex", flexDirection:"column", gap:4, height:"100vh", position:"sticky", top:0
+    }}>
+      <div style={{display:"flex", alignItems:"center", gap:10, padding:"4px 6px 16px", borderBottom:"1px solid var(--line)", marginBottom:10}}>
+        <div style={{width:28, height:28, borderRadius:8, background:"linear-gradient(135deg,#3b82f6,#6366f1)", display:"grid", placeItems:"center", boxShadow:"0 0 0 1px rgba(255,255,255,0.08) inset"}}>
+          <Icon size={15} d={<><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.2 4.2l4.3 4.3M15.5 15.5l4.3 4.3M1 12h6M17 12h6M4.2 19.8l4.3-4.3M15.5 8.5l4.3-4.3"/></>}/>
+        </div>
+        <div style={{fontWeight:700, letterSpacing:.2}}>PicMachina</div>
+      </div>
+      {items.map((it,idx)=>{
+        if(it.group) return <div key={"g"+idx} style={{height:1, background:"var(--line)", margin:"10px 2px"}}/>;
+        const isActive = it.id===active;
+        return (
+          <div key={it.id} style={{
+            display:"flex", alignItems:"center", gap:10, padding:"8px 10px", borderRadius:8,
+            color: isActive? "#93c5fd":"var(--text-dim)",
+            background: isActive? "rgba(59,130,246,0.12)":"transparent",
+            border: isActive? "1px solid rgba(59,130,246,0.25)":"1px solid transparent",
+            fontSize:13, fontWeight: isActive?600:500, cursor:"pointer"
+          }}>
+            <span style={{display:"inline-flex"}}>{it.icon}</span>
+            {it.label}
+          </div>
+        );
+      })}
+      <div style={{flex:1}}/>
+      <div style={{display:"flex", justifyContent:"center", padding:"10px 0"}}>
+        <div style={{width:30, height:30, borderRadius:"50%", border:"1px solid var(--line-2)", display:"grid", placeItems:"center", color:"var(--text-dim)"}}>{I.moon}</div>
+      </div>
+    </aside>
+  );
+}
+
+/* ===================== SHARED: header row on content ===================== */
+function PageHeader({title, icon, right}){
+  return (
+    <div style={{display:"flex", alignItems:"center", gap:10, padding:"18px 32px", borderBottom:"1px solid var(--line)", background:"rgba(10,15,28,0.6)", backdropFilter:"blur(8px)", position:"sticky", top:0, zIndex:20}}>
+      <span style={{color:"#60a5fa"}}>{icon}</span>
+      <h1 style={{margin:0, fontSize:18, fontWeight:600, letterSpacing:.2}}>{title}</h1>
+      <div style={{flex:1}}/>
+      {right}
+    </div>
+  );
+}
+
+/* ===================== HERO A — LIVE PIPELINE ===================== */
+function LivePipelineHero(){
+  // animated processing state on a loop
+  const [tick,setTick] = React.useState(0);
+  React.useEffect(()=>{
+    const id = setInterval(()=>setTick(t=>(t+1)%400), 50);
+    return ()=>clearInterval(id);
+  },[]);
+  const phase = Math.floor(tick/100); // 0..3
+  const nodes = [
+    {label:"Input", sub:"portrait_04.jpg", x:40,  y:90, color:"var(--teal)", icon:I.image, kind:"source"},
+    {label:"Analyse", sub:"detect faces",  x:230, y:40, color:"var(--cyan)", icon:I.scan},
+    {label:"Amend",   sub:"cinematic LUT", x:230, y:140,color:"var(--orange)", icon:I.slider},
+    {label:"Annotate",sub:"add caption",   x:420, y:40, color:"var(--amber)", icon:I.type},
+    {label:"Output",  sub:"/exports/final/",x:420, y:140,color:"var(--green)", icon:I.download},
+  ];
+  // progress for each edge: fill based on phase
+  const edges = [
+    {from:0, to:1, active:phase>=0},
+    {from:0, to:2, active:phase>=0},
+    {from:1, to:3, active:phase>=1},
+    {from:2, to:3, active:phase>=2},
+    {from:2, to:4, active:phase>=2},
+    {from:3, to:4, active:phase>=3},
+  ];
+  const getNode = i => nodes[i];
+  const edgePath = (a,b) => {
+    const x1=a.x+140, y1=a.y+30, x2=b.x, y2=b.y+30;
+    const mx=(x1+x2)/2;
+    return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+  };
+
+  return (
+    <div style={{
+      position:"relative", borderRadius:20, overflow:"hidden",
+      background:"linear-gradient(180deg, #0f1a30 0%, #0c1424 100%)",
+      border:"1px solid var(--line-2)",
+      padding:"40px 48px"
+    }}>
+      {/* backdrop glow */}
+      <div style={{position:"absolute", inset:0, pointerEvents:"none",
+        background:"radial-gradient(600px 300px at 20% 0%, rgba(59,130,246,0.18), transparent 60%), radial-gradient(500px 300px at 90% 100%, rgba(167,139,250,0.12), transparent 60%)"}}/>
+      <div className="gridbg" style={{position:"absolute", inset:0, opacity:.5, maskImage:"radial-gradient(ellipse at center, black 30%, transparent 80%)"}}/>
+
+      <div style={{position:"relative", display:"grid", gridTemplateColumns:"1.1fr 1.3fr", gap:48, alignItems:"center"}}>
+        {/* LEFT: copy */}
+        <div>
+          <div style={{display:"inline-flex", alignItems:"center", gap:8, padding:"6px 10px", borderRadius:999, background:"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.3)", marginBottom:20}}>
+            <span className="pulse-dot" style={{width:6, height:6, borderRadius:3, background:"#60a5fa"}}/>
+            <span className="mono" style={{fontSize:11, color:"#93c5fd", letterSpacing:1, textTransform:"uppercase"}}>Local · Private · Fast</span>
+          </div>
+          <h1 style={{margin:0, fontSize:56, lineHeight:1.02, letterSpacing:-1.2, fontWeight:700}}>
+            Imagine the outcome. <span className="serif" style={{fontStyle:"italic", color:"#cbd5e1", fontWeight:400, fontSize:58}}>Automate</span> the rest.
+          </h1>
+          <p style={{color:"var(--text-dim)", fontSize:16, marginTop:18, maxWidth:480, lineHeight:1.55}}>
+            A visual node engine that turns messy folders of media into perfectly-processed deliverables. Runs entirely on your machine.
+          </p>
+          <div style={{display:"flex", gap:10, marginTop:26, flexWrap:"wrap"}}>
+            <button style={{background:"var(--primary)", color:"white", padding:"12px 18px", borderRadius:10, fontSize:14, fontWeight:600, display:"inline-flex", alignItems:"center", gap:8, boxShadow:"0 8px 24px rgba(59,130,246,0.35), 0 0 0 1px rgba(255,255,255,0.1) inset"}}>
+              {I.plus} Create New Recipe
+            </button>
+            <button style={{background:"rgba(255,255,255,0.06)", border:"1px solid var(--line-2)", padding:"12px 18px", borderRadius:10, fontSize:14, fontWeight:500, display:"inline-flex", alignItems:"center", gap:8}}>
+              {I.library} Browse 83 Recipes
+            </button>
+            <button style={{padding:"12px 14px", color:"var(--text-dim)", fontSize:13, display:"inline-flex", alignItems:"center", gap:8}} className="mono">
+              {I.command} K <span style={{opacity:.7}}>— open launcher</span>
+            </button>
+          </div>
+          {/* stats bar */}
+          <div style={{marginTop:32, display:"flex", gap:24, paddingTop:22, borderTop:"1px solid var(--line)"}}>
+            {[
+              {k:"83", v:"recipes ready"},
+              {k:"7", v:"node categories"},
+              {k:"100%", v:"on-device"},
+            ].map(s=>(
+              <div key={s.v}>
+                <div style={{fontSize:22, fontWeight:700}} className="mono">{s.k}</div>
+                <div style={{fontSize:11, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1}}>{s.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* RIGHT: live pipeline */}
+        <div style={{position:"relative"}}>
+          <div style={{
+            position:"relative",
+            background:"rgba(8,13,25,0.7)",
+            border:"1px solid var(--line-2)",
+            borderRadius:16, padding:20, minHeight:340,
+            boxShadow:"0 30px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.02) inset"
+          }}>
+            {/* window chrome */}
+            <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:16}}>
+              <div style={{width:9, height:9, borderRadius:"50%", background:"#ff5f56"}}/>
+              <div style={{width:9, height:9, borderRadius:"50%", background:"#ffbd2e"}}/>
+              <div style={{width:9, height:9, borderRadius:"50%", background:"#27c93f"}}/>
+              <div className="mono" style={{marginLeft:10, fontSize:11, color:"var(--text-mute)"}}>cinematic_portrait.recipe</div>
+              <div style={{flex:1}}/>
+              <div className="mono" style={{fontSize:10, color:"var(--green)", display:"inline-flex", alignItems:"center", gap:6, padding:"3px 7px", background:"rgba(52,211,153,0.1)", borderRadius:6, border:"1px solid rgba(52,211,153,0.25)"}}>
+                <span className="pulse-dot" style={{width:5, height:5, borderRadius:3, background:"var(--green)"}}/>
+                running
+              </div>
+            </div>
+
+            {/* pipeline svg */}
+            <svg viewBox="0 0 560 240" style={{width:"100%", height:240}}>
+              <defs>
+                <linearGradient id="edgeGrad" x1="0" x2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity=".1"/>
+                  <stop offset="100%" stopColor="#3b82f6" stopOpacity=".8"/>
+                </linearGradient>
+              </defs>
+              {edges.map((e,i)=>{
+                const a=getNode(e.from), b=getNode(e.to);
+                return (
+                  <g key={i}>
+                    <path d={edgePath(a,b)} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5"/>
+                    {e.active && <path d={edgePath(a,b)} fill="none" stroke="url(#edgeGrad)" strokeWidth="2" className="march"/>}
+                  </g>
+                );
+              })}
+              {nodes.map((n,i)=>{
+                const isSource = n.kind==="source";
+                const active = (i===0) || (i===1 && phase>=1) || (i===2 && phase>=1) || (i===3 && phase>=2) || (i===4 && phase>=3);
+                return (
+                  <g key={i} transform={`translate(${n.x},${n.y})`}>
+                    <rect width="140" height="60" rx="10"
+                      fill={active?"rgba(20,28,46,1)":"rgba(20,28,46,0.6)"}
+                      stroke={active?n.color:"rgba(255,255,255,0.08)"} strokeWidth={active?1.5:1}/>
+                    {active && <rect width="140" height="60" rx="10" fill="none" stroke={n.color} strokeWidth="1" opacity=".25"/>}
+                    {/* color dot */}
+                    <circle cx="14" cy="20" r="9" fill={`${n.color}`} opacity=".18"/>
+                    <circle cx="14" cy="20" r="5" fill={n.color}/>
+                    <text x="30" y="24" fill="#e7ecf5" fontSize="12" fontWeight="600" fontFamily="Inter">{n.label}</text>
+                    <text x="14" y="46" fill="#98a3b8" fontSize="10" fontFamily="JetBrains Mono">{n.sub}</text>
+                    {/* port dots */}
+                    {!isSource && <circle cx="0" cy="30" r="3" fill="#0a0f1c" stroke={n.color} strokeWidth="1.5"/>}
+                    <circle cx="140" cy="30" r="3" fill="#0a0f1c" stroke={n.color} strokeWidth="1.5"/>
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* bottom log */}
+            <div className="mono" style={{marginTop:10, fontSize:11, color:"var(--text-mute)", padding:"10px 12px", background:"rgba(0,0,0,0.25)", borderRadius:8, border:"1px solid var(--line)", display:"flex", gap:16, alignItems:"center"}}>
+              <span style={{color:"var(--green)"}}>●</span>
+              <span>processed <b style={{color:"var(--text)"}}>portrait_04.jpg</b> → /exports/final/</span>
+              <span style={{flex:1}}/>
+              <span>1.3s</span>
+              <span style={{color:"var(--text-dim)"}}>·</span>
+              <span>1 / 1</span>
+            </div>
+          </div>
+
+          {/* floating chip */}
+          <div className="float-slow" style={{position:"absolute", top:-14, right:-14, padding:"8px 12px", background:"linear-gradient(135deg, #3b82f6, #6366f1)", borderRadius:999, fontSize:12, fontWeight:600, display:"inline-flex", alignItems:"center", gap:6, boxShadow:"0 10px 24px rgba(59,130,246,0.4)"}}>
+            {I.sparkle} Live demo
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== HERO B — GUIDED TOUR ===================== */
+function GuidedTourHero(){
+  const steps = [
+    {n:1, label:"Drop files", sub:"Any folder, any format.", icon:I.upload, color:"var(--teal)"},
+    {n:2, label:"Pick a recipe", sub:"Or build your own.", icon:I.library, color:"var(--cyan)"},
+    {n:3, label:"Tweak", sub:"Parameters are live.", icon:I.slider, color:"var(--amber)"},
+    {n:4, label:"Preview", sub:"Before / after.", icon:I.image, color:"var(--orange)"},
+    {n:5, label:"Run", sub:"Bulk or batch.", icon:I.play, color:"var(--green)"},
+  ];
+  const [step, setStep] = React.useState(0);
+  React.useEffect(()=>{
+    const id = setInterval(()=>setStep(s=>(s+1)%steps.length), 2800);
+    return ()=>clearInterval(id);
+  },[]);
+
+  const ContentPane = () => {
+    if(step===0) return <DropPreview/>;
+    if(step===1) return <RecipePreview/>;
+    if(step===2) return <TweakPreview/>;
+    if(step===3) return <BeforeAfterPreview/>;
+    return <RunPreview/>;
+  };
+
+  return (
+    <div style={{
+      position:"relative", borderRadius:20, overflow:"hidden",
+      background:"linear-gradient(180deg, #0f1a30 0%, #0c1424 100%)",
+      border:"1px solid var(--line-2)",
+      padding:"40px 48px"
+    }}>
+      <div style={{position:"absolute", inset:0, pointerEvents:"none",
+        background:"radial-gradient(600px 300px at 20% 0%, rgba(52,211,153,0.14), transparent 60%), radial-gradient(500px 300px at 90% 100%, rgba(59,130,246,0.14), transparent 60%)"}}/>
+      <div className="gridbg" style={{position:"absolute", inset:0, opacity:.5, maskImage:"radial-gradient(ellipse at center, black 30%, transparent 80%)"}}/>
+
+      <div style={{position:"relative"}}>
+        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:48, alignItems:"end", marginBottom:30}}>
+          <div>
+            <div style={{display:"inline-flex", alignItems:"center", gap:8, padding:"6px 10px", borderRadius:999, background:"rgba(52,211,153,0.1)", border:"1px solid rgba(52,211,153,0.3)", marginBottom:20}}>
+              <span className="pulse-dot" style={{width:6, height:6, borderRadius:3, background:"var(--green)"}}/>
+              <span className="mono" style={{fontSize:11, color:"#6ee7b7", letterSpacing:1, textTransform:"uppercase"}}>Five-step first run</span>
+            </div>
+            <h1 style={{margin:0, fontSize:52, lineHeight:1.05, letterSpacing:-1, fontWeight:700}}>
+              From <span className="serif" style={{fontStyle:"italic", color:"#cbd5e1", fontWeight:400}}>zero</span> to a finished<br/>batch in under a minute.
+            </h1>
+          </div>
+          <div>
+            <p style={{color:"var(--text-dim)", fontSize:15, margin:0, lineHeight:1.6, maxWidth:440}}>
+              Follow the rail below or skip straight to a recipe. Everything runs locally — your files never leave this machine.
+            </p>
+            <div style={{display:"flex", gap:10, marginTop:18}}>
+              <button style={{background:"var(--primary)", color:"white", padding:"11px 16px", borderRadius:10, fontSize:14, fontWeight:600, display:"inline-flex", alignItems:"center", gap:8}}>{I.play} Start the tour</button>
+              <button style={{background:"rgba(255,255,255,0.06)", border:"1px solid var(--line-2)", padding:"11px 16px", borderRadius:10, fontSize:14, fontWeight:500, display:"inline-flex", alignItems:"center", gap:8}}>{I.x} Skip</button>
+            </div>
+          </div>
+        </div>
+
+        {/* step rail */}
+        <div style={{display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:14, marginBottom:22}}>
+          {steps.map((s,i)=>{
+            const done = i<step, cur = i===step;
+            return (
+              <button key={s.n} onClick={()=>setStep(i)} style={{
+                textAlign:"left", padding:"14px 16px", borderRadius:12,
+                background: cur? "rgba(20,28,46,1)": "rgba(20,28,46,0.5)",
+                border: cur? `1px solid ${s.color}` : "1px solid var(--line-2)",
+                display:"flex", flexDirection:"column", gap:8, position:"relative", overflow:"hidden"
+              }}>
+                <div style={{display:"flex", alignItems:"center", gap:10}}>
+                  <div style={{
+                    width:26, height:26, borderRadius:8,
+                    background: done? s.color : cur? `${s.color}` : "rgba(255,255,255,0.06)",
+                    color: done||cur? "#0a0f1c" : "var(--text-dim)",
+                    display:"grid", placeItems:"center", fontSize:12, fontWeight:700
+                  }} className="mono">
+                    {done? I.check : s.n}
+                  </div>
+                  <div className="mono" style={{fontSize:10, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1}}>Step {s.n}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:14, fontWeight:600}}>{s.label}</div>
+                  <div style={{fontSize:12, color:"var(--text-mute)", marginTop:2}}>{s.sub}</div>
+                </div>
+                {/* progress underline */}
+                {cur && <div style={{position:"absolute", left:0, bottom:0, height:2, width:"100%", background:"rgba(255,255,255,0.04)"}}>
+                  <div key={step} style={{height:"100%", width:"100%", background:s.color, transformOrigin:"left", animation:"fillbar 2.6s linear"}}/>
+                </div>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* content pane */}
+        <div style={{background:"rgba(8,13,25,0.7)", border:"1px solid var(--line-2)", borderRadius:16, padding:22, minHeight:260, boxShadow:"0 30px 60px rgba(0,0,0,0.45)"}}>
+          <ContentPane/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------- tour panes (small, self-contained mocks) ------- */
+function DropPreview(){
+  return (
+    <div style={{display:"grid", gridTemplateColumns:"1.2fr 1fr", gap:22, alignItems:"center"}}>
+      <div style={{border:"2px dashed rgba(45,212,191,0.35)", borderRadius:14, padding:"30px", background:"rgba(45,212,191,0.04)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10, minHeight:200}}>
+        <div style={{width:56, height:56, borderRadius:16, background:"rgba(45,212,191,0.15)", display:"grid", placeItems:"center", color:"var(--teal)"}}>{I.upload}</div>
+        <div style={{fontSize:16, fontWeight:600}}>Drop files or a folder here</div>
+        <div className="mono" style={{fontSize:11, color:"var(--text-mute)"}}>.jpg · .png · .mp4 · .webp · .heic · and more</div>
+      </div>
+      <div>
+        <div style={{fontSize:13, color:"var(--text-dim)", marginBottom:10}}>Recently dropped</div>
+        {[
+          {n:"shoot_paris_2026/", c:"124 items", ic:I.folder, col:"var(--amber)"},
+          {n:"client_delivery.zip", c:"56 MB", ic:I.folder, col:"var(--violet)"},
+          {n:"roll_042.cr3", c:"1 file", ic:I.image, col:"var(--cyan)"},
+        ].map((f,i)=>(
+          <div key={i} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 12px", borderRadius:10, background:"rgba(255,255,255,0.03)", border:"1px solid var(--line)", marginBottom:6}}>
+            <div style={{color:f.col}}>{f.ic}</div>
+            <div style={{flex:1}}>
+              <div className="mono" style={{fontSize:12}}>{f.n}</div>
+              <div style={{fontSize:11, color:"var(--text-mute)"}}>{f.c}</div>
+            </div>
+            <span style={{color:"var(--text-mute)"}}>{I.chevronR}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function RecipePreview(){
+  const recipes = [
+    {n:"Cinematic Portrait", tags:["portrait","LUT"], col:"var(--orange)"},
+    {n:"Background Swap", tags:["bg","ai"], col:"var(--cyan)"},
+    {n:"Pop Art Warhol", tags:["color","art"], col:"var(--pink)"},
+    {n:"Classic Analog Film", tags:["grain","vintage"], col:"var(--amber)"},
+    {n:"Mask Cut In", tags:["geocode","text"], col:"var(--violet)"},
+    {n:"Remove BG HQ", tags:["cutout"], col:"var(--teal)"},
+  ];
+  return (
+    <div>
+      <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:14}}>
+        <div style={{flex:1, position:"relative"}}>
+          <div style={{position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"var(--text-mute)"}}>{I.library}</div>
+          <div style={{padding:"10px 12px 10px 38px", border:"1px solid var(--line-2)", borderRadius:10, background:"rgba(255,255,255,0.03)", fontSize:13, color:"var(--text-dim)"}}>
+            cine<span className="caret">|</span>
+          </div>
+        </div>
+        <div className="mono" style={{fontSize:11, color:"var(--text-mute)"}}>6 / 83 matches</div>
+      </div>
+      <div style={{display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:10}}>
+        {recipes.map((r,i)=>(
+          <div key={i} style={{padding:14, borderRadius:12, background:"rgba(255,255,255,0.03)", border: i===0? `1px solid ${r.col}` : "1px solid var(--line-2)"}}>
+            <div style={{height:70, borderRadius:8, background:`linear-gradient(135deg, ${r.col}22, ${r.col}08)`, marginBottom:10, position:"relative", overflow:"hidden"}}>
+              <div style={{position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 8px, transparent 8px 16px)"}}/>
+            </div>
+            <div style={{fontSize:13, fontWeight:600}}>{r.n}</div>
+            <div style={{display:"flex", gap:4, marginTop:6, flexWrap:"wrap"}}>
+              {r.tags.map(t=>(<span key={t} className="mono" style={{fontSize:10, padding:"2px 6px", borderRadius:4, background:"rgba(255,255,255,0.05)", color:"var(--text-dim)"}}>{t}</span>))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function TweakPreview(){
+  const params = [
+    {k:"grain", v:0.42, col:"var(--amber)"},
+    {k:"warmth", v:0.68, col:"var(--orange)"},
+    {k:"contrast", v:0.55, col:"var(--cyan)"},
+    {k:"vignette", v:0.31, col:"var(--violet)"},
+  ];
+  return (
+    <div style={{display:"grid", gridTemplateColumns:"1.1fr 1fr", gap:22}}>
+      <div>
+        <div className="mono" style={{fontSize:11, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1, marginBottom:10}}>Node · Cinematic LUT</div>
+        {params.map((p,i)=>(
+          <div key={i} style={{marginBottom:14}}>
+            <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
+              <span className="mono" style={{fontSize:12, color:"var(--text-dim)"}}>{p.k}</span>
+              <span className="mono" style={{fontSize:12, color:p.col}}>{p.v.toFixed(2)}</span>
+            </div>
+            <div style={{height:4, borderRadius:2, background:"rgba(255,255,255,0.06)", position:"relative"}}>
+              <div style={{position:"absolute", left:0, top:0, bottom:0, width:`${p.v*100}%`, background:p.col, borderRadius:2}}/>
+              <div style={{position:"absolute", left:`${p.v*100}%`, top:"50%", transform:"translate(-50%,-50%)", width:12, height:12, borderRadius:"50%", background:p.col, boxShadow:`0 0 0 3px ${p.col}33`}}/>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{borderRadius:12, background:"linear-gradient(135deg, #3a2418, #1a1410)", position:"relative", overflow:"hidden", minHeight:200}}>
+        <div style={{position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 4px)"}}/>
+        <div className="mono" style={{position:"absolute", left:12, top:10, fontSize:10, color:"rgba(255,255,255,0.6)", padding:"3px 7px", background:"rgba(0,0,0,0.4)", borderRadius:4}}>preview · live</div>
+        <div style={{position:"absolute", inset:0, display:"grid", placeItems:"center", color:"rgba(255,255,255,0.25)"}}>{I.image}</div>
+      </div>
+    </div>
+  );
+}
+function BeforeAfterPreview(){
+  return (
+    <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:14}}>
+      {[{label:"before", tone:"#2a2f3a"},{label:"after", tone:"#3a2418", accent:"var(--orange)"}].map((p,i)=>(
+        <div key={i} style={{borderRadius:12, border: p.accent? `1px solid ${p.accent}`:"1px solid var(--line-2)", overflow:"hidden", position:"relative", minHeight:210, background:`linear-gradient(135deg, ${p.tone}, #0a0f1c)`}}>
+          <div style={{position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 12px, transparent 12px 24px)"}}/>
+          <div className="mono" style={{position:"absolute", top:10, left:12, fontSize:11, color:"rgba(255,255,255,0.75)", padding:"3px 8px", borderRadius:6, background:"rgba(0,0,0,0.45)"}}>{p.label}</div>
+          <div style={{position:"absolute", inset:0, display:"grid", placeItems:"center", color:"rgba(255,255,255,0.2)"}}>{I.image}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function RunPreview(){
+  return (
+    <div>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14}}>
+        <div>
+          <div style={{fontSize:15, fontWeight:600}}>cinematic_portrait · batch run</div>
+          <div className="mono" style={{fontSize:11, color:"var(--text-mute)"}}>124 items · 7 nodes · est. 48s</div>
+        </div>
+        <div style={{display:"inline-flex", alignItems:"center", gap:6, color:"var(--green)", padding:"6px 12px", borderRadius:8, background:"rgba(52,211,153,0.1)", border:"1px solid rgba(52,211,153,0.3)"}}>
+          <span className="pulse-dot" style={{width:6, height:6, borderRadius:3, background:"var(--green)"}}/>
+          <span className="mono" style={{fontSize:11}}>running</span>
+        </div>
+      </div>
+      <div style={{height:10, borderRadius:5, background:"rgba(255,255,255,0.06)", overflow:"hidden", marginBottom:16}}>
+        <div style={{height:"100%", width:"62%", background:"linear-gradient(90deg, var(--primary), var(--teal))"}}/>
+      </div>
+      <div style={{display:"grid", gridTemplateColumns:"repeat(8, 1fr)", gap:6}}>
+        {Array.from({length:40}).map((_,i)=>{
+          const done = i<25, run = i===25;
+          return <div key={i} style={{aspectRatio:"1/1", borderRadius:4, background: done? "var(--teal)" : run? "var(--amber)": "rgba(255,255,255,0.05)", opacity: done?.85:1}}/>;
+        })}
+      </div>
+      <div style={{display:"flex", gap:20, marginTop:16, color:"var(--text-dim)", fontSize:12}}>
+        <span><span className="mono" style={{color:"var(--teal)"}}>●</span> done 25</span>
+        <span><span className="mono" style={{color:"var(--amber)"}}>●</span> processing 1</span>
+        <span><span className="mono" style={{color:"var(--text-mute)"}}>●</span> queued 98</span>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== PIPELINE DIAGRAM (What can PicMachina do) ===================== */
+function PipelineDiagram(){
+  const rows = [
+    {label:"Process",  sub:"Extract · parse · metadata",           icon:I.code,    color:"var(--teal)"},
+    {label:"Analyse",  sub:"Local AI · detect · understand",       icon:I.scan,    color:"var(--cyan)"},
+    {label:"Amend",    sub:"LUTs · color · structure",             icon:I.slider,  color:"var(--orange)"},
+    {label:"Annotate", sub:"Captions · watermarks · titles",       icon:I.type,    color:"var(--amber)"},
+    {label:"Aggregate",sub:"Compose · grid · collage",             icon:I.grid,    color:"var(--violet)"},
+    {label:"Create",   sub:"Generate new media from data",         icon:I.wand,    color:"var(--pink)"},
+    {label:"Organise", sub:"Route into intelligent folders",       icon:I.route,   color:"var(--primary-2)"},
+  ];
+  return (
+    <div style={{background:"var(--panel)", border:"1px solid var(--line-2)", borderRadius:16, padding:32, position:"relative", overflow:"hidden"}}>
+      <div style={{position:"absolute", inset:0, pointerEvents:"none", background:"radial-gradient(600px 200px at 50% 0%, rgba(59,130,246,0.08), transparent 70%)"}}/>
+      <div style={{position:"relative"}}>
+        <div style={{display:"flex", alignItems:"baseline", gap:14, marginBottom:26}}>
+          <h2 style={{margin:0, fontSize:28, fontWeight:700, letterSpacing:-.5}}>What can PicMachina do?</h2>
+          <span className="mono" style={{fontSize:11, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4}}>7 node categories · 83 recipes</span>
+        </div>
+
+        {/* diagram */}
+        <div style={{display:"grid", gridTemplateColumns:"200px 1fr 200px", gap:24, alignItems:"stretch"}}>
+          {/* IN */}
+          <div style={{background:"rgba(8,13,25,0.6)", border:"1px solid var(--line-2)", borderRadius:14, padding:18, display:"flex", flexDirection:"column", justifyContent:"center"}}>
+            <div className="mono" style={{fontSize:10, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, marginBottom:10}}>Input</div>
+            <div style={{fontSize:18, fontWeight:600, marginBottom:4}}>Any media</div>
+            <div style={{fontSize:12, color:"var(--text-dim)"}}>Folders, zips, cameras, cloud drives.</div>
+            <div style={{display:"flex", gap:4, marginTop:14, flexWrap:"wrap"}}>
+              {["jpg","png","mp4","heic","raw","gif","webp"].map(x=>(
+                <span key={x} className="mono" style={{fontSize:10, padding:"2px 6px", borderRadius:4, background:"rgba(255,255,255,0.05)", border:"1px solid var(--line)", color:"var(--text-dim)"}}>.{x}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* CORE: 7 nodes */}
+          <div style={{display:"flex", flexDirection:"column", gap:10, position:"relative"}}>
+            {/* connector left */}
+            <div style={{position:"absolute", left:-24, top:"50%", width:24, height:2, background:"linear-gradient(90deg, transparent, rgba(255,255,255,0.15))", transform:"translateY(-50%)"}}/>
+            {/* connector right */}
+            <div style={{position:"absolute", right:-24, top:"50%", width:24, height:2, background:"linear-gradient(90deg, rgba(255,255,255,0.15), transparent)", transform:"translateY(-50%)"}}/>
+            {rows.map((r,i)=>(
+              <div key={i} className="lift" style={{
+                display:"grid", gridTemplateColumns:"32px 1fr auto", alignItems:"center", gap:14,
+                padding:"10px 14px", borderRadius:10,
+                background:"rgba(8,13,25,0.4)",
+                border:"1px solid var(--line)",
+                position:"relative"
+              }}>
+                <div style={{
+                  width:32, height:32, borderRadius:8,
+                  background:`linear-gradient(135deg, ${r.color}33, ${r.color}10)`,
+                  border:`1px solid ${r.color}55`,
+                  color:r.color, display:"grid", placeItems:"center"
+                }}>{r.icon}</div>
+                <div>
+                  <div style={{fontSize:14, fontWeight:600, display:"flex", alignItems:"center", gap:10}}>
+                    {r.label}
+                    <span className="mono" style={{fontSize:10, color:"var(--text-mute)", padding:"1px 6px", border:"1px solid var(--line)", borderRadius:4}}>{String(i+1).padStart(2,"0")}</span>
+                  </div>
+                  <div style={{fontSize:12, color:"var(--text-dim)"}}>{r.sub}</div>
+                </div>
+                <div style={{color:"var(--text-mute)", fontSize:11}} className="mono">
+                  {[12,18,15,9,8,11,10][i]} recipes
+                </div>
+                {/* little color tick */}
+                <div style={{position:"absolute", left:0, top:"50%", width:3, height:22, background:r.color, borderRadius:2, transform:"translateY(-50%)"}}/>
+              </div>
+            ))}
+          </div>
+
+          {/* OUT */}
+          <div style={{background:"rgba(8,13,25,0.6)", border:"1px solid var(--line-2)", borderRadius:14, padding:18, display:"flex", flexDirection:"column", justifyContent:"center"}}>
+            <div className="mono" style={{fontSize:10, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, marginBottom:10}}>Output</div>
+            <div style={{fontSize:18, fontWeight:600, marginBottom:4}}>Deliverables</div>
+            <div style={{fontSize:12, color:"var(--text-dim)"}}>Organised, named, and ready to ship.</div>
+            <div style={{marginTop:14, display:"flex", flexDirection:"column", gap:4}}>
+              {[
+                "/exports/final/",
+                "/contact_sheets/",
+                "/social_instagram/",
+                "/client_drop.zip"
+              ].map(p=>(
+                <div key={p} className="mono" style={{fontSize:11, color:"var(--text-dim)", display:"inline-flex", alignItems:"center", gap:6}}>
+                  <span style={{color:"var(--green)"}}>→</span> {p}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== PERSONAS ===================== */
+function Personas(){
+  const personas = [
+    {
+      k:"individuals", label:"Individuals", icon:I.user, color:"var(--teal)",
+      desc:"Auto-categorise messy photo dumps, compile vacation memories into simple timelapses, and efficiently format images for sharing or archiving without heavy editing software.",
+      stat:"4 starter recipes",
+      samples:["Holiday collage","Backup & rename","Face-group"]
+    },
+    {
+      k:"photographers", label:"Photographers", icon:I.camera, color:"var(--orange)",
+      desc:"Batch process exports, apply uniform watermarks, auto-generate client contact sheets, extract EXIF for cataloguing, and standardise color profiles across large shoots.",
+      stat:"18 pro recipes",
+      samples:["Contact sheet","Watermark · uniform","EXIF → CSV"]
+    },
+    {
+      k:"creators", label:"Content Creators", icon:I.video, color:"var(--pink)",
+      desc:"Adapt stapler media into various formats for Instagram, TikTok, and YouTube. Automatically overlay branding, pull highlights, and convert snippets into engaging GIFs.",
+      stat:"22 social recipes",
+      samples:["TikTok 9:16","Highlights reel","Thumbnail kit"]
+    },
+    {
+      k:"enterprise", label:"Enterprise Users", icon:I.building, color:"var(--primary-2)",
+      desc:"Build robust product photography pipelines, clear backgrounds via local AI, standardise margins across thousands of SKUs, and strip sensitive metadata for compliance.",
+      stat:"9 enterprise recipes",
+      samples:["SKU pipeline","BG clear · AI","Metadata sanitise"]
+    },
+  ];
+  const [active,setActive] = React.useState(0);
+  const p = personas[active];
+  return (
+    <div>
+      <div style={{display:"flex", alignItems:"baseline", gap:14, marginBottom:20, flexWrap:"wrap"}}>
+        <h2 style={{margin:0, fontSize:28, fontWeight:700, letterSpacing:-.5, whiteSpace:"nowrap"}}>Who uses PicMachina?</h2>
+        <span className="mono" style={{fontSize:11, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, whiteSpace:"nowrap"}}>Pick a persona · see starter recipes</span>
+      </div>
+
+      <div style={{display:"grid", gridTemplateColumns:"300px 1fr", gap:22}}>
+        {/* tabs rail */}
+        <div style={{display:"flex", flexDirection:"column", gap:6}}>
+          {personas.map((x,i)=>(
+            <button key={x.k} onClick={()=>setActive(i)} style={{
+              textAlign:"left", padding:"12px 14px", borderRadius:10,
+              background: active===i? "rgba(20,28,46,1)": "transparent",
+              border: active===i? `1px solid ${x.color}` : "1px solid var(--line)",
+              display:"flex", alignItems:"center", gap:12
+            }}>
+              <div style={{
+                width:30, height:30, borderRadius:8, flex:"0 0 30px",
+                background:`linear-gradient(135deg, ${x.color}33, ${x.color}10)`,
+                border:`1px solid ${x.color}55`,
+                color:x.color, display:"grid", placeItems:"center"
+              }}>{x.icon}</div>
+              <div style={{minWidth:0, flex:1}}>
+                <div style={{fontSize:13, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{x.label}</div>
+                <div style={{fontSize:11, color:"var(--text-mute)", whiteSpace:"nowrap"}}>{x.stat}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* detail */}
+        <div style={{background:"var(--panel)", border:"1px solid var(--line-2)", borderRadius:14, padding:24, position:"relative", overflow:"hidden"}}>
+          <div style={{position:"absolute", top:0, right:0, width:240, height:240,
+            background:`radial-gradient(circle at top right, ${p.color}22, transparent 60%)`, pointerEvents:"none"}}/>
+          <div style={{display:"flex", alignItems:"center", gap:14, marginBottom:16}}>
+            <div style={{
+              width:44, height:44, borderRadius:12, flex:"0 0 44px",
+              background:`linear-gradient(135deg, ${p.color}33, ${p.color}10)`,
+              border:`1px solid ${p.color}55`,
+              color:p.color, display:"grid", placeItems:"center"
+            }}>{p.icon}</div>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:18, fontWeight:700, whiteSpace:"nowrap"}}>{p.label}</div>
+              <div className="mono" style={{fontSize:11, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, whiteSpace:"nowrap"}}>{p.stat}</div>
+            </div>
+          </div>
+          <p style={{margin:0, color:"var(--text-dim)", fontSize:14, lineHeight:1.6, maxWidth:640}}>{p.desc}</p>
+
+          <div className="mono" style={{fontSize:10, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, margin:"22px 0 10px"}}>Starter recipes</div>
+          <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
+            {p.samples.map(s=>(
+              <div key={s} style={{
+                display:"inline-flex", alignItems:"center", gap:8,
+                padding:"8px 12px", borderRadius:10,
+                background:"rgba(255,255,255,0.03)", border:"1px solid var(--line-2)"
+              }}>
+                <div style={{width:6, height:6, borderRadius:3, background:p.color}}/>
+                <span style={{fontSize:13}}>{s}</span>
+                <span style={{color:"var(--text-mute)"}}>{I.chevronR}</span>
+              </div>
+            ))}
+            <button style={{padding:"8px 12px", borderRadius:10, background:"rgba(59,130,246,0.1)", border:"1px solid rgba(59,130,246,0.3)", color:"#93c5fd", fontSize:13, fontWeight:500, display:"inline-flex", alignItems:"center", gap:6}}>
+              {I.plus} Start from {p.label.toLowerCase()} preset
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== SMART AUTOMATION / JUST ASK CLAUDE ===================== */
+function SmartAutomation(){
+  const prompts = [
+    "deblur photos older than 2020 and re-save as webp",
+    "build a contact sheet per folder with watermark",
+    "extract faces, group, and rename by person",
+  ];
+  const [ph, setPh] = React.useState(0);
+  const [text, setText] = React.useState("");
+  React.useEffect(()=>{
+    let i=0;
+    const target = prompts[ph];
+    setText("");
+    const id = setInterval(()=>{
+      i++;
+      setText(target.slice(0,i));
+      if(i>=target.length){
+        clearInterval(id);
+        setTimeout(()=>setPh(p=>(p+1)%prompts.length), 1800);
+      }
+    }, 28);
+    return ()=>clearInterval(id);
+  },[ph]);
+  return (
+    <div style={{
+      borderRadius:16, padding:32,
+      background:"linear-gradient(135deg, rgba(59,130,246,0.14), rgba(167,139,250,0.08))",
+      border:"1px solid rgba(59,130,246,0.3)",
+      position:"relative", overflow:"hidden"
+    }}>
+      <div style={{position:"absolute", top:-60, right:-60, width:260, height:260, background:"radial-gradient(circle, rgba(167,139,250,0.25), transparent 60%)", pointerEvents:"none"}}/>
+      <div style={{display:"grid", gridTemplateColumns:"1.3fr 1fr", gap:28, alignItems:"center", position:"relative"}}>
+        <div>
+          <div style={{display:"inline-flex", alignItems:"center", gap:8, padding:"6px 10px", borderRadius:999, background:"rgba(167,139,250,0.15)", border:"1px solid rgba(167,139,250,0.35)", marginBottom:14, whiteSpace:"nowrap", width:"fit-content"}}>
+            {I.sparkle}
+            <span className="mono" style={{fontSize:11, color:"#c4b5fd", letterSpacing:1, textTransform:"uppercase"}}>Just Ask Claude</span>
+          </div>
+          <h3 style={{margin:"0 0 10px", fontSize:26, fontWeight:700, letterSpacing:-.4}}>Smart automation, made simple.</h3>
+          <p style={{margin:0, color:"var(--text-dim)", fontSize:14, lineHeight:1.6, maxWidth:480}}>
+            Describe what you want in plain English. Claude builds the recipe — every node, every parameter — and you just hit Run. No technical skills required.
+          </p>
+        </div>
+        <div style={{background:"rgba(8,13,25,0.85)", border:"1px solid var(--line-2)", borderRadius:12, padding:16}}>
+          <div className="mono" style={{fontSize:10, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, marginBottom:10}}>Prompt</div>
+          <div className="mono" style={{fontSize:14, lineHeight:1.5, minHeight:56, color:"var(--text)"}}>
+            {text}<span className="caret" style={{color:"var(--primary-2)"}}>▎</span>
+          </div>
+          <div style={{marginTop:14, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+            <div style={{display:"flex", gap:6}}>
+              {prompts.map((_,i)=>(
+                <div key={i} style={{width:24, height:3, borderRadius:2, background: i===ph? "var(--primary-2)": "rgba(255,255,255,0.1)"}}/>
+              ))}
+            </div>
+            <button style={{padding:"7px 12px", borderRadius:8, background:"var(--primary)", color:"white", fontSize:12, fontWeight:600, display:"inline-flex", alignItems:"center", gap:6}}>
+              {I.wand} Generate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== KB SHORTCUTS / FOOTER STRIP ===================== */
+function Shortcuts(){
+  const items = [
+    {k:["⌘","K"], label:"Open launcher"},
+    {k:["⌘","N"], label:"New recipe"},
+    {k:["⌘","⇧","O"], label:"Open folder"},
+    {k:["⌘","R"], label:"Run last recipe"},
+    {k:["⌘","/"], label:"Ask Claude"},
+  ];
+  return (
+    <div style={{display:"flex", gap:18, flexWrap:"wrap", padding:"18px 24px", borderRadius:12, background:"rgba(255,255,255,0.02)", border:"1px solid var(--line)"}}>
+      <div className="mono" style={{fontSize:10, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, alignSelf:"center"}}>Shortcuts</div>
+      {items.map((x,i)=>(
+        <div key={i} style={{display:"inline-flex", alignItems:"center", gap:8}}>
+          <div style={{display:"inline-flex", gap:3}}>
+            {x.k.map(ch=>(
+              <kbd key={ch} className="mono" style={{fontSize:11, padding:"3px 7px", borderRadius:5, background:"rgba(255,255,255,0.06)", border:"1px solid var(--line-2)", borderBottomWidth:2}}>{ch}</kbd>
+            ))}
+          </div>
+          <span style={{fontSize:12, color:"var(--text-dim)"}}>{x.label}</span>
+        </div>
+      ))}
+      <div style={{flex:1}}/>
+      <div className="mono" style={{fontSize:11, color:"var(--text-mute)", alignSelf:"center"}}>v3.1.2 · arm64 · 100% local</div>
+    </div>
+  );
+}
+
+/* ===================== TWEAKS PANEL ===================== */
+function TweaksPanel({tweaks, setTweaks, visible}){
+  if(!visible) return null;
+  const set = (patch)=>{
+    const next = {...tweaks, ...patch};
+    setTweaks(next);
+    window.parent.postMessage({type:'__edit_mode_set_keys', edits:patch}, '*');
+  };
+  return (
+    <div className="tweaks">
+      <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:10}}>
+        {I.settings}
+        <div style={{fontWeight:600, fontSize:13}}>Tweaks</div>
+      </div>
+      <div className="mono" style={{fontSize:10, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, marginBottom:8}}>Hero variant</div>
+      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:6}}>
+        {[
+          {k:"pipeline", label:"A · Live Pipeline"},
+          {k:"tour", label:"B · Guided Tour"},
+        ].map(o=>(
+          <button key={o.k} onClick={()=>set({heroVariant:o.k})} style={{
+            padding:"10px 12px", borderRadius:8, fontSize:12, fontWeight:500,
+            background: tweaks.heroVariant===o.k? "rgba(59,130,246,0.15)": "rgba(255,255,255,0.03)",
+            border: tweaks.heroVariant===o.k? "1px solid rgba(59,130,246,0.5)" : "1px solid var(--line-2)",
+            color: tweaks.heroVariant===o.k? "#93c5fd" : "var(--text-dim)", textAlign:"left"
+          }}>{o.label}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ===================== APP ===================== */
+function App(){
+  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
+  const [tweaksOpen, setTweaksOpen] = React.useState(false);
+
+  React.useEffect(()=>{
+    const handler = (e)=>{
+      if(!e.data) return;
+      if(e.data.type==='__activate_edit_mode') setTweaksOpen(true);
+      if(e.data.type==='__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({type:'__edit_mode_available'}, '*');
+    return ()=>window.removeEventListener('message', handler);
+  },[]);
+
+  return (
+    <div style={{display:"flex", minHeight:"100vh", background:"var(--bg)"}}>
+      <Sidebar active="started"/>
+      <main style={{flex:1, minWidth:0}}>
+        <PageHeader
+          title="Get Started"
+          icon={I.rocket}
+          right={
+            <div style={{display:"flex", gap:10, alignItems:"center"}}>
+              <div className="mono" style={{fontSize:11, color:"var(--text-mute)", padding:"5px 10px", borderRadius:6, background:"rgba(255,255,255,0.03)", border:"1px solid var(--line)"}}>
+                <span style={{color:"var(--green)"}}>●</span> engine ready · 8 models loaded
+              </div>
+              <button style={{padding:"7px 12px", fontSize:12, color:"var(--text-dim)", border:"1px solid var(--line-2)", borderRadius:8, display:"inline-flex", alignItems:"center", gap:6}}>{I.help} Tour</button>
+            </div>
+          }
+        />
+
+        <div style={{padding:"28px 32px 48px", display:"flex", flexDirection:"column", gap:32, maxWidth:1200, margin:"0 auto"}}>
+          {tweaks.heroVariant==="tour" ? <GuidedTourHero/> : <LivePipelineHero/>}
+
+          <PipelineDiagram/>
+
+          <Personas/>
+
+          <SmartAutomation/>
+
+          <Shortcuts/>
+        </div>
+      </main>
+
+      <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} visible={tweaksOpen}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
