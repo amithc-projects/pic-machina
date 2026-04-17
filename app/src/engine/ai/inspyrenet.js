@@ -353,3 +353,54 @@ export async function runInspyrenet(ctx, opts = {}, log) {
   const maskObj = await getSaliencyMask(ctx.canvas, { log });
   applyMaskAsAlpha(ctx, maskObj, opts);
 }
+
+/**
+ * Produce a new canvas the same size as the given ImageBitmap with the
+ * subject matte baked in as alpha. Background pixels become transparent.
+ * Used by the aggregating flow transforms (photo-stack, animate-stack,
+ * template-aggregator) when their `isolateSubject` per-layer flag is set —
+ * so compositing draws a cut-out silhouette instead of a full rectangle.
+ *
+ * Returns `null` if the InSPyReNet model isn't downloaded, so the caller can
+ * gracefully fall back to drawing the original bitmap.
+ *
+ * The returned canvas is drawable via `ctx.drawImage(canvas, …)` just like
+ * an ImageBitmap; the caller owns it (no explicit close needed).
+ *
+ * @param {ImageBitmap}  bitmap
+ * @param {{edgeSmoothing?: number, log?: (lvl:string,msg:string)=>void, bypassCache?: boolean}} [opts]
+ * @returns {Promise<HTMLCanvasElement|null>}
+ */
+export async function isolateSubjectBitmap(bitmap, opts = {}) {
+  const ready = await isModelReady();
+  if (!ready) {
+    opts.log?.('warn', '[inspyrenet] isolateSubjectBitmap: model not downloaded; falling back to rectangular compositing.');
+    return null;
+  }
+
+  // Stage the bitmap on a temporary canvas — getSaliencyMask needs a canvas,
+  // and applyMaskAsAlpha writes back into a 2D context.
+  const tmp = document.createElement('canvas');
+  tmp.width  = bitmap.width;
+  tmp.height = bitmap.height;
+  const tctx = tmp.getContext('2d');
+  tctx.drawImage(bitmap, 0, 0);
+
+  try {
+    // bypassCache defaults to true here — each source bitmap is a different
+    // image, so the module-level cache would just thrash.
+    const maskObj = await getSaliencyMask(tmp, {
+      log: opts.log,
+      bypassCache: opts.bypassCache !== false,
+    });
+    applyMaskAsAlpha(tctx, maskObj, {
+      mode: 'Transparent',
+      edgeSmoothing: opts.edgeSmoothing ?? 50,
+    });
+    return tmp;
+  } catch (err) {
+    opts.log?.('warn', `[inspyrenet] isolateSubjectBitmap failed: ${err.message || err}`);
+    console.warn('[inspyrenet] isolateSubjectBitmap failed:', err);
+    return null;
+  }
+}

@@ -185,6 +185,7 @@ registry.register({
     { name: 'borderBottom', label: 'Caption Border (px)',    type: 'number',  defaultValue: 60 },
     { name: 'caption',      label: 'Caption ({{vars}} supported)', type: 'text', defaultValue: '{{filename | sanitized}}' },
     { name: 'overlap',      label: 'Overlap (%)',                  type: 'range', min: 0, max: 90, defaultValue: 0 },
+    { name: 'isolateSubject', label: 'Isolate Subject (AI cut-out)', type: 'boolean', defaultValue: false },
   ],
   apply() { /* handled by Processor as aggregation node */ }
 });
@@ -363,6 +364,7 @@ registry.register({
     { name: 'filename',   label: 'Output Filename', type: 'text', defaultValue: 'render.jpg' },
     { name: 'templateId', label: 'Template',        type: 'template-select', defaultValue: '' },
     { name: 'quality',    label: 'Quality (0-100)', type: 'range', min: 1, max: 100, defaultValue: 90 },
+    { name: 'isolateSubject', label: 'Isolate Subject (AI cut-out)', type: 'boolean', defaultValue: false },
   ],
   apply() { /* handled by batch.js as aggregation node */ }
 });
@@ -383,6 +385,7 @@ registry.register({
     { name: 'frameDelay',  label: 'Appear Delay (ms)',   type: 'number', defaultValue: 800 },
     { name: 'maxRotation', label: 'Max Rotation (°)',    type: 'range',  min: 0, max: 45, defaultValue: 35 },
     { name: 'overlap',     label: 'Overlap (%)',          type: 'range',  min: 0, max: 90, defaultValue: 0 },
+    { name: 'isolateSubject', label: 'Isolate Subject (AI cut-out)', type: 'boolean', defaultValue: false },
   ],
   apply() { /* handled by Processor as aggregation node */ }
 });

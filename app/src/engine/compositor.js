@@ -277,18 +277,38 @@ export async function createContactSheet(images, metadataList = [], { columns = 
  * No polaroid framing — use overlay-polaroid-frame upstream if desired.
  */
 export async function createAnimatedStack(blobs, {
-  width       = 1920,
-  height      = 1080,
-  deskColor   = '#3d2b1a',
-  frameDelay  = 800,
-  maxRotation = 35,
-  overlap     = 0,
-  format      = 'gif',
-  fps         = 30,
+  width          = 1920,
+  height         = 1080,
+  deskColor      = '#3d2b1a',
+  frameDelay     = 800,
+  maxRotation    = 35,
+  overlap        = 0,
+  format         = 'gif',
+  fps            = 30,
+  isolateSubject = false,
+  log,
 } = {}) {
   const bitmaps = await Promise.all(blobs.map(b => createImageBitmap(b)));
   const N = bitmaps.length;
   if (N === 0) throw new Error('[createAnimatedStack] No frames to compose');
+
+  // Per-frame subject isolation. Each source image = 1 inference call.
+  // For long sequences with a static subject, users can instead apply
+  // ai-remove-bg-hq upstream once and skip this flag.
+  if (isolateSubject) {
+    const { isolateSubjectBitmap } = await import('./ai/inspyrenet.js');
+    log?.('info', `[animate-stack] Isolating subjects in ${N} source image(s)…`);
+    const t0 = performance.now();
+    for (let i = 0; i < N; i++) {
+      const iso = await isolateSubjectBitmap(bitmaps[i], { log });
+      if (iso) {
+        const old = bitmaps[i];
+        bitmaps[i] = iso;
+        old.close();
+      }
+    }
+    log?.('info', `[animate-stack] Subject isolation ${Math.round(performance.now() - t0)}ms`);
+  }
 
   function rand(seed) {
     let s = (seed + 0x9e3779b9) >>> 0;
@@ -528,21 +548,43 @@ export function drawCaption(ctx, text, fw, fh, ph, borderTop, borderBottom, bord
 }
 
 export async function createPhotoStack(blobs, {
-  width        = 1920,
-  height       = 1080,
-  deskColor    = '#3d2b1a',
-  frameDelay   = 800,
-  maxRotation  = 35,
-  borderColor  = '#f5f5f0',
-  borderBottom = 60,
-  format       = 'gif',
-  fps          = 30,
-  captions     = [],
-  overlap      = 0,
+  width          = 1920,
+  height         = 1080,
+  deskColor      = '#3d2b1a',
+  frameDelay     = 800,
+  maxRotation    = 35,
+  borderColor    = '#f5f5f0',
+  borderBottom   = 60,
+  format         = 'gif',
+  fps            = 30,
+  captions       = [],
+  overlap        = 0,
+  isolateSubject = false,
+  log,
 } = {}) {
   const bitmaps = await Promise.all(blobs.map(b => createImageBitmap(b)));
   const N = bitmaps.length;
   if (N === 0) throw new Error('[createPhotoStack] No frames to compose');
+
+  // If `isolateSubject` is on, replace each bitmap with a same-sized canvas
+  // that has the saliency matte baked in as alpha. Compositing code stays
+  // unchanged below — `drawImage` accepts both bitmaps and canvases.
+  // Each source image = 1 inference, so this scales linearly with N.
+  if (isolateSubject) {
+    const { isolateSubjectBitmap } = await import('./ai/inspyrenet.js');
+    log?.('info', `[photo-stack] Isolating subjects in ${N} source image(s)…`);
+    const t0 = performance.now();
+    for (let i = 0; i < N; i++) {
+      const iso = await isolateSubjectBitmap(bitmaps[i], { log });
+      if (iso) {
+        // Keep bitmap.width/height API compatibility — canvas also has those.
+        const old = bitmaps[i];
+        bitmaps[i] = iso;
+        old.close();
+      }
+    }
+    log?.('info', `[photo-stack] Subject isolation ${Math.round(performance.now() - t0)}ms`);
+  }
 
   // ── Deterministic pseudo-random (seeded, no Math.random) ──
   function rand(seed) {
