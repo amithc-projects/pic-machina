@@ -170,6 +170,16 @@ All transforms are referenced by their `transformId`. Params shown with their de
 | `centerNose` | boolean | `true` |
 | `targetScale` | range 10–200 | `100` |
 
+#### `ai-subject-crop` — Subject-Aware Crop (InSPyReNet)
+Crops to a target aspect ratio while composing around the detected subject. Requires the InSPyReNet model (see `#mdl`); falls back to centre-crop when the model isn't downloaded or no subject is found. Reads `asset.vision.subjectBBox` when available — a second batch at a different aspect ratio skips inference.
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `aspectRatio` | select | `"1:1"` | `"original"` \| `"1:1"` \| `"4:5"` \| `"3:4"` \| `"4:3"` \| `"16:9"` \| `"9:16"` \| `"custom"` |
+| `customRatio` | text | `"1.618"` | Numeric width/height (only used when `aspectRatio="custom"`) |
+| `padding` | range 0–50 | `10` | % of subject bbox (not image) |
+| `anchor` | select | `"center"` | `"center"` \| `"top"` \| `"bottom"` \| `"thirds-tl"` \| `"thirds-tr"` \| `"thirds-bl"` \| `"thirds-br"` |
+| `threshold` | range 10–90 | `50` | Matte confidence % for bbox extraction |
+
 ---
 
 ### 3.2 Color, Tone & Filters (`color-*`, `filter-*`)
@@ -420,13 +430,52 @@ Draws a Template around the current image using a strict pipeline pass. The imag
 | `confidence` | range 0–100 | `70` |
 | `padding` | range 0–100 | `20` |
 
-#### `ai-remove-bg` — Remove Background
+#### `ai-remove-bg` — Remove Background (MediaPipe, fast)
+Fast selfie-segmenter — tuned for people. Use `ai-remove-bg-hq` for arbitrary subjects with pixel-accurate edges.
 | Param | Type | Default |
 |---|---|---|
 | `mode` | select | `"Transparent"` | `"Transparent"` \| `"Silhouette"` |
 | `edgeSmoothing` | range 0–100 | `50` |
 | `bgFill` | select | `"none"` | `"none"` \| `"color"` \| `"image"` |
 | `bgColor` | color | `"#ffffff"` |
+
+#### `ai-remove-bg-hq` — Remove BG (High Quality, InSPyReNet)
+State-of-the-art saliency segmentation — clean edges on fur, hair, transparent objects, products. Requires the ~200 MB InSPyReNet model (see `#mdl`). Same parameter shape as `ai-remove-bg` so the two are drop-in swappable in recipes.
+| Param | Type | Default |
+|---|---|---|
+| `mode` | select | `"Transparent"` | `"Transparent"` \| `"Silhouette"` |
+| `edgeSmoothing` | range 0–100 | `50` |
+| `bgFill` | select | `"none"` | `"none"` \| `"color"` \| `"image"` |
+| `bgColor` | color | `"#ffffff"` |
+| `bgImage` | file | `""` |
+
+#### `ai-portrait-bokeh` — Portrait Bokeh (InSPyReNet)
+Large-aperture lens simulation: keeps the subject sharp and blurs the background. Graduated falloff uses a mid-band blur at half the radius for approximate depth falloff.
+| Param | Type | Default |
+|---|---|---|
+| `blurRadius` | range 0–60 | `15` |
+| `edgeFeather` | range 0–30 | `8` |
+| `falloff` | select | `"flat"` | `"flat"` \| `"graduated"` |
+
+#### `ai-drop-shadow` — Subject Drop Shadow (InSPyReNet)
+Casts a soft shadow behind the detected subject. Works on both transparent cut-outs (writes alpha to empty pixels) and opaque photos (darkens visible background toward shadow color).
+| Param | Type | Default |
+|---|---|---|
+| `offsetX` | range −100..100 | `12` |
+| `offsetY` | range −100..100 | `18` |
+| `blur` | range 0–80 | `20` |
+| `opacity` | range 0–100 | `55` |
+| `color` | color | `"#000000"` |
+
+#### `ai-sticker-outline` — Sticker Outline (InSPyReNet)
+Cut-out sticker effect: subject + solid ring border. Optional second concentric ring for double-border looks (e.g. white outer + black inner for YouTube thumbnail style).
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `thickness` | range 1–40 | `8` | First ring width in px |
+| `color` | color | `"#ffffff"` | First ring color |
+| `doubleOutline` | boolean | `false` | Enables second ring at 2× thickness |
+| `secondColor` | color | `"#000000"` | Second ring color (only when `doubleOutline=true`) |
+| `bgMode` | select | `"transparent"` | `"transparent"` (cut out) \| `"keep"` (paint ring onto original photo) |
 
 #### `ai-silhouette` — Silhouette
 | Param | Type | Default |
