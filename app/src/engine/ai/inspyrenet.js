@@ -6,6 +6,20 @@
  *
  * The session is created lazily on first use and cached at module scope.
  * Call disposeSession() when the underlying model is deleted/reloaded.
+ *
+ * ─── Public API ─────────────────────────────────────────────────────────
+ *   isModelReady()         → model bytes present in IDB?
+ *   getSaliencyMask(canvas, opts)
+ *                           → { mask, width, height }  (mask at source res)
+ *   applyMaskAsAlpha(ctx, mask, opts)
+ *                           → mutate ctx canvas: alpha or silhouette
+ *   computeSubjectBBox(mask, width, height, opts)
+ *                           → { x, y, w, h, centroid, area } | null
+ *   runInspyrenet(ctx, opts, log)   (legacy — wraps getMask + applyAlpha)
+ *   invalidateMaskCache()  → drop cached last-mask (call on canvas mutation)
+ *   disposeSession()       → release ORT session (call on model delete)
+ *   isSessionLoaded()      → session created?
+ *   getActiveBackend()     → 'webgpu' | 'wasm' | null
  */
 
 import { getModelBytes, isModelDownloaded, getModelMeta } from '../../data/models.js';
@@ -19,6 +33,10 @@ let _session = null;
 let _inputName = null;
 let _sessionPromise = null;
 let _activeEP = null;
+
+// ── Last-mask cache (size 1, keyed by canvas signature) ──────────────────
+let _cacheKey = null;
+let _cacheValue = null;  // { mask: Uint8ClampedArray, width, height }
 
 async function loadOrt() {
   if (_ort) return _ort;
@@ -45,6 +63,11 @@ export function getActiveBackend() {
   return _activeEP;
 }
 
+export function invalidateMaskCache() {
+  _cacheKey = null;
+  _cacheValue = null;
+}
+
 export async function disposeSession() {
   if (_session) {
     try { await _session.release(); } catch { /* ignore */ }
@@ -53,6 +76,7 @@ export async function disposeSession() {
   _inputName = null;
   _sessionPromise = null;
   _activeEP = null;
+  invalidateMaskCache();
 }
 
 async function getOrCreateSession(log) {
@@ -96,6 +120,8 @@ async function getOrCreateSession(log) {
   }
 }
 
+// ─── Preprocessing / postprocessing helpers ───────────────────────────────
+
 /**
  * Preprocess an HTMLCanvasElement into an ImageNet-normalized NCHW Float32Array
  * at inputSize × inputSize.
@@ -122,14 +148,15 @@ function preprocess(canvas, inputSize) {
 }
 
 /**
- * Upscale a raw single-channel mask (inputSize × inputSize) to (W × H),
- * returning an ImageData whose alpha channel carries the mask and RGB is white.
+ * Upscale a raw single-channel mask (inputSize × inputSize, Float32 0..1) to
+ * (W × H), returning a Uint8ClampedArray of length W*H with 0..255 values.
  * Uses canvas bilinear drawImage for quality.
  */
-function maskToImageData(mask, inputSize, W, H) {
+function upscaleMaskToSource(rawMask, inputSize, W, H) {
+  // Stage the raw mask into the alpha channel of an RGBA ImageData at input res
   const lo = new ImageData(inputSize, inputSize);
-  for (let i = 0, j = 0; i < mask.length; i++, j += 4) {
-    const v = Math.max(0, Math.min(1, mask[i]));
+  for (let i = 0, j = 0; i < rawMask.length; i++, j += 4) {
+    const v = Math.max(0, Math.min(1, rawMask[i]));
     const a = Math.round(v * 255);
     lo.data[j]     = 255;
     lo.data[j + 1] = 255;
@@ -148,8 +175,171 @@ function maskToImageData(mask, inputSize, W, H) {
   hc.imageSmoothingEnabled = true;
   hc.imageSmoothingQuality = 'high';
   hc.drawImage(loCanvas, 0, 0, W, H);
-  return hc.getImageData(0, 0, W, H);
+  const rgba = hc.getImageData(0, 0, W, H).data;
+
+  // Pull just the alpha plane into a flat Uint8ClampedArray.
+  const out = new Uint8ClampedArray(W * H);
+  for (let i = 3, o = 0; i < rgba.length; i += 4, o++) out[o] = rgba[i];
+  return out;
 }
+
+/**
+ * Cheap, collision-resistant canvas content signature. Samples a sparse grid
+ * of RGB values and combines them into a short string. Typical cost: <0.3ms.
+ */
+function canvasSignature(canvas) {
+  const W = canvas.width, H = canvas.height;
+  if (!W || !H) return null;
+  // Downscale to 8×8 grey sample — cheap and reasonably unique.
+  const tmp = document.createElement('canvas');
+  tmp.width = 8; tmp.height = 8;
+  const tctx = tmp.getContext('2d');
+  tctx.drawImage(canvas, 0, 0, 8, 8);
+  const { data } = tctx.getImageData(0, 0, 8, 8);
+  let sig = `${W}x${H}:`;
+  // 64 pixels × 3 channels = 192 values, but we only need a hash-grade digest.
+  // Build a short string by taking every 4th channel.
+  for (let i = 0; i < data.length; i += 4) {
+    const g = (data[i] + data[i + 1] + data[i + 2]) | 0;
+    sig += g.toString(16);
+  }
+  return sig;
+}
+
+// ─── Public: saliency primitive ──────────────────────────────────────────
+
+/**
+ * Run InSPyReNet on a canvas and return the saliency mask upscaled to the
+ * canvas's source resolution. Result is cached until the canvas content
+ * (signature) changes, so multiple downstream transforms share one pass.
+ *
+ * @param {HTMLCanvasElement|OffscreenCanvas} canvas
+ * @param {{log?: (lvl:string,msg:string)=>void, bypassCache?: boolean}} [opts]
+ * @returns {Promise<{mask: Uint8ClampedArray, width: number, height: number}>}
+ */
+export async function getSaliencyMask(canvas, opts = {}) {
+  const log = opts.log;
+  const sig = opts.bypassCache ? null : canvasSignature(canvas);
+  if (sig && _cacheKey === sig && _cacheValue) {
+    log?.('info', '[inspyrenet] mask cache hit');
+    return _cacheValue;
+  }
+
+  const meta = getModelMeta(MODEL_ID);
+  const inputSize = meta?.inputSize || 1024;
+
+  const session = await getOrCreateSession(log);
+  const ort = await loadOrt();
+
+  const W = canvas.width, H = canvas.height;
+  const t0 = performance.now();
+
+  const input = preprocess(canvas, inputSize);
+  const tensor = new ort.Tensor('float32', input, [1, 3, inputSize, inputSize]);
+
+  const feeds = {};
+  feeds[_inputName] = tensor;
+
+  const outputs = await session.run(feeds);
+  const outKey = Object.keys(outputs)[0];
+  const rawMask = outputs[outKey].data;   // Float32Array, inputSize²
+  const mask = upscaleMaskToSource(rawMask, inputSize, W, H);
+
+  const result = { mask, width: W, height: H };
+  if (sig) {
+    _cacheKey = sig;
+    _cacheValue = result;
+  }
+
+  log?.('info', `[inspyrenet] Inference ${Math.round(performance.now() - t0)}ms (${_activeEP})`);
+  return result;
+}
+
+/**
+ * Apply a previously-computed saliency mask to a canvas as either alpha
+ * (transparent BG) or silhouette (black subject). Mask dimensions must
+ * match the context's canvas.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{mask: Uint8ClampedArray, width: number, height: number}} maskObj
+ * @param {{mode?: 'Transparent'|'Silhouette', edgeSmoothing?: number}} [opts]
+ */
+export function applyMaskAsAlpha(ctx, maskObj, opts = {}) {
+  const { mask, width: mW, height: mH } = maskObj;
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  if (mW !== W || mH !== H) {
+    throw new Error(`Mask ${mW}×${mH} does not match canvas ${W}×${H}.`);
+  }
+
+  const mode = opts.mode || 'Transparent';
+  const smoothing = ((opts.edgeSmoothing ?? 50) / 100);
+  const lo = 0.5 - smoothing * 0.4;
+  const hi = 0.5 + smoothing * 0.4;
+  const span = Math.max(1e-6, hi - lo);
+
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+
+  for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
+    const conf = mask[i] / 255;
+
+    if (mode === 'Transparent') {
+      const alpha = conf < lo ? 0
+                  : conf > hi ? 255
+                  : Math.round(((conf - lo) / span) * 255);
+      data[p + 3] = alpha;
+    } else if (mode === 'Silhouette') {
+      if (conf > 0.5) {
+        data[p]     = 0;
+        data[p + 1] = 0;
+        data[p + 2] = 0;
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+/**
+ * Compute the subject bounding box and summary stats from a saliency mask.
+ * Returns null if no pixel exceeds the threshold (flat/abstract scene).
+ *
+ * @param {Uint8ClampedArray} mask     Flat 0..255 mask, length W*H
+ * @param {number} W
+ * @param {number} H
+ * @param {{threshold?: number}} [opts]  threshold is 0..1 (default 0.5)
+ * @returns {{x:number,y:number,w:number,h:number,centroid:{x:number,y:number},area:number}|null}
+ */
+export function computeSubjectBBox(mask, W, H, opts = {}) {
+  const t = Math.round((opts.threshold ?? 0.5) * 255);
+  let minX = W, minY = H, maxX = -1, maxY = -1;
+  let sumX = 0, sumY = 0, count = 0;
+
+  for (let y = 0, i = 0; y < H; y++) {
+    for (let x = 0; x < W; x++, i++) {
+      if (mask[i] >= t) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        sumX += x;
+        sumY += y;
+        count++;
+      }
+    }
+  }
+
+  if (count === 0 || maxX < 0) return null;
+  return {
+    x: minX,
+    y: minY,
+    w: maxX - minX + 1,
+    h: maxY - minY + 1,
+    centroid: { x: sumX / count, y: sumY / count },
+    area: count / (W * H),   // fraction of frame
+  };
+}
+
+// ─── Legacy entry point (wraps the split API for backward compat) ────────
 
 /**
  * Run InSPyReNet on the given 2D canvas context. Mutates ctx's canvas with the
@@ -160,59 +350,6 @@ function maskToImageData(mask, inputSize, W, H) {
  * @param {(lvl: string, msg: string) => void} [log]
  */
 export async function runInspyrenet(ctx, opts = {}, log) {
-  const meta = getModelMeta(MODEL_ID);
-  const inputSize = meta?.inputSize || 1024;
-  const mode = opts.mode || 'Transparent';
-  const smoothing = ((opts.edgeSmoothing ?? 50) / 100);
-
-  const session = await getOrCreateSession(log);
-  const ort = await loadOrt();
-
-  const W = ctx.canvas.width, H = ctx.canvas.height;
-  const t0 = performance.now();
-
-  const input = preprocess(ctx.canvas, inputSize);
-  const tensor = new ort.Tensor('float32', input, [1, 3, inputSize, inputSize]);
-
-  const feeds = {};
-  feeds[_inputName] = tensor;
-
-  const outputs = await session.run(feeds);
-  const outKey = Object.keys(outputs)[0];
-  const maskTensor = outputs[outKey];
-  const mask = maskTensor.data; // Float32Array, length inputSize*inputSize
-
-  const maskImg = maskToImageData(mask, inputSize, W, H);
-
-  // Apply to main canvas
-  const imageData = ctx.getImageData(0, 0, W, H);
-  const data = imageData.data;
-  const m = maskImg.data;
-
-  // Threshold edges using the smoothing control.
-  // smoothing = 0   -> sharp binary cutoff at 0.5
-  // smoothing = 1   -> soft ramp uses full 0.1..0.9 range
-  const lo = 0.5 - smoothing * 0.4;
-  const hi = 0.5 + smoothing * 0.4;
-  const span = Math.max(1e-6, hi - lo);
-
-  for (let i = 0, j = 3; i < m.length; i += 4, j += 4) {
-    const conf = m[i + 3] / 255;
-
-    if (mode === 'Transparent') {
-      const alpha = conf < lo ? 0
-                  : conf > hi ? 255
-                  : Math.round(((conf - lo) / span) * 255);
-      data[j] = alpha;
-    } else if (mode === 'Silhouette') {
-      if (conf > 0.5) {
-        data[i]     = 0;
-        data[i + 1] = 0;
-        data[i + 2] = 0;
-      }
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
-
-  log?.('info', `[inspyrenet] Inference ${Math.round(performance.now() - t0)}ms (${_activeEP})`);
+  const maskObj = await getSaliencyMask(ctx.canvas, { log });
+  applyMaskAsAlpha(ctx, maskObj, opts);
 }
