@@ -184,7 +184,10 @@ export async function render(container, hash) {
       const host = document.createElement('div');
       host.style.cssText = 'position:fixed;top:0;right:0;height:100vh;z-index:200;';
       container.appendChild(host);
-      _infoPanel = new MetadataPanel(host, { dirHandle: null, startHidden: true });
+      // Try to get the input folder handle so sidecar data can be read
+      const { getFolder } = await import('../data/folders.js');
+      const inputHandle = await getFolder('input').catch(() => null);
+      _infoPanel = new MetadataPanel(host, { dirHandle: inputHandle, startHidden: true });
     }
     return _infoPanel;
   }
@@ -206,12 +209,15 @@ export async function render(container, hash) {
     allowUpload: true,
     allowFolder: true,
     fileFilter: stepFileFilter,
-    onFilesChange: (files, activeFile) => {
+    onFilesChange: async (files, activeFile) => {
       window._icTestFolderFiles = files;
       window._icTestImage = { file: activeFile };
       testFile = activeFile;
-      // Live-update the metadata panel if it is open
-      if (_infoPanel?.isVisible() && activeFile) {
+      // Refresh the input folder handle on the panel (user may have just picked a folder)
+      if (_infoPanel && activeFile) {
+        const { getFolder } = await import('../data/folders.js');
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) _infoPanel.setDirHandle(inputHandle);
         _infoPanel.setFile(activeFile);
       }
       // Load filmstrip thumbnails for the time-range strip
