@@ -89,6 +89,7 @@ All transforms are registered by their `transformId` string.
 | `overlay-polaroid-frame` | Polaroid Frame | `borderColor`, `borderSide`, `borderBottom`, `caption` | Expands canvas with white border and caption; designed to precede `flow-animate-stack` |
 | `overlay-scanlines` | CRT Scanlines | `spacing`, `opacity`, `color` | Horizontal CRT-style scan line overlay |
 | `overlay-template` | Template Frame | `templateId` | Warps the current image into the primary slot of a saved Perspective Template; renders the template background around it |
+| `overlay-device-mockup` | Device Mockup | `family`, `model`, `variant` | Wraps the current image inside a physical device chassis using dynamic clipping and glare overlays |
 
 ---
 
