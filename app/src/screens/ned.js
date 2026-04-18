@@ -176,6 +176,19 @@ export async function render(container, hash) {
     ? bindTimeRangeControls(container, node, def, { onChange: schedulePreview })
     : null;
 
+  // ── Metadata panel — lazy, shared by iw-info-btn and ned-btn-info ──────
+  let _infoPanel = null;
+  async function getOrCreateInfoPanel() {
+    if (!_infoPanel) {
+      const { MetadataPanel } = await import('../components/metadata-panel.js');
+      const host = document.createElement('div');
+      host.style.cssText = 'position:fixed;top:0;right:0;height:100vh;z-index:200;';
+      container.appendChild(host);
+      _infoPanel = new MetadataPanel(host, { dirHandle: null, startHidden: true });
+    }
+    return _infoPanel;
+  }
+
   // ── Unified Image Workspace ───────────────────────────────
   const { ImageWorkspace } = await import('../components/image-workspace.js');
   const wsContainer = container.querySelector('#ned-workspace-container');
@@ -197,10 +210,19 @@ export async function render(container, hash) {
       window._icTestFolderFiles = files;
       window._icTestImage = { file: activeFile };
       testFile = activeFile;
+      // Live-update the metadata panel if it is open
+      if (_infoPanel?.isVisible() && activeFile) {
+        _infoPanel.setFile(activeFile);
+      }
       // Load filmstrip thumbnails for the time-range strip
       if (trControls && activeFile && isVideoFile(activeFile)) {
         trControls.loadFilmstrip(activeFile);
       }
+    },
+    onInfo: async (file) => {
+      const panel = await getOrCreateInfoPanel();
+      await panel.setFile(file);
+      panel.show();
     },
     onRender: async (file) => {
       // Non-transform nodes (conditional, branch, block-ref) have no visual output
@@ -306,28 +328,21 @@ export async function render(container, hash) {
     workspace.setFiles([window._icTestImage.file]);
   }
 
-  // ── Metadata panel (i) button ─────────────────────────────
-  {
-    const { MetadataPanel } = await import('../components/metadata-panel.js');
-    const infoPanelHost = document.createElement('div');
-    infoPanelHost.style.cssText = 'position:fixed;top:0;right:0;height:100vh;z-index:200;';
-    container.appendChild(infoPanelHost);
-    const infoPanel = new MetadataPanel(infoPanelHost, { dirHandle: null, startHidden: true });
-
-    container.querySelector('#ned-btn-info')?.addEventListener('click', async () => {
-      const file = testFile ?? window._icTestImage?.file;
-      if (!file) {
-        window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
-        return;
-      }
-      if (infoPanel.isVisible()) {
-        infoPanel.hide();
-      } else {
-        await infoPanel.setFile(file);
-        infoPanel.show();
-      }
-    });
-  }
+  // ── Toolbar (i) button — toggle the same shared panel ────────────────
+  container.querySelector('#ned-btn-info')?.addEventListener('click', async () => {
+    const file = testFile ?? window._icTestImage?.file;
+    if (!file) {
+      window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
+      return;
+    }
+    const panel = await getOrCreateInfoPanel();
+    if (panel.isVisible()) {
+      panel.hide();
+    } else {
+      await panel.setFile(file);
+      panel.show();
+    }
+  });
 
   // ── Back ──────────────────────────────────────────────────
   container.querySelector('#ned-back')?.addEventListener('click', () => navigate(`#bld?id=${recipeId}`));
