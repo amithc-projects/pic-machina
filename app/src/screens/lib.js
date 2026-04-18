@@ -119,6 +119,9 @@ export async function render(container) {
             <span class="material-symbols-outlined">add</span>
             New Recipe
           </button>
+          <button class="btn-icon" id="lib-btn-info" title="Image info for last test image">
+            <span class="material-symbols-outlined">info</span>
+          </button>
         </div>
       </div>
 
@@ -165,6 +168,28 @@ export async function render(container) {
 
   // ── Styles (scoped to LIB) ────────────────────────────
   injectStyles();
+
+  // ── Metadata panel (toggled via (i) button) ───────────
+  const { MetadataPanel } = await import('../components/metadata-panel.js');
+  const infoPanelHost = document.createElement('div');
+  infoPanelHost.style.cssText = 'position:fixed;top:0;right:0;height:100vh;z-index:200;pointer-events:none;';
+  container.appendChild(infoPanelHost);
+  const infoPanel = new MetadataPanel(infoPanelHost, { dirHandle: null, startHidden: true });
+  infoPanelHost.style.pointerEvents = '';
+
+  container.querySelector('#lib-btn-info')?.addEventListener('click', async () => {
+    const testFile = window._icTestImage?.file;
+    if (!testFile) {
+      window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet', description: 'Pick a test image from the recipe editor first.' });
+      return;
+    }
+    if (infoPanel.isVisible()) {
+      infoPanel.hide();
+    } else {
+      await infoPanel.setFile(testFile);
+      infoPanel.show();
+    }
+  });
 
   // ── Load recipes ──────────────────────────────────────
   let recipes = await getAllRecipes();
