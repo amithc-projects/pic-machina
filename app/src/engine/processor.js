@@ -236,7 +236,7 @@ export class ImageProcessor {
       if (fmt === 'image/jpeg') blob = await injectExif(blob, context);
 
       const base = context.filename.replace(/\.[^.]+$/, '');
-      const ext  = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[fmt] || 'jpg';
+      const ext  = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif' }[fmt] || 'jpg';
       results.push({ blob, filename: `${base}${suffix}.${ext}`, subfolder: effectiveSubfolder });
       return;
     }
