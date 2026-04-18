@@ -11,6 +11,7 @@
 
 import { writeFile, getOrCreateOutputSubfolder } from '../data/folders.js';
 import { createRun, updateRun, appendLog }        from '../data/runs.js';
+import { readSidecar, flattenSidecarVars }        from '../data/sidecar.js';
 import { getAllBlocks }                            from '../data/blocks.js';
 import { ImageProcessor }                         from './processor.js';
 import { extractExif }                            from './exif-reader.js';
@@ -141,7 +142,7 @@ function getWorker() {
 }
 
 // ─── Main-thread batch runner ─────────────────────────────
-async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, blocksById, runParams, run, onProgress, onLog, onComplete }) {
+async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, subfolder, blocksById, runParams, run, onProgress, onLog, onComplete }) {
   const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
   const processor = new ImageProcessor();
   const total = files.length;
@@ -190,8 +191,17 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
       const exif  = await extractExif(file);
 
       // Persist this file to the asset store (idempotent — no-op if already ingested).
-      // Returns the asset record whose sidecar map feeds {{sidecar.key}} interpolation.
       const asset = await ingestFile(file);
+
+      // Read sidecar from input folder (if available) so {{sidecar.*}} vars resolve
+      const fileSidecar = inputHandle
+        ? await readSidecar(inputHandle, file.name)
+        : null;
+
+      const variables = new Map();
+      if (fileSidecar) {
+        flattenSidecarVars(fileSidecar).forEach((v, k) => variables.set(k, v));
+      }
 
       const context = {
         originalImage: image,
@@ -200,13 +210,15 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         ext,
         exif,
         meta:      {},
-        variables: new Map(),
+        variables,
         recipe:    runParams || {},
         outputSubfolder: subfolder || 'output',
-        sidecar:   { ...(asset.geo ?? {}), ...(asset.sidecar ?? {}) },
+        sidecar:   fileSidecar ?? { ...(asset.geo ?? {}), ...(asset.sidecar ?? {}) },
         assetHash: asset.hash,
+        inputHandle,
         fileIndex: i,
         runState,
+        sidecarWrites: {},   // meta-sidecar-write transform accumulates here
         log: (level, msg) => onLog(level, msg),
       };
 
@@ -236,7 +248,19 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
         }
       }
 
-      // Write sidecar JSON — re-read asset so any enrichment (geocode etc.) is captured
+      // Flush sidecar writes from meta-sidecar-write transform back to input folder
+      if (inputHandle && Object.keys(context.sidecarWrites || {}).length > 0) {
+        try {
+          const { writeSidecar } = await import('../data/sidecar.js');
+          const existing = await readSidecar(inputHandle, file.name) ?? {};
+          existing.computed = { ...(existing.computed || {}), ...context.sidecarWrites };
+          await writeSidecar(inputHandle, file.name, existing);
+        } catch (err) {
+          onLog('warn', `Sidecar write-back failed: ${file.name} — ${err.message}`);
+        }
+      }
+
+      // Write internal .PicMachina sidecar to output folder (asset record snapshot)
       if (context.assetHash) {
         try {
           const { getAsset } = await import('../data/assets.js');
@@ -697,7 +721,7 @@ async function runMainThreadBatch({ recipe, files, outputHandle, subfolder, bloc
  * @param {function} opts.onError        — (msg) => void
  * @returns {{ cancel: function, runId: string }}
  */
-export async function startBatch({ recipe, files, outputHandle, subfolder = 'output', runParams = {}, onProgress, onLog, onComplete, onError }) {
+export async function startBatch({ recipe, files, inputHandle, outputHandle, subfolder = 'output', runParams = {}, onProgress, onLog, onComplete, onError }) {
   const allBlocks  = await getAllBlocks();
   const blocksById = Object.fromEntries(allBlocks.map(b => [b.id, b]));
 
@@ -724,7 +748,7 @@ export async function startBatch({ recipe, files, outputHandle, subfolder = 'out
   if (needsMain) {
     // Fire the batch as an async task so we can return { runId, cancel } immediately
     runMainThreadBatch({
-      recipe, files, outputHandle, subfolder, blocksById, runParams, run,
+      recipe, files, inputHandle, outputHandle, subfolder, blocksById, runParams, run,
       onProgress: wrappedProgress,
       onLog:      wrappedLog,
       onComplete: wrappedComplete,

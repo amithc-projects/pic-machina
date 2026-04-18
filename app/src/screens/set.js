@@ -406,6 +406,7 @@ export async function render(container, hash) {
         batchControl = await startBatch({
           recipe: currentRecipe,
           files,
+          inputHandle,
           outputHandle: effOutputHandle,
           subfolder,
           runParams,

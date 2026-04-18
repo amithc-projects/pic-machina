@@ -421,7 +421,8 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
 
 /**
  * Wire a lightweight autocomplete dropdown to a variable-mode text input.
- * Shows matching recipe variable names as the user types after "{{recipe.".
+ * Shows matching recipe variable names as the user types after "{{recipe.",
+ * and sidecar field names after "{{sidecar.".
  */
 function _wireVarAutocomplete(input, getRecipeVars) {
   let dropdown = null;
@@ -430,45 +431,61 @@ function _wireVarAutocomplete(input, getRecipeVars) {
     if (dropdown) { dropdown.remove(); dropdown = null; }
   }
 
-  input.addEventListener('input', () => {
+  function showDropdown(items, onSelect) {
     removeDropdown();
-    const val = input.value;
-    const match = val.match(/\{\{recipe\.([^}]*)$/);
-    if (!match) return;
-
-    const typed = match[1].toLowerCase();
-    const vars = (getRecipeVars() || []).filter(v => v.toLowerCase().includes(typed));
-    if (!vars.length) return;
-
+    if (!items.length) return;
     dropdown = document.createElement('div');
     dropdown.className = 'ned-var-autocomplete';
     dropdown.style.cssText = `
       position:absolute; z-index:9999; background:var(--ps-bg-panel,#1a1a2e);
       border:1px solid var(--ps-blue); border-radius:6px; overflow:hidden;
-      box-shadow:0 4px 12px rgba(0,0,0,.4); min-width:180px;
+      box-shadow:0 4px 12px rgba(0,0,0,.4); min-width:200px; max-height:200px; overflow-y:auto;
     `;
-
-    for (const v of vars) {
+    for (const v of items) {
       const item = document.createElement('div');
       item.textContent = v;
       item.style.cssText = 'padding:6px 10px;cursor:pointer;font-size:12px;font-family:var(--font-mono);';
       item.addEventListener('mouseenter', () => { item.style.background = 'var(--ps-blue)'; item.style.color = '#fff'; });
       item.addEventListener('mouseleave', () => { item.style.background = ''; item.style.color = ''; });
-      item.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        // Replace the partial token with the selected variable
-        input.value = val.replace(/\{\{recipe\.[^}]*$/, `{{recipe.${v}}}`);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        removeDropdown();
-      });
+      item.addEventListener('mousedown', (e) => { e.preventDefault(); onSelect(v); removeDropdown(); });
       dropdown.appendChild(item);
     }
-
-    // Position below input
     const rect = input.getBoundingClientRect();
     dropdown.style.top  = `${rect.bottom + window.scrollY + 2}px`;
     dropdown.style.left = `${rect.left + window.scrollX}px`;
     document.body.appendChild(dropdown);
+  }
+
+  input.addEventListener('input', async () => {
+    removeDropdown();
+    const val = input.value;
+
+    // ── {{recipe.* autocomplete ──────────────────────────────
+    const recipeMatch = val.match(/\{\{recipe\.([^}]*)$/);
+    if (recipeMatch) {
+      const typed = recipeMatch[1].toLowerCase();
+      const vars = (getRecipeVars() || []).filter(v => v.toLowerCase().includes(typed));
+      showDropdown(vars, v => {
+        input.value = val.replace(/\{\{recipe\.[^}]*$/, `{{recipe.${v}}}`);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      return;
+    }
+
+    // ── {{sidecar.* autocomplete ─────────────────────────────
+    const sidecarMatch = val.match(/\{\{sidecar\.([^}]*)$/);
+    if (sidecarMatch) {
+      const typed = sidecarMatch[1].toLowerCase();
+      // Import SIDECAR_SCHEMA_KEYS lazily so param-fields has no hard dep on sidecar.js
+      const { SIDECAR_SCHEMA_KEYS } = await import('../data/sidecar.js');
+      const hits = SIDECAR_SCHEMA_KEYS
+        .filter(k => k.replace('sidecar.', '').toLowerCase().includes(typed));
+      showDropdown(hits, fullKey => {
+        input.value = val.replace(/\{\{sidecar\.[^}]*$/, `{{${fullKey}}}`);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      return;
+    }
   });
 
   input.addEventListener('blur', () => setTimeout(removeDropdown, 150));
