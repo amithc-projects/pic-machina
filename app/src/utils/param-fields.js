@@ -69,11 +69,17 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           }
         </div>`;
 
+    case 'device-family-select':
+    case 'device-model-select':
+    case 'device-variant-select':
     case 'video-layout-select':
     case 'template-select':
     case 'select': {
-      const selClass = param.type === 'template-select' ? 'ic-input ic-template-select' :
-                       (param.type === 'video-layout-select' ? 'ic-input ic-video-layout-select' : 'ic-input');
+      let selClass = 'ic-input';
+      if (param.type === 'template-select') selClass += ' ic-template-select';
+      else if (param.type === 'video-layout-select') selClass += ' ic-video-layout-select';
+      else if (param.type.startsWith('device-')) selClass += ` ic-${param.type}`;
+      
       return `
         <div class="ned-field">
           <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
@@ -344,6 +350,72 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
         });
       });
     });
+  }
+
+  // Handle device frame cascading selectors
+  const familySelects = container.querySelectorAll('.ic-device-family-select');
+  const modelSelects = container.querySelectorAll('.ic-device-model-select');
+  const variantSelects = container.querySelectorAll('.ic-device-variant-select');
+
+  if (familySelects.length > 0) {
+    const MASTER_URL = 'https://raw.githubusercontent.com/jonnyjackson26/device-frames-media/main/device-frames-output/index.json';
+    fetch(MASTER_URL).then(r => r.json()).then(data => {
+      familySelects.forEach((fSel, idx) => {
+        const mSel = modelSelects[idx];
+        const vSel = variantSelects[idx];
+        if (!mSel || !vSel) return;
+
+        let fHTML = '<option value="">-- Family --</option>';
+        Object.keys(data).forEach(fKey => {
+           fHTML += `<option value="${fKey}">${escHtml(fKey)}</option>`;
+        });
+        fSel.innerHTML = fHTML;
+
+        const updateModels = () => {
+           const fVal = fSel.value;
+           let mHTML = '<option value="">-- Model --</option>';
+           if (fVal && data[fVal]) {
+             Object.keys(data[fVal]).forEach(mKey => {
+                mHTML += `<option value="${mKey}">${escHtml(mKey)}</option>`;
+             });
+           }
+           mSel.innerHTML = mHTML;
+           vSel.innerHTML = '<option value="">-- Color --</option>';
+        };
+
+        const updateVariants = () => {
+           const fVal = fSel.value;
+           const mVal = mSel.value;
+           let vHTML = '<option value="">-- Color --</option>';
+           if (fVal && mVal && data[fVal] && data[fVal][mVal]) {
+              Object.keys(data[fVal][mVal]).forEach(vKey => {
+                 vHTML += `<option value="${vKey}">${escHtml(vKey)}</option>`;
+              });
+           }
+           vSel.innerHTML = vHTML;
+        };
+
+        fSel.addEventListener('change', () => { updateModels(); mSel.dispatchEvent(new Event('change')); });
+        mSel.addEventListener('change', updateVariants);
+
+        // Pre-fill initial selection if they exist in dataset
+        const initFVal = fSel.dataset.value || fSel.value;
+        const initMVal = mSel.dataset.value || mSel.value;
+        const initVVal = vSel.dataset.value || vSel.value;
+        
+        if (initFVal) {
+           fSel.value = initFVal;
+           updateModels();
+           if (initMVal) {
+             mSel.value = initMVal;
+             updateVariants();
+             if (initVVal) {
+               vSel.value = initVVal;
+             }
+           }
+        }
+      });
+    }).catch(e => console.warn('[device-frames] Failed to load index.json', e));
   }
 }
 

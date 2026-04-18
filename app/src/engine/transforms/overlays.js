@@ -815,3 +815,110 @@ registry.register({
     }
   }
 });
+
+// ─── Device Mockup ──────────────────────────────────────────
+registry.register({
+  id: 'overlay-device-mockup', name: 'Device Mockup',
+  category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'devices',
+  description: 'Wrap your image realistically inside a physical device frame with dynamic bezels and glare.',
+  params: [
+    { name: 'family', label: 'Device Family', type: 'device-family-select', defaultValue: '' },
+    { name: 'model', label: 'Device Model', type: 'device-model-select', defaultValue: '' },
+    { name: 'variant', label: 'Color Variant', type: 'device-variant-select', defaultValue: '' },
+  ],
+  async apply(ctx, p, context) {
+    if (!p.family || !p.model || !p.variant) return;
+
+    let deviceData = null;
+    try {
+      const MASTER_URL = 'https://raw.githubusercontent.com/jonnyjackson26/device-frames-media/main/device-frames-output/index.json';
+      const resp = await fetch(MASTER_URL);
+      const data = await resp.json();
+      deviceData = data?.[p.family]?.[p.model]?.[p.variant];
+    } catch(e) {
+      context?.log?.('warn', `Failed to load device index.json: ${e.message}`);
+    }
+
+    if (!deviceData) {
+      context?.log?.('warn', `Could not locate mockup metadata for ${p.family} > ${p.model} > ${p.variant}`);
+      return;
+    }
+
+    const { frameSize, screen, frame, mask } = deviceData;
+
+    try {
+      // Fetch the frame and mask images concurrently using createImageBitmap (safe for Web Workers)
+      const [imgFrame, imgMask] = await Promise.all([
+        fetch(frame).then(r => r.blob()).then(createImageBitmap),
+        fetch(mask).then(r => r.blob()).then(createImageBitmap)
+      ]);
+
+      // Save user's source image to a temporary canvas
+      const srcW = ctx.canvas.width;
+      const srcH = ctx.canvas.height;
+      const tmpSrc = document.createElement('canvas');
+      tmpSrc.width = srcW;
+      tmpSrc.height = srcH;
+      tmpSrc.getContext('2d').drawImage(ctx.canvas, 0, 0);
+
+      // Resize main canvas to the device frame size
+      ctx.canvas.width = frameSize.width;
+      ctx.canvas.height = frameSize.height;
+      ctx.clearRect(0, 0, frameSize.width, frameSize.height);
+
+      // Offscreen compositing buffer
+      const buffer = document.createElement('canvas');
+      buffer.width = frameSize.width;
+      buffer.height = frameSize.height;
+      const bCtx = buffer.getContext('2d');
+
+      // 1. Draw source image scaled 'cover' fit into the screen bounds
+      const scale = Math.max(screen.width / srcW, screen.height / srcH);
+      const drawW = srcW * scale;
+      const drawH = srcH * scale;
+
+      const offsetDrawX = screen.x + (screen.width - drawW) / 2;
+      const offsetDrawY = screen.y + (screen.height - drawH) / 2;
+      bCtx.drawImage(tmpSrc, offsetDrawX, offsetDrawY, drawW, drawH);
+
+      // 2. Process Mask (handles both Alpha-channel masks and Luma/B&W masks)
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = frameSize.width;
+      maskCanvas.height = frameSize.height;
+      const mCtx = maskCanvas.getContext('2d');
+      mCtx.drawImage(imgMask, 0, 0, frameSize.width, frameSize.height);
+      const maskData = mCtx.getImageData(0, 0, frameSize.width, frameSize.height);
+      
+      let hasAlpha = false;
+      for (let i = 0; i < maskData.data.length; i += 40) {
+        if (maskData.data[i + 3] < 255) { hasAlpha = true; break; }
+      }
+      if (!hasAlpha) {
+        // Convert Luma (grayscale) to Alpha: assumes white=keep, black=drop
+        for (let i = 0; i < maskData.data.length; i += 4) {
+           maskData.data[i + 3] = maskData.data[i]; 
+        }
+        mCtx.putImageData(maskData, 0, 0);
+      }
+
+      // Clip the screenshot using the processed mask
+      bCtx.globalCompositeOperation = 'destination-in';
+      bCtx.drawImage(maskCanvas, 0, 0, frameSize.width, frameSize.height);
+
+      // 3. Reset composite and overlay the phone frame on top
+      bCtx.globalCompositeOperation = 'source-over';
+      bCtx.drawImage(imgFrame, 0, 0, frameSize.width, frameSize.height);
+
+      // Finally, paint the buffer to the main canvas
+      ctx.drawImage(buffer, 0, 0);
+
+      // Free bitmaps
+      imgFrame.close?.();
+      imgMask.close?.();
+
+    } catch (err) {
+      context?.log?.('error', `Error compositing images: ${err.message}`);
+    }
+  }
+});
