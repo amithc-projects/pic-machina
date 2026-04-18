@@ -848,7 +848,9 @@ function injectStyles() {
       font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px;
       line-height: 1.5;
-      min-height: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
     .gsd-screen .mono  { font-family: 'JetBrains Mono', ui-monospace, monospace; }

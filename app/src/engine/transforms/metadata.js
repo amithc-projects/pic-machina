@@ -252,3 +252,130 @@ registry.register({
     });
   }
 });
+
+// ─── Blur / Sharpness Detection ───────────────────────────
+registry.register({
+  id: 'meta-blur-detect',
+  name: 'Detect Blur / Sharpness',
+  category: 'Metadata',
+  categoryKey: 'meta',
+  icon: 'blur_on',
+  description: [
+    'Scores how sharp or blurry the image is using a Laplacian variance',
+    'analysis (no external models required). Exposes {{sharpnessScore}}',
+    '(0–100) and {{blurLabel}} (Sharp / Soft / Blurry) for use in',
+    'filename templates and conditional branches. Also persists the score',
+    'to the asset record (vision.sharpnessScore) for future filtering.',
+  ].join(' '),
+  params: [
+    {
+      name: 'sampleSize',
+      label: 'Sample Resolution',
+      type: 'select',
+      options: [
+        { label: 'Fast (256 px)', value: 256 },
+        { label: 'Balanced (512 px)', value: 512 },
+        { label: 'Precise (1024 px)', value: 1024 },
+      ],
+      defaultValue: 512,
+    },
+    {
+      name: 'sharpThreshold',
+      label: 'Sharp threshold (0–100)',
+      type: 'range',
+      min: 0, max: 100,
+      defaultValue: 60,
+    },
+    {
+      name: 'blurryThreshold',
+      label: 'Blurry threshold (0–100)',
+      type: 'range',
+      min: 0, max: 100,
+      defaultValue: 30,
+    },
+  ],
+  apply(ctx, p, context) {
+    if (!context.meta)      context.meta      = {};
+    if (!context.variables) context.variables = new Map();
+
+    const size    = Number(p.sampleSize)    || 512;
+    const sharpTh = Number(p.sharpThreshold)  ?? 60;
+    const blurTh  = Number(p.blurryThreshold) ?? 30;
+
+    // ── 1. Downsample to a square working canvas ──────────────
+    const tmp  = document.createElement('canvas');
+    const srcW = ctx.canvas.width;
+    const srcH = ctx.canvas.height;
+    const scale = Math.min(1, size / Math.max(srcW, srcH));
+    tmp.width  = Math.round(srcW * scale);
+    tmp.height = Math.round(srcH * scale);
+    tmp.getContext('2d').drawImage(ctx.canvas, 0, 0, tmp.width, tmp.height);
+
+    const W = tmp.width;
+    const H = tmp.height;
+    const imageData = tmp.getContext('2d').getImageData(0, 0, W, H);
+    const d = imageData.data;
+
+    // ── 2. Convert to grayscale ───────────────────────────────
+    const gray = new Float32Array(W * H);
+    for (let i = 0; i < W * H; i++) {
+      const off = i * 4;
+      gray[i] = 0.299 * d[off] + 0.587 * d[off + 1] + 0.114 * d[off + 2];
+    }
+
+    // ── 3. Apply 3×3 Laplacian kernel [0,1,0; 1,-4,1; 0,1,0] ─
+    // Skip 1-pixel border to avoid edge artifacts.
+    let sum = 0;
+    let sumSq = 0;
+    let count = 0;
+
+    for (let y = 1; y < H - 1; y++) {
+      for (let x = 1; x < W - 1; x++) {
+        const val =
+          -4 * gray[y * W + x]     +
+               gray[(y - 1) * W + x] +
+               gray[(y + 1) * W + x] +
+               gray[y * W + (x - 1)] +
+               gray[y * W + (x + 1)];
+        sum   += val;
+        sumSq += val * val;
+        count++;
+      }
+    }
+
+    const mean     = sum / count;
+    const variance = sumSq / count - mean * mean;
+
+    // ── 4. Log-normalise to 0–100 ─────────────────────────────
+    // log1p(~500) ≈ 6.2 → maps "clearly sharp" photos to ~100.
+    // Very blurry images score ~0–15; acceptable sharpness is 30+.
+    const LOG_CAP = Math.log1p(500);
+    const score   = Math.min(100, Math.round(Math.log1p(Math.max(0, variance)) / LOG_CAP * 100));
+
+    const label =
+      score >= sharpTh ? 'Sharp' :
+      score >= blurTh  ? 'Soft'  :
+      'Blurry';
+
+    // ── 5. Expose as variables and meta ──────────────────────
+    context.meta.sharpnessScore = score;
+    context.meta.blurLabel      = label;
+    context.variables.set('sharpnessScore', String(score));
+    context.variables.set('blurLabel',      label);
+
+    context.log?.('info', `[blur-detect] variance=${variance.toFixed(1)}  score=${score}  → ${label}`);
+
+    // ── 6. Persist to asset store (non-blocking) ─────────────
+    if (context.assetHash) {
+      import('../../data/assets.js').then(({ patchAsset }) => {
+        patchAsset(context.assetHash, {
+          vision: {
+            sharpnessScore: score,
+            blurLabel:      label,
+            blurAt:         Date.now(),
+          },
+        });
+      }).catch(() => { /* non-fatal */ });
+    }
+  },
+});

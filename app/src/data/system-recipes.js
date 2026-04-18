@@ -1181,6 +1181,42 @@ export const SYSTEM_RECIPES = [
         label: 'Export JPEG 92%'
       }
     ]
+  },
+
+  // ── Find Blurry Images ────────────────────────────────────
+  {
+    id: 'sys-find-blurry', name: 'Find Blurry Images',
+    description: 'Scores every image for sharpness and sorts them into two subfolders: "blurry/" for shots that fall below the threshold and "sharp/" for the rest. Adjust the threshold node to taste.',
+    isSystem: true, coverColor: '#7c3aed',
+    inputType: 'image',
+    tags: ['blur', 'sharpness', 'organise', 'quality', 'triage', 'sort'],
+    createdAt: 0, updatedAt: 0,
+    nodes: [
+      {
+        id: 'fb-1', type: 'transform', transformId: 'meta-blur-detect',
+        params: { sampleSize: 512, sharpThreshold: 60, blurryThreshold: 35 },
+        label: 'Score Sharpness'
+      },
+      {
+        id: 'fb-2', type: 'conditional',
+        label: 'Blurry? (score < 35)',
+        condition: { field: 'meta.sharpnessScore', operator: 'lt', value: 35 },
+        thenNodes: [
+          {
+            id: 'fb-2a', type: 'transform', transformId: 'flow-export',
+            params: { subfolder: 'blurry', suffix: '', format: 'image/jpeg', quality: 100 },
+            label: 'Export → blurry/'
+          }
+        ],
+        elseNodes: [
+          {
+            id: 'fb-2b', type: 'transform', transformId: 'flow-export',
+            params: { subfolder: 'sharp', suffix: '', format: 'image/jpeg', quality: 100 },
+            label: 'Export → sharp/'
+          }
+        ]
+      }
+    ]
   }
 ];
 
