@@ -20,6 +20,7 @@ import { renderParamField, collectParams,
 import { showThreeWayConfirm }                      from '../utils/dialogs.js';
 import { registry }                                 from '../engine/index.js';
 import { computeStrength }                          from '../engine/video-convert.js';
+import { checkRecipeAvailability }                   from '../engine/capabilities.js';
 
 export async function render(container, hash) {
   injectStyles();
@@ -389,6 +390,13 @@ export async function render(container, hash) {
     try {
       await outputHandle.getDirectoryHandle('.', { create: false }).catch(() => {});
     } catch (_) { /* non-fatal — let startBatch surface the real error */ }
+
+    // Pre-run gate: check for unmet transform requirements
+    const { available: recipeAvailable, unmet } = await checkRecipeAvailability(currentRecipe);
+    if (!recipeAvailable) {
+      const proceed = await showCapabilityDialog(unmet);
+      if (!proceed) return;
+    }
 
     // Update browser URL hash explicitly
     location.hash = '#que';
@@ -1140,6 +1148,60 @@ export async function render(container, hash) {
     if (_lbUrl) { URL.revokeObjectURL(_lbUrl); _lbUrl = null; }
   };
 
+}
+
+// ── Capability gate dialog ─────────────────────────────────
+/**
+ * Shows a non-blocking dialog listing unmet requirements.
+ * Returns true  → user chose "Run anyway"
+ * Returns false → user chose "Fix now" (already navigated) or dismissed
+ */
+function showCapabilityDialog(unmet) {
+  return new Promise(resolve => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'ic-modal';
+    dlg.style.cssText = 'max-width:420px;width:90vw;padding:0;border-radius:12px;border:1px solid var(--ps-border);background:var(--ps-bg-surface)';
+
+    const items = unmet.map(req =>
+      `<li style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;color:var(--ps-text)">
+         <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-warning,#f59e0b)">warning</span>
+         ${escHtml(req.label || req.id)}
+       </li>`
+    ).join('');
+
+    dlg.innerHTML = `
+      <div style="padding:20px 20px 8px;border-bottom:1px solid var(--ps-border)">
+        <div style="font-size:15px;font-weight:600;color:var(--ps-text);margin-bottom:4px">Setup required</div>
+        <div style="font-size:12px;color:var(--ps-text-muted)">This recipe uses steps that need additional setup:</div>
+      </div>
+      <ul style="list-style:none;padding:12px 20px;margin:0">
+        ${items}
+      </ul>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--ps-border)">
+        <button class="btn-secondary" id="cap-dlg-fix">
+          <span class="material-symbols-outlined">open_in_new</span>Fix now
+        </button>
+        <button class="btn-primary" id="cap-dlg-run">Run anyway</button>
+      </div>`;
+
+    document.body.appendChild(dlg);
+    dlg.showModal();
+
+    dlg.querySelector('#cap-dlg-run').addEventListener('click', () => {
+      dlg.close(); dlg.remove(); resolve(true);
+    });
+    dlg.querySelector('#cap-dlg-fix').addEventListener('click', () => {
+      dlg.close(); dlg.remove();
+      const href = unmet[0]?.actionHref || '#mdl';
+      location.hash = href;
+      resolve(false);
+    });
+    dlg.addEventListener('cancel', () => { dlg.remove(); resolve(false); });
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Scoped styles ─────────────────────────────────────────

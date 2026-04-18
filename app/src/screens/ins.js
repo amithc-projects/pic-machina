@@ -8,7 +8,8 @@
 import { getBlock, cloneBlock } from '../data/blocks.js';
 import { navigate }             from '../main.js';
 import { registry }             from '../engine/index.js';
-import { ImageProcessor } from '../engine/index.js';
+import { ImageProcessor }      from '../engine/index.js';
+import { checkTransformAvailability } from '../engine/capabilities.js';
 import { extractExif }          from '../engine/exif-reader.js';
 import { formatDate }           from '../utils/misc.js';
 
@@ -117,6 +118,20 @@ export async function render(container, hash) {
     </div>`;
 
   injectInsStyles();
+
+  // Async pass: annotate step rows with warning icons for unmet requirements
+  (async () => {
+    for (let i = 0; i < block.nodes.length; i++) {
+      const node = block.nodes[i];
+      if (!node.transformId) continue;
+      const { available } = await checkTransformAvailability(node.transformId);
+      if (available) continue;
+      const row = container.querySelector(`.ins-step-row[data-idx="${i}"]`);
+      row?.insertAdjacentHTML('beforeend',
+        `<span class="material-symbols-outlined" title="Needs setup"
+               style="font-size:12px;color:var(--ps-warning,#f59e0b);margin-left:auto;flex-shrink:0">warning</span>`);
+    }
+  })();
 
   container.querySelector('#ins-back')?.addEventListener('click', () => navigate('#bkb'));
   container.querySelector('#ins-edit-btn')?.addEventListener('click', () => navigate(`#bkb?id=${block.id}`));
