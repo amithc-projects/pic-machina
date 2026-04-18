@@ -36,6 +36,8 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-portrait-bokeh',
   'ai-drop-shadow',
   'ai-sticker-outline',
+  'ai-subject-glow',
+  'ai-export-matte',
   'ai-subject-crop',
   'ai-subject-vignette',
   'ai-selective-grade',

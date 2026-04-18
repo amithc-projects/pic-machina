@@ -1270,6 +1270,167 @@ registry.register({
   }
 });
 
+// ─── Subject Glow (InSPyReNet) ────────────────────────────
+registry.register({
+  id: 'ai-subject-glow', name: 'Subject Glow', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'flare',
+  description: 'Adds a soft colour bloom around the detected subject — neon halos, dreamy glows, or subtle edge lighting. Uses additive blending so the glow brightens without muddying the background. Requires the InSPyReNet model (#mdl).',
+  mainThread: true,
+  params: [
+    { name: 'spread',    label: 'Spread (px)',   type: 'range', min: 0, max: 80, defaultValue: 24 },
+    { name: 'intensity', label: 'Intensity (%)', type: 'range', min: 0, max: 100, defaultValue: 70 },
+    { name: 'color',     label: 'Glow Color',   type: 'color', defaultValue: '#ffffff' },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-subject-glow] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+    try {
+      const spread    = clamp(Math.round(p.spread    ?? 24), 0, 80);
+      const intensity = clamp(Math.round(p.intensity ?? 70), 0, 100) / 100;
+      const color     = p.color || '#ffffff';
+
+      if (intensity === 0 || spread === 0) return;
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-subject-glow] ${msg}`);
+        return;
+      }
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+
+      const maskObj  = await getSaliencyMask(ctx.canvas, { log: context?.log });
+      const origMask = maskObj.mask;
+      // Blur the matte outward by `spread` pixels to form the glow halo.
+      const glowMask = await featherMaskChannel(origMask, W, H, spread);
+
+      const hexToRgb = (hex) => [
+        parseInt(hex.slice(1, 3), 16),
+        parseInt(hex.slice(3, 5), 16),
+        parseInt(hex.slice(5, 7), 16),
+      ];
+      const [gr, gg, gb] = hexToRgb(color);
+
+      const imageData = ctx.getImageData(0, 0, W, H);
+      const data = imageData.data;
+
+      for (let i = 0, p4 = 0; i < origMask.length; i++, p4 += 4) {
+        const subj = origMask[i] / 255;
+        // Glow strongest in the halo region, fades as it reaches the subject
+        // centre. Allow a gentle bleed onto the subject edge for a natural look.
+        const glowAmt = (glowMask[i] / 255) * intensity * (1 - subj * 0.7);
+        if (glowAmt <= 0.005) continue;
+
+        // Additive (screen-like) blend — moves each channel toward glow colour.
+        data[p4]     = Math.min(255, data[p4]     + gr * glowAmt);
+        data[p4 + 1] = Math.min(255, data[p4 + 1] + gg * glowAmt);
+        data[p4 + 2] = Math.min(255, data[p4 + 2] + gb * glowAmt);
+        // For transparent backgrounds (cut-outs) also write alpha so the glow
+        // is visible there.
+        if (data[p4 + 3] < 255) {
+          data[p4 + 3] = Math.max(data[p4 + 3], Math.round(glowAmt * 255));
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        subjectGlow: { spread, intensity, color, at: Date.now() }
+      });
+
+      context?.log?.('info', `[ai-subject-glow] ${Math.round(performance.now() - t0)}ms`);
+
+    } catch (err) {
+      console.warn('[ai-subject-glow] failed:', err);
+      context?.log?.('warn', `[ai-subject-glow] failed: ${err.message || err}`);
+    }
+  }
+});
+
+// ─── Matte Export (InSPyReNet) ────────────────────────────
+registry.register({
+  id: 'ai-export-matte', name: 'Export Matte', category: 'AI & Composition', categoryKey: 'ai',
+  icon: 'invert_colors',
+  description: 'Replaces the canvas with the raw InSPyReNet saliency matte so you can export it as a PNG for use in Photoshop, After Effects, or other compositing tools. Pair with a Save File node (PNG format). Requires the InSPyReNet model (#mdl).',
+  mainThread: true,
+  params: [
+    { name: 'mode', label: 'Output Mode', type: 'select',
+      options: [
+        { label: 'Alpha PNG (subject opaque, bg transparent)', value: 'alpha' },
+        { label: 'Luma Matte (white = subject, black = bg)',   value: 'luma'  },
+        { label: 'Inverted Alpha (bg opaque, subject transparent)', value: 'inverted' },
+      ],
+      defaultValue: 'alpha' },
+    { name: 'edgeSmoothing', label: 'Edge Smoothing', type: 'range', min: 0, max: 20, defaultValue: 2 },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-export-matte] Skipping — onnxruntime-web requires the main thread.');
+      return;
+    }
+    try {
+      const mode          = p.mode || 'alpha';
+      const edgeSmoothing = clamp(Math.round(p.edgeSmoothing ?? 2), 0, 20);
+
+      const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'InSPyReNet model not downloaded. Open the Models screen (#mdl) to download it.';
+        context?.log?.('warn', `[ai-export-matte] ${msg}`);
+        return;
+      }
+
+      const W = ctx.canvas.width, H = ctx.canvas.height;
+      const t0 = performance.now();
+
+      const maskObj = await getSaliencyMask(ctx.canvas, { log: context?.log });
+      const rawMask = edgeSmoothing > 0
+        ? await featherMaskChannel(maskObj.mask, W, H, edgeSmoothing)
+        : maskObj.mask;
+
+      // Replace canvas with the matte
+      ctx.clearRect(0, 0, W, H);
+      const imageData = ctx.createImageData(W, H);
+      const data = imageData.data;
+
+      for (let i = 0, p4 = 0; i < rawMask.length; i++, p4 += 4) {
+        const v = rawMask[i]; // 0-255, 255 = subject
+
+        if (mode === 'luma') {
+          // Grayscale: white = subject, black = background, fully opaque
+          data[p4] = data[p4 + 1] = data[p4 + 2] = v;
+          data[p4 + 3] = 255;
+        } else if (mode === 'inverted') {
+          // Transparent where subject is, opaque where background is
+          data[p4] = data[p4 + 1] = data[p4 + 2] = 0;
+          data[p4 + 3] = 255 - v;
+        } else {
+          // alpha: subject opaque (white), background transparent
+          data[p4] = data[p4 + 1] = data[p4 + 2] = 255;
+          data[p4 + 3] = v;
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      await persistSubjectVision(context?.assetHash, maskObj, {
+        matteExport: { mode, edgeSmoothing, at: Date.now() }
+      });
+
+      context?.log?.('info', `[ai-export-matte] mode=${mode}  ${Math.round(performance.now() - t0)}ms`);
+
+    } catch (err) {
+      console.warn('[ai-export-matte] failed:', err);
+      context?.log?.('warn', `[ai-export-matte] failed: ${err.message || err}`);
+    }
+  }
+});
+
 // ─── Clipping Mask ────────────────────────────────────────
 registry.register({
   id: 'ai-clipping-mask', name: 'Clipping Mask', category: 'AI & Composition', categoryKey: 'ai',
