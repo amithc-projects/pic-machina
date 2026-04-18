@@ -21,6 +21,7 @@ import { renderAssetPanel,
          injectAssetPanelStyles,
          renderExtractedMetadataForSidebar }         from '../utils/asset-panel.js';
 import { showConfirm }                               from '../utils/dialogs.js';
+import { SidecarDrawer }                             from '../components/sidecar-drawer.js';
 
 const IMAGE_EXTS = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS = new Set(['.mp4','.mov','.webm']);
@@ -294,6 +295,15 @@ export async function render(container, hash) {
   let filteredFolders = []; // currently visible folders
   let currentHandle = null; // FileSystemDirectoryHandle being viewed
   let dirStack = [];     // [{ handle, name }] — path from root to parent of currentHandle
+
+  // Sidecar drawer (lazy-mounted on first use)
+  const sidecarDrawer = new SidecarDrawer(document.body, {
+    dirHandle: null,  // set dynamically as currentHandle changes
+    onSaved: (file, sidecar) => {
+      // Refresh sidecar badge overlays after save
+      _refreshSidecarBadge(file.name, sidecar);
+    },
+  });
   let videoPreviews = new Map(); // videoName → File (preview JPEG)
   let _previewGenRunning = false;
   let inputFiles = [];   // File[] from input folder for comparison
@@ -870,12 +880,20 @@ export async function render(container, hash) {
                  </button>`
             : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
           }
+          <button class="fld-thumb-info" title="View / edit metadata" data-info="${escHtml(ent.file.name)}">
+            <span class="material-symbols-outlined" style="font-size:14px">info</span>
+          </button>
         </div>
         <div class="fld-cell-name">${escHtml(ent.file.name)}</div>`;
 
       cell.querySelector('.fld-thumb-chg-preview')?.addEventListener('click', e => {
         e.stopPropagation();
         showChangePreviewDialog(ent);
+      });
+      cell.querySelector('.fld-thumb-info')?.addEventListener('click', e => {
+        e.stopPropagation();
+        sidecarDrawer.setDirHandle(currentHandle);
+        sidecarDrawer.open(ent.file, filtered.map(f => f.file));
       });
       cell.addEventListener('click', e => {
         handleFileClick(ent, i, e);
@@ -1453,9 +1471,27 @@ export async function render(container, hash) {
     if (slideshowIsPlaying) startTimer();
   }
 
+  // Update star/flag badge overlay on a thumbnail after sidecar save
+  function _refreshSidecarBadge(filename, sidecar) {
+    const cell = container.querySelector(`[data-fld-ent-name="${CSS.escape(filename)}"]`);
+    if (!cell) return;
+    // Remove existing badge
+    cell.querySelector('.fld-sidecar-badge')?.remove();
+    const rating = sidecar?.annotation?.rating;
+    const flag   = sidecar?.annotation?.flag;
+    if (!rating && !flag) return;
+    const badge = document.createElement('div');
+    badge.className = 'fld-sidecar-badge';
+    if (rating) badge.innerHTML += `<span class="fld-sb-rating">★${rating}</span>`;
+    if (flag === 'pick')   badge.innerHTML += `<span class="fld-sb-pick">P</span>`;
+    if (flag === 'reject') badge.innerHTML += `<span class="fld-sb-reject">R</span>`;
+    cell.querySelector('.fld-thumb')?.appendChild(badge);
+  }
+
   return () => {
     revokeBlobUrls();
     clearInterval(slideshowTimer);
+    sidecarDrawer.close();
     document.removeEventListener('mousemove', _onResizeMove);
     document.removeEventListener('mouseup',   _onResizeUp);
   };
@@ -1553,6 +1589,25 @@ function injectFldStyles() {
     .fld-thumb:hover .fld-thumb-chg-preview { display:flex; }
     .fld-thumb-chg-preview--noprev { display:flex; opacity:0.8; }
     .fld-thumb-chg-preview--noprev:hover { opacity:1; }
+    .fld-thumb-info {
+      position:absolute; top:4px; right:4px; z-index:2;
+      background:rgba(0,0,0,0.6); border:none; border-radius:4px;
+      color:#fff; cursor:pointer; padding:3px 5px; display:none;
+      align-items:center; line-height:1;
+    }
+    .fld-thumb:hover .fld-thumb-info { display:flex; }
+    .fld-thumb-info .material-symbols-outlined { font-size:14px; }
+    /* Sidecar rating/flag badges */
+    .fld-sidecar-badge {
+      position:absolute; bottom:4px; left:4px; display:flex; gap:3px; z-index:2; pointer-events:none;
+    }
+    .fld-sb-rating, .fld-sb-pick, .fld-sb-reject {
+      font-size:10px; font-weight:700; border-radius:3px;
+      padding:1px 4px; line-height:1.4;
+    }
+    .fld-sb-rating { background:rgba(245,158,11,0.85); color:#fff; }
+    .fld-sb-pick   { background:rgba(52,211,153,0.85);  color:#fff; }
+    .fld-sb-reject { background:rgba(248,113,113,0.85); color:#fff; }
 
     /* Change-preview modal overlay (reused .fld-modal-overlay pattern) */
     .fld-modal-overlay {

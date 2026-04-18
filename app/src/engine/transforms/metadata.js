@@ -379,3 +379,44 @@ registry.register({
     }
   },
 });
+
+registry.register({
+  id:          'meta-sidecar-write',
+  name:        'Write Sidecar Field',
+  category:    'Metadata',
+  categoryKey: 'meta',
+  icon:        'edit_note',
+  description: 'Write a value into the sidecar JSON file\'s computed block. The sidecar is flushed to disk after each image is processed.',
+  params: [
+    {
+      name: 'key',
+      label: 'Field name',
+      type: 'text',
+      default: '',
+      placeholder: 'e.g. myScore',
+      description: 'Key written under sidecar.computed — use letters, numbers, underscores',
+    },
+    {
+      name: 'value',
+      label: 'Value',
+      type: 'text',
+      default: '',
+      placeholder: '{{sharpnessScore}}',
+      description: 'Value to store. Supports {{variable}} substitution.',
+    },
+  ],
+  apply(ctx, p, context) {
+    const key   = (p.key   || '').trim();
+    const value = (p.value || '').trim();
+    if (!key) return;
+
+    // Resolve variables in value
+    const resolved = context.variables instanceof Map && value.includes('{{')
+      ? value.replace(/\{\{([^}]+)\}\}/g, (_, k) => context.variables.get(k.trim()) ?? context.meta?.[k.trim()] ?? `{{${k}}}`)
+      : value;
+
+    // Accumulate into sidecarWrites — batch.js flushes this after each file
+    if (!context.sidecarWrites) context.sidecarWrites = {};
+    context.sidecarWrites[key] = resolved;
+  },
+});

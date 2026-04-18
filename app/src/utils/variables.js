@@ -10,7 +10,7 @@
  *   {{exif.date | date("DD-MMM-YYYY")}}  → formatted date
  *   {{exif.author | "fallback"}}  → value with fallback
  *   {{loop.index}}                → reserved (v1.2) — rendered as literal until implemented
- *   {{sidecar.key}}               → reserved (v1.1) — rendered as literal until implemented
+ *   {{sidecar.geo.city}}           → sidecar field (nested dotted paths: annotation.rating, geo.city, etc.)
  */
 
 const TOKEN_RE = /\{\{([^}]+)\}\}/g;
@@ -58,7 +58,17 @@ function resolveKey(key, ctx) {
   if (ns === 'exif' || ns === 'meta') return ctx.exif?.[field] ?? ctx.meta?.[field] ?? null;
   if (ns === 'recipe')  return ctx.recipe?.[field] != null ? String(ctx.recipe[field]) : null;
   if (ns === 'loop')    return `{{loop.${field}}}`;   // v1.2 reserved
-  if (ns === 'sidecar') return ctx.sidecar?.[field] ?? null;
+  if (ns === 'sidecar') {
+    // Support nested dotted paths: sidecar.annotation.rating, sidecar.geo.city, etc.
+    const parts = field.split('.');
+    let val = ctx.sidecar;
+    for (const p of parts) {
+      if (val == null || typeof val !== 'object') return null;
+      val = val[p];
+    }
+    if (Array.isArray(val)) return val.join(', ');
+    return val != null ? String(val) : null;
+  }
 
   // Bare key (no namespace) — check variables Map, then meta, then exif
   if (ctx.variables instanceof Map && ctx.variables.has(key)) return ctx.variables.get(key);
