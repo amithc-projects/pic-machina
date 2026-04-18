@@ -406,10 +406,34 @@ export async function render(container, hash) {
     applyConfigOpen();
   });
 
+  // ── Metadata panel — lazy, shared by bld-info-btn and iw-info-btn ────
+  let _bldInfoPanel = null;
+  async function getBldInfoPanel() {
+    if (!_bldInfoPanel) {
+      const { MetadataPanel } = await import('../components/metadata-panel.js');
+      const host = document.createElement('div');
+      host.style.cssText = 'position:fixed;top:0;right:0;height:100vh;z-index:200;';
+      container.appendChild(host);
+      const { getFolder } = await import('../data/folders.js');
+      const inputHandle = await getFolder('input').catch(() => null);
+      _bldInfoPanel = new MetadataPanel(host, { dirHandle: inputHandle, startHidden: true });
+    }
+    return _bldInfoPanel;
+  }
+
   container.querySelector('#bld-info-btn')?.addEventListener('click', async () => {
-    if (!bldTestFile) return;
-    const { renderFileInfoModal } = await import('../utils/info-modal.js');
-    renderFileInfoModal(bldTestFile, window._icBldAfterUrl);
+    const testFile = window._icTestImage?.file;
+    if (!testFile) {
+      window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
+      return;
+    }
+    const panel = await getBldInfoPanel();
+    if (panel.isVisible()) {
+      panel.hide();
+    } else {
+      await panel.setFile(testFile);
+      panel.show();
+    }
   });
 
   const saveStatus = container.querySelector('#bld-save-status');
@@ -420,7 +444,7 @@ export async function render(container, hash) {
 
   const { ImageWorkspace } = await import('../components/image-workspace.js');
   const wsContainer = container.querySelector('#bld-workspace-container');
-  
+
   const workspace = new ImageWorkspace(wsContainer, {
     fileFilter: fileFilterForRecipe(draft),
     customControlsHtml: `
@@ -439,9 +463,21 @@ export async function render(container, hash) {
         });
       });
     },
-    onFilesChange: (files, activeFile) => {
+    onFilesChange: async (files, activeFile) => {
       window._icTestFolderFiles = files;
       window._icTestImage = { file: activeFile };
+      // Live-update metadata panel if open; also refresh dirHandle in case folder changed
+      if (_bldInfoPanel && activeFile) {
+        const { getFolder } = await import('../data/folders.js');
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
+        if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(activeFile);
+      }
+    },
+    onInfo: async (file) => {
+      const panel = await getBldInfoPanel();
+      await panel.setFile(file);
+      panel.show();
     },
     onRender: async (file) => {
       const url = URL.createObjectURL(file);
