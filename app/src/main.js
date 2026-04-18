@@ -51,19 +51,12 @@ async function navigate(hash) {
   }
 
   const container = document.getElementById('screen-container');
-  container.innerHTML = '<div class="screen-loading"><div class="spinner spinner--lg"></div></div>';
 
+  // Pre-load the module before starting the transition so network latency doesn't
+  // stall the animation (subsequent visits use the cached module — effectively instant)
+  let mod;
   try {
-    const mod = await loader();
-    if (typeof mod.render === 'function') {
-      container.innerHTML = '';
-      const wrapper = document.createElement('div');
-      wrapper.className = 'screen-enter';
-      wrapper.style.height = '100%';
-      container.appendChild(wrapper);
-      currentCleanup = await mod.render(wrapper, hash) ?? null;
-      currentScreen = screenId;
-    }
+    mod = await loader();
   } catch (err) {
     console.error(`[router] Failed to load screen "${screenId}"`, err);
     container.innerHTML = `
@@ -72,6 +65,27 @@ async function navigate(hash) {
         <div class="empty-state-title">Screen failed to load</div>
         <div class="empty-state-desc">${err.message}</div>
       </div>`;
+    return;
+  }
+
+  const doSwap = async () => {
+    container.innerHTML = '';
+    if (typeof mod.render === 'function') {
+      const wrapper = document.createElement('div');
+      wrapper.style.height = '100%';
+      container.appendChild(wrapper);
+      currentCleanup = await mod.render(wrapper, hash) ?? null;
+      currentScreen = screenId;
+    }
+  };
+
+  if ('startViewTransition' in document) {
+    // Modern path: smooth compositor cross-fade between old and new screen
+    document.startViewTransition(doSwap);
+  } else {
+    // Fallback: run swap then apply the CSS-only enter animation
+    await doSwap();
+    container.firstElementChild?.classList.add('screen-enter');
   }
 }
 
