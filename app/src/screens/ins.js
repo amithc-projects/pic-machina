@@ -57,6 +57,9 @@ export async function render(container, hash) {
           <span class="ic-badge">${escHtml(block.category || 'General')}</span>
         </div>
         <div class="flex items-center gap-2">
+          <button class="btn-icon" id="ins-btn-info" title="Image info for last test image">
+            <span class="material-symbols-outlined">info</span>
+          </button>
           <button class="btn-secondary" id="ins-edit-btn">
             <span class="material-symbols-outlined">edit</span>
             Edit Block
@@ -135,6 +138,30 @@ export async function render(container, hash) {
 
   container.querySelector('#ins-back')?.addEventListener('click', () => navigate('#bkb'));
   container.querySelector('#ins-edit-btn')?.addEventListener('click', () => navigate(`#bkb?id=${block.id}`));
+
+  // ── Metadata panel (i) button ─────────────────────────
+  {
+    const { MetadataPanel } = await import('../components/metadata-panel.js');
+    const infoPanelHost = document.createElement('div');
+    infoPanelHost.style.cssText = 'position:fixed;top:0;right:0;height:100vh;z-index:200;';
+    container.appendChild(infoPanelHost);
+    const infoPanel = new MetadataPanel(infoPanelHost, { dirHandle: null, startHidden: true });
+
+    container.querySelector('#ins-btn-info')?.addEventListener('click', async () => {
+      const tf = window._icTestImage?.file;
+      if (!tf) {
+        window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
+        return;
+      }
+      if (infoPanel.isVisible()) {
+        infoPanel.hide();
+      } else {
+        await infoPanel.setFile(tf);
+        infoPanel.show();
+      }
+    });
+  }
+
   container.querySelector('#ins-clone-btn')?.addEventListener('click', async () => {
     const c = await cloneBlock(block.id);
     window.AuroraToast?.show({ variant: 'success', title: `"${c.name}" cloned` });

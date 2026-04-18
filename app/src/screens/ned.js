@@ -101,6 +101,9 @@ export async function render(container, hash) {
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <button class="btn-icon" id="ned-btn-info" title="Image info for test image">
+            <span class="material-symbols-outlined">info</span>
+          </button>
           <button class="btn-secondary" id="ned-btn-reset">
             <span class="material-symbols-outlined">restart_alt</span>
             Reset
@@ -301,6 +304,29 @@ export async function render(container, hash) {
     workspace.setFiles(window._icTestFolderFiles, idx >= 0 ? idx : 0);
   } else if (window._icTestImage?.file) {
     workspace.setFiles([window._icTestImage.file]);
+  }
+
+  // ── Metadata panel (i) button ─────────────────────────────
+  {
+    const { MetadataPanel } = await import('../components/metadata-panel.js');
+    const infoPanelHost = document.createElement('div');
+    infoPanelHost.style.cssText = 'position:fixed;top:0;right:0;height:100vh;z-index:200;';
+    container.appendChild(infoPanelHost);
+    const infoPanel = new MetadataPanel(infoPanelHost, { dirHandle: null, startHidden: true });
+
+    container.querySelector('#ned-btn-info')?.addEventListener('click', async () => {
+      const file = testFile ?? window._icTestImage?.file;
+      if (!file) {
+        window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
+        return;
+      }
+      if (infoPanel.isVisible()) {
+        infoPanel.hide();
+      } else {
+        await infoPanel.setFile(file);
+        infoPanel.show();
+      }
+    });
   }
 
   // ── Back ──────────────────────────────────────────────────

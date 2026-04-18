@@ -15,13 +15,11 @@ import { extractVideoFrame }                         from '../utils/video-frame.
 import { setRecipeThumbnail }                        from '../data/recipes.js';
 import { navigate }                                  from '../main.js';
 import { formatBytes }                               from '../utils/misc.js';
-import { getImageInfo, renderImageInfoPanel,
-         injectImageInfoStyles }                     from '../utils/image-info.js';
+import { injectImageInfoStyles }                     from '../utils/image-info.js';
 import { renderAssetPanel,
-         injectAssetPanelStyles,
-         renderExtractedMetadataForSidebar }         from '../utils/asset-panel.js';
+         injectAssetPanelStyles }                    from '../utils/asset-panel.js';
 import { showConfirm }                               from '../utils/dialogs.js';
-import { SidecarDrawer }                             from '../components/sidecar-drawer.js';
+import { MetadataPanel }                             from '../components/metadata-panel.js';
 
 const IMAGE_EXTS = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS = new Set(['.mp4','.mov','.webm']);
@@ -163,6 +161,10 @@ export async function render(container, hash) {
           <div style="width:1px;height:20px;background:var(--ps-border);margin:0 4px"></div>
         </div>
 
+        <button class="btn-icon" id="fld-btn-compare" title="Compare with input image" style="margin-right:4px">
+          <span class="material-symbols-outlined">compare_arrows</span>
+        </button>
+
         <div class="fld-view-toggle" role="group">
           <button class="fld-view-btn is-active" data-fld-view="grid" title="Grid view">
             <span class="material-symbols-outlined">grid_view</span>
@@ -207,8 +209,7 @@ export async function render(container, hash) {
             <span class="text-sm text-muted">Loading files…</span>
           </div>
         </div>
-        <div class="fld-resize-handle" id="fld-resize-handle" style="display:none"></div>
-        <div class="fld-detail" id="fld-detail" style="display:none"></div>
+        <div id="fld-meta-panel-host" style="height:100%"></div>
       </div>
     </div>`;
 
@@ -296,14 +297,14 @@ export async function render(container, hash) {
   let currentHandle = null; // FileSystemDirectoryHandle being viewed
   let dirStack = [];     // [{ handle, name }] — path from root to parent of currentHandle
 
-  // Sidecar drawer (lazy-mounted on first use)
-  const sidecarDrawer = new SidecarDrawer(document.body, {
-    dirHandle: null,  // set dynamically as currentHandle changes
-    onSaved: (file, sidecar) => {
-      // Refresh sidecar badge overlays after save
-      _refreshSidecarBadge(file.name, sidecar);
-    },
-  });
+  // Persistent metadata panel (always mounted, user can collapse)
+  const metaPanel = new MetadataPanel(
+    container.querySelector('#fld-meta-panel-host'),
+    {
+      dirHandle: null,  // set dynamically as currentHandle changes
+      onSaved: (file, sidecar) => _refreshSidecarBadge(file.name, sidecar),
+    }
+  );
   let videoPreviews = new Map(); // videoName → File (preview JPEG)
   let _previewGenRunning = false;
   let inputFiles = [];   // File[] from input folder for comparison
@@ -370,51 +371,6 @@ export async function render(container, hash) {
   container.querySelector('#fld-btn-download-sel')?.addEventListener('click', downloadSelected);
   container.querySelector('#fld-btn-delete-sel')?.addEventListener('click', deleteSelected);
 
-  // ── Resizable detail panel ──────────────────────────────────
-  const detailEl      = container.querySelector('#fld-detail');
-  const resizeHandle  = container.querySelector('#fld-resize-handle');
-  const DETAIL_W_KEY  = 'ic-fld-detail-width';
-  let detailWidth     = Math.max(220, Math.min(700, parseInt(localStorage.getItem(DETAIL_W_KEY)) || 340));
-
-  function applyDetailWidth(w) {
-    detailWidth = Math.max(220, Math.min(700, w));
-    if (detailEl) { detailEl.style.width = detailWidth + 'px'; detailEl.style.minWidth = detailWidth + 'px'; }
-  }
-
-  function showDetailAndHandle() {
-    if (resizeHandle) resizeHandle.style.display = '';
-    if (detailEl)     detailEl.style.display = 'flex';
-    applyDetailWidth(detailWidth);
-  }
-
-  let _isResizing = false;
-  resizeHandle?.addEventListener('mousedown', e => {
-    _isResizing = true;
-    resizeHandle.classList.add('is-dragging');
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    e.preventDefault();
-  });
-
-  function _onResizeMove(e) {
-    if (!_isResizing) return;
-    const body = container.querySelector('#fld-body');
-    if (!body) return;
-    applyDetailWidth(body.getBoundingClientRect().right - e.clientX);
-  }
-
-  function _onResizeUp() {
-    if (!_isResizing) return;
-    _isResizing = false;
-    resizeHandle?.classList.remove('is-dragging');
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    localStorage.setItem(DETAIL_W_KEY, String(detailWidth));
-  }
-
-  document.addEventListener('mousemove', _onResizeMove);
-  document.addEventListener('mouseup',   _onResizeUp);
-
   container.querySelector('#fld-btn-slideshow')?.addEventListener('click', () => {
     const images = filtered.filter(ent => fileType(ent.file.name) === 'image');
     if (!images.length) {
@@ -422,6 +378,42 @@ export async function render(container, hash) {
       return;
     }
     startSlideshow(images);
+  });
+
+  // ── Compare button ─────────────────────────────────────────
+  container.querySelector('#fld-btn-compare')?.addEventListener('click', async () => {
+    if (!selected) {
+      window.AuroraToast?.show({ variant: 'info', title: 'Select a file first to compare' });
+      return;
+    }
+    const ws = await ensureWorkspace();
+    ws.setFiles([selected.file]);
+
+    const modal = document.createElement('div');
+    modal.className = 'fld-modal-overlay';
+    modal.innerHTML = `
+      <div class="fld-modal" style="max-width:90vw;width:900px;height:80vh;display:flex;flex-direction:column">
+        <div class="fld-modal-header">
+          <strong>Compare</strong>
+          <span style="color:var(--ps-text-muted);font-size:13px;margin-left:8px">${escHtml(selected.file.name)}</span>
+          <button class="btn-icon" id="fld-cmp-close" style="margin-left:auto">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div id="fld-cmp-mount" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('#fld-cmp-mount').appendChild(ws.container);
+    modal.querySelector('#fld-cmp-close').addEventListener('click', () => {
+      container.appendChild(ws.container); // return to DOM (avoid GC)
+      modal.remove();
+    });
+    modal.addEventListener('click', e => {
+      if (e.target === modal) {
+        container.appendChild(ws.container);
+        modal.remove();
+      }
+    });
   });
 
   // ── Load files ──────────────────────────────────────────────
@@ -446,6 +438,7 @@ export async function render(container, hash) {
     }
 
     currentHandle = rootHandle;
+    metaPanel.setDirHandle(currentHandle);
 
     // Try to load input files for comparison
     const inputHandle = await getFolder('input').catch(() => null);
@@ -535,6 +528,8 @@ export async function render(container, hash) {
   async function enterFolder(folder) {
     dirStack.push({ handle: currentHandle, name: currentHandle.name });
     currentHandle = folder.handle;
+    metaPanel.setDirHandle(currentHandle);
+    metaPanel.clear();
     await reloadContents();
   }
 
@@ -542,6 +537,8 @@ export async function render(container, hash) {
     if (stackIdx < 0 || stackIdx >= dirStack.length) return;
     currentHandle = dirStack[stackIdx].handle;
     dirStack = dirStack.slice(0, stackIdx);
+    metaPanel.setDirHandle(currentHandle);
+    metaPanel.clear();
     await reloadContents();
   }
 
@@ -880,20 +877,12 @@ export async function render(container, hash) {
                  </button>`
             : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
           }
-          <button class="fld-thumb-info" title="View / edit metadata" data-info="${escHtml(ent.file.name)}">
-            <span class="material-symbols-outlined" style="font-size:14px">info</span>
-          </button>
         </div>
         <div class="fld-cell-name">${escHtml(ent.file.name)}</div>`;
 
       cell.querySelector('.fld-thumb-chg-preview')?.addEventListener('click', e => {
         e.stopPropagation();
         showChangePreviewDialog(ent);
-      });
-      cell.querySelector('.fld-thumb-info')?.addEventListener('click', e => {
-        e.stopPropagation();
-        sidecarDrawer.setDirHandle(currentHandle);
-        sidecarDrawer.open(ent.file, filtered.map(f => f.file));
       });
       cell.addEventListener('click', e => {
         handleFileClick(ent, i, e);
@@ -989,11 +978,9 @@ export async function render(container, hash) {
       strip.appendChild(thumb);
     });
 
-    // If something was selected, show it in main area and sidebar info panel
+    // If something was selected, show it in main area
     if (selected) {
       renderFilmstripPreview(selected);
-      showDetailAndHandle();
-      renderInfoPanel(detailEl, selected);
     }
   }
 
@@ -1144,24 +1131,22 @@ export async function render(container, hash) {
   }
 
   // ── Select / detail panel ───────────────────────────────────
-  async function selectFile(file) {
-    selected = file;
+  async function selectFile(ent) {
+    selected = ent;
 
     // Highlight selected cell in current view
     container.querySelectorAll('.fld-cell, .fld-fs-thumb, .fld-list-row').forEach(el => {
       const idx = parseInt(el.dataset.idx);
-      el.classList.toggle('is-selected', filtered[idx] === file);
+      el.classList.toggle('is-selected', filtered[idx] === ent);
     });
 
     if (viewMode === 'filmstrip') {
-      await renderFilmstripPreview(file);
-      showDetailAndHandle();
-      renderInfoPanel(detailEl, file);
-      return;
+      await renderFilmstripPreview(ent);
     }
 
-    showDetailAndHandle();
-    await renderDetailContent(detailEl, file, false);
+    // Update the persistent right metadata panel
+    metaPanel.setDirHandle(currentHandle);
+    await metaPanel.setFile(ent.file);
   }
 
   /** Render file preview into an element (used by both detail panel + filmstrip preview). */
@@ -1233,52 +1218,6 @@ export async function render(container, hash) {
       ws.setFiles([file]);
 
     }
-  }
-
-  async function renderInfoPanel(el, ent) {
-    const file = ent.file;
-    const type = fileType(file.name);
-    const fileUrl = URL.createObjectURL(file);
-    blobUrls.push(fileUrl);
-    el.innerHTML = `
-      <div class="fld-detail-inner">
-        <div class="fld-detail-header">
-          <div class="fld-detail-title">${escHtml(file.name)}</div>
-          <div class="fld-detail-meta">
-            ${type === 'video'
-              ? `<span class="ic-badge" style="background:rgba(0,119,255,.15);color:var(--ps-blue)">Video</span>`
-              : `<span class="ic-badge">${extOf(file.name).slice(1).toUpperCase()}</span>`
-            }
-            <span class="text-sm text-muted">${formatBytes(file.size)}</span>
-          </div>
-        </div>
-        <div class="fld-detail-preview" id="fld-info-panel-view">
-          <div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px">
-            <div class="spinner"></div><span class="text-sm text-muted">Reading metadata…</span>
-          </div>
-        </div>
-        <div class="fld-detail-footer">
-          <button class="btn-secondary fld-detail-dl-btn" style="flex:1">
-            <span class="material-symbols-outlined">download</span> Download
-          </button>
-          ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
-            <span class="material-symbols-outlined">photo_library</span>
-          </button>` : ''}
-        </div>
-      </div>`;
-    el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
-      if (selectedSet.size > 1) downloadSelected();
-      else downloadFile(file);
-    });
-    el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
-    const view = el.querySelector('#fld-info-panel-view');
-    if (!view) return;
-    const info = await getImageInfo(file);
-    view.innerHTML = '';
-    view.appendChild(renderImageInfoPanel(info));
-    // Append extracted metadata (geocode, OCR, vision, custom) below embedded EXIF
-    const extracted = await renderExtractedMetadataForSidebar(file);
-    if (extracted) view.appendChild(extracted);
   }
 
   function downloadFile(file) {
@@ -1491,9 +1430,6 @@ export async function render(container, hash) {
   return () => {
     revokeBlobUrls();
     clearInterval(slideshowTimer);
-    sidecarDrawer.close();
-    document.removeEventListener('mousemove', _onResizeMove);
-    document.removeEventListener('mouseup',   _onResizeUp);
   };
 }
 
@@ -1589,14 +1525,6 @@ function injectFldStyles() {
     .fld-thumb:hover .fld-thumb-chg-preview { display:flex; }
     .fld-thumb-chg-preview--noprev { display:flex; opacity:0.8; }
     .fld-thumb-chg-preview--noprev:hover { opacity:1; }
-    .fld-thumb-info {
-      position:absolute; top:4px; right:4px; z-index:2;
-      background:rgba(0,0,0,0.6); border:none; border-radius:4px;
-      color:#fff; cursor:pointer; padding:3px 5px; display:none;
-      align-items:center; line-height:1;
-    }
-    .fld-thumb:hover .fld-thumb-info { display:flex; }
-    .fld-thumb-info .material-symbols-outlined { font-size:14px; }
     /* Sidecar rating/flag badges */
     .fld-sidecar-badge {
       position:absolute; bottom:4px; left:4px; display:flex; gap:3px; z-index:2; pointer-events:none;
@@ -1700,23 +1628,7 @@ function injectFldStyles() {
     .fld-list-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; }
     .fld-list-name { font-size:12px; color:var(--ps-text); font-family:var(--font-mono); }
 
-    /* Resize handle between main and detail */
-    .fld-resize-handle {
-      width:5px; flex-shrink:0; cursor:col-resize;
-      background:var(--ps-border);
-      transition:background 120ms;
-      position:relative;
-    }
-    .fld-resize-handle:hover, .fld-resize-handle.is-dragging {
-      background:var(--ps-blue);
-    }
-
-    /* Detail panel */
-    .fld-detail {
-      min-width:220px; border:none;
-      display:flex; flex-direction:column; overflow:hidden; flex-shrink:0;
-      background:var(--ps-bg-app);
-    }
+    /* Filmstrip preview detail content (reused by renderDetailContent) */
     .fld-detail-inner { display:flex; flex-direction:column; height:100%; }
     .fld-detail-header { padding:12px 14px; border-bottom:1px solid var(--ps-border); flex-shrink:0; }
     .fld-detail-title { font-size:12px; font-weight:600; color:var(--ps-text); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:6px; }
