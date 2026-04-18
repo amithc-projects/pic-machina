@@ -505,6 +505,7 @@ registry.register({
 registry.register({
   id: 'ai-subject-crop', name: 'Subject Crop', category: 'Geometric & Framing', categoryKey: 'geo',
   icon: 'center_focus_strong',
+  requires: [{ type: 'model', id: 'inspyrenet-swinb-fp16', label: 'InSPyReNet model (~200 MB)', actionHref: '#mdl' }],
   description: 'Crop to a target aspect ratio while keeping the detected subject composed correctly. Uses InSPyReNet saliency (requires the model — see #mdl). Falls back to centre-crop if the model is unavailable.',
   params: [
     { name: 'aspectRatio', label: 'Aspect Ratio', type: 'select',

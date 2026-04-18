@@ -11,6 +11,7 @@ import {
   downloadModel,
   deleteModel,
 } from '../data/models.js';
+import { invalidate } from '../engine/capabilities.js';
 
 function escHtml(s) {
   return String(s)
@@ -156,6 +157,7 @@ export async function render(container) {
         await disposeSession();
       } catch { /* non-fatal */ }
       await deleteModel(meta.id);
+      invalidate('model', meta.id);
       await refreshCard(meta);
     }
   }
@@ -193,6 +195,7 @@ export async function render(container) {
           : `${formatBytes(loaded)}`;
       }, abort.signal);
       entry.abort = null;
+      invalidate('model', meta.id);
       await refreshCard(meta);
     } catch (err) {
       entry.abort = null;

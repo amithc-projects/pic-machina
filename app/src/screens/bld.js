@@ -13,6 +13,7 @@ import { showConfirm } from '../utils/dialogs.js';
 import { uuid, now, deepClone } from '../utils/misc.js';
 import { registry, ImageProcessor } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
+import { checkTransformAvailability } from '../engine/capabilities.js';
 import { extractExif } from '../engine/exif-reader.js';
 import { renderParamField } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
@@ -544,6 +545,21 @@ export async function render(container, hash) {
              <div class="empty-state-desc">Click "Add Step" to build your recipe.</div>
            </div>`;
       bindNodeActions();
+
+      // Async pass: add amber warning icon to rows whose transform has unmet requirements
+      (async () => {
+        for (const item of items) {
+          if (item.node.type !== 'transform' || !item.node.transformId) continue;
+          const { available, unmet } = await checkTransformAvailability(item.node.transformId);
+          if (available) continue;
+          const row = listEl.querySelector(`.bld-node-row[data-id="${item.node.id}"]`);
+          if (!row || row.querySelector('.bld-req-warn')) continue;
+          const tip = unmet.map(r => r.label).join(', ');
+          row.insertAdjacentHTML('beforeend',
+            `<span class="material-symbols-outlined bld-req-warn" title="Needs setup: ${tip}"` +
+            ` style="font-size:14px;color:var(--ps-warning,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">warning</span>`);
+        }
+      })();
     }
     const realCount = countNodes(draft.nodes);
     if (countEl) countEl.textContent = `${realCount} step${realCount !== 1 ? 's' : ''}`;
@@ -662,8 +678,27 @@ export async function render(container, hash) {
   const addModal = container.querySelector('#bld-add-modal');
   const addSearch = container.querySelector('#bld-add-search');
 
+  let _pickerAnnotated = false;
   container.querySelector('#bld-btn-add-node')?.addEventListener('click', () => {
     if (addModal) { addModal.style.display = 'flex'; addSearch?.focus(); }
+    // On first open, annotate tiles whose transforms have unmet requirements
+    if (!_pickerAnnotated && addModal) {
+      _pickerAnnotated = true;
+      (async () => {
+        const tiles = addModal.querySelectorAll('.bld-add-item[data-transform-id]');
+        for (const tile of tiles) {
+          const id = tile.dataset.transformId;
+          const { available, unmet } = await checkTransformAvailability(id);
+          if (available) continue;
+          const tip = unmet.map(r => r.label).join(', ');
+          tile.classList.add('bld-add-item--needs-setup');
+          tile.title = `Needs setup: ${tip}`;
+          tile.insertAdjacentHTML('beforeend',
+            `<span class="material-symbols-outlined bld-add-warn" title="Needs setup: ${tip}"` +
+            ` style="position:absolute;top:3px;right:3px;font-size:12px;color:var(--ps-warning,#f59e0b)">warning</span>`);
+        }
+      })();
+    }
   });
   container.querySelector('#bld-add-close')?.addEventListener('click', () => {
     if (addModal) addModal.style.display = 'none';
@@ -1277,8 +1312,10 @@ function injectBldStyles() {
       padding:10px 8px; border-radius:8px; background:var(--ps-bg-app);
       border:1px solid var(--ps-border); cursor:pointer; font-family:var(--font-primary);
       transition:border-color 150ms, background 150ms; text-align:center;
+      position:relative;
     }
     .bld-add-item:hover { border-color:var(--ps-blue); background:var(--ps-bg-hover); }
+    .bld-add-item--needs-setup { border-color:var(--ps-warning,#f59e0b); }
     .bld-add-item-name { font-size:11px; color:var(--ps-text-muted); line-height:1.3; }
     .bld-modal-footer { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--ps-border); flex-shrink:0; }
   `;

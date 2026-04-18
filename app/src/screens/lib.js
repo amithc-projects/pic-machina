@@ -6,6 +6,7 @@
  */
 
 import { getAllRecipes, deleteRecipe, cloneRecipe, saveRecipe, getRecipeBundle, saveRecipeBundle, clearRecipeThumbnail } from '../data/recipes.js';
+import { checkRecipeAvailability } from '../engine/capabilities.js';
 import { navigate } from '../main.js';
 import { formatDate, uuid, now } from '../utils/misc.js';
 import { initTabs } from '../aurora/tabs.js';
@@ -189,6 +190,24 @@ export async function render(container) {
       return;
     }
     el.innerHTML = items.map(recipeCardHTML).join('');
+
+    // Async post-render pass: inject "Needs setup" badge on cards whose
+    // transforms have unmet requirements (e.g. model not downloaded).
+    // Runs after initial paint so the grid is never blocked.
+    (async () => {
+      for (const recipe of items) {
+        const { available, unmet } = await checkRecipeAvailability(recipe);
+        if (available) continue;
+        const card = el.querySelector(`.lib-card[data-id="${recipe.id}"]`);
+        if (!card) continue;
+        const badges = card.querySelector('.lib-card__badges');
+        if (!badges) continue;
+        const tip = unmet.map(r => r.label).join(', ');
+        badges.insertAdjacentHTML('beforeend',
+          `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Needs setup: ${tip}">` +
+          `<span class="material-symbols-outlined" style="font-size:11px">warning</span> Needs setup</span>`);
+      }
+    })();
   }
 
   function renderTagChips() {

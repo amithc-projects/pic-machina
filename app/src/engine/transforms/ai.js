@@ -8,6 +8,17 @@ import { clamp } from '../../utils/misc.js';
 import { persistSubjectVision } from '../ai/vision-metadata.js';
 import { ensurePhoton, featherMaskChannel, blurImageDataPixels } from '../ai/matte-ops.js';
 
+// ─── Shared requirement declaration ──────────────────────
+// All transforms that call getSaliencyMask() need the InSPyReNet model.
+// Reference this constant in each registry.register() call so it only
+// needs updating in one place if the model ID ever changes.
+const INSPYRENET_REQ = {
+  type:       'model',
+  id:         'inspyrenet-swinb-fp16',
+  label:      'InSPyReNet model (~200 MB)',
+  actionHref: '#mdl',
+};
+
 // ─── Shared helpers for saliency-using transforms ────────
 // `persistSubjectVision` lives in ../ai/vision-metadata.js so geometry
 // transforms (ai-subject-crop) can share it without circular imports.
@@ -261,6 +272,7 @@ registry.register({
 registry.register({
   id: 'ai-remove-bg-hq', name: 'Remove BG (High Quality)', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'auto_awesome_motion',
+  requires: [INSPYRENET_REQ],
   description: 'High-quality background removal using InSPyReNet (SwinB). Requires a one-time ~200 MB model download (see #mdl).',
   params: [
     { name: 'mode', label: 'Mode', type: 'select',
@@ -350,6 +362,7 @@ registry.register({
 registry.register({
   id: 'ai-portrait-bokeh', name: 'Portrait Bokeh', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'blur_circular',
+  requires: [INSPYRENET_REQ],
   description: 'Large-aperture lens simulation: keeps the subject sharp and blurs the background. Requires the InSPyReNet model (#mdl).',
   params: [
     { name: 'blurRadius',   label: 'Blur Strength',   type: 'range', min: 0, max: 60, defaultValue: 15 },
@@ -445,6 +458,7 @@ registry.register({
 registry.register({
   id: 'ai-drop-shadow', name: 'Subject Drop Shadow', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'filter_drama',
+  requires: [INSPYRENET_REQ],
   description: 'Cast a soft shadow behind the detected subject. Works on both transparent cut-outs and photos (shadow darkens visible background). Requires the InSPyReNet model (#mdl).',
   params: [
     { name: 'offsetX', label: 'Offset X (px)',  type: 'range', min: -100, max: 100, defaultValue: 12 },
@@ -541,6 +555,7 @@ registry.register({
 registry.register({
   id: 'ai-sticker-outline', name: 'Sticker Outline', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'filter_frames',
+  requires: [INSPYRENET_REQ],
   description: 'Cut out the detected subject with a solid border, like a sticker. Optional second ring for a double-outline look. Requires the InSPyReNet model (#mdl).',
   params: [
     { name: 'thickness',     label: 'Outline Thickness (px)', type: 'range',   min: 1, max: 40, defaultValue: 8 },
@@ -657,6 +672,7 @@ registry.register({
 registry.register({
   id: 'ai-subject-vignette', name: 'Subject Vignette', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'vignette',
+  requires: [INSPYRENET_REQ],
   description: 'Darken everything except the detected subject. Matte-driven vignette that stays locked to the subject. Requires the InSPyReNet model (#mdl).',
   params: [
     { name: 'strength', label: 'Strength',     type: 'range', min: 0,   max: 100, defaultValue: 60 },
@@ -738,6 +754,7 @@ registry.register({
 registry.register({
   id: 'ai-subject-sharpen', name: 'Subject Sharpen', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'deblur',
+  requires: [INSPYRENET_REQ],
   description: 'Sharpen (or denoise) only the detected subject, leaving the background untouched. Requires the InSPyReNet model (#mdl).',
   params: [
     { name: 'mode',         label: 'Mode', type: 'select',
@@ -830,6 +847,7 @@ registry.register({
 registry.register({
   id: 'ai-silhouette', name: 'Silhouette', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'person_off',
+  requires: [INSPYRENET_REQ],
   description: 'Black out subjects while keeping background.',
   params: [
     { name: 'color', label: 'Color', type: 'color', defaultValue: '#000000' },
@@ -850,6 +868,7 @@ registry.register({
 registry.register({
   id: 'ai-smart-redact', name: 'Smart Redact', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'shield_lock',
+  requires: [INSPYRENET_REQ],
   description: 'Detect and blur licence plates, text, or faces using OCR. Use Extract mode to store OCR text without modifying the image.',
   params: [
     { name: 'mode', label: 'Mode', type: 'select',
@@ -1274,6 +1293,7 @@ registry.register({
 registry.register({
   id: 'ai-subject-glow', name: 'Subject Glow', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'flare',
+  requires: [INSPYRENET_REQ],
   description: 'Adds a soft colour bloom around the detected subject — neon halos, dreamy glows, or subtle edge lighting. Uses additive blending so the glow brightens without muddying the background. Requires the InSPyReNet model (#mdl).',
   mainThread: true,
   params: [
@@ -1356,6 +1376,7 @@ registry.register({
 registry.register({
   id: 'ai-export-matte', name: 'Export Matte', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'invert_colors',
+  requires: [INSPYRENET_REQ],
   description: 'Replaces the canvas with the raw InSPyReNet saliency matte so you can export it as a PNG for use in Photoshop, After Effects, or other compositing tools. Pair with a Save File node (PNG format). Requires the InSPyReNet model (#mdl).',
   mainThread: true,
   params: [

@@ -982,6 +982,7 @@ registry.register({
 registry.register({
   id: 'ai-selective-grade', name: 'Selective Color Grade', category: 'AI & Composition', categoryKey: 'ai',
   icon: 'palette',
+  requires: [{ type: 'model', id: 'inspyrenet-swinb-fp16', label: 'InSPyReNet model (~200 MB)', actionHref: '#mdl' }],
   description: 'Grade the subject and background independently — saturation, temperature and exposure per scope. Requires the InSPyReNet model (#mdl).',
   params: [
     { name: 'subjectSaturation',    label: 'Subject Saturation',   type: 'range', min: -100, max: 100, defaultValue:  20 },
