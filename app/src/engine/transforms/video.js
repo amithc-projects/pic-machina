@@ -333,6 +333,114 @@ registry.register({
   apply() { /* handled by Processor */ },
 });
 
+// ─── Pose Landmarks Overlay ──────────────────────────────────────────────────
+
+// MediaPipe Pose skeleton connections (pairs of landmark indices).
+const POSE_CONNECTIONS = [
+  // Face
+  [0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10],
+  // Torso
+  [11, 12], [11, 23], [12, 24], [23, 24],
+  // Left arm + hand
+  [11, 13], [13, 15], [15, 17], [15, 19], [15, 21], [17, 19],
+  // Right arm + hand
+  [12, 14], [14, 16], [16, 18], [16, 20], [16, 22], [18, 20],
+  // Left leg
+  [23, 25], [25, 27], [27, 29], [27, 31], [29, 31],
+  // Right leg
+  [24, 26], [26, 28], [28, 30], [28, 32], [30, 32],
+];
+
+registry.register({
+  id: 'video-pose-landmarks',
+  name: 'Video Pose Landmarks',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'accessibility_new',
+  description: 'Overlay body pose skeleton (lines + keypoints) tracked across every video frame using MediaPipe.',
+  params: [
+    { name: 'lineColor',      label: 'Line Color',        type: 'color',   defaultValue: '#ffffff' },
+    { name: 'lineWidth',      label: 'Line Width (px)',    type: 'range',   min: 1, max: 10, defaultValue: 3 },
+    { name: 'showKeypoints',  label: 'Show Keypoints',     type: 'boolean', defaultValue: true },
+    { name: 'keypointColor',  label: 'Keypoint Color',     type: 'color',   defaultValue: '#ffffff' },
+    { name: 'keypointRadius', label: 'Keypoint Radius (px)', type: 'range', min: 1, max: 12, defaultValue: 4 },
+    { name: 'minVisibility',  label: 'Min Visibility (%)', type: 'range',   min: 0, max: 100, defaultValue: 30 },
+    ...COMMON_PARAMS,
+  ],
+  async applyPerFrame(ctx, p, context) {
+    // Cache the PoseLandmarker across frames on the per-file context so
+    // we load the model and wasm once per video, not once per frame.
+    if (!context._poseLandmarker) {
+      const { PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
+      const vision = await FilesetResolver.forVisionTasks(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
+      );
+      context._poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
+        },
+        runningMode: 'VIDEO',
+        numPoses: 1,
+      });
+      context._poseTimestamp = 0;
+    }
+
+    // MediaPipe VIDEO mode requires monotonically increasing timestamps (ms).
+    context._poseTimestamp = (context._poseTimestamp || 0) + 1;
+    const ts = context._poseTimestamp;
+
+    let result;
+    try {
+      result = context._poseLandmarker.detectForVideo(ctx.canvas, ts);
+    } catch {
+      return;
+    }
+    if (!result?.landmarks?.length) return;
+
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const minVis = (Number(p.minVisibility) ?? 30) / 100;
+    const lineColor = p.lineColor || '#ffffff';
+    const lineWidth = Number(p.lineWidth) || 3;
+    const showKp    = p.showKeypoints !== false;
+    const kpColor   = p.keypointColor || '#ffffff';
+    const kpRadius  = Number(p.keypointRadius) || 4;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (const lm of result.landmarks) {
+      // Draw skeleton lines
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = lineWidth;
+      for (const [i, j] of POSE_CONNECTIONS) {
+        const a = lm[i], b = lm[j];
+        if (!a || !b) continue;
+        if ((a.visibility ?? 1) < minVis || (b.visibility ?? 1) < minVis) continue;
+        ctx.beginPath();
+        ctx.moveTo(a.x * W, a.y * H);
+        ctx.lineTo(b.x * W, b.y * H);
+        ctx.stroke();
+      }
+
+      // Draw keypoints
+      if (showKp) {
+        ctx.fillStyle = kpColor;
+        for (const kp of lm) {
+          if ((kp.visibility ?? 1) < minVis) continue;
+          ctx.beginPath();
+          ctx.arc(kp.x * W, kp.y * H, kpRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    ctx.restore();
+  },
+  apply() { /* handled by Processor */ },
+});
+
 // ─── Overlay / Compositing Effects ───────────────────────────────────────────
 
 registry.register({
