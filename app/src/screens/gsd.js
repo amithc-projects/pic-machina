@@ -79,6 +79,7 @@ export async function render(container) {
         <section id="gsd-pipeline"></section>
         <section id="gsd-personas"></section>
         <section id="gsd-automation"></section>
+        <section id="gsd-claude-skills"></section>
         <section id="gsd-shortcuts"></section>
       </div>
     </div>
@@ -89,6 +90,7 @@ export async function render(container) {
   renderPipelineDiagram(container.querySelector('#gsd-pipeline'), counts);
   renderPersonas(container.querySelector('#gsd-personas'));
   renderAutomation(container.querySelector('#gsd-automation'));
+  renderClaudeSkills(container.querySelector('#gsd-claude-skills'));
   renderShortcuts(container.querySelector('#gsd-shortcuts'));
 
   // Hero variant toggle
@@ -788,6 +790,183 @@ function renderAutomation(host) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// CLAUDE SKILLS
+// ═══════════════════════════════════════════════════════════════
+function renderClaudeSkills(host) {
+  host.innerHTML = `
+    <div class="gsd-skills">
+      <div class="gsd-skills__bg"></div>
+      <div class="gsd-skills__inner">
+
+        <div class="gsd-skills__header">
+          <div class="gsd-pill gsd-pill--teal">
+            <span class="material-symbols-outlined" style="font-size:14px">psychology</span>
+            <span class="mono">Claude Skills</span>
+          </div>
+          <h3 class="gsd-skills__headline">Supercharge Pic Machina with AI</h3>
+          <p class="gsd-skills__lede">
+            These Claude.ai Project skills let you use AI to build recipes and
+            analyse images without writing a single line of code. Set them up once
+            in a Claude Project — then just chat.
+          </p>
+        </div>
+
+        <div class="gsd-skills__cards">
+
+          <!-- ── Skill 1: Recipe Architect ───────────────────── -->
+          <div class="gsd-skill-card">
+            <div class="gsd-skill-card__icon" style="background:linear-gradient(135deg,#6d28d933,#7c3aed22)">
+              <span class="material-symbols-outlined" style="color:#a78bfa;font-size:24px">receipt_long</span>
+            </div>
+            <div class="gsd-skill-card__body">
+              <div class="gsd-skill-card__title">Recipe Architect</div>
+              <div class="gsd-skill-card__desc">
+                Describe an image editing workflow in plain English — Claude generates
+                a complete, ready-to-import Pic Machina recipe JSON with every node
+                and parameter already configured.
+              </div>
+
+              <div class="gsd-skill-steps">
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">1</span>
+                  <span>Go to <a href="https://claude.ai" target="_blank" rel="noopener" class="gsd-link">claude.ai</a> and create a new <strong>Project</strong></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">2</span>
+                  <span>Open <strong>Project Instructions</strong> and paste the contents of <code>claude-recipe-prompt.md</code></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">3</span>
+                  <span>Add <code>node-catalog.json</code> and <code>recipe-bundle-schema.json</code> to <strong>Project Knowledge</strong></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">4</span>
+                  <span>Chat: <em>"Make a recipe that crops to square, adds a soft glow, and watermarks the bottom-right"</em></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">5</span>
+                  <span>Copy the JSON → <strong>Library → Import JSON</strong> → done!</span>
+                </div>
+              </div>
+
+              <div class="gsd-skill-card__files">
+                <div class="gsd-skill-files__label">Files needed</div>
+                <div class="gsd-skill-files__list">
+                  <button class="gsd-file-chip" data-download="claude-recipe-prompt.md">
+                    <span class="material-symbols-outlined">description</span>
+                    claude-recipe-prompt.md
+                    <span class="gsd-file-chip__badge">System Prompt</span>
+                  </button>
+                  <button class="gsd-file-chip" data-download="node-catalog.json">
+                    <span class="material-symbols-outlined">data_object</span>
+                    node-catalog.json
+                    <span class="gsd-file-chip__badge">Node Dictionary</span>
+                  </button>
+                  <button class="gsd-file-chip" data-download="recipe-bundle-schema.json">
+                    <span class="material-symbols-outlined">schema</span>
+                    recipe-bundle-schema.json
+                    <span class="gsd-file-chip__badge">Output Schema</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Skill 2: Image Describer ────────────────────── -->
+          <div class="gsd-skill-card">
+            <div class="gsd-skill-card__icon" style="background:linear-gradient(135deg,#0e749933,#0891b222)">
+              <span class="material-symbols-outlined" style="color:#38bdf8;font-size:24px">image_search</span>
+            </div>
+            <div class="gsd-skill-card__body">
+              <div class="gsd-skill-card__title">
+                Image Describer
+                <span class="gsd-badge-new">New</span>
+              </div>
+              <div class="gsd-skill-card__desc">
+                Upload any image — Claude produces rich AI analysis JSON (scene,
+                subjects, colour palette, composition, generative prompts, DAM notes)
+                in the exact format Pic Machina's metadata sidecar expects. Works
+                standalone or wired to the <strong>AI endpoint</strong> in Settings.
+              </div>
+
+              <div class="gsd-skill-steps">
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">1</span>
+                  <span>Create a new Claude.ai <strong>Project</strong></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">2</span>
+                  <span>Paste <code>claude-image-prompt.md</code> into <strong>Project Instructions</strong></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">3</span>
+                  <span>Add <code>sidecar.schema.json</code> to <strong>Project Knowledge</strong></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">4</span>
+                  <span>Upload an image and say: <em>"Describe this image for PicMachina"</em></span>
+                </div>
+                <div class="gsd-skill-step">
+                  <span class="gsd-skill-step__num">5</span>
+                  <span>Copy the JSON → paste into any <code>.jpg.json</code> sidecar file, <strong>or</strong> host a simple endpoint and use <strong>Describe with AI</strong> in the metadata panel</span>
+                </div>
+              </div>
+
+              <div class="gsd-skill-card__files">
+                <div class="gsd-skill-files__label">Files needed</div>
+                <div class="gsd-skill-files__list">
+                  <button class="gsd-file-chip" data-download="claude-image-prompt.md">
+                    <span class="material-symbols-outlined">description</span>
+                    claude-image-prompt.md
+                    <span class="gsd-file-chip__badge">System Prompt</span>
+                  </button>
+                  <button class="gsd-file-chip" data-download="sidecar.schema.json">
+                    <span class="material-symbols-outlined">schema</span>
+                    sidecar.schema.json
+                    <span class="gsd-file-chip__badge">Output Schema</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="gsd-skill-card__tip">
+                <span class="material-symbols-outlined" style="font-size:14px;color:var(--gsd-cyan)">tips_and_updates</span>
+                <span>Connect it to the <strong>AI endpoint</strong> setting for one-click analysis directly inside the metadata panel — no copy-paste required.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `;
+
+  // File download handlers — fetch from /docs/ and trigger save
+  host.querySelectorAll('[data-download]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const filename = btn.dataset.download;
+      try {
+        const originalHtml = btn.innerHTML;
+        btn.style.opacity = '0.6';
+        const resp = await fetch(`/docs/${filename}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const text = await resp.text();
+        const blob = new Blob([text], { type: filename.endsWith('.json') ? 'application/json' : 'text/markdown' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        btn.style.opacity = '';
+      } catch (err) {
+        console.warn('[GSD] Download failed:', err);
+        btn.style.opacity = '';
+        window.AuroraToast?.show({ variant: 'warning', title: `Could not download ${filename}`, description: 'Try opening the /docs/ folder directly.' });
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SHORTCUTS
 // ═══════════════════════════════════════════════════════════════
 function renderShortcuts(host) {
@@ -1328,6 +1507,107 @@ function injectStyles() {
     .gsd-shortcuts__label { font-size: 12px; color: var(--gsd-dim); }
     .gsd-shortcuts__meta  { font-size: 11px; color: var(--gsd-mute); align-self: center; }
 
+    /* ── Pills extra colours ── */
+    .gsd-pill--teal { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.3); color: #67e8f9; }
+
+    /* ── Claude Skills section ── */
+    .gsd-skills {
+      position: relative; border-radius: 20px; overflow: hidden;
+      background: linear-gradient(180deg, #0d1a2e 0%, #0a1220 100%);
+      border: 1px solid var(--gsd-line-2);
+      padding: 36px 40px;
+    }
+    .gsd-skills__bg {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(600px 300px at 10% 100%, rgba(34,211,238,0.08), transparent 60%),
+        radial-gradient(500px 300px at 90% 0%, rgba(167,139,250,0.08), transparent 60%);
+    }
+    .gsd-skills__inner { position: relative; }
+    .gsd-skills__header { margin-bottom: 28px; }
+    .gsd-skills__headline { font-size: 24px; font-weight: 700; letter-spacing: -.3px; margin: 10px 0 8px; }
+    .gsd-skills__lede { color: var(--gsd-dim); font-size: 14px; line-height: 1.6; margin: 0; max-width: 560px; }
+
+    .gsd-skills__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .gsd-skill-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--gsd-line-2);
+      border-radius: 16px;
+      padding: 22px;
+      display: flex; gap: 16px;
+      transition: border-color .2s;
+    }
+    .gsd-skill-card:hover { border-color: rgba(255,255,255,0.18); }
+    .gsd-skill-card__icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .gsd-skill-card__body { flex: 1; min-width: 0; }
+    .gsd-skill-card__title {
+      font-size: 16px; font-weight: 600; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .gsd-skill-card__desc { color: var(--gsd-dim); font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
+
+    .gsd-badge-new {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      padding: 2px 7px; border-radius: 999px;
+      background: rgba(34,211,238,0.15); color: var(--gsd-cyan);
+      border: 1px solid rgba(34,211,238,0.3);
+    }
+
+    .gsd-skill-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+    .gsd-skill-step {
+      display: flex; align-items: baseline; gap: 10px;
+      font-size: 13px; color: var(--gsd-dim); line-height: 1.5;
+    }
+    .gsd-skill-step__num {
+      flex-shrink: 0;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(255,255,255,0.07); border: 1px solid var(--gsd-line-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: var(--gsd-text);
+      margin-top: 1px;
+    }
+    .gsd-skill-step a.gsd-link { color: var(--gsd-blue-2); text-decoration: none; }
+    .gsd-skill-step a.gsd-link:hover { text-decoration: underline; }
+    .gsd-skill-step strong { color: var(--gsd-text); font-weight: 600; }
+    .gsd-skill-step em { color: var(--gsd-dim); font-style: italic; }
+    .gsd-skill-step code {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11.5px; color: #a5f3fc;
+      background: rgba(34,211,238,0.07); padding: 1px 5px; border-radius: 4px;
+    }
+
+    .gsd-skill-card__files { margin-bottom: 14px; }
+    .gsd-skill-files__label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--gsd-mute); margin-bottom: 8px; }
+    .gsd-skill-files__list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .gsd-file-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 8px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--gsd-line-2);
+      font-size: 12px; color: var(--gsd-text); cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .gsd-file-chip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+    .gsd-file-chip .material-symbols-outlined { font-size: 15px; color: var(--gsd-mute); }
+    .gsd-file-chip__badge {
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px;
+      color: var(--gsd-mute); background: rgba(255,255,255,0.05);
+      padding: 1px 5px; border-radius: 4px; margin-left: 2px;
+    }
+
+    .gsd-skill-card__tip {
+      display: flex; align-items: baseline; gap: 7px;
+      font-size: 12px; color: var(--gsd-mute); line-height: 1.5;
+      background: rgba(34,211,238,0.05); border: 1px solid rgba(34,211,238,0.12);
+      border-radius: 8px; padding: 9px 11px;
+    }
+    .gsd-skill-card__tip strong { color: var(--gsd-text); font-weight: 600; }
+
     /* ── Responsive collapse ── */
     @media (max-width: 1000px) {
       .gsd-hero { padding: 28px; }
@@ -1340,6 +1620,7 @@ function injectStyles() {
       .gsd-pipeline-diagram__connector { display: none; }
       .gsd-personas__grid { grid-template-columns: 1fr; }
       .gsd-automation__inner { grid-template-columns: 1fr; gap: 18px; }
+      .gsd-skills__cards { grid-template-columns: 1fr; }
     }
     @media (max-width: 700px) {
       .gsd-body { padding: 18px; gap: 22px; }
