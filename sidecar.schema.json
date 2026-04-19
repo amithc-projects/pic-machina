@@ -2,16 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pic-machina.app/sidecar.schema.json",
   "title": "Pic-Machina Image Sidecar",
-  "description": "Per-image metadata sidecar file written alongside the source image (e.g. photo.jpg → photo.jpg.json). Contains user annotations, EXIF mirror, reverse-geocoded location, AI-computed fields, and a processing log.",
+  "description": "Per-image metadata sidecar file written alongside the source image (e.g. photo.jpg → photo.jpg.json). Combines workflow metadata written by Pic-Machina (EXIF mirror, user annotations, processing log) with rich AI-generated content analysis (scene, subjects, composition, lighting, colour palette, generative prompts).",
   "type": "object",
   "required": ["$version"],
 
   "properties": {
 
     "$version": {
-      "description": "Schema version. Always 1 for the current format.",
+      "description": "Schema version. 1 = original workflow-only format. 2 = superset including AI content analysis.",
       "type": "integer",
-      "const": 1
+      "enum": [1, 2]
     },
 
     "source": {
@@ -32,67 +32,146 @@
       "additionalProperties": false
     },
 
+    "asset": {
+      "description": "High-level descriptive properties of the asset — what kind of image it is. Populated by AI analysis or manually. All fields optional.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "AI-generated or manually authored descriptive title for the image.",
+          "type": "string",
+          "examples": ["Two People Smiling Together in a Modern Café Interior"]
+        },
+        "assetType": {
+          "description": "Classification of the asset type.",
+          "type": "string",
+          "examples": ["Digital Photograph", "Screenshot", "Illustration", "Product Shot"]
+        },
+        "format": {
+          "description": "Human-readable format description.",
+          "type": "string",
+          "examples": ["digital photograph (RAW-processed JPEG)", "JPEG", "PNG"]
+        },
+        "resolution": {
+          "description": "Human-readable resolution description.",
+          "type": "string",
+          "examples": ["high resolution (~4032×3024, 12MP)", "4K UHD"]
+        },
+        "widthPx": {
+          "description": "Image width in pixels.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "heightPx": {
+          "description": "Image height in pixels.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "aspectRatio": {
+          "description": "Aspect ratio as a string.",
+          "type": "string",
+          "examples": ["4:3", "16:9", "1:1", "3:2"]
+        },
+        "orientation": {
+          "description": "Physical orientation of the image.",
+          "type": "string",
+          "enum": ["landscape", "portrait", "square"]
+        },
+        "contentRating": {
+          "description": "Content rating for audience suitability.",
+          "type": "string",
+          "enum": ["general", "mature", "explicit"],
+          "default": "general"
+        },
+        "rightsNotes": {
+          "description": "Rights, copyright, or licensing notes.",
+          "type": "string",
+          "examples": ["© 2024 Jane Smith. All rights reserved.", "Creative Commons BY-SA 4.0"]
+        },
+        "analysisConfidence": {
+          "description": "Overall confidence level of any AI-generated analysis in this sidecar.",
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        }
+      },
+      "additionalProperties": false
+    },
+
     "exif": {
-      "description": "Mirror of embedded EXIF fields extracted from the image. Read-only — populated automatically by Pic-Machina and not intended to be hand-authored.",
+      "description": "Mirror of embedded EXIF fields extracted from the image. Read-only — populated automatically by Pic-Machina.",
       "type": "object",
       "properties": {
         "cameraMake": {
           "description": "Camera manufacturer (EXIF Make tag).",
           "type": "string",
-          "examples": ["Apple", "Canon", "Sony"]
+          "examples": ["Apple", "Canon", "Sony", "Google"]
         },
         "cameraModel": {
           "description": "Camera model name (EXIF Model tag).",
           "type": "string",
-          "examples": ["iPhone 15 Pro", "EOS R5"]
+          "examples": ["iPhone 15 Pro", "EOS R5", "Pixel 8 Pro"]
         },
         "focalLength": {
-          "description": "Focal length as a human-readable string, e.g. '24mm'.",
+          "description": "Focal length as a human-readable string.",
           "type": "string",
-          "examples": ["24mm", "50mm"]
+          "examples": ["24mm", "85mm"]
+        },
+        "focalLengthEquiv": {
+          "description": "35mm-equivalent focal length as a human-readable string.",
+          "type": "string",
+          "examples": ["28mm", "50mm"]
         },
         "aperture": {
-          "description": "Aperture as a human-readable string, e.g. 'f/1.8'.",
+          "description": "Aperture as a human-readable string.",
           "type": "string",
           "examples": ["f/1.8", "f/8"]
         },
         "iso": {
           "description": "ISO sensitivity value.",
           "type": "integer",
-          "minimum": 0,
-          "examples": [100, 400, 3200]
+          "minimum": 0
         },
         "shutterSpeed": {
-          "description": "Shutter speed as a human-readable string, e.g. '1/250'.",
+          "description": "Shutter speed as a human-readable string.",
           "type": "string",
           "examples": ["1/250", "1/30", "2s"]
         },
         "dateTaken": {
-          "description": "Date and time the photo was taken, in ISO 8601 format.",
+          "description": "Date and time the photo was taken, ISO 8601.",
           "type": "string",
-          "format": "date-time",
-          "examples": ["2024-03-15T14:30:00"]
+          "format": "date-time"
         },
         "gpsLat": {
           "description": "GPS latitude in decimal degrees. Positive = North.",
           "type": "number",
           "minimum": -90,
-          "maximum": 90,
-          "examples": [51.5074, -33.8688]
+          "maximum": 90
         },
         "gpsLng": {
           "description": "GPS longitude in decimal degrees. Positive = East.",
           "type": "number",
           "minimum": -180,
-          "maximum": 180,
-          "examples": [-0.1278, 151.2093]
+          "maximum": 180
+        },
+        "gpsAltitude": {
+          "description": "GPS altitude in metres above sea level.",
+          "type": "number"
+        },
+        "whiteBalance": {
+          "description": "White balance mode recorded in EXIF.",
+          "type": "string",
+          "examples": ["Auto", "Daylight", "Cloudy"]
+        },
+        "colorSpace": {
+          "description": "Colour space recorded in EXIF.",
+          "type": "string",
+          "examples": ["sRGB", "Adobe RGB"]
         }
       },
       "additionalProperties": true
     },
 
     "geo": {
-      "description": "Human-readable location derived from GPS coordinates via reverse-geocoding (Nominatim / OpenStreetMap). User-editable.",
+      "description": "Human-readable location derived from GPS or set manually. User-editable.",
       "type": "object",
       "properties": {
         "city": {
@@ -123,95 +202,454 @@
     },
 
     "annotation": {
-      "description": "User-authored curation data. The primary fields a human edits in the Pic-Machina metadata panel.",
+      "description": "User-authored curation and editorial data. The primary fields a human edits in the Pic-Machina metadata panel.",
       "type": "object",
       "properties": {
         "rating": {
-          "description": "Star rating from 1 (lowest) to 5 (highest). Null means unrated.",
+          "description": "Star rating 1–5. Null = unrated.",
           "oneOf": [
             { "type": "integer", "minimum": 1, "maximum": 5 },
             { "type": "null" }
-          ],
-          "examples": [null, 3, 5]
+          ]
         },
         "flag": {
-          "description": "Curation flag. 'pick' marks an image for selection; 'reject' marks it for discard; null means unflagged.",
+          "description": "Curation flag: 'pick' (keep), 'reject' (discard), or null (undecided).",
           "oneOf": [
             { "type": "string", "enum": ["pick", "reject"] },
             { "type": "null" }
-          ],
-          "examples": [null, "pick", "reject"]
+          ]
         },
         "tags": {
-          "description": "Free-form keyword tags for search and grouping.",
+          "description": "Free-form keyword tags for search and grouping. Human-authored.",
           "type": "array",
           "items": { "type": "string" },
-          "uniqueItems": true,
-          "examples": [["portrait", "golden-hour"], ["product", "studio"]]
+          "uniqueItems": true
         },
         "caption": {
-          "description": "Free-text caption or description of the image.",
-          "type": "string",
-          "examples": ["Sunset over the Thames, March 2024"]
+          "description": "Human-written caption or description.",
+          "type": "string"
+        },
+        "usageScenarios": {
+          "description": "Intended use cases for the asset. May be human-authored or AI-suggested.",
+          "type": "array",
+          "items": { "type": "string" },
+          "examples": [["lifestyle marketing", "social media content", "website hero image"]]
         }
       },
       "additionalProperties": false
     },
 
-    "computed": {
-      "description": "Fields written automatically by Pic-Machina batch transforms (AI analysis, sharpness scoring, OCR, etc.). External systems may add their own fields here. Unknown fields are preserved.",
+    "analysis": {
+      "description": "AI-generated content analysis of the image. All sub-sections are optional and populated progressively. The 'computed' object holds scalar values written by Pic-Machina transforms; structured sub-objects hold richer AI content descriptions.",
       "type": "object",
       "properties": {
-        "sharpnessScore": {
-          "description": "Perceptual sharpness score from 0.0 (very blurry) to 1.0 (very sharp), computed by the sharpness-detect transform.",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "examples": [0.87, 0.12]
-        },
-        "blurLabel": {
-          "description": "Human-readable blur classification derived from sharpnessScore.",
+
+        "generatedAt": {
+          "description": "ISO 8601 timestamp when this analysis was last generated.",
           "type": "string",
-          "enum": ["sharp", "soft", "blurry"],
-          "examples": ["sharp", "blurry"]
+          "format": "date-time"
         },
-        "ocrText": {
-          "description": "Full text extracted from the image by an OCR transform.",
-          "type": "string"
-        },
-        "ocrTags": {
-          "description": "Comma-separated keywords extracted from OCR output.",
-          "type": "string"
-        },
-        "faceCount": {
-          "description": "Number of faces detected in the image (stored as a string for template-variable compatibility).",
+        "generatedBy": {
+          "description": "Model or system that produced this analysis.",
           "type": "string",
-          "pattern": "^[0-9]+$",
-          "examples": ["0", "1", "3"]
+          "examples": ["claude-opus-4", "gpt-4o", "pic-machina-v2"]
         },
-        "personCount": {
-          "description": "Number of people detected in the image (stored as a string for template-variable compatibility).",
-          "type": "string",
-          "pattern": "^[0-9]+$",
-          "examples": ["0", "2"]
+
+        "computed": {
+          "description": "Scalar values written by Pic-Machina batch transforms. Backwards-compatible with the v1 'computed' section.",
+          "type": "object",
+          "properties": {
+            "sharpnessScore": {
+              "description": "Perceptual sharpness 0.0 (blurry) to 1.0 (sharp).",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "blurLabel": {
+              "description": "Human-readable blur classification.",
+              "type": "string",
+              "enum": ["sharp", "soft", "blurry"]
+            },
+            "ocrText": {
+              "description": "Full text extracted by OCR.",
+              "type": "string"
+            },
+            "ocrTags": {
+              "description": "Comma-separated keywords from OCR output.",
+              "type": "string"
+            },
+            "faceCount": {
+              "description": "Number of faces detected (string for template compatibility).",
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            },
+            "personCount": {
+              "description": "Number of people detected (string for template compatibility).",
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            },
+            "poseLabel": {
+              "description": "Dominant pose classification.",
+              "type": "string",
+              "enum": ["standing", "sitting", "mixed", "unknown"]
+            },
+            "peopleLabel": {
+              "description": "Natural-language people description, e.g. 'two people (sitting)'.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
         },
-        "poseLabel": {
-          "description": "Dominant pose classification detected by the people-detect transform.",
-          "type": "string",
-          "enum": ["standing", "sitting", "mixed", "unknown"],
-          "examples": ["standing", "mixed"]
+
+        "scene": {
+          "description": "AI-analysed description of the scene and setting.",
+          "type": "object",
+          "properties": {
+            "locationType": {
+              "description": "Type of location depicted.",
+              "type": "string",
+              "examples": ["café", "office", "outdoor park", "home interior"]
+            },
+            "indoorOutdoor": {
+              "description": "Whether the scene is indoors, outdoors, or mixed.",
+              "type": "string",
+              "enum": ["indoor", "outdoor", "mixed", "unknown"]
+            },
+            "timeOfDay": {
+              "description": "Apparent time of day.",
+              "type": "string",
+              "enum": ["dawn", "morning", "daytime", "afternoon", "golden-hour", "dusk", "night", "unknown"]
+            },
+            "atmosphere": {
+              "description": "Mood or atmosphere of the scene.",
+              "type": "string",
+              "examples": ["casual, relaxed, social", "dramatic, moody"]
+            },
+            "style": {
+              "description": "Interior design or aesthetic style, if applicable.",
+              "type": "string",
+              "examples": ["modern boho-Scandi", "industrial-chic", "minimalist"]
+            },
+            "settingDetails": {
+              "description": "Specific visual elements in the setting.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
         },
-        "peopleLabel": {
-          "description": "Natural-language description of the people detected, e.g. 'two people (sitting)'.",
-          "type": "string",
-          "examples": ["one person (standing)", "two people (sitting)"]
+
+        "subjects": {
+          "description": "People or primary subjects visible in the image.",
+          "type": "object",
+          "properties": {
+            "count": {
+              "description": "Total number of subjects.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "arrangement": {
+              "description": "How subjects are positioned relative to each other.",
+              "type": "string",
+              "examples": ["seated side-by-side", "standing in a row", "single subject centred"]
+            },
+            "interaction": {
+              "description": "Nature of interaction between subjects.",
+              "type": "string",
+              "examples": ["casual social moment", "professional handshake", "no interaction"]
+            },
+            "emotion": {
+              "description": "Dominant emotional tone across subjects.",
+              "type": "string",
+              "examples": ["friendly, happy", "serious, focused", "relaxed"]
+            },
+            "items": {
+              "description": "Per-subject detail objects.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string", "examples": ["subject_1"] },
+                  "position": {
+                    "description": "Position within the frame.",
+                    "type": "string",
+                    "enum": ["left", "right", "centre", "background", "foreground", "other"]
+                  },
+                  "genderPresentation": {
+                    "description": "Apparent gender presentation as observed in the image.",
+                    "type": "string",
+                    "examples": ["female", "male", "non-binary presenting", "not discernible"]
+                  },
+                  "approximateAgeRange": {
+                    "description": "Estimated age range.",
+                    "type": "string",
+                    "examples": ["late 30s–mid 40s", "child (approx 8–10)", "elderly"]
+                  },
+                  "ethnicityAppearance": {
+                    "description": "Apparent ethnic or regional appearance as observed. Provided for DAM and diversity-tracking purposes only.",
+                    "type": "string",
+                    "examples": ["South Asian descent", "East Asian descent", "Northern European"]
+                  },
+                  "visibility": {
+                    "description": "How much of the face is visible.",
+                    "type": "string",
+                    "enum": ["full face visible", "partial face", "profile", "back to camera", "obscured"]
+                  },
+                  "skinTone": {
+                    "description": "Perceptual skin tone description.",
+                    "type": "string",
+                    "examples": ["medium warm olive", "light fair", "medium-dark warm brown"]
+                  },
+                  "expression": {
+                    "description": "Facial expression description.",
+                    "type": "string",
+                    "examples": ["wide genuine smile", "neutral", "focused concentration"]
+                  },
+                  "hair": {
+                    "type": "object",
+                    "properties": {
+                      "color": { "type": "string" },
+                      "length": { "type": "string" },
+                      "style": { "type": "string" }
+                    },
+                    "additionalProperties": false
+                  },
+                  "eyes": {
+                    "type": "object",
+                    "properties": {
+                      "color": { "type": "string" },
+                      "expression": { "type": "string" }
+                    },
+                    "additionalProperties": false
+                  },
+                  "glasses": {
+                    "type": "object",
+                    "properties": {
+                      "frameStyle": { "type": "string", "examples": ["rectangular", "round", "aviator"] },
+                      "frameColor": { "type": "string" },
+                      "lens": { "type": "string", "examples": ["clear", "tinted", "photochromic"] }
+                    },
+                    "additionalProperties": false
+                  },
+                  "outfit": {
+                    "description": "Description of visible clothing.",
+                    "type": "object",
+                    "additionalProperties": { "type": "string" }
+                  },
+                  "accessories": {
+                    "description": "List of visible accessories.",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "posture": {
+                    "description": "Body posture description.",
+                    "type": "string",
+                    "examples": ["upright, facing camera", "slightly leaning left, relaxed"]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "composition": {
+          "description": "Photographic composition analysis.",
+          "type": "object",
+          "properties": {
+            "shotType": {
+              "description": "Photographic shot classification.",
+              "type": "string",
+              "examples": ["close-up", "medium portrait", "wide establishing shot", "macro"]
+            },
+            "framing": {
+              "description": "How subjects are framed within the image.",
+              "type": "string",
+              "examples": ["subjects fill foreground, centred", "rule-of-thirds left placement"]
+            },
+            "cameraAngle": {
+              "description": "Camera angle relative to subjects.",
+              "type": "string",
+              "enum": ["eye-level", "low angle", "high angle", "bird's eye", "dutch angle", "unknown"]
+            },
+            "cameraPerspective": {
+              "description": "Optical perspective / lens characteristics observed.",
+              "type": "string",
+              "examples": ["smartphone wide-angle (~28–35mm equivalent), mild distortion", "telephoto compression, 85mm equiv"]
+            },
+            "focus": {
+              "description": "Focus quality description.",
+              "type": "string",
+              "examples": ["sharp on subjects, background soft", "full scene in focus"]
+            },
+            "depthOfField": {
+              "description": "Apparent depth of field.",
+              "type": "string",
+              "enum": ["shallow", "moderate", "deep", "unknown"]
+            },
+            "captureType": {
+              "description": "How the image was captured.",
+              "type": "string",
+              "examples": ["handheld selfie", "tripod long exposure", "drone aerial"]
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "lighting": {
+          "description": "Lighting analysis.",
+          "type": "object",
+          "properties": {
+            "primarySource": {
+              "description": "Main light source.",
+              "type": "string",
+              "examples": ["natural daylight from windows", "studio softbox", "golden-hour sun"]
+            },
+            "secondarySource": {
+              "description": "Fill or accent light source.",
+              "type": "string",
+              "examples": ["ceiling track spotlights", "reflector bounce", "none"]
+            },
+            "quality": {
+              "description": "Quality of light.",
+              "type": "string",
+              "examples": ["soft, even, diffused", "hard directional with strong shadows"]
+            },
+            "colorTemperatureK": {
+              "description": "Approximate colour temperature in Kelvin.",
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 20000,
+              "examples": [4500, 5600, 3200]
+            },
+            "shadows": {
+              "description": "Shadow characteristics.",
+              "type": "string",
+              "examples": ["soft, minimal", "hard, directional", "none visible"]
+            },
+            "exposureNote": {
+              "description": "Notable exposure characteristics or issues.",
+              "type": "string",
+              "examples": ["slightly underexposed on subjects relative to bright window backlight"]
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "colorPalette": {
+          "description": "Dominant and accent colours observed in the image.",
+          "type": "object",
+          "properties": {
+            "dominant": {
+              "description": "Primary colours that occupy the most visual area.",
+              "type": "array",
+              "items": { "type": "string" },
+              "examples": [["dusty rose", "warm beige", "black"]]
+            },
+            "accent": {
+              "description": "Secondary or pop colours.",
+              "type": "array",
+              "items": { "type": "string" },
+              "examples": [["muted teal", "yellow ochre", "soft gold"]]
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "objects": {
+          "description": "Notable objects identified in the scene.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "examples": ["wooden shelf", "track lighting", "wall artwork"] },
+              "material": { "type": "string", "examples": ["light wood", "metal", "fabric"] },
+              "color": { "type": "string" },
+              "style": { "type": "string" },
+              "function": { "type": "string" },
+              "position": { "type": "string", "examples": ["upper left background", "foreground centre"] },
+              "note": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+
+        "tags": {
+          "description": "AI-generated keyword tags describing image content. Distinct from user annotation.tags — intended to be richer and more comprehensive.",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "examples": [["portrait", "café", "indoor", "natural light", "shallow depth of field", "lifestyle"]]
+        },
+
+        "generationPrompts": {
+          "description": "Prompts that could be used to recreate a similar image with a generative AI system.",
+          "type": "object",
+          "properties": {
+            "short": {
+              "description": "Concise one-paragraph prompt.",
+              "type": "string"
+            },
+            "detailed": {
+              "description": "Comprehensive multi-sentence prompt with full scene, subject, lighting, and style details.",
+              "type": "string"
+            },
+            "negativePrompt": {
+              "description": "Negative prompt describing what to avoid (for diffusion model systems).",
+              "type": "string",
+              "examples": ["text, watermark, blurry faces, distorted features, harsh flash"]
+            },
+            "replicationSettings": {
+              "description": "Suggested camera/lighting settings to physically recreate the shot.",
+              "type": "object",
+              "properties": {
+                "lensEquivalent": { "type": "string", "examples": ["35mm prime", "85mm telephoto"] },
+                "aperture": { "type": "string", "examples": ["f/1.8", "f/8"] },
+                "depthOfField": { "type": "string", "enum": ["shallow", "moderate", "deep"] },
+                "lighting": { "type": "string" },
+                "whiteBalance": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "dam": {
+          "description": "Digital Asset Management operational notes. Intended for DAM systems ingesting this sidecar.",
+          "type": "object",
+          "properties": {
+            "contentSensitivity": {
+              "description": "Any content sensitivity flags.",
+              "type": "string",
+              "examples": ["none — general audience", "identifiable faces — requires model release"]
+            },
+            "identityNotes": {
+              "description": "Notes about identifiable people in the image and release status.",
+              "type": "string"
+            },
+            "brandingFlexibility": {
+              "description": "Assessment of how flexibly the image can be used for branding.",
+              "type": "string",
+              "examples": ["high — no identifiable faces", "moderate — faces visible, distinctive"]
+            },
+            "limitations": {
+              "description": "Known limitations or uncertainties in this analysis.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
         }
+
       },
       "additionalProperties": true
     },
 
     "processing": {
-      "description": "Append-only log of every batch run that has processed this image. New entries are appended; existing entries are never modified.",
+      "description": "Append-only log of every Pic-Machina batch run that has processed this image.",
       "type": "array",
       "items": {
         "type": "object",
@@ -220,22 +658,19 @@
           "runId": {
             "description": "UUID of the batch run.",
             "type": "string",
-            "format": "uuid",
-            "examples": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
+            "format": "uuid"
           },
           "recipeName": {
-            "description": "Human-readable name of the recipe that was applied.",
-            "type": "string",
-            "examples": ["Enhance & Export", "Portrait Retouch"]
+            "description": "Human-readable recipe name.",
+            "type": "string"
           },
           "recipeId": {
-            "description": "Internal ID of the recipe.",
+            "description": "Internal recipe ID.",
             "type": "string"
           },
           "at": {
-            "description": "Unix timestamp (milliseconds since epoch) when the run completed.",
-            "type": "integer",
-            "examples": [1712345678000]
+            "description": "Unix timestamp in milliseconds when the run completed.",
+            "type": "integer"
           }
         },
         "additionalProperties": true
@@ -248,19 +683,32 @@
 
   "examples": [
     {
-      "$version": 1,
+      "$version": 2,
       "source": {
-        "filename": "DSC_0042.jpg",
+        "filename": "PXL_20260404_132957794.jpg",
         "sizeBytes": 4823041
       },
+      "asset": {
+        "title": "Two People Smiling Together in a Modern Café Interior",
+        "assetType": "Digital Photograph",
+        "format": "digital photograph (RAW-processed JPEG)",
+        "widthPx": 4032,
+        "heightPx": 3024,
+        "aspectRatio": "4:3",
+        "orientation": "landscape",
+        "contentRating": "general",
+        "rightsNotes": "No rights information available from file metadata.",
+        "analysisConfidence": "high"
+      },
       "exif": {
-        "cameraMake": "Sony",
-        "cameraModel": "A7R V",
-        "focalLength": "85mm",
-        "aperture": "f/1.4",
-        "iso": 200,
-        "shutterSpeed": "1/500",
-        "dateTaken": "2024-06-21T08:15:00",
+        "cameraMake": "Google",
+        "cameraModel": "Pixel 8 Pro",
+        "focalLength": "6.8mm",
+        "focalLengthEquiv": "28mm",
+        "aperture": "f/1.8",
+        "iso": 64,
+        "shutterSpeed": "1/120",
+        "dateTaken": "2026-04-04T13:29:57",
         "gpsLat": 51.5074,
         "gpsLng": -0.1278
       },
@@ -271,25 +719,138 @@
         "countryCode": "GB"
       },
       "annotation": {
-        "rating": 5,
+        "rating": 4,
         "flag": "pick",
-        "tags": ["portrait", "natural-light"],
-        "caption": "Summer portrait session, Hyde Park"
+        "tags": ["portrait", "café", "team"],
+        "caption": "Team catch-up at the local café",
+        "usageScenarios": ["lifestyle marketing", "social media content", "hospitality branding"]
       },
-      "computed": {
-        "sharpnessScore": 0.94,
-        "blurLabel": "sharp",
-        "faceCount": "1",
-        "personCount": "1",
-        "poseLabel": "standing",
-        "peopleLabel": "one person (standing)"
+      "analysis": {
+        "generatedAt": "2026-04-04T15:00:00Z",
+        "generatedBy": "claude-opus-4",
+        "computed": {
+          "sharpnessScore": 0.91,
+          "blurLabel": "sharp",
+          "faceCount": "2",
+          "personCount": "2",
+          "poseLabel": "sitting",
+          "peopleLabel": "two people (sitting)"
+        },
+        "scene": {
+          "locationType": "café or hybrid retail-café space",
+          "indoorOutdoor": "indoor",
+          "timeOfDay": "daytime",
+          "atmosphere": "casual, relaxed, social, intimate",
+          "style": "modern boho-Scandi with industrial-chic elements",
+          "settingDetails": [
+            "Exposed ceiling grid painted peach/terracotta with black track lighting",
+            "Dusty rose walls",
+            "Floating light wood shelves with bottles, books, and a potted plant",
+            "Natural jute hanging curtain diffusing backlight from windows",
+            "Dark teal upholstered booth seating"
+          ]
+        },
+        "subjects": {
+          "count": 2,
+          "arrangement": "seated side-by-side, close proximity, both facing camera",
+          "interaction": "casual social moment, friendly and relaxed",
+          "emotion": "friendly, happy, at ease",
+          "items": [
+            {
+              "id": "subject_1",
+              "position": "left",
+              "genderPresentation": "female",
+              "approximateAgeRange": "late 30s–mid 40s",
+              "ethnicityAppearance": "Middle Eastern or South Asian descent",
+              "visibility": "full face visible",
+              "skinTone": "medium warm olive",
+              "expression": "wide genuine smile, teeth clearly visible",
+              "hair": { "color": "dark brown to black", "length": "medium, shoulder-length", "style": "loose, slightly wavy" },
+              "eyes": { "color": "dark brown", "expression": "warm, engaged" },
+              "outfit": { "top": "black sleeveless top", "layer": "sheer beige lace kimono-style jacket" },
+              "accessories": ["silver pendant necklace", "small pin badge", "small button earrings"],
+              "posture": "slightly leaning toward subject 2, relaxed"
+            },
+            {
+              "id": "subject_2",
+              "position": "right",
+              "genderPresentation": "male",
+              "approximateAgeRange": "late 30s–mid 40s",
+              "ethnicityAppearance": "South Asian descent",
+              "visibility": "full face visible",
+              "skinTone": "medium-dark warm brown",
+              "expression": "calm, composed half-smile",
+              "hair": { "color": "dark brown to black", "length": "short", "style": "natural, slightly curly, receding at temples" },
+              "eyes": { "color": "dark brown", "expression": "calm, direct gaze" },
+              "glasses": { "frameStyle": "rectangular", "frameColor": "black", "lens": "clear" },
+              "outfit": { "top": "dark burgundy ribbed crew-neck sweater" },
+              "accessories": ["black rectangular framed eyeglasses"],
+              "posture": "upright, facing camera directly"
+            }
+          ]
+        },
+        "composition": {
+          "shotType": "close medium portrait",
+          "framing": "two subjects fill foreground, centred and tightly cropped",
+          "cameraAngle": "eye-level",
+          "cameraPerspective": "smartphone wide-angle (~28–35mm equivalent), mild perspective distortion",
+          "focus": "sharp on subjects, background moderately soft",
+          "depthOfField": "shallow",
+          "captureType": "smartphone selfie or close arm's-length shot"
+        },
+        "lighting": {
+          "primarySource": "natural daylight from background windows",
+          "secondarySource": "black ceiling track spotlights",
+          "quality": "soft, even, slightly overcast ambient fill",
+          "colorTemperatureK": 4800,
+          "shadows": "soft, minimal harsh shadows",
+          "exposureNote": "slightly underexposed on subjects relative to bright window backlight"
+        },
+        "colorPalette": {
+          "dominant": ["dusty rose / terracotta", "warm beige / sand", "dark burgundy", "black"],
+          "accent": ["natural linen / jute", "muted teal", "yellow ochre", "soft cream"]
+        },
+        "objects": [
+          { "name": "floating shelves", "material": "light wood", "note": "contains small bottles, jars, books, potted plant" },
+          { "name": "hanging curtain", "material": "natural jute / rope", "function": "divider and light diffuser" },
+          { "name": "track lighting", "style": "black ceiling-mounted spotlights on exposed grid rails" },
+          { "name": "wall artwork", "note": "large yellow-background figurative painting, partially visible, white-framed" },
+          { "name": "booth seating", "material": "upholstered fabric", "color": "dark teal/navy" }
+        ],
+        "tags": [
+          "portrait", "couple", "two people", "candid", "selfie",
+          "café", "coffee shop", "indoor", "daytime", "natural light",
+          "shallow depth of field", "warm tones", "boho interior",
+          "lifestyle", "hospitality", "diversity", "social", "friendly"
+        ],
+        "generationPrompts": {
+          "short": "A casual selfie-style portrait of two people in a cozy modern café. Woman on left with dark wavy hair, olive skin, red lipstick, sheer lace jacket over black top, silver necklace. Man on right with short dark hair, warm brown skin, black rectangular glasses, burgundy ribbed sweater. Warm ambient lighting, exposed peach industrial ceiling, jute screen, wooden shelves. Shallow depth of field, lifestyle photography.",
+          "detailed": "Close-up portrait, selfie composition, eye-level, two adults seated side-by-side on a dark teal café bench. Left: woman, medium dark wavy hair, warm olive skin, red lipstick, wide smile, sheer beige lace kimono jacket over black top, silver pendant necklace. Right: man, short dark curly hair, medium-dark warm brown skin, calm half-smile, black rectangular glasses, dark burgundy ribbed sweater. Background: dusty rose walls, exposed peach structural ceiling grid with black track lighting, natural jute rope curtain, floating wood shelves with décor. Shallow DOF, natural daylight blended with warm track lighting, smartphone wide-angle lens.",
+          "negativePrompt": "text, watermark, logos, blurry faces, distorted features, extra limbs, harsh flash, overexposed background, low resolution",
+          "replicationSettings": {
+            "lensEquivalent": "28–35mm (smartphone wide-angle)",
+            "aperture": "f/1.8–f/2.0",
+            "depthOfField": "shallow",
+            "lighting": "warm indoor ambient + soft window backlight",
+            "whiteBalance": "auto warm (~4800K)"
+          }
+        },
+        "dam": {
+          "contentSensitivity": "identifiable faces — ensure model release documentation before commercial use",
+          "identityNotes": "Two subjects clearly identifiable. Obtain signed model releases for commercial licensing.",
+          "brandingFlexibility": "moderate — faces visible and distinctive; suitable for inclusive lifestyle and hospitality contexts",
+          "limitations": [
+            "Some background details are approximate where partially obscured or out of focus",
+            "Exact garment brands cannot be confirmed from image alone"
+          ]
+        }
       },
       "processing": [
         {
           "runId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
           "recipeName": "Portrait Retouch",
           "recipeId": "portrait-retouch-v2",
-          "at": 1719907200000
+          "at": 1743775200000
         }
       ]
     }
