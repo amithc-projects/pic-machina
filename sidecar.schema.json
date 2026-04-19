@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pic-machina.app/sidecar.schema.json",
+  "title": "Pic-Machina Image Sidecar",
+  "description": "Per-image metadata sidecar file written alongside the source image (e.g. photo.jpg → photo.jpg.json). Contains user annotations, EXIF mirror, reverse-geocoded location, AI-computed fields, and a processing log.",
+  "type": "object",
+  "required": ["$version"],
+
+  "properties": {
+
+    "$version": {
+      "description": "Schema version. Always 1 for the current format.",
+      "type": "integer",
+      "const": 1
+    },
+
+    "source": {
+      "description": "Immutable identity fields written on first save and never overwritten.",
+      "type": "object",
+      "properties": {
+        "filename": {
+          "description": "Original filename of the image this sidecar belongs to.",
+          "type": "string",
+          "examples": ["DSC_0042.jpg"]
+        },
+        "sizeBytes": {
+          "description": "File size of the image in bytes at the time the sidecar was first created.",
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "exif": {
+      "description": "Mirror of embedded EXIF fields extracted from the image. Read-only — populated automatically by Pic-Machina and not intended to be hand-authored.",
+      "type": "object",
+      "properties": {
+        "cameraMake": {
+          "description": "Camera manufacturer (EXIF Make tag).",
+          "type": "string",
+          "examples": ["Apple", "Canon", "Sony"]
+        },
+        "cameraModel": {
+          "description": "Camera model name (EXIF Model tag).",
+          "type": "string",
+          "examples": ["iPhone 15 Pro", "EOS R5"]
+        },
+        "focalLength": {
+          "description": "Focal length as a human-readable string, e.g. '24mm'.",
+          "type": "string",
+          "examples": ["24mm", "50mm"]
+        },
+        "aperture": {
+          "description": "Aperture as a human-readable string, e.g. 'f/1.8'.",
+          "type": "string",
+          "examples": ["f/1.8", "f/8"]
+        },
+        "iso": {
+          "description": "ISO sensitivity value.",
+          "type": "integer",
+          "minimum": 0,
+          "examples": [100, 400, 3200]
+        },
+        "shutterSpeed": {
+          "description": "Shutter speed as a human-readable string, e.g. '1/250'.",
+          "type": "string",
+          "examples": ["1/250", "1/30", "2s"]
+        },
+        "dateTaken": {
+          "description": "Date and time the photo was taken, in ISO 8601 format.",
+          "type": "string",
+          "format": "date-time",
+          "examples": ["2024-03-15T14:30:00"]
+        },
+        "gpsLat": {
+          "description": "GPS latitude in decimal degrees. Positive = North.",
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "examples": [51.5074, -33.8688]
+        },
+        "gpsLng": {
+          "description": "GPS longitude in decimal degrees. Positive = East.",
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "examples": [-0.1278, 151.2093]
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "geo": {
+      "description": "Human-readable location derived from GPS coordinates via reverse-geocoding (Nominatim / OpenStreetMap). User-editable.",
+      "type": "object",
+      "properties": {
+        "city": {
+          "description": "City or town name.",
+          "type": "string",
+          "examples": ["London", "Sydney"]
+        },
+        "region": {
+          "description": "State, county, or administrative region.",
+          "type": "string",
+          "examples": ["England", "New South Wales"]
+        },
+        "country": {
+          "description": "Full country name.",
+          "type": "string",
+          "examples": ["United Kingdom", "Australia"]
+        },
+        "countryCode": {
+          "description": "ISO 3166-1 alpha-2 country code.",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 2,
+          "pattern": "^[A-Z]{2}$",
+          "examples": ["GB", "AU", "US"]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "annotation": {
+      "description": "User-authored curation data. The primary fields a human edits in the Pic-Machina metadata panel.",
+      "type": "object",
+      "properties": {
+        "rating": {
+          "description": "Star rating from 1 (lowest) to 5 (highest). Null means unrated.",
+          "oneOf": [
+            { "type": "integer", "minimum": 1, "maximum": 5 },
+            { "type": "null" }
+          ],
+          "examples": [null, 3, 5]
+        },
+        "flag": {
+          "description": "Curation flag. 'pick' marks an image for selection; 'reject' marks it for discard; null means unflagged.",
+          "oneOf": [
+            { "type": "string", "enum": ["pick", "reject"] },
+            { "type": "null" }
+          ],
+          "examples": [null, "pick", "reject"]
+        },
+        "tags": {
+          "description": "Free-form keyword tags for search and grouping.",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "examples": [["portrait", "golden-hour"], ["product", "studio"]]
+        },
+        "caption": {
+          "description": "Free-text caption or description of the image.",
+          "type": "string",
+          "examples": ["Sunset over the Thames, March 2024"]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "computed": {
+      "description": "Fields written automatically by Pic-Machina batch transforms (AI analysis, sharpness scoring, OCR, etc.). External systems may add their own fields here. Unknown fields are preserved.",
+      "type": "object",
+      "properties": {
+        "sharpnessScore": {
+          "description": "Perceptual sharpness score from 0.0 (very blurry) to 1.0 (very sharp), computed by the sharpness-detect transform.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "examples": [0.87, 0.12]
+        },
+        "blurLabel": {
+          "description": "Human-readable blur classification derived from sharpnessScore.",
+          "type": "string",
+          "enum": ["sharp", "soft", "blurry"],
+          "examples": ["sharp", "blurry"]
+        },
+        "ocrText": {
+          "description": "Full text extracted from the image by an OCR transform.",
+          "type": "string"
+        },
+        "ocrTags": {
+          "description": "Comma-separated keywords extracted from OCR output.",
+          "type": "string"
+        },
+        "faceCount": {
+          "description": "Number of faces detected in the image (stored as a string for template-variable compatibility).",
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "examples": ["0", "1", "3"]
+        },
+        "personCount": {
+          "description": "Number of people detected in the image (stored as a string for template-variable compatibility).",
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "examples": ["0", "2"]
+        },
+        "poseLabel": {
+          "description": "Dominant pose classification detected by the people-detect transform.",
+          "type": "string",
+          "enum": ["standing", "sitting", "mixed", "unknown"],
+          "examples": ["standing", "mixed"]
+        },
+        "peopleLabel": {
+          "description": "Natural-language description of the people detected, e.g. 'two people (sitting)'.",
+          "type": "string",
+          "examples": ["one person (standing)", "two people (sitting)"]
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "processing": {
+      "description": "Append-only log of every batch run that has processed this image. New entries are appended; existing entries are never modified.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["runId", "at"],
+        "properties": {
+          "runId": {
+            "description": "UUID of the batch run.",
+            "type": "string",
+            "format": "uuid",
+            "examples": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
+          },
+          "recipeName": {
+            "description": "Human-readable name of the recipe that was applied.",
+            "type": "string",
+            "examples": ["Enhance & Export", "Portrait Retouch"]
+          },
+          "recipeId": {
+            "description": "Internal ID of the recipe.",
+            "type": "string"
+          },
+          "at": {
+            "description": "Unix timestamp (milliseconds since epoch) when the run completed.",
+            "type": "integer",
+            "examples": [1712345678000]
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+
+  },
+
+  "additionalProperties": false,
+
+  "examples": [
+    {
+      "$version": 1,
+      "source": {
+        "filename": "DSC_0042.jpg",
+        "sizeBytes": 4823041
+      },
+      "exif": {
+        "cameraMake": "Sony",
+        "cameraModel": "A7R V",
+        "focalLength": "85mm",
+        "aperture": "f/1.4",
+        "iso": 200,
+        "shutterSpeed": "1/500",
+        "dateTaken": "2024-06-21T08:15:00",
+        "gpsLat": 51.5074,
+        "gpsLng": -0.1278
+      },
+      "geo": {
+        "city": "London",
+        "region": "England",
+        "country": "United Kingdom",
+        "countryCode": "GB"
+      },
+      "annotation": {
+        "rating": 5,
+        "flag": "pick",
+        "tags": ["portrait", "natural-light"],
+        "caption": "Summer portrait session, Hyde Park"
+      },
+      "computed": {
+        "sharpnessScore": 0.94,
+        "blurLabel": "sharp",
+        "faceCount": "1",
+        "personCount": "1",
+        "poseLabel": "standing",
+        "peopleLabel": "one person (standing)"
+      },
+      "processing": [
+        {
+          "runId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "recipeName": "Portrait Retouch",
+          "recipeId": "portrait-retouch-v2",
+          "at": 1719907200000
+        }
+      ]
+    }
+  ]
+}
