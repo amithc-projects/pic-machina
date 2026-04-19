@@ -2,16 +2,73 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pic-machina.app/sidecar.schema.json",
   "title": "Pic-Machina Image Sidecar",
-  "description": "Per-image metadata sidecar file written alongside the source image (e.g. photo.jpg → photo.jpg.json). Contains user annotations, EXIF mirror, reverse-geocoded location, AI-computed fields, and a processing log.",
+  "description": "Per-image metadata sidecar file written alongside the source image (e.g. photo.jpg → photo.jpg.json). Combines workflow metadata written by Pic-Machina (EXIF mirror, user annotations, processing log) with rich AI-generated content analysis (scene, subjects, composition, lighting, colour palette, identified location, architecture, segmentation, generative prompts).",
   "type": "object",
   "required": ["$version"],
+
+  "$defs": {
+
+    "colorEntry": {
+      "description": "A single colour in a palette — human-readable label plus optional hex value.",
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "description": "Descriptive name for the colour.",
+          "type": "string",
+          "examples": ["bright white", "dark charcoal grey", "vivid green", "dusty rose"]
+        },
+        "hex": {
+          "description": "Hex colour value. Optional — AI may not always produce one.",
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "examples": ["#FFFFFF", "#374151", "#22C55E"]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "boundingBox": {
+      "description": "Normalised bounding box with coords in the range 0.0–1.0 relative to image width/height. Optional confidence score and mask file reference.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "description": "Left edge as fraction of image width.",
+          "type": "number", "minimum": 0, "maximum": 1
+        },
+        "y": {
+          "description": "Top edge as fraction of image height.",
+          "type": "number", "minimum": 0, "maximum": 1
+        },
+        "w": {
+          "description": "Width as fraction of image width.",
+          "type": "number", "minimum": 0, "maximum": 1
+        },
+        "h": {
+          "description": "Height as fraction of image height.",
+          "type": "number", "minimum": 0, "maximum": 1
+        },
+        "confidence": {
+          "description": "Detection confidence 0.0–1.0.",
+          "type": "number", "minimum": 0, "maximum": 1
+        },
+        "maskRef": {
+          "description": "Optional relative path to a mask file (e.g. PNG alpha mask stored alongside the image).",
+          "type": "string",
+          "examples": ["photo.jpg.masks/face_1.png"]
+        }
+      },
+      "additionalProperties": false
+    }
+
+  },
 
   "properties": {
 
     "$version": {
-      "description": "Schema version. Always 1 for the current format.",
+      "description": "Schema version. 1 = original workflow-only format. 2 = superset including AI content analysis.",
       "type": "integer",
-      "const": 1
+      "enum": [1, 2]
     },
 
     "source": {
@@ -32,67 +89,157 @@
       "additionalProperties": false
     },
 
+    "asset": {
+      "description": "High-level descriptive properties of the asset — what kind of image it is. Populated by AI analysis or manually. All fields optional.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "AI-generated or manually authored descriptive title for the image.",
+          "type": "string",
+          "examples": ["Skálholt Cathedral, Iceland — Exterior View from South-West"]
+        },
+        "assetType": {
+          "description": "Classification of the asset type.",
+          "type": "string",
+          "examples": ["Digital Photograph", "Screenshot", "Illustration", "Product Shot"]
+        },
+        "captureDate": {
+          "description": "Date the image was captured, ISO 8601 date (YYYY-MM-DD). May be AI-inferred if EXIF is missing.",
+          "type": "string",
+          "format": "date",
+          "examples": ["2017-07-15"]
+        },
+        "captureTimeApprox": {
+          "description": "Approximate time of capture in local time, as a human-readable string. May be AI-inferred.",
+          "type": "string",
+          "examples": ["13:01 local time", "late afternoon"]
+        },
+        "format": {
+          "description": "Human-readable format description.",
+          "type": "string",
+          "examples": ["digital photograph (RAW-processed JPEG)", "JPEG", "PNG"]
+        },
+        "resolution": {
+          "description": "Human-readable resolution description.",
+          "type": "string",
+          "examples": ["high resolution (~4160×3120, typical Android smartphone)", "4K UHD"]
+        },
+        "widthPx": {
+          "description": "Image width in pixels.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "heightPx": {
+          "description": "Image height in pixels.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "aspectRatio": {
+          "description": "Aspect ratio as a string.",
+          "type": "string",
+          "examples": ["4:3", "16:9", "1:1", "3:2"]
+        },
+        "orientation": {
+          "description": "Physical orientation of the image.",
+          "type": "string",
+          "enum": ["landscape", "portrait", "square"]
+        },
+        "contentRating": {
+          "description": "Content rating for audience suitability.",
+          "type": "string",
+          "enum": ["general", "mature", "explicit"],
+          "default": "general"
+        },
+        "rightsNotes": {
+          "description": "Rights, copyright, or licensing notes.",
+          "type": "string",
+          "examples": ["© 2024 Jane Smith. All rights reserved.", "Creative Commons BY-SA 4.0"]
+        },
+        "analysisConfidence": {
+          "description": "Overall confidence level of any AI-generated analysis in this sidecar.",
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        }
+      },
+      "additionalProperties": false
+    },
+
     "exif": {
-      "description": "Mirror of embedded EXIF fields extracted from the image. Read-only — populated automatically by Pic-Machina and not intended to be hand-authored.",
+      "description": "Mirror of embedded EXIF fields extracted from the image. Read-only — populated automatically by Pic-Machina.",
       "type": "object",
       "properties": {
         "cameraMake": {
           "description": "Camera manufacturer (EXIF Make tag).",
           "type": "string",
-          "examples": ["Apple", "Canon", "Sony"]
+          "examples": ["Apple", "Canon", "Sony", "Google"]
         },
         "cameraModel": {
           "description": "Camera model name (EXIF Model tag).",
           "type": "string",
-          "examples": ["iPhone 15 Pro", "EOS R5"]
+          "examples": ["iPhone 15 Pro", "EOS R5", "Pixel 8 Pro"]
         },
         "focalLength": {
-          "description": "Focal length as a human-readable string, e.g. '24mm'.",
+          "description": "Focal length as a human-readable string.",
           "type": "string",
-          "examples": ["24mm", "50mm"]
+          "examples": ["24mm", "85mm"]
+        },
+        "focalLengthEquiv": {
+          "description": "35mm-equivalent focal length as a human-readable string.",
+          "type": "string",
+          "examples": ["28mm", "50mm"]
         },
         "aperture": {
-          "description": "Aperture as a human-readable string, e.g. 'f/1.8'.",
+          "description": "Aperture as a human-readable string.",
           "type": "string",
           "examples": ["f/1.8", "f/8"]
         },
         "iso": {
           "description": "ISO sensitivity value.",
           "type": "integer",
-          "minimum": 0,
-          "examples": [100, 400, 3200]
+          "minimum": 0
         },
         "shutterSpeed": {
-          "description": "Shutter speed as a human-readable string, e.g. '1/250'.",
+          "description": "Shutter speed as a human-readable string.",
           "type": "string",
           "examples": ["1/250", "1/30", "2s"]
         },
         "dateTaken": {
-          "description": "Date and time the photo was taken, in ISO 8601 format.",
+          "description": "Date and time the photo was taken, ISO 8601.",
           "type": "string",
-          "format": "date-time",
-          "examples": ["2024-03-15T14:30:00"]
+          "format": "date-time"
         },
         "gpsLat": {
           "description": "GPS latitude in decimal degrees. Positive = North.",
           "type": "number",
           "minimum": -90,
-          "maximum": 90,
-          "examples": [51.5074, -33.8688]
+          "maximum": 90
         },
         "gpsLng": {
           "description": "GPS longitude in decimal degrees. Positive = East.",
           "type": "number",
           "minimum": -180,
-          "maximum": 180,
-          "examples": [-0.1278, 151.2093]
+          "maximum": 180
+        },
+        "gpsAltitude": {
+          "description": "GPS altitude in metres above sea level.",
+          "type": "number"
+        },
+        "whiteBalance": {
+          "description": "White balance mode recorded in EXIF.",
+          "type": "string",
+          "examples": ["Auto", "Daylight", "Cloudy"]
+        },
+        "colorSpace": {
+          "description": "Colour space recorded in EXIF.",
+          "type": "string",
+          "examples": ["sRGB", "Adobe RGB"]
         }
       },
       "additionalProperties": true
     },
 
     "geo": {
-      "description": "Human-readable location derived from GPS coordinates via reverse-geocoding (Nominatim / OpenStreetMap). User-editable.",
+      "description": "Human-readable location derived from GPS or set manually. User-editable.",
       "type": "object",
       "properties": {
         "city": {
@@ -123,95 +270,713 @@
     },
 
     "annotation": {
-      "description": "User-authored curation data. The primary fields a human edits in the Pic-Machina metadata panel.",
+      "description": "User-authored curation and editorial data. The primary fields a human edits in the Pic-Machina metadata panel.",
       "type": "object",
       "properties": {
         "rating": {
-          "description": "Star rating from 1 (lowest) to 5 (highest). Null means unrated.",
+          "description": "Star rating 1–5. Null = unrated.",
           "oneOf": [
             { "type": "integer", "minimum": 1, "maximum": 5 },
             { "type": "null" }
-          ],
-          "examples": [null, 3, 5]
+          ]
         },
         "flag": {
-          "description": "Curation flag. 'pick' marks an image for selection; 'reject' marks it for discard; null means unflagged.",
+          "description": "Curation flag: 'pick' (keep), 'reject' (discard), or null (undecided).",
           "oneOf": [
             { "type": "string", "enum": ["pick", "reject"] },
             { "type": "null" }
-          ],
-          "examples": [null, "pick", "reject"]
+          ]
         },
         "tags": {
-          "description": "Free-form keyword tags for search and grouping.",
+          "description": "Free-form keyword tags for search and grouping. Human-authored.",
           "type": "array",
           "items": { "type": "string" },
-          "uniqueItems": true,
-          "examples": [["portrait", "golden-hour"], ["product", "studio"]]
+          "uniqueItems": true
         },
         "caption": {
-          "description": "Free-text caption or description of the image.",
-          "type": "string",
-          "examples": ["Sunset over the Thames, March 2024"]
+          "description": "Human-written caption or description.",
+          "type": "string"
+        },
+        "usageScenarios": {
+          "description": "Intended use cases for the asset. May be human-authored or AI-suggested.",
+          "type": "array",
+          "items": { "type": "string" },
+          "examples": [["lifestyle marketing", "social media content", "website hero image"]]
         }
       },
       "additionalProperties": false
     },
 
-    "computed": {
-      "description": "Fields written automatically by Pic-Machina batch transforms (AI analysis, sharpness scoring, OCR, etc.). External systems may add their own fields here. Unknown fields are preserved.",
+    "analysis": {
+      "description": "AI-generated content analysis of the image. All sub-sections are optional and populated progressively.",
       "type": "object",
       "properties": {
-        "sharpnessScore": {
-          "description": "Perceptual sharpness score from 0.0 (very blurry) to 1.0 (very sharp), computed by the sharpness-detect transform.",
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
-          "examples": [0.87, 0.12]
-        },
-        "blurLabel": {
-          "description": "Human-readable blur classification derived from sharpnessScore.",
+
+        "generatedAt": {
+          "description": "ISO 8601 timestamp when this analysis was last generated.",
           "type": "string",
-          "enum": ["sharp", "soft", "blurry"],
-          "examples": ["sharp", "blurry"]
+          "format": "date-time"
         },
-        "ocrText": {
-          "description": "Full text extracted from the image by an OCR transform.",
-          "type": "string"
-        },
-        "ocrTags": {
-          "description": "Comma-separated keywords extracted from OCR output.",
-          "type": "string"
-        },
-        "faceCount": {
-          "description": "Number of faces detected in the image (stored as a string for template-variable compatibility).",
+        "generatedBy": {
+          "description": "Model or system that produced this analysis.",
           "type": "string",
-          "pattern": "^[0-9]+$",
-          "examples": ["0", "1", "3"]
+          "examples": ["claude-opus-4", "gpt-4o", "pic-machina-v2"]
         },
-        "personCount": {
-          "description": "Number of people detected in the image (stored as a string for template-variable compatibility).",
-          "type": "string",
-          "pattern": "^[0-9]+$",
-          "examples": ["0", "2"]
+
+        "computed": {
+          "description": "Scalar values written by Pic-Machina batch transforms. Backwards-compatible with the v1 'computed' section.",
+          "type": "object",
+          "properties": {
+            "sharpnessScore": {
+              "description": "Perceptual sharpness 0.0 (blurry) to 1.0 (sharp).",
+              "type": "number", "minimum": 0, "maximum": 1
+            },
+            "blurLabel": {
+              "description": "Human-readable blur classification.",
+              "type": "string",
+              "enum": ["sharp", "soft", "blurry"]
+            },
+            "ocrText": {
+              "description": "Full text extracted by OCR.",
+              "type": "string"
+            },
+            "ocrTags": {
+              "description": "Comma-separated keywords from OCR output.",
+              "type": "string"
+            },
+            "faceCount": {
+              "description": "Number of faces detected (string for template compatibility).",
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            },
+            "personCount": {
+              "description": "Number of people detected (string for template compatibility).",
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            },
+            "poseLabel": {
+              "description": "Dominant pose classification.",
+              "type": "string",
+              "enum": ["standing", "sitting", "mixed", "unknown"]
+            },
+            "peopleLabel": {
+              "description": "Natural-language people description, e.g. 'two people (sitting)'.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
         },
-        "poseLabel": {
-          "description": "Dominant pose classification detected by the people-detect transform.",
-          "type": "string",
-          "enum": ["standing", "sitting", "mixed", "unknown"],
-          "examples": ["standing", "mixed"]
+
+        "identifiedLocation": {
+          "description": "AI-identified specific place or landmark visible in the image — distinct from the GPS-derived 'geo' section. Useful for architecture, travel, and heritage photography.",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "Common English name of the identified location or landmark.",
+              "type": "string",
+              "examples": ["Skálholt Cathedral", "Eiffel Tower", "Times Square"]
+            },
+            "localName": {
+              "description": "Name in the local language, if different.",
+              "type": "string",
+              "examples": ["Skálholtskirkja", "Tour Eiffel"]
+            },
+            "country": { "type": "string" },
+            "region": {
+              "description": "State, province, or administrative region.",
+              "type": "string"
+            },
+            "municipality": { "type": "string" },
+            "coordinatesApproximate": {
+              "description": "AI-estimated coordinates when EXIF GPS is absent. Less precise than EXIF GPS.",
+              "type": "object",
+              "properties": {
+                "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+                "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+              },
+              "additionalProperties": false
+            },
+            "historicalSignificance": {
+              "description": "Brief description of historical or cultural importance.",
+              "type": "string"
+            },
+            "architecturalPeriod": {
+              "description": "Construction era or stylistic period.",
+              "type": "string",
+              "examples": ["Modern (1956–1963)", "Gothic Revival (1840s)", "Ancient Roman"]
+            },
+            "architect": {
+              "description": "Architect or firm, if known.",
+              "type": "string"
+            },
+            "denomination": {
+              "description": "Religious denomination, if applicable.",
+              "type": "string",
+              "examples": ["Church of Iceland (Evangelical Lutheran)", "Roman Catholic", "Eastern Orthodox"]
+            },
+            "heritageStatus": {
+              "description": "UNESCO, national, or local heritage listing status.",
+              "type": "string",
+              "examples": ["UNESCO World Heritage Site", "Nationally significant historic site", "Grade I listed"]
+            },
+            "identificationConfidence": {
+              "description": "Confidence level of this location identification.",
+              "type": "string",
+              "enum": ["high", "medium", "low"]
+            },
+            "identificationBasis": {
+              "description": "How the location was identified — the visual evidence used.",
+              "type": "string",
+              "examples": ["Tower form, rose window, staining pattern, hilltop setting, and Icelandic landscape characteristics"]
+            }
+          },
+          "additionalProperties": false
         },
-        "peopleLabel": {
-          "description": "Natural-language description of the people detected, e.g. 'two people (sitting)'.",
-          "type": "string",
-          "examples": ["one person (standing)", "two people (sitting)"]
+
+        "architecture": {
+          "description": "Architectural analysis of built structures visible in the image. Populated when the primary subject is a building or structure.",
+          "type": "object",
+          "properties": {
+            "buildingType": {
+              "description": "Primary building classification.",
+              "type": "string",
+              "examples": ["cathedral / church", "residential house", "commercial tower", "bridge", "industrial warehouse"]
+            },
+            "style": {
+              "description": "Architectural style or movement.",
+              "type": "string",
+              "examples": ["Nordic Modernism", "Gothic Revival", "Art Deco", "Brutalist", "Victorian"]
+            },
+            "constructionMaterial": {
+              "description": "Primary building material observed.",
+              "type": "string",
+              "examples": ["rendered masonry", "red brick", "glass and steel", "timber frame"]
+            },
+            "exteriorColor": {
+              "description": "Dominant exterior colour(s).",
+              "type": "string",
+              "examples": ["bright white render", "red brick with white trim"]
+            },
+            "roofMaterial": {
+              "description": "Roof material and colour.",
+              "type": "string",
+              "examples": ["dark grey/charcoal slate tiles", "copper oxidised green", "terracotta clay tiles"]
+            },
+            "condition": {
+              "description": "Observed condition of the structure.",
+              "type": "string",
+              "examples": ["excellent, recently renovated", "good overall with minor weathering", "poor, significant decay"]
+            },
+            "components": {
+              "description": "Named sub-elements of the building (e.g. tower, nave, entrance porch). Free-form object keyed by component name.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string" },
+                  "position": { "type": "string" },
+                  "roof": { "type": "string" },
+                  "windows": { "type": "string" },
+                  "features": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "additional": { "type": "string" }
+                },
+                "additionalProperties": true
+              }
+            },
+            "distinctiveFeatures": {
+              "description": "Notable or unique visual features of the structure.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "scene": {
+          "description": "AI-analysed description of the scene and setting.",
+          "type": "object",
+          "properties": {
+            "locationType": {
+              "description": "Type of location depicted.",
+              "type": "string",
+              "examples": ["café", "office", "outdoor park", "home interior", "religious building / historic landmark"]
+            },
+            "indoorOutdoor": {
+              "description": "Whether the scene is indoors, outdoors, or mixed.",
+              "type": "string",
+              "enum": ["indoor", "outdoor", "mixed", "unknown"]
+            },
+            "timeOfDay": {
+              "description": "Apparent time of day.",
+              "type": "string",
+              "enum": ["dawn", "morning", "midday", "daytime", "afternoon", "golden-hour", "dusk", "night", "unknown"]
+            },
+            "season": {
+              "description": "Apparent season, if discernible.",
+              "type": "string",
+              "enum": ["spring", "summer", "autumn", "winter", "unknown"]
+            },
+            "weather": {
+              "description": "Weather conditions visible in the scene.",
+              "type": "string",
+              "examples": ["clear blue sky, bright sunlight", "partly cloudy with dramatic cloud formations", "overcast, flat light", "rain visible on windows"]
+            },
+            "visibility": {
+              "description": "Atmospheric visibility in outdoor scenes.",
+              "type": "string",
+              "enum": ["high", "moderate", "low", "unknown"]
+            },
+            "atmosphere": {
+              "description": "Mood or atmosphere of the scene.",
+              "type": "string",
+              "examples": ["casual, relaxed, social", "dramatic, moody", "peaceful, serene"]
+            },
+            "style": {
+              "description": "Interior design or aesthetic style, if applicable.",
+              "type": "string",
+              "examples": ["modern boho-Scandi", "industrial-chic", "minimalist"]
+            },
+            "settingDetails": {
+              "description": "Specific visual elements in the setting — interior furnishings, architectural details, landscape features, etc.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "subjects": {
+          "description": "People or primary subjects visible in the image.",
+          "type": "object",
+          "properties": {
+            "count": {
+              "description": "Total number of subjects.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "arrangement": {
+              "description": "How subjects are positioned relative to each other.",
+              "type": "string",
+              "examples": ["seated side-by-side", "standing in a row", "single subject centred"]
+            },
+            "interaction": {
+              "description": "Nature of interaction between subjects.",
+              "type": "string",
+              "examples": ["casual social moment", "professional handshake", "no interaction"]
+            },
+            "emotion": {
+              "description": "Dominant emotional tone across subjects.",
+              "type": "string",
+              "examples": ["friendly, happy", "serious, focused", "relaxed"]
+            },
+            "items": {
+              "description": "Per-subject detail objects.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string", "examples": ["subject_1"] },
+                  "position": {
+                    "description": "Position within the frame.",
+                    "type": "string",
+                    "enum": ["left", "right", "centre", "background", "foreground", "other"]
+                  },
+                  "genderPresentation": {
+                    "description": "Apparent gender presentation as observed in the image.",
+                    "type": "string",
+                    "examples": ["female", "male", "non-binary presenting", "not discernible"]
+                  },
+                  "approximateAgeRange": {
+                    "description": "Estimated age range.",
+                    "type": "string",
+                    "examples": ["late 30s–mid 40s", "child (approx 8–10)", "elderly"]
+                  },
+                  "ethnicityAppearance": {
+                    "description": "Apparent ethnic or regional appearance as observed. Provided for DAM and diversity-tracking purposes only.",
+                    "type": "string",
+                    "examples": ["South Asian descent", "East Asian descent", "Northern European"]
+                  },
+                  "visibility": {
+                    "description": "How much of the face is visible.",
+                    "type": "string",
+                    "enum": ["full face visible", "partial face", "profile", "back to camera", "obscured"]
+                  },
+                  "skinTone": {
+                    "description": "Perceptual skin tone description.",
+                    "type": "string",
+                    "examples": ["medium warm olive", "light fair", "medium-dark warm brown"]
+                  },
+                  "expression": {
+                    "description": "Facial expression description.",
+                    "type": "string",
+                    "examples": ["wide genuine smile", "neutral", "focused concentration"]
+                  },
+                  "hair": {
+                    "type": "object",
+                    "properties": {
+                      "color": { "type": "string" },
+                      "length": { "type": "string" },
+                      "style": { "type": "string" }
+                    },
+                    "additionalProperties": false
+                  },
+                  "eyes": {
+                    "type": "object",
+                    "properties": {
+                      "color": { "type": "string" },
+                      "expression": { "type": "string" }
+                    },
+                    "additionalProperties": false
+                  },
+                  "glasses": {
+                    "type": "object",
+                    "properties": {
+                      "frameStyle": { "type": "string", "examples": ["rectangular", "round", "aviator"] },
+                      "frameColor": { "type": "string" },
+                      "lens": { "type": "string", "examples": ["clear", "tinted", "photochromic"] }
+                    },
+                    "additionalProperties": false
+                  },
+                  "outfit": {
+                    "description": "Description of visible clothing.",
+                    "type": "object",
+                    "additionalProperties": { "type": "string" }
+                  },
+                  "accessories": {
+                    "description": "List of visible accessories.",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "posture": {
+                    "description": "Body posture description.",
+                    "type": "string",
+                    "examples": ["upright, facing camera", "slightly leaning left, relaxed"]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "composition": {
+          "description": "Photographic composition analysis.",
+          "type": "object",
+          "properties": {
+            "shotType": {
+              "description": "Photographic shot classification.",
+              "type": "string",
+              "examples": ["close-up", "medium portrait", "wide architectural exterior", "macro", "aerial"]
+            },
+            "framing": {
+              "description": "How subjects are framed within the image.",
+              "type": "string",
+              "examples": ["subjects fill foreground, centred", "rule-of-thirds left placement", "building fills upper two-thirds of frame"]
+            },
+            "cameraAngle": {
+              "description": "Camera angle relative to subjects.",
+              "type": "string",
+              "enum": ["eye-level", "low angle", "high angle", "bird's eye", "dutch angle", "unknown"]
+            },
+            "cameraPerspective": {
+              "description": "Optical perspective / lens characteristics observed.",
+              "type": "string",
+              "examples": ["smartphone wide-angle (~28–35mm equivalent), mild distortion", "telephoto compression, 85mm equiv"]
+            },
+            "viewpoint": {
+              "description": "Compass or positional description of the camera viewpoint relative to the subject.",
+              "type": "string",
+              "examples": ["south-west facing (front-left oblique)", "north-east corner", "directly above (overhead)"]
+            },
+            "foreground": {
+              "description": "What is visible in the foreground of the image.",
+              "type": "string",
+              "examples": ["green grassy hillside slope and wooden fence", "café table with coffee cup", "blurred bokeh flowers"]
+            },
+            "midground": {
+              "description": "What is visible in the midground.",
+              "type": "string",
+              "examples": ["building base and lower extensions", "pedestrians on pavement", "row of parked vehicles"]
+            },
+            "background": {
+              "description": "What is visible in the background or behind the primary subject.",
+              "type": "string",
+              "examples": ["dramatic sky with storm clouds left, blue sky right", "blurred café interior", "open countryside"]
+            },
+            "horizonLine": {
+              "description": "Position of the horizon line in the frame.",
+              "type": "string",
+              "examples": ["lower third of frame", "upper third of frame", "centred", "no visible horizon"]
+            },
+            "focus": {
+              "description": "Focus quality description.",
+              "type": "string",
+              "examples": ["sharp on subjects, background soft", "full scene in focus (deep DOF)"]
+            },
+            "depthOfField": {
+              "description": "Apparent depth of field.",
+              "type": "string",
+              "enum": ["shallow", "moderate", "deep", "unknown"]
+            },
+            "captureType": {
+              "description": "How the image was captured.",
+              "type": "string",
+              "examples": ["handheld selfie", "tripod long exposure", "drone aerial", "handheld walking shot"]
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "lighting": {
+          "description": "Lighting analysis.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "Broad lighting type classification.",
+              "type": "string",
+              "examples": ["natural daylight", "artificial indoor", "mixed natural and artificial", "studio"]
+            },
+            "primarySource": {
+              "description": "Main light source.",
+              "type": "string",
+              "examples": ["natural daylight from windows", "directional sunlight from right", "studio softbox", "golden-hour sun"]
+            },
+            "secondarySource": {
+              "description": "Fill or accent light source.",
+              "type": "string",
+              "examples": ["ceiling track spotlights", "reflector bounce", "none"]
+            },
+            "quality": {
+              "description": "Quality of light.",
+              "type": "string",
+              "examples": ["soft, even, diffused", "hard directional with strong shadows", "flat, overcast ambient"]
+            },
+            "skyCondition": {
+              "description": "Sky conditions observed in outdoor scenes.",
+              "type": "string",
+              "examples": ["clear blue", "partly cloudy", "dramatic storm clouds left, blue sky right", "overcast flat grey", "golden-hour warm"]
+            },
+            "highlights": {
+              "description": "Description of the brightest lit areas in the image.",
+              "type": "string",
+              "examples": ["bright white building walls strongly lit on south face", "specular highlights on glassware", "blown-out window light"]
+            },
+            "colorTemperatureK": {
+              "description": "Approximate colour temperature. Integer for a precise value (e.g. 5600) or string for a range or description (e.g. '6000–6500' or 'cool-neutral ~6000K').",
+              "oneOf": [
+                { "type": "integer", "minimum": 1000, "maximum": 20000 },
+                { "type": "string" }
+              ],
+              "examples": [4500, 5600, "6000–6500", "cool-neutral, approximately 5600K"]
+            },
+            "shadows": {
+              "description": "Shadow characteristics.",
+              "type": "string",
+              "examples": ["soft, minimal", "hard directional shadows on left wall", "none visible"]
+            },
+            "exposureNote": {
+              "description": "Notable exposure characteristics or issues.",
+              "type": "string",
+              "examples": ["slightly underexposed on subjects relative to bright window backlight", "well-exposed throughout"]
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "colorPalette": {
+          "description": "Colour palette observed in the image. Each entry is a label + optional hex. Three tiers: dominant (largest visual area), secondary (significant but lesser), accent (small pops of colour).",
+          "type": "object",
+          "properties": {
+            "dominant": {
+              "description": "Primary colours occupying the most visual area.",
+              "type": "array",
+              "items": { "$ref": "#/$defs/colorEntry" }
+            },
+            "secondary": {
+              "description": "Secondary colours — significant but covering less area than dominant.",
+              "type": "array",
+              "items": { "$ref": "#/$defs/colorEntry" }
+            },
+            "accent": {
+              "description": "Small accent or pop colours.",
+              "type": "array",
+              "items": { "$ref": "#/$defs/colorEntry" }
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "objects": {
+          "description": "Notable objects identified in the scene.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string", "examples": ["wooden fence", "track lighting", "wall artwork"] },
+              "type": {
+                "description": "Sub-classification of the object.",
+                "type": "string",
+                "examples": ["post-and-rail", "pendant", "armchair"]
+              },
+              "material": { "type": "string", "examples": ["light wood", "metal", "fabric", "weathered wood"] },
+              "color": { "type": "string" },
+              "style": { "type": "string" },
+              "function": { "type": "string" },
+              "position": { "type": "string", "examples": ["upper left background", "foreground centre", "lower left foreground"] },
+              "count": { "type": "integer", "minimum": 1 },
+              "note": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+
+        "tags": {
+          "description": "AI-generated keyword tags describing image content. Distinct from user annotation.tags — intended to be richer and more comprehensive.",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true,
+          "examples": [["portrait", "café", "indoor", "natural light", "shallow depth of field", "lifestyle"]]
+        },
+
+        "generationPrompts": {
+          "description": "Prompts that could be used to recreate a similar image with a generative AI system.",
+          "type": "object",
+          "properties": {
+            "short": {
+              "description": "Concise one-paragraph prompt.",
+              "type": "string"
+            },
+            "detailed": {
+              "description": "Comprehensive multi-sentence prompt with full scene, subject, lighting, and style details.",
+              "type": "string"
+            },
+            "negativePrompt": {
+              "description": "Negative prompt describing what to avoid (for diffusion model systems).",
+              "type": "string",
+              "examples": ["text, watermark, blurry faces, distorted features, harsh flash"]
+            },
+            "replicationSettings": {
+              "description": "Suggested camera/lighting settings to physically recreate the shot.",
+              "type": "object",
+              "properties": {
+                "lensEquivalent": { "type": "string", "examples": ["35mm prime", "85mm telephoto", "28–35mm wide angle"] },
+                "aperture": { "type": "string", "examples": ["f/1.8", "f/8–f/11"] },
+                "shutterSpeed": { "type": "string", "examples": ["1/250", "1/400s–1/800s", "1/30"] },
+                "iso": { "type": "string", "examples": ["100–200", "400", "64"] },
+                "depthOfField": { "type": "string", "enum": ["shallow", "moderate", "deep"] },
+                "lighting": { "type": "string" },
+                "whiteBalance": { "type": "string", "examples": ["auto", "daylight", "auto warm (~4800K)"] },
+                "technique": {
+                  "description": "Any specific capture technique required.",
+                  "type": "string",
+                  "examples": ["low angle, looking up from base of hill", "handheld selfie at arm's length", "tripod, remote shutter"]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "segmentation": {
+          "description": "Cached region and segmentation data derived from the image by AI or computer vision tools. Intended for AI-assisted editing (background swap, hair recolour, sky replacement) and advanced search. All coordinates are normalised 0.0–1.0 relative to image width/height.",
+          "type": "object",
+          "properties": {
+            "generatedAt": {
+              "description": "ISO 8601 timestamp when segmentation was last computed.",
+              "type": "string",
+              "format": "date-time"
+            },
+            "model": {
+              "description": "Model or tool used to generate these segmentation results.",
+              "type": "string",
+              "examples": ["segment-anything-2", "mediapipe-selfie", "pic-machina-seg-v1"]
+            },
+            "subjects": {
+              "description": "Per-subject region data. Entries correspond by index to analysis.subjects.items[] where possible.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "description": "Subject identifier, matching analysis.subjects.items[].id if present.",
+                    "type": "string",
+                    "examples": ["subject_1"]
+                  },
+                  "face":      { "$ref": "#/$defs/boundingBox", "description": "Face region." },
+                  "body":      { "$ref": "#/$defs/boundingBox", "description": "Full body region." },
+                  "hair":      { "$ref": "#/$defs/boundingBox", "description": "Hair region." },
+                  "silhouette":{ "$ref": "#/$defs/boundingBox", "description": "Full silhouette / person cutout region." }
+                },
+                "additionalProperties": false
+              }
+            },
+            "scene": {
+              "description": "Scene-level region data for background and environmental elements.",
+              "type": "object",
+              "properties": {
+                "sky":        { "$ref": "#/$defs/boundingBox", "description": "Sky region." },
+                "background": { "$ref": "#/$defs/boundingBox", "description": "Overall background region (excluding subjects)." },
+                "foreground": { "$ref": "#/$defs/boundingBox", "description": "Foreground region." },
+                "ground":     { "$ref": "#/$defs/boundingBox", "description": "Ground, floor, or road surface region." },
+                "water":      { "$ref": "#/$defs/boundingBox", "description": "Water body region (sea, lake, river, pool)." },
+                "vegetation": { "$ref": "#/$defs/boundingBox", "description": "Plant/foliage region." },
+                "building":   { "$ref": "#/$defs/boundingBox", "description": "Primary building or structure region." }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+
+        "dam": {
+          "description": "Digital Asset Management operational notes. Intended for DAM systems ingesting this sidecar.",
+          "type": "object",
+          "properties": {
+            "contentSensitivity": {
+              "description": "Any content sensitivity flags.",
+              "type": "string",
+              "examples": ["none — general audience", "identifiable faces — requires model release"]
+            },
+            "identityNotes": {
+              "description": "Notes about identifiable people in the image and release status.",
+              "type": "string"
+            },
+            "propertyReleaseNotes": {
+              "description": "Notes about property release requirements for identifiable buildings, artworks, or private locations.",
+              "type": "string",
+              "examples": ["Publicly visible historic landmark; standard editorial use generally unrestricted. Verify for commercial use.", "Private property — written permission required for commercial use."]
+            },
+            "brandingFlexibility": {
+              "description": "Assessment of how flexibly the image can be used for branding.",
+              "type": "string",
+              "examples": ["high — no identifiable faces", "moderate — faces visible, distinctive"]
+            },
+            "geoVerification": {
+              "description": "Notes on how location identification was verified, and confidence basis.",
+              "type": "string",
+              "examples": ["Location identified with high confidence from architectural features: tower form, staining pattern, rose window, hilltop setting"]
+            },
+            "limitations": {
+              "description": "Known limitations or uncertainties in this analysis.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
         }
+
       },
       "additionalProperties": true
     },
 
     "processing": {
-      "description": "Append-only log of every batch run that has processed this image. New entries are appended; existing entries are never modified.",
+      "description": "Append-only log of every Pic-Machina batch run that has processed this image.",
       "type": "array",
       "items": {
         "type": "object",
@@ -220,22 +985,19 @@
           "runId": {
             "description": "UUID of the batch run.",
             "type": "string",
-            "format": "uuid",
-            "examples": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
+            "format": "uuid"
           },
           "recipeName": {
-            "description": "Human-readable name of the recipe that was applied.",
-            "type": "string",
-            "examples": ["Enhance & Export", "Portrait Retouch"]
+            "description": "Human-readable recipe name.",
+            "type": "string"
           },
           "recipeId": {
-            "description": "Internal ID of the recipe.",
+            "description": "Internal recipe ID.",
             "type": "string"
           },
           "at": {
-            "description": "Unix timestamp (milliseconds since epoch) when the run completed.",
-            "type": "integer",
-            "examples": [1712345678000]
+            "description": "Unix timestamp in milliseconds when the run completed.",
+            "type": "integer"
           }
         },
         "additionalProperties": true
@@ -248,50 +1010,210 @@
 
   "examples": [
     {
-      "$version": 1,
+      "$version": 2,
       "source": {
-        "filename": "DSC_0042.jpg",
-        "sizeBytes": 4823041
+        "filename": "IMG_20170715_130113.jpg",
+        "sizeBytes": 15499776
+      },
+      "asset": {
+        "title": "Skálholt Cathedral, Iceland — Exterior View from South-West",
+        "assetType": "Digital Photograph",
+        "captureDate": "2017-07-15",
+        "captureTimeApprox": "13:01 local time",
+        "format": "JPEG",
+        "resolution": "high resolution (~4160×3120, typical Android smartphone)",
+        "aspectRatio": "4:3",
+        "orientation": "landscape",
+        "contentRating": "general",
+        "analysisConfidence": "high"
       },
       "exif": {
-        "cameraMake": "Sony",
-        "cameraModel": "A7R V",
-        "focalLength": "85mm",
-        "aperture": "f/1.4",
-        "iso": 200,
-        "shutterSpeed": "1/500",
-        "dateTaken": "2024-06-21T08:15:00",
-        "gpsLat": 51.5074,
-        "gpsLng": -0.1278
+        "dateTaken": "2017-07-15T13:01:13",
+        "gpsLat": 64.1269,
+        "gpsLng": -20.5258
       },
       "geo": {
-        "city": "London",
-        "region": "England",
-        "country": "United Kingdom",
-        "countryCode": "GB"
+        "region": "South Iceland (Suðurland)",
+        "country": "Iceland",
+        "countryCode": "IS"
       },
       "annotation": {
-        "rating": 5,
+        "rating": 4,
         "flag": "pick",
-        "tags": ["portrait", "natural-light"],
-        "caption": "Summer portrait session, Hyde Park"
+        "tags": ["iceland", "cathedral", "architecture", "travel"],
+        "usageScenarios": [
+          "Travel and tourism content — Iceland",
+          "Religious and ecclesiastical publications",
+          "Nordic or Scandinavian architectural features",
+          "Historic landmarks and heritage photography"
+        ]
       },
-      "computed": {
-        "sharpnessScore": 0.94,
-        "blurLabel": "sharp",
-        "faceCount": "1",
-        "personCount": "1",
-        "poseLabel": "standing",
-        "peopleLabel": "one person (standing)"
-      },
-      "processing": [
-        {
-          "runId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "recipeName": "Portrait Retouch",
-          "recipeId": "portrait-retouch-v2",
-          "at": 1719907200000
+      "analysis": {
+        "generatedAt": "2026-04-19T10:00:00Z",
+        "generatedBy": "claude-opus-4",
+        "identifiedLocation": {
+          "name": "Skálholt Cathedral",
+          "localName": "Skálholtskirkja",
+          "country": "Iceland",
+          "region": "South Iceland (Suðurland)",
+          "municipality": "Bláskógabyggð",
+          "coordinatesApproximate": {
+            "latitude": 64.1269,
+            "longitude": -20.5258
+          },
+          "historicalSignificance": "One of Iceland's two medieval episcopal sees; ecclesiastical and cultural capital of Iceland for nearly 800 years from the 11th century. Current church consecrated 1963.",
+          "architecturalPeriod": "Modern (1956–1963), replacing earlier historic structures on the same site",
+          "architect": "Húsasmidjan (Rakel Sigurdardóttir and Ágúst Pálsson)",
+          "denomination": "Church of Iceland (Evangelical Lutheran)",
+          "heritageStatus": "Nationally significant historic site; contains medieval crypt and artifacts",
+          "identificationConfidence": "high",
+          "identificationBasis": "Tower form, rust staining pattern, rose window with cross motif, hilltop positioning, and characteristic Icelandic open landscape"
+        },
+        "architecture": {
+          "buildingType": "cathedral / church",
+          "style": "Nordic Modernism with traditional ecclesiastical references",
+          "constructionMaterial": "rendered/plastered masonry",
+          "exteriorColor": "bright white render",
+          "roofMaterial": "dark grey/charcoal slate tiles",
+          "condition": "good overall; visible mineral/rust staining streaks on tower face",
+          "components": {
+            "tower": {
+              "type": "square bell tower",
+              "position": "central, dominant vertical element",
+              "features": [
+                "Tall narrow vertical window slits (louvred bell openings)",
+                "Slate hipped roof with two dormer skylights",
+                "Rust/mineral staining streaks running vertically from window openings"
+              ]
+            },
+            "nave": {
+              "position": "left / west wing",
+              "roof": "steeply pitched gabled slate roof",
+              "windows": "multiple evenly-spaced rectangular windows in two rows",
+              "additional": "lower flat-roofed extension on front face"
+            },
+            "chancel": {
+              "position": "right / east wing",
+              "features": [
+                "Gabled front facade with circular rose window containing a cross motif",
+                "Large tall rectangular windows",
+                "Small brown wooden door at far right"
+              ]
+            }
+          },
+          "distinctiveFeatures": [
+            "Rose window with cross — sole decorative ecclesiastical element on exterior",
+            "Rust/mineral staining on tower from bell louvre runoff",
+            "Asymmetric massing — tall tower offset to centre-right",
+            "Completely white render against dark slate — high visual contrast",
+            "Hilltop positioning creating dramatic silhouette against sky"
+          ]
+        },
+        "scene": {
+          "locationType": "religious building / historic landmark",
+          "indoorOutdoor": "outdoor",
+          "timeOfDay": "midday",
+          "season": "summer",
+          "weather": "partly cloudy with dramatic cloud formations, patches of blue sky",
+          "visibility": "high",
+          "atmosphere": "dramatic, historic, open",
+          "settingDetails": [
+            "Green grass hillside in foreground",
+            "Wooden post-and-rail fence at base of hill",
+            "Open agricultural land beyond fence",
+            "Wild dandelions visible at fence line",
+            "No trees — characteristic Icelandic open landscape"
+          ]
+        },
+        "subjects": {
+          "count": 0
+        },
+        "composition": {
+          "shotType": "wide architectural exterior",
+          "framing": "low-angle, looking up from base of hill; building fills upper two-thirds of frame",
+          "cameraAngle": "low angle",
+          "cameraPerspective": "28–35mm wide angle smartphone lens",
+          "viewpoint": "south-west facing (front-left oblique)",
+          "foreground": "green grassy hillside slope and wooden post-and-rail fence",
+          "midground": "building base and lower extensions",
+          "background": "dramatic sky — dark storm clouds left, bright blue sky with white cumulus right",
+          "horizonLine": "lower third of frame",
+          "focus": "entire scene acceptably sharp",
+          "depthOfField": "deep",
+          "captureType": "handheld ground-level"
+        },
+        "lighting": {
+          "type": "natural daylight",
+          "primarySource": "directional sunlight from right (south/east)",
+          "quality": "mixed — directional sunlight on south face, soft shadow on north face",
+          "skyCondition": "dramatic mixed — dark storm clouds on left, bright blue with white cumulus on right",
+          "highlights": "bright white building walls strongly lit on south face",
+          "shadows": "soft shadow on north-facing (left) wall of nave",
+          "colorTemperatureK": "6000–6500"
+        },
+        "colorPalette": {
+          "dominant": [
+            { "label": "bright white", "hex": "#F5F5F0" },
+            { "label": "dark charcoal grey", "hex": "#3D3D3D" },
+            { "label": "mid grey", "hex": "#8A8A8A" }
+          ],
+          "secondary": [
+            { "label": "vivid green", "hex": "#4CAF50" },
+            { "label": "sky blue", "hex": "#5BA3D9" },
+            { "label": "warm tan / rust staining", "hex": "#A0785A" }
+          ],
+          "accent": [
+            { "label": "natural wood brown", "hex": "#8B6F47" },
+            { "label": "door brown", "hex": "#5C4033" }
+          ]
+        },
+        "objects": [
+          { "name": "wooden fence", "type": "post-and-rail", "material": "weathered wood", "position": "lower left foreground", "function": "perimeter boundary" },
+          { "name": "dandelions", "position": "base of fence, lower left", "note": "yellow flowers partially visible" },
+          { "name": "dormer skylights", "count": 2, "position": "tower roof", "note": "small windows in hipped slate roof" }
+        ],
+        "tags": [
+          "Iceland", "Skálholt", "cathedral", "church", "Nordic architecture",
+          "modernist architecture", "religious building", "historic landmark",
+          "white building", "slate roof", "bell tower", "rural Iceland",
+          "South Iceland", "hilltop", "dramatic sky", "summer", "green landscape",
+          "travel photography", "architectural photography", "Lutheran church",
+          "rose window", "cross", "wooden fence", "storm clouds", "natural light"
+        ],
+        "generationPrompts": {
+          "short": "A large white modernist Lutheran cathedral on a green hilltop in Iceland, tall square white tower with narrow vertical window slits and dark slate roof, rust staining streaks on tower, dramatic partly cloudy sky, green grass foreground with wooden post-and-rail fence, summer daytime, wide architectural shot.",
+          "detailed": "Wide-angle architectural photograph of Skálholt Cathedral, Iceland. Stark white rendered modernist church on a gently sloping green hilltop against a dramatic mixed sky — dark storm clouds left, bright blue sky with white cumulus right. Tall square central tower with narrow louvred vertical slits, rust-brown mineral staining, charcoal slate hipped roof with two dormer skylights. Left wing: long nave with steeply pitched slate gable and two rows of rectangular windows. Right wing: gabled chancel facade with circular rose window containing white cross motif. Foreground: green grass slope, weathered wooden post-and-rail fence, dandelion flowers. No trees — open Icelandic landscape. Directional sunlight from right. Photorealistic travel and architectural photography.",
+          "negativePrompt": "people, cars, modern signage, power lines, distorted perspective, lens flare, overexposed sky, snow, winter, trees, urban surroundings, watermark, text overlay",
+          "replicationSettings": {
+            "lensEquivalent": "28–35mm wide angle",
+            "aperture": "f/8–f/11",
+            "shutterSpeed": "1/400s–1/800s",
+            "iso": "100–200",
+            "depthOfField": "deep",
+            "whiteBalance": "daylight / auto",
+            "technique": "low angle, looking up from base of hill"
+          }
+        },
+        "segmentation": {
+          "generatedAt": "2026-04-19T10:01:00Z",
+          "model": "segment-anything-2",
+          "subjects": [],
+          "scene": {
+            "sky":        { "x": 0.0, "y": 0.0, "w": 1.0, "h": 0.45, "confidence": 0.92 },
+            "building":   { "x": 0.05, "y": 0.08, "w": 0.9, "h": 0.72, "confidence": 0.96 },
+            "ground":     { "x": 0.0, "y": 0.72, "w": 1.0, "h": 0.28, "confidence": 0.88 },
+            "vegetation": { "x": 0.0, "y": 0.65, "w": 0.7, "h": 0.35, "confidence": 0.85 }
+          }
+        },
+        "dam": {
+          "contentSensitivity": "none — general audience",
+          "identityNotes": "No people present. No model release required.",
+          "propertyReleaseNotes": "Skálholt Cathedral is a publicly visible historic landmark; standard editorial use is generally unrestricted. Verify for commercial use.",
+          "brandingFlexibility": "high — clean architectural subject suitable for editorial, travel, and heritage contexts",
+          "geoVerification": "Location identified with high confidence from architectural features: tower form, staining pattern, rose window, hilltop setting, and Icelandic landscape characteristics"
         }
-      ]
+      },
+      "processing": []
     }
   ]
 }
