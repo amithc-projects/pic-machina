@@ -792,6 +792,124 @@ function renderAutomation(host) {
 // ═══════════════════════════════════════════════════════════════
 // CLAUDE SKILLS
 // ═══════════════════════════════════════════════════════════════
+// ── Skill definitions ─────────────────────────────────────────
+const SKILLS = {
+  'recipe-architect': {
+    zipName: 'pic-machina-recipe-architect-skill.zip',
+    promptFile: 'claude-recipe-prompt.md',
+    knowledgeFiles: ['node-catalog.json', 'recipe-bundle-schema.json'],
+    readme: `# Recipe Architect — Pic Machina Claude Skill
+
+## Setup (3 steps)
+
+**Step 1 — Project Instructions**
+Open \`claude-recipe-prompt.md\`, copy the entire contents, then paste it
+into your Claude Project's **Project Instructions** field.
+
+**Step 2 — Project Knowledge**
+Drag these two files into your Claude Project's **Project Knowledge**:
+- node-catalog.json        (all available nodes + parameters)
+- recipe-bundle-schema.json (the output format Claude must follow)
+
+**Step 3 — Start chatting**
+In any chat within the project, describe the workflow you want, for example:
+  "Make a recipe that crops to square, adds a soft glow, and watermarks bottom-right"
+
+Claude will output a ready-to-import Pic Machina recipe JSON.
+Copy it → Pic Machina Library → Import JSON → done!
+
+---
+Pic Machina · https://picmachina.app
+`,
+  },
+  'image-describer': {
+    zipName: 'pic-machina-image-describer-skill.zip',
+    promptFile: 'claude-image-prompt.md',
+    knowledgeFiles: ['sidecar.schema.json'],
+    readme: `# Image Describer — Pic Machina Claude Skill
+
+## Setup (3 steps)
+
+**Step 1 — Project Instructions**
+Open \`claude-image-prompt.md\`, copy the entire contents, then paste it
+into your Claude Project's **Project Instructions** field.
+
+**Step 2 — Project Knowledge**
+Drag this file into your Claude Project's **Project Knowledge**:
+- sidecar.schema.json  (the exact JSON format Claude must output)
+
+**Step 3 — Analyse an image**
+Upload any photo and say: "Describe this image for PicMachina"
+
+Claude will output rich metadata JSON — scene, subjects, colour palette,
+composition, generative prompts, DAM notes — in the exact sidecar format
+Pic Machina expects.
+
+## Using the AI endpoint (optional)
+Host a simple HTTP endpoint that accepts a multipart/form-data POST with
+an \`image\` field, calls the Claude API with this system prompt, and returns
+the JSON. Then set the endpoint URL in Pic Machina Settings → AI Integration
+for one-click analysis directly inside the metadata panel.
+
+---
+Pic Machina · https://picmachina.app
+`,
+  },
+};
+
+async function downloadSkillZip(skillKey, btn) {
+  const skill = SKILLS[skillKey];
+  if (!skill) return;
+
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `
+    <span class="material-symbols-outlined gsd-spin">progress_activity</span>
+    Preparing…
+  `;
+
+  try {
+    const JSZip = (await import('jszip')).default;
+    const zip   = new JSZip();
+
+    // Fetch all files in parallel
+    const allFiles = [skill.promptFile, ...skill.knowledgeFiles];
+    const fetched  = await Promise.all(
+      allFiles.map(async (f) => {
+        const r = await fetch(`/docs/${f}`);
+        if (!r.ok) throw new Error(`Could not fetch ${f}: HTTP ${r.status}`);
+        return { name: f, text: await r.text() };
+      })
+    );
+
+    // Add README + fetched files to ZIP
+    zip.file('README.md', skill.readme);
+    fetched.forEach(({ name, text }) => zip.file(name, text));
+
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = skill.zipName;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    btn.innerHTML = `
+      <span class="material-symbols-outlined">check_circle</span>
+      Downloaded!
+    `;
+    setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2200);
+  } catch (err) {
+    console.warn('[GSD] Skill ZIP download failed:', err);
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    window.AuroraToast?.show({
+      variant: 'warning',
+      title: 'Download failed',
+      description: err.message || 'Could not fetch skill files.',
+    });
+  }
+}
+
 function renderClaudeSkills(host) {
   host.innerHTML = `
     <div class="gsd-skills">
@@ -806,8 +924,8 @@ function renderClaudeSkills(host) {
           <h3 class="gsd-skills__headline">Supercharge Pic Machina with AI</h3>
           <p class="gsd-skills__lede">
             These Claude.ai Project skills let you use AI to build recipes and
-            analyse images without writing a single line of code. Set them up once
-            in a Claude Project — then just chat.
+            analyse images without writing a single line of code. Download a skill
+            package, set it up once in a Claude Project — then just chat.
           </p>
         </div>
 
@@ -829,46 +947,27 @@ function renderClaudeSkills(host) {
               <div class="gsd-skill-steps">
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">1</span>
-                  <span>Go to <a href="https://claude.ai" target="_blank" rel="noopener" class="gsd-link">claude.ai</a> and create a new <strong>Project</strong></span>
+                  <span>Download the skill package below and unzip it</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">2</span>
-                  <span>Open <strong>Project Instructions</strong> and paste the contents of <code>claude-recipe-prompt.md</code></span>
+                  <span>Go to <a href="https://claude.ai" target="_blank" rel="noopener" class="gsd-link">claude.ai</a>, create a new <strong>Project</strong>, open <strong>Project Instructions</strong> and paste the contents of <code>claude-recipe-prompt.md</code></span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">3</span>
-                  <span>Add <code>node-catalog.json</code> and <code>recipe-bundle-schema.json</code> to <strong>Project Knowledge</strong></span>
+                  <span>Drag <code>node-catalog.json</code> and <code>recipe-bundle-schema.json</code> into <strong>Project Knowledge</strong></span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">4</span>
-                  <span>Chat: <em>"Make a recipe that crops to square, adds a soft glow, and watermarks the bottom-right"</em></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">5</span>
-                  <span>Copy the JSON → <strong>Library → Import JSON</strong> → done!</span>
+                  <span>Chat: <em>"Make a recipe that crops to square, adds a soft glow, and watermarks the bottom-right"</em> → copy the JSON → <strong>Library → Import JSON</strong></span>
                 </div>
               </div>
 
-              <div class="gsd-skill-card__files">
-                <div class="gsd-skill-files__label">Files needed</div>
-                <div class="gsd-skill-files__list">
-                  <button class="gsd-file-chip" data-download="claude-recipe-prompt.md">
-                    <span class="material-symbols-outlined">description</span>
-                    claude-recipe-prompt.md
-                    <span class="gsd-file-chip__badge">System Prompt</span>
-                  </button>
-                  <button class="gsd-file-chip" data-download="node-catalog.json">
-                    <span class="material-symbols-outlined">data_object</span>
-                    node-catalog.json
-                    <span class="gsd-file-chip__badge">Node Dictionary</span>
-                  </button>
-                  <button class="gsd-file-chip" data-download="recipe-bundle-schema.json">
-                    <span class="material-symbols-outlined">schema</span>
-                    recipe-bundle-schema.json
-                    <span class="gsd-file-chip__badge">Output Schema</span>
-                  </button>
-                </div>
-              </div>
+              <button class="gsd-skill-dl-btn" data-skill="recipe-architect">
+                <span class="material-symbols-outlined">download</span>
+                Download Skill Package
+                <span class="gsd-skill-dl-btn__meta">3 files · .zip</span>
+              </button>
             </div>
           </div>
 
@@ -885,52 +984,37 @@ function renderClaudeSkills(host) {
               <div class="gsd-skill-card__desc">
                 Upload any image — Claude produces rich AI analysis JSON (scene,
                 subjects, colour palette, composition, generative prompts, DAM notes)
-                in the exact format Pic Machina's metadata sidecar expects. Works
-                standalone or wired to the <strong>AI endpoint</strong> in Settings.
+                in the exact format Pic Machina's metadata sidecar expects.
               </div>
 
               <div class="gsd-skill-steps">
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">1</span>
-                  <span>Create a new Claude.ai <strong>Project</strong></span>
+                  <span>Download the skill package below and unzip it</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">2</span>
-                  <span>Paste <code>claude-image-prompt.md</code> into <strong>Project Instructions</strong></span>
+                  <span>Create a new Claude.ai <strong>Project</strong>, paste <code>claude-image-prompt.md</code> into <strong>Project Instructions</strong></span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">3</span>
-                  <span>Add <code>sidecar.schema.json</code> to <strong>Project Knowledge</strong></span>
+                  <span>Drag <code>sidecar.schema.json</code> into <strong>Project Knowledge</strong></span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">4</span>
-                  <span>Upload an image and say: <em>"Describe this image for PicMachina"</em></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">5</span>
-                  <span>Copy the JSON → paste into any <code>.jpg.json</code> sidecar file, <strong>or</strong> host a simple endpoint and use <strong>Describe with AI</strong> in the metadata panel</span>
+                  <span>Upload a photo and say: <em>"Describe this image for PicMachina"</em> → copy the JSON into any sidecar file</span>
                 </div>
               </div>
 
-              <div class="gsd-skill-card__files">
-                <div class="gsd-skill-files__label">Files needed</div>
-                <div class="gsd-skill-files__list">
-                  <button class="gsd-file-chip" data-download="claude-image-prompt.md">
-                    <span class="material-symbols-outlined">description</span>
-                    claude-image-prompt.md
-                    <span class="gsd-file-chip__badge">System Prompt</span>
-                  </button>
-                  <button class="gsd-file-chip" data-download="sidecar.schema.json">
-                    <span class="material-symbols-outlined">schema</span>
-                    sidecar.schema.json
-                    <span class="gsd-file-chip__badge">Output Schema</span>
-                  </button>
-                </div>
-              </div>
+              <button class="gsd-skill-dl-btn gsd-skill-dl-btn--cyan" data-skill="image-describer">
+                <span class="material-symbols-outlined">download</span>
+                Download Skill Package
+                <span class="gsd-skill-dl-btn__meta">2 files · .zip</span>
+              </button>
 
               <div class="gsd-skill-card__tip">
                 <span class="material-symbols-outlined" style="font-size:14px;color:var(--gsd-cyan)">tips_and_updates</span>
-                <span>Connect it to the <strong>AI endpoint</strong> setting for one-click analysis directly inside the metadata panel — no copy-paste required.</span>
+                <span>Connect it to the <strong>AI endpoint</strong> in Settings for one-click analysis directly inside the metadata panel.</span>
               </div>
             </div>
           </div>
@@ -940,29 +1024,9 @@ function renderClaudeSkills(host) {
     </div>
   `;
 
-  // File download handlers — fetch from /docs/ and trigger save
-  host.querySelectorAll('[data-download]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const filename = btn.dataset.download;
-      try {
-        const originalHtml = btn.innerHTML;
-        btn.style.opacity = '0.6';
-        const resp = await fetch(`/docs/${filename}`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const text = await resp.text();
-        const blob = new Blob([text], { type: filename.endsWith('.json') ? 'application/json' : 'text/markdown' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-        btn.style.opacity = '';
-      } catch (err) {
-        console.warn('[GSD] Download failed:', err);
-        btn.style.opacity = '';
-        window.AuroraToast?.show({ variant: 'warning', title: `Could not download ${filename}`, description: 'Try opening the /docs/ folder directly.' });
-      }
-    });
+  // Wire single-ZIP download buttons
+  host.querySelectorAll('[data-skill]').forEach(btn => {
+    btn.addEventListener('click', () => downloadSkillZip(btn.dataset.skill, btn));
   });
 }
 
@@ -1581,24 +1645,34 @@ function injectStyles() {
       background: rgba(34,211,238,0.07); padding: 1px 5px; border-radius: 4px;
     }
 
-    .gsd-skill-card__files { margin-bottom: 14px; }
-    .gsd-skill-files__label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--gsd-mute); margin-bottom: 8px; }
-    .gsd-skill-files__list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .gsd-skill-dl-btn {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; margin-top: 18px; margin-bottom: 14px;
+      padding: 12px 16px; border-radius: 10px;
+      background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.35);
+      color: #c4b5fd; font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+    .gsd-skill-dl-btn:hover:not(:disabled) {
+      background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.55);
+      transform: translateY(-1px);
+    }
+    .gsd-skill-dl-btn:disabled { opacity: .7; cursor: default; }
+    .gsd-skill-dl-btn .material-symbols-outlined { font-size: 20px; }
+    .gsd-skill-dl-btn__meta {
+      margin-left: auto; font-size: 11px; font-weight: 400;
+      color: rgba(196,181,253,0.6); font-family: 'JetBrains Mono', monospace;
+    }
+    .gsd-skill-dl-btn--cyan {
+      background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.3); color: #67e8f9;
+    }
+    .gsd-skill-dl-btn--cyan:hover:not(:disabled) {
+      background: rgba(34,211,238,0.18); border-color: rgba(34,211,238,0.5);
+    }
+    .gsd-skill-dl-btn--cyan .gsd-skill-dl-btn__meta { color: rgba(103,232,249,0.55); }
 
-    .gsd-file-chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 10px; border-radius: 8px;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--gsd-line-2);
-      font-size: 12px; color: var(--gsd-text); cursor: pointer;
-      transition: background .15s, border-color .15s;
-    }
-    .gsd-file-chip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
-    .gsd-file-chip .material-symbols-outlined { font-size: 15px; color: var(--gsd-mute); }
-    .gsd-file-chip__badge {
-      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px;
-      color: var(--gsd-mute); background: rgba(255,255,255,0.05);
-      padding: 1px 5px; border-radius: 4px; margin-left: 2px;
-    }
+    @keyframes gsdSpin { to { transform: rotate(360deg); } }
+    .gsd-spin { animation: gsdSpin .7s linear infinite; display: inline-block; }
 
     .gsd-skill-card__tip {
       display: flex; align-items: baseline; gap: 7px;
