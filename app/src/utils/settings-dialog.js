@@ -92,6 +92,35 @@ export async function showSettingsModal() {
           </label>
         </section>
 
+        <!-- AI Integration -->
+        <section style="display:flex; flex-direction:column; gap:12px;">
+          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">AI Integration</h4>
+          <div style="background:var(--ps-bg-overlay); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <label for="cfg-ai-endpoint" style="font-size:13px; font-weight:500; color:var(--ps-text);">AI Image Describer Endpoint</label>
+              <input type="url" id="cfg-ai-endpoint" class="ic-input"
+                value="${current.ai?.describerEndpoint || ''}"
+                placeholder="https://your-server.example.com/describe"
+                style="font-size:12px; font-family:var(--font-mono);"
+              />
+            </div>
+            <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+              When set, a <strong>Describe Image with AI</strong> button appears in the metadata panel.
+              The endpoint receives a <code>multipart/form-data</code> POST with an <code>image</code>
+              file field and a <code>filename</code> text field. It must return JSON matching the
+              Pic-Machina sidecar schema (full sidecar or a raw analysis object). The response is
+              merged into the image sidecar without overwriting your annotations.
+            </p>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn-secondary" id="btn-test-ai-endpoint" style="font-size:11px; padding:5px 12px;">
+                <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">electric_bolt</span>
+                Test connection
+              </button>
+              <span id="ai-endpoint-test-result" style="font-size:11px; color:var(--ps-text-faint);"></span>
+            </div>
+          </div>
+        </section>
+
         <!-- Custom Color Swatches -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <div style="display:flex; flex-direction:column;">
@@ -236,6 +265,28 @@ export async function showSettingsModal() {
     }
   };
 
+  // AI endpoint test
+  modal.querySelector('#btn-test-ai-endpoint').onclick = async (e) => {
+    const btn    = e.currentTarget;
+    const result = modal.querySelector('#ai-endpoint-test-result');
+    const url    = modal.querySelector('#cfg-ai-endpoint').value.trim();
+    if (!url) { result.textContent = 'No URL entered.'; result.style.color = 'var(--ps-text-faint)'; return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">hourglass_empty</span>Testing…';
+    result.textContent = '';
+    try {
+      const resp = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+      result.textContent = `✓ Reachable (HTTP ${resp.status})`;
+      result.style.color = 'var(--ps-green, #22c55e)';
+    } catch (err) {
+      result.textContent = `✗ ${err.message || 'Unreachable'}`;
+      result.style.color = 'var(--ps-red, #f87171)';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">electric_bolt</span>Test connection';
+    }
+  };
+
   modal.querySelector('#btn-add-swatch').onclick = () => {
       palette.push({ label: 'New Color', color: '#ff0000' });
       renderSwatches();
@@ -260,6 +311,9 @@ export async function showSettingsModal() {
       },
       thumbnails: {
         smart: modal.querySelector('#cfg-smart-thumbs').checked
+      },
+      ai: {
+        describerEndpoint: modal.querySelector('#cfg-ai-endpoint').value.trim()
       },
       palette: nextPalette
     });
