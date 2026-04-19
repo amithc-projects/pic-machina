@@ -33,6 +33,7 @@ import {
   reverseGeocode, buildSidecarPatch,
 } from '../data/sidecar.js';
 import { extractExif } from '../engine/exif-reader.js';
+import { getSettings } from '../utils/settings.js';
 
 // ── Style injection ────────────────────────────────────────────────────────────
 
@@ -42,6 +43,8 @@ function injectStyles() {
   _stylesInjected = true;
   const s = document.createElement('style');
   s.textContent = `
+    @keyframes spin { to { transform:rotate(360deg); } }
+
     /* ── Shell ─────────────────────────────────────────────── */
     .mp-panel {
       display:flex; flex-direction:column;
@@ -370,6 +373,44 @@ function injectStyles() {
       font-size:9px; background:rgba(0,119,255,.1); color:var(--ps-blue);
       border-radius:3px; padding:1px 5px;
     }
+
+    /* ── AI Describe CTA ─────────────────────────────────────── */
+    .mp-ai-cta {
+      display:flex; flex-direction:column; align-items:center;
+      gap:10px; padding:16px 20px; text-align:center;
+      border-bottom:1px solid var(--ps-border);
+    }
+    .mp-ai-cta-icon {
+      font-size:28px; color:var(--ps-blue); opacity:.7;
+    }
+    .mp-ai-cta-msg { font-size:11px; color:var(--ps-text-faint); line-height:1.4; }
+    .mp-ai-cta-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 16px; border-radius:7px; font-size:12px; font-weight:600;
+      background:var(--ps-blue); color:#fff; border:none; cursor:pointer;
+      transition:filter 120ms;
+    }
+    .mp-ai-cta-btn:hover { filter:brightness(1.1); }
+    .mp-ai-cta-btn:disabled { opacity:.5; cursor:default; }
+    .mp-ai-cta-btn .material-symbols-outlined { font-size:15px; }
+    .mp-ai-reanalyze {
+      display:flex; align-items:center; justify-content:flex-end;
+      padding:6px 12px; gap:8px; border-bottom:1px solid var(--ps-border);
+    }
+    .mp-ai-reanalyze-btn {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:3px 10px; border-radius:5px; font-size:10px; font-weight:600;
+      border:1px solid var(--ps-border); background:none; cursor:pointer;
+      color:var(--ps-text-muted); transition:all 100ms;
+    }
+    .mp-ai-reanalyze-btn:hover { background:var(--ps-bg-hover); color:var(--ps-text); }
+    .mp-ai-reanalyze-btn:disabled { opacity:.5; cursor:default; }
+    .mp-ai-reanalyze-btn .material-symbols-outlined { font-size:13px; }
+    .mp-ai-endpoint-note {
+      padding:8px 16px; font-size:10px; color:var(--ps-text-faint);
+      text-align:center; border-bottom:1px solid var(--ps-border);
+    }
+    .mp-ai-endpoint-note a { color:var(--ps-blue); cursor:pointer; text-decoration:underline; }
 
     /* ── Footer ─────────────────────────────────────────────── */
     .mp-footer {
@@ -724,6 +765,49 @@ export class MetadataPanel {
     const hdr = body.querySelector('#mp-analysis-hdr');
     const sec = body.querySelector('#mp-sec-analysis');
     hdr?.addEventListener('click', () => sec?.classList.toggle('mp-sec-collapsed'));
+
+    // ── AI Describe CTA ──────────────────────────────────────
+    const endpoint = getSettings().ai?.describerEndpoint?.trim();
+    const ctaHost  = document.createElement('div');
+
+    if (endpoint) {
+      if (!hasAnalysis) {
+        // No analysis yet — prominent CTA
+        ctaHost.className = 'mp-ai-cta';
+        ctaHost.innerHTML = `
+          <span class="material-symbols-outlined mp-ai-cta-icon">auto_awesome</span>
+          <div class="mp-ai-cta-msg">No AI analysis yet.<br>Send this image to your AI endpoint to generate rich metadata.</div>
+          <button class="mp-ai-cta-btn" id="mp-describe-btn">
+            <span class="material-symbols-outlined">auto_awesome</span>
+            Describe Image with AI
+          </button>`;
+      } else {
+        // Analysis exists — small re-analyse row
+        ctaHost.className = 'mp-ai-reanalyze';
+        ctaHost.innerHTML = `
+          <span style="font-size:10px;color:var(--ps-text-faint)">Analysis by ${_e(analysis.generatedBy || 'AI')}</span>
+          <button class="mp-ai-reanalyze-btn" id="mp-describe-btn">
+            <span class="material-symbols-outlined">refresh</span>Re-analyse
+          </button>`;
+      }
+    } else {
+      // No endpoint configured
+      ctaHost.className = 'mp-ai-endpoint-note';
+      ctaHost.innerHTML = `<a id="mp-ai-settings-link">Configure AI endpoint</a> in Settings to enable AI image analysis`;
+      ctaHost.querySelector('#mp-ai-settings-link')?.addEventListener('click', async () => {
+        const { showSettingsModal } = await import('../utils/settings-dialog.js');
+        showSettingsModal();
+      });
+    }
+
+    // Insert CTA before the analysis body
+    const analysisSec = body.querySelector('#mp-sec-analysis');
+    analysisSec?.insertBefore(ctaHost, body.querySelector('#mp-analysis-body'));
+
+    // Wire describe button
+    ctaHost.querySelector('#mp-describe-btn')?.addEventListener('click', () => {
+      this._describeWithAI(ctaHost.querySelector('#mp-describe-btn'));
+    });
 
     // Build Level 2 sub-sections
     const analysisBody = body.querySelector('#mp-analysis-body');
@@ -1156,6 +1240,95 @@ export class MetadataPanel {
     return this._subsec('tune', 'Computed', '', body);
   }
 
+  // ── AI Describe ────────────────────────────────────────────────────────────
+
+  async _describeWithAI(btn) {
+    if (!this._file) return;
+
+    const endpoint = getSettings().ai?.describerEndpoint?.trim();
+    if (!endpoint) {
+      window.AuroraToast?.show({ variant: 'warning', title: 'No AI endpoint configured', description: 'Add an endpoint URL in Settings → AI Integration.' });
+      return;
+    }
+
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-symbols-outlined" style="animation:spin 1s linear infinite">hourglass_top</span> Describing…`;
+
+    try {
+      // Build multipart form — image + filename
+      const formData = new FormData();
+      formData.append('image', this._file, this._file.name);
+      formData.append('filename', this._file.name);
+
+      const resp = await fetch(endpoint, { method: 'POST', body: formData });
+
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => resp.statusText);
+        throw new Error(`HTTP ${resp.status}: ${txt.slice(0, 120)}`);
+      }
+
+      const raw = await resp.json();
+
+      // Normalise response to { analysis, asset, usageScenarios }
+      const { analysis, asset, usageScenarios } = _normalizeAIResponse(raw);
+
+      // Stamp generation metadata
+      analysis.generatedAt = new Date().toISOString();
+      if (!analysis.generatedBy && raw.generatedBy) analysis.generatedBy = raw.generatedBy;
+
+      // Merge into existing sidecar — never overwrite user annotation fields
+      const updated = {
+        ...(this._sidecar || {}),
+        $version: 2,
+        source: this._sidecar?.source || { filename: this._file.name, sizeBytes: this._file.size },
+        asset: {
+          ...(this._sidecar?.asset || {}),
+          ...asset,
+        },
+        annotation: {
+          ...(this._sidecar?.annotation || {}),
+          // Merge usage scenarios additively (don't replace user's existing ones)
+          usageScenarios: _mergeUnique(
+            this._sidecar?.annotation?.usageScenarios || [],
+            usageScenarios
+          ),
+        },
+        analysis: {
+          ...(this._sidecar?.analysis || {}),
+          ...analysis,
+        },
+      };
+
+      // Save to disk
+      if (this._dirHandle) {
+        await writeSidecar(this._dirHandle, this._file.name, updated);
+        this._onSaved?.(this._file, updated);
+      }
+
+      this._sidecar = updated;
+      // Refresh editable state from merged sidecar
+      this._assetTitle    = updated.asset?.title    ?? this._assetTitle;
+      this._contentRating = updated.asset?.contentRating ?? this._contentRating;
+      this._usageScenarios = updated.annotation?.usageScenarios ?? this._usageScenarios;
+
+      // Full re-render to show new analysis sections
+      await this._renderBody();
+
+      // Auto-expand the AI Analysis section so user sees results immediately
+      const sec = this._panelEl?.querySelector('#mp-sec-analysis');
+      sec?.classList.remove('mp-sec-collapsed');
+
+      window.AuroraToast?.show({ variant: 'success', title: 'AI analysis complete', description: `Sidecar updated for ${this._file.name}` });
+
+    } catch (err) {
+      console.error('[MetadataPanel] AI describe failed:', err);
+      window.AuroraToast?.show({ variant: 'danger', title: 'AI description failed', description: err.message });
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  }
+
   _renderProcessingLog(procs) {
     if (!procs.length) return '';
     return `
@@ -1524,6 +1697,213 @@ export class MetadataPanel {
     const wr    = await fh.createWritable();
     await wr.write(blob); await wr.close();
   }
+}
+
+// ── AI response normaliser ─────────────────────────────────────────────────────
+//
+// Accepts either:
+//   A) Full sidecar JSON  { $version, analysis, asset, annotation, … }
+//   B) Sidecar with top-level analysis block { analysis: { scene, … }, asset: … }
+//   C) Raw AI analysis JSON (snake_case or camelCase top-level keys)
+//      e.g. { scene: {…}, identified_location: {…}, color_palette: {…}, … }
+//
+// Returns: { analysis, asset, usageScenarios }
+
+function _normalizeAIResponse(json) {
+  if (!json || typeof json !== 'object') return { analysis: {}, asset: {}, usageScenarios: [] };
+
+  // Case A/B — already structured as sidecar or has an analysis key
+  if (json.$version !== undefined || json.analysis !== undefined) {
+    return {
+      analysis:        json.analysis        || {},
+      asset:           json.asset           || {},
+      usageScenarios:  json.annotation?.usageScenarios || json.usage_scenarios || [],
+    };
+  }
+
+  // Case C — raw AI analysis JSON, map to schema
+  const analysis = {};
+
+  // Scene
+  if (json.scene) {
+    const s = json.scene;
+    analysis.scene = {
+      locationType:   s.location_type  || s.locationType,
+      indoorOutdoor:  s.indoor_outdoor || s.indoorOutdoor,
+      timeOfDay:      s.time_of_day    || s.timeOfDay,
+      season:         s.season,
+      weather:        s.weather,
+      visibility:     s.visibility,
+      atmosphere:     s.atmosphere,
+      style:          s.style,
+      settingDetails: s.setting_details || s.settingDetails || s.landscape_features || [],
+    };
+    // Remove undefined keys
+    Object.keys(analysis.scene).forEach(k => analysis.scene[k] === undefined && delete analysis.scene[k]);
+  }
+
+  // Subjects
+  if (json.subjects) analysis.subjects = json.subjects;
+
+  // Composition
+  if (json.composition) {
+    const c = json.composition;
+    analysis.composition = {
+      shotType:         c.shot_type          || c.shotType,
+      framing:          c.framing,
+      cameraAngle:      c.camera_angle       || c.cameraAngle,
+      cameraPerspective:c.camera_perspective || c.cameraPerspective,
+      viewpoint:        c.viewpoint,
+      foreground:       c.foreground,
+      midground:        c.midground,
+      background:       c.background,
+      horizonLine:      c.horizon_line       || c.horizonLine,
+      focus:            c.focus,
+      depthOfField:     c.depth_of_field     || c.depthOfField,
+      captureType:      c.capture_type       || c.captureType,
+    };
+    Object.keys(analysis.composition).forEach(k => analysis.composition[k] === undefined && delete analysis.composition[k]);
+  }
+
+  // Lighting
+  if (json.lighting) {
+    const l = json.lighting;
+    analysis.lighting = {
+      type:               l.type,
+      primarySource:      l.primary_source      || l.primarySource,
+      secondarySource:    l.secondary_source     || l.secondarySource,
+      quality:            l.quality,
+      skyCondition:       l.sky_condition        || l.skyCondition,
+      highlights:         l.highlights,
+      colorTemperatureK:  l.color_temperature_k  || l.colorTemperatureK || l.color_temperature,
+      shadows:            l.shadows,
+      exposureNote:       l.exposure_note        || l.exposureNote,
+    };
+    Object.keys(analysis.lighting).forEach(k => analysis.lighting[k] === undefined && delete analysis.lighting[k]);
+  }
+
+  // Colour palette — convert string arrays to {label} objects, keep existing {label,hex}
+  const rawPalette = json.color_palette || json.colorPalette;
+  if (rawPalette) {
+    const toEntries = arr => (arr || []).map(e =>
+      typeof e === 'string' ? { label: e } : e
+    );
+    analysis.colorPalette = {
+      dominant:  toEntries(rawPalette.dominant),
+      secondary: toEntries(rawPalette.secondary),
+      accent:    toEntries(rawPalette.accent),
+    };
+  }
+
+  // Objects
+  if (json.objects) analysis.objects = json.objects;
+
+  // AI Tags
+  if (json.tags?.length) analysis.tags = json.tags;
+
+  // Generative prompts
+  const rawPrompts = json.ai_generation_prompts || json.generationPrompts;
+  const rawCamSettings = json.camera_settings_for_replication || rawPrompts?.camera_settings_for_replication;
+  if (rawPrompts) {
+    analysis.generationPrompts = {
+      short:          rawPrompts.short,
+      detailed:       rawPrompts.detailed,
+      negativePrompt: rawPrompts.negative_prompt || rawPrompts.negativePrompt,
+    };
+    if (rawCamSettings) {
+      analysis.generationPrompts.replicationSettings = {
+        lensEquivalent: rawCamSettings.lens_equivalent || rawCamSettings.lensEquivalent,
+        aperture:       rawCamSettings.aperture,
+        shutterSpeed:   rawCamSettings.shutter_speed   || rawCamSettings.shutterSpeed,
+        iso:            rawCamSettings.iso              ? String(rawCamSettings.iso) : undefined,
+        whiteBalance:   rawCamSettings.white_balance    || rawCamSettings.whiteBalance,
+        depthOfField:   rawCamSettings.depth_of_field   || rawCamSettings.depthOfField,
+        technique:      rawCamSettings.technique,
+      };
+      Object.keys(analysis.generationPrompts.replicationSettings).forEach(
+        k => analysis.generationPrompts.replicationSettings[k] === undefined &&
+             delete analysis.generationPrompts.replicationSettings[k]
+      );
+    }
+    Object.keys(analysis.generationPrompts).forEach(k => analysis.generationPrompts[k] === undefined && delete analysis.generationPrompts[k]);
+  }
+
+  // Identified location
+  const rawLoc = json.identified_location || json.identifiedLocation;
+  if (rawLoc) {
+    analysis.identifiedLocation = {
+      name:                    rawLoc.name,
+      localName:               rawLoc.local_name      || rawLoc.localName || rawLoc.icelandic_name,
+      country:                 rawLoc.country,
+      region:                  rawLoc.region,
+      municipality:            rawLoc.municipality,
+      coordinatesApproximate:  rawLoc.coordinates_approximate || rawLoc.coordinatesApproximate,
+      historicalSignificance:  rawLoc.historical_significance || rawLoc.historicalSignificance,
+      architecturalPeriod:     rawLoc.architectural_period    || rawLoc.architecturalPeriod,
+      architect:               rawLoc.architect,
+      denomination:            rawLoc.denomination,
+      heritageStatus:          rawLoc.unesco_or_heritage_status || rawLoc.heritage_status || rawLoc.heritageStatus,
+      identificationConfidence:rawLoc.identification_confidence || rawLoc.identificationConfidence,
+      identificationBasis:     rawLoc.identification_basis     || rawLoc.identificationBasis,
+    };
+    Object.keys(analysis.identifiedLocation).forEach(k => analysis.identifiedLocation[k] === undefined && delete analysis.identifiedLocation[k]);
+  }
+
+  // Architecture
+  if (json.architecture) {
+    const a = json.architecture;
+    analysis.architecture = {
+      buildingType:         a.building_type          || a.buildingType,
+      style:                a.style,
+      constructionMaterial: a.construction_material  || a.constructionMaterial,
+      exteriorColor:        a.exterior_color         || a.exteriorColor,
+      roofMaterial:         a.roof_material          || a.roofMaterial,
+      condition:            a.condition,
+      components:           a.components,
+      distinctiveFeatures:  a.distinctive_features   || a.distinctiveFeatures,
+    };
+    Object.keys(analysis.architecture).forEach(k => analysis.architecture[k] === undefined && delete analysis.architecture[k]);
+  }
+
+  // DAM
+  const rawDam = json.dam_operational || json.dam;
+  if (rawDam) {
+    analysis.dam = {
+      contentSensitivity:   rawDam.content_sensitivity   || rawDam.contentSensitivity,
+      identityNotes:        rawDam.identity_notes         || rawDam.identityNotes,
+      propertyReleaseNotes: rawDam.property_release_notes || rawDam.propertyReleaseNotes,
+      brandingFlexibility:  rawDam.branding_flexibility   || rawDam.brandingFlexibility,
+      geoVerification:      rawDam.geo_verification       || rawDam.geoVerification,
+      limitations:          rawDam.limitations,
+    };
+    Object.keys(analysis.dam).forEach(k => analysis.dam[k] === undefined && delete analysis.dam[k]);
+  }
+
+  // Asset fields from raw format
+  const asset = {};
+  if (json.asset) {
+    const a = json.asset;
+    if (a.title)                                      asset.title             = a.title;
+    if (a.asset_type   || a.assetType)                asset.assetType         = a.asset_type || a.assetType;
+    if (a.capture_date || a.captureDate)              asset.captureDate       = a.capture_date || a.captureDate;
+    if (a.capture_time_approx || a.captureTimeApprox) asset.captureTimeApprox = a.capture_time_approx || a.captureTimeApprox;
+    if (a.format)                                     asset.format            = a.format;
+    if (a.aspect_ratio || a.aspectRatio)              asset.aspectRatio       = a.aspect_ratio || a.aspectRatio;
+    if (a.orientation)                                asset.orientation       = a.orientation;
+    if (a.content_rating || a.contentRating)          asset.contentRating     = a.content_rating || a.contentRating;
+    if (a.confidence || a.analysisConfidence)         asset.analysisConfidence= a.confidence || a.analysisConfidence;
+    if (a.resolution)                                 asset.resolution        = a.resolution;
+  }
+
+  const usageScenarios = json.usage_scenarios || json.usageScenarios || [];
+
+  return { analysis, asset, usageScenarios };
+}
+
+function _mergeUnique(existing, incoming) {
+  const set = new Set(existing);
+  (incoming || []).forEach(v => set.add(v));
+  return [...set];
 }
 
 // ── Binary helpers ─────────────────────────────────────────────────────────────

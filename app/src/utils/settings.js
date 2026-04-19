@@ -18,6 +18,15 @@ const DEFAULT_SETTINGS = {
     // model is missing or no subject is found. See utils/thumbnails.js.
     smart: false
   },
+  ai: {
+    // URL of the AI Image Describer endpoint.
+    // Receives a multipart/form-data POST with an `image` file field and an
+    // optional `filename` text field. Must return JSON matching (or mappable
+    // to) the Pic-Machina sidecar schema — either the full sidecar format
+    // (with a top-level `analysis` key) or the raw AI analysis format
+    // (with top-level keys: scene, subjects, composition, lighting, etc.).
+    describerEndpoint: ''
+  },
   palette: [
     { label: 'Black',  color: '#000000' },
     { label: 'White',  color: '#ffffff' },
