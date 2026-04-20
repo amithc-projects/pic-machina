@@ -53,6 +53,9 @@ function findNode(nodes, nodeId) {
 }
 
 export async function render(container, hash) {
+  // Captured during each preview run — used by the {{vars}} picker modal
+  // to show the current file's resolved variable values.
+  let _latestVarContext = null;
   const params   = new URLSearchParams((hash.split('?')[1] || ''));
   const recipeId = params.get('recipe');
   const nodeId   = params.get('node');
@@ -162,7 +165,21 @@ export async function render(container, hash) {
   if (def && def.params) {
     // Provide recipe variable names for autocomplete in variable-bind mode
     const getRecipeVars = () => (recipe?.params || []).map(p => p.name);
-    bindParamFieldEvents(container, def.params, 'ned', { getRecipeVars });
+    // Track the latest preview context so the {{vars}} picker can show
+    // resolved values for the currently-previewed file.
+    const getVarContext = () => {
+      const ctx = _latestVarContext || {};
+      return {
+        filename: ctx.filename || '',
+        ext:      ctx.ext || '',
+        exif:     ctx.exif || {},
+        meta:     ctx.meta || {},
+        sidecar:  ctx.sidecar || null,
+        recipe:   Object.fromEntries((recipe?.params || []).map(p => [p.name, p.defaultValue])),
+        recipeVars: getRecipeVars(),
+      };
+    };
+    bindParamFieldEvents(container, def.params, 'ned', { getRecipeVars, getVarContext });
   }
 
   let _previewTimer = null;
@@ -277,6 +294,14 @@ export async function render(container, hash) {
         filename: file.name, exif, meta: {}, variables: new Map(),
         originalFile: file,
         _previewMode: true,
+      };
+
+      // Cache this context so the {{vars}} picker can show resolved values
+      // for the currently-previewed file.
+      _latestVarContext = {
+        filename: file.name.replace(/\.[^.]+$/, ''),
+        ext: file.name.slice(file.name.lastIndexOf('.') + 1),
+        exif, meta: {}, sidecar: null,
       };
 
       // For video files, extract a representative frame as the canvas base.
