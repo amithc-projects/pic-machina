@@ -160,6 +160,90 @@ const TRANSITIONS = {
       }
       return color / weightSum;
     }
+  `,
+  filmBurn: `
+    vec4 transition(vec2 uv) {
+      vec4 f = getFromColor(uv);
+      vec4 t = getToColor(uv);
+      vec4 color = mix(f, t, progress);
+      float flash = smoothstep(0.0, 0.5, progress) * (1.0 - smoothstep(0.5, 1.0, progress));
+      vec3 burnColor = vec3(1.0, 0.8, 0.6) * flash * 1.5;
+      return min(color + vec4(burnColor, 0.0), 1.0);
+    }
+  `,
+  zoomFade: `
+    vec4 transition(vec2 uv) {
+      vec2 center = vec2(0.5, 0.5);
+      float s1 = 1.0 - progress * 0.5;
+      vec2 uv1 = (uv - center) * s1 + center;
+      float s2 = 1.5 - progress * 0.5;
+      vec2 uv2 = (uv - center) * s2 + center;
+      return mix(getFromColor(uv1), getToColor(uv2), progress);
+    }
+  `,
+  lumaWipe: `
+    vec4 transition(vec2 uv) {
+      vec4 f = getFromColor(uv);
+      vec4 t = getToColor(uv);
+      float luma = dot(t.rgb, vec3(0.299, 0.587, 0.114));
+      float p = smoothstep(luma * 0.5, luma * 0.5 + 0.5, progress);
+      return mix(f, t, p);
+    }
+  `,
+  vhsGlitch: `
+    float rand(vec2 co){
+        return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    }
+    vec4 transition(vec2 uv) {
+      float env = smoothstep(0.0, 0.5, progress) * (1.0 - smoothstep(0.5, 1.0, progress));
+      float glitchLine = rand(vec2(floor(uv.y * 20.0), 1.0)) * 2.0 - 1.0;
+      vec2 disp = vec2(glitchLine * env * 0.15, 0.0);
+      vec4 f = getFromColor(uv + disp);
+      vec4 t = getToColor(uv - disp);
+      float r = mix(getFromColor(uv + disp + vec2(0.02*env, 0)).r, getToColor(uv - disp + vec2(0.02*env, 0)).r, progress);
+      float g = mix(f.g, t.g, progress);
+      float b = mix(getFromColor(uv + disp - vec2(0.02*env, 0)).b, getToColor(uv - disp - vec2(0.02*env, 0)).b, progress);
+      return vec4(r, g, b, 1.0);
+    }
+  `,
+  venetianBlinds: `
+    vec4 transition(vec2 uv) {
+      float stripes = 12.0;
+      float stripIndex = floor(uv.y * stripes);
+      float p = progress * 1.2 - (stripIndex / stripes) * 0.2;
+      p = clamp(p, 0.0, 1.0);
+      float localY = fract(uv.y * stripes);
+      if (localY < p) {
+        return getToColor(uv);
+      } else {
+        return getFromColor(uv);
+      }
+    }
+  `,
+  liquidSwirl: `
+    vec4 transition(vec2 uv) {
+      vec2 center = vec2(0.5, 0.5);
+      vec2 toCenter = uv - center;
+      float dist = length(toCenter);
+      float angle = progress * 3.14159 * 2.5 * (1.0 - dist);
+      float s = sin(angle);
+      float c = cos(angle);
+      vec2 swirled = vec2(toCenter.x * c - toCenter.y * s, toCenter.x * s + toCenter.y * c);
+      swirled += center;
+      return mix(getFromColor(swirled), getToColor(uv), progress);
+    }
+  `,
+  radialWipe: `
+    vec4 transition(vec2 uv) {
+      vec2 toCenter = uv - vec2(0.5);
+      float angle = atan(toCenter.y, toCenter.x);
+      angle = (angle / (2.0 * 3.14159)) + 0.5; 
+      if (angle <= progress) {
+        return getToColor(uv);
+      } else {
+        return getFromColor(uv);
+      }
+    }
   `
 };
 
