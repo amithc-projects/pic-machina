@@ -10,6 +10,22 @@ function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/**
+ * Render a param label as HTML, converting any occurrence of the literal
+ * "{{vars}}" token (case-insensitive) into a clickable button that opens
+ * the variable picker modal for the field `id`.
+ *
+ * Recognised label hints: "{{vars}}", "{{var}}", "{{variables}}".
+ */
+function renderLabelHtml(label, id) {
+  const safe = escHtml(label || '');
+  return safe.replace(/\{\{(vars?|variables)\}\}/gi, (match) => {
+    return `<button type="button" class="ned-vars-link" data-vars-link="${id}"
+      title="Click to browse and insert variables"
+      style="background:none;border:none;padding:0 2px;margin:0;font:inherit;font-family:var(--font-mono,monospace);color:var(--ps-blue,#3b82f6);cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px">${match}</button>`;
+  });
+}
+
 /** Returns true if val is a {{...}} variable reference */
 function isVarRef(val) {
   return typeof val === 'string' && /^\{\{/.test(val.trim());
@@ -59,7 +75,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
     case 'boolean':
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<label class="ned-toggle">
@@ -82,7 +98,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
       
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<select id="${id}" name="${param.name}" class="${selClass}" data-value="${escHtml(String(val))}">
@@ -97,7 +113,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
     case 'range':
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}
             ${!varActive ? `<span id="${id}-val" class="mono text-sm" style="margin-left:auto;color:var(--ps-blue)">${val}</span>` : ''}
             ${supportsVarBind ? varBindBtn(id, varActive) : ''}
           </label>
@@ -127,7 +143,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
 
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<div class="ned-color-row" style="margin-bottom:4px;">
@@ -148,7 +164,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
     case 'number':
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<input type="number" id="${id}" name="${param.name}" class="ic-input"
@@ -160,14 +176,14 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
     case 'textarea':
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}</label>
           <textarea id="${id}" name="${param.name}" class="ic-input" rows="4">${escHtml(String(val))}</textarea>
         </div>`;
 
     default: // 'text'
       return `
         <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${escHtml(param.label)}</label>
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}</label>
           <input type="text" id="${id}" name="${param.name}" class="ic-input" value="${escHtml(String(val))}">
         </div>`;
   }
@@ -237,7 +253,34 @@ export function injectParamFieldStyles() {
  * @param {string} [prefix]
  * @param {object} [opts]      — { getRecipeVars: () => string[] } — optional list of recipe var names for autocomplete
  */
-export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getRecipeVars } = {}) {
+export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getRecipeVars, getVarContext } = {}) {
+  // ── Wire {{vars}} clickable label hints → variable picker modal ──
+  const varLinks = container.querySelectorAll('[data-vars-link]');
+  if (varLinks.length) {
+    // Merge getRecipeVars into the context accessor so the picker always
+    // has the recipe variable list even when the caller didn't pass ctx.
+    const ctxAccessor = () => {
+      const base = (typeof getVarContext === 'function') ? (getVarContext() || {}) : {};
+      if (!base.recipeVars && typeof getRecipeVars === 'function') {
+        base.recipeVars = getRecipeVars() || [];
+      }
+      return base;
+    };
+    varLinks.forEach(link => {
+      if (link.dataset.varsWired === '1') return;
+      link.dataset.varsWired = '1';
+      link.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetId = link.getAttribute('data-vars-link');
+        const target = container.querySelector(`#${targetId}`);
+        if (!target) return;
+        const { openVariablePicker } = await import('./variable-picker.js');
+        openVariablePicker(target, { getVarContext: ctxAccessor });
+      });
+    });
+  }
+
   for (const p of paramDefs) {
     const id = `${prefix}-param-${p.name}`;
 
@@ -285,7 +328,7 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
           tmp.innerHTML = html;
           field.replaceWith(tmp.firstElementChild);
           // Re-wire events for the newly inserted field
-          bindParamFieldEvents(container, [p], prefix, { getRecipeVars });
+          bindParamFieldEvents(container, [p], prefix, { getRecipeVars, getVarContext });
         } else {
           // Switch to variable mode — replace widget with text input
           const currentNativeEl = container.querySelector(`#${id}`);
@@ -304,7 +347,7 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
             if (getRecipeVars) _wireVarAutocomplete(newInput, getRecipeVars);
           }
           // Re-wire toggle on the new element
-          bindParamFieldEvents(container, [p], prefix, { getRecipeVars });
+          bindParamFieldEvents(container, [p], prefix, { getRecipeVars, getVarContext });
         }
       });
 

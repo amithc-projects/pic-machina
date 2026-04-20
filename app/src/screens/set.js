@@ -938,12 +938,18 @@ export async function render(container, hash) {
     const storageKey = `ic-run-params-${currentRecipe.id}`;
     const lastUsed   = JSON.parse(localStorage.getItem(storageKey) || 'null') || {};
     fields.innerHTML = paramDefs.map(p => renderParamField(p, lastUsed[p.name] ?? p.defaultValue, 'rp', { showVarBind: false })).join('');
-    bindParamFieldEvents(container, paramDefs, 'rp');
+    bindParamFieldEvents(container, paramDefs, 'rp', {
+      getRecipeVars: () => paramDefs.map(p => p.name),
+      getVarContext: () => ({ recipeVars: paramDefs.map(p => p.name) }),
+    });
 
     container.querySelector('#set-params-reset')?.addEventListener('click', () => {
       localStorage.removeItem(storageKey);
       fields.innerHTML = paramDefs.map(p => renderParamField(p, p.defaultValue, 'rp', { showVarBind: false })).join('');
-      bindParamFieldEvents(container, paramDefs, 'rp');
+      bindParamFieldEvents(container, paramDefs, 'rp', {
+      getRecipeVars: () => paramDefs.map(p => p.name),
+      getVarContext: () => ({ recipeVars: paramDefs.map(p => p.name) }),
+    });
     }, { once: true });
   }
 
