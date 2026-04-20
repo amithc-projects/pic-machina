@@ -245,6 +245,8 @@ export async function render(container, hash) {
       await setCurrentFolder(inputHandle);
       await dbSaveFolderHistory('input', inputHandle);
       await renderMRUs();
+      // New folder from MRU → reset selection so we don't carry filenames across folders
+      selectedIds.clear();
       await refreshImageGrid();
       updateRunButton();
       e.target.value = '';
@@ -303,6 +305,8 @@ export async function render(container, hash) {
       container.querySelector('#set-input-path').textContent = inputHandle.name;
       await dbSaveFolderHistory('input', inputHandle);
       await renderMRUs();
+      // New folder picked → reset selection so we don't carry filenames across folders
+      selectedIds.clear();
       await refreshImageGrid();
       updateRunButton();
     } catch (e) { if (e.name !== 'AbortError') console.error(e); }
@@ -476,13 +480,14 @@ export async function render(container, hash) {
         loadVideoPreviews(inputHandle).then(m => { setVideoPreviews = m; }),
       ]);
       selectedIds.clear();
-      
-      if (previousSelection.size > 0 && selectedFiles.some(f => previousSelection.has(f.name))) {
+
+      // Preserve any previously-selected filenames that still exist in the new listing
+      // (covers recipe change on same folder, file-type filter toggle, etc.). If nothing
+      // carries over, default to "none selected" — the user can Select All explicitly.
+      if (previousSelection.size > 0) {
         selectedFiles.forEach(f => {
           if (previousSelection.has(f.name)) selectedIds.set(f.name, previousSelection.get(f.name));
         });
-      } else {
-        selectedFiles.forEach((f, i) => selectedIds.set(f.name, i + 1));
       }
       
       renderImageGrid(onlyVideo, includeVideo);
