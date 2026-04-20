@@ -55,7 +55,23 @@ function resolveKey(key, ctx) {
   const [ns, ...rest] = key.split('.');
   const field = rest.join('.');
 
-  if (ns === 'exif' || ns === 'meta') return ctx.exif?.[field] ?? ctx.meta?.[field] ?? null;
+  if (ns === 'exif' || ns === 'meta') {
+    // Try flat key first (keys with dots in the name, e.g. "Exif.DateTimeOriginal")
+    const src = ns === 'exif' ? ctx.exif : ctx.meta;
+    if (src && src[field] != null && typeof src[field] !== 'object') return String(src[field]);
+    // Fall back to walking the dotted path for nested objects (e.g. exif.gps.lat)
+    const parts = field.split('.');
+    let val = src;
+    for (const p of parts) {
+      if (val == null || typeof val !== 'object') return null;
+      val = val[p];
+    }
+    if (Array.isArray(val)) return val.join(', ');
+    if (val != null && typeof val !== 'object') return String(val);
+    // Last resort — check the other namespace (legacy: exif|meta were aliased)
+    const other = ns === 'exif' ? ctx.meta : ctx.exif;
+    return other?.[field] != null ? String(other[field]) : null;
+  }
   if (ns === 'recipe')  return ctx.recipe?.[field] != null ? String(ctx.recipe[field]) : null;
   if (ns === 'loop')    return `{{loop.${field}}}`;   // v1.2 reserved
   if (ns === 'sidecar') {

@@ -260,11 +260,17 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
     // Merge getRecipeVars into the context accessor so the picker always
     // has the recipe variable list even when the caller didn't pass ctx.
     const ctxAccessor = () => {
-      const base = (typeof getVarContext === 'function') ? (getVarContext() || {}) : {};
-      if (!base.recipeVars && typeof getRecipeVars === 'function') {
-        base.recipeVars = getRecipeVars() || [];
-      }
-      return base;
+      const raw = (typeof getVarContext === 'function') ? getVarContext() : {};
+      const injectRecipe = (b) => {
+        const base = b || {};
+        if (!base.recipeVars && typeof getRecipeVars === 'function') {
+          base.recipeVars = getRecipeVars() || [];
+        }
+        return base;
+      };
+      // getVarContext may be async (ned.js walks getImageInfo()) — unwrap.
+      if (raw && typeof raw.then === 'function') return raw.then(injectRecipe);
+      return injectRecipe(raw);
     };
     varLinks.forEach(link => {
       if (link.dataset.varsWired === '1') return;

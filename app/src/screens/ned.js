@@ -166,18 +166,44 @@ export async function render(container, hash) {
     // Provide recipe variable names for autocomplete in variable-bind mode
     const getRecipeVars = () => (recipe?.params || []).map(p => p.name);
     // Track the latest preview context so the {{vars}} picker can show
-    // resolved values for the currently-previewed file.
-    const getVarContext = () => {
+    // resolved values for the currently-previewed file. We return a promise
+    // so the picker can `await` the richer getImageInfo() walk — that gets
+    // us XMP / IPTC / camera / capture sections the flat extractExif misses.
+    const getVarContext = async () => {
       const ctx = _latestVarContext || {};
-      return {
+      const baseRecipe = Object.fromEntries((recipe?.params || []).map(p => [p.name, p.defaultValue]));
+      const base = {
         filename: ctx.filename || '',
         ext:      ctx.ext || '',
-        exif:     ctx.exif || {},
+        exif:     { ...(ctx.exif || {}) },
         meta:     ctx.meta || {},
         sidecar:  ctx.sidecar || null,
-        recipe:   Object.fromEntries((recipe?.params || []).map(p => [p.name, p.defaultValue])),
+        recipe:   baseRecipe,
         recipeVars: getRecipeVars(),
+        sourceFilename: ctx.sourceFilename || null,
       };
+      // Pull structured info from the currently-previewed file if available —
+      // camera/capture/meta/gps/xmp/iptc all get surfaced to the picker.
+      if (ctx.file) {
+        try {
+          const { getImageInfo } = await import('../utils/image-info.js');
+          const info = await getImageInfo(ctx.file);
+          // Merge structured sections into exif so interpolate() can resolve
+          // dotted paths like {{exif.camera.Make}} or {{exif.gps.lat}}.
+          base.exif = {
+            ...base.exif,
+            camera:  info.camera  || {},
+            capture: info.capture || {},
+            ...(info.gps ? { gps: info.gps } : {}),
+            file:    { width: info.width, height: info.height, size: info.fileSize, mimeType: info.mimeType },
+          };
+          base.xmp  = info.xmp  || {};
+          base.iptc = info.iptc || {};
+          // Author/rights live on info.meta — merge into meta ns
+          base.meta = { ...(base.meta || {}), ...(info.meta || {}) };
+        } catch { /* info is best-effort */ }
+      }
+      return base;
     };
     bindParamFieldEvents(container, def.params, 'ned', { getRecipeVars, getVarContext });
   }
@@ -279,6 +305,18 @@ export async function render(container, hash) {
       const params = collectParams(container, def.params || [], 'ned');
       const exif   = await extractExif(file);
 
+      // Load sidecar JSON for this file, if an input folder handle is available.
+      // Best-effort: missing / unreadable sidecars just leave sidecar=null.
+      let sidecar = null;
+      try {
+        const { getFolder }   = await import('../data/folders.js');
+        const { readSidecar } = await import('../data/sidecar.js');
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) {
+          sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
+        }
+      } catch { /* best-effort */ }
+
       // Update Notice
       let notice = null;
       if (node.transformId === 'flow-geo-timeline' && (!exif?.gps?.lat)) {
@@ -291,7 +329,7 @@ export async function render(container, hash) {
       }
 
       const context = {
-        filename: file.name, exif, meta: {}, variables: new Map(),
+        filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
         originalFile: file,
         _previewMode: true,
       };
@@ -301,7 +339,9 @@ export async function render(container, hash) {
       _latestVarContext = {
         filename: file.name.replace(/\.[^.]+$/, ''),
         ext: file.name.slice(file.name.lastIndexOf('.') + 1),
-        exif, meta: {}, sidecar: null,
+        sourceFilename: file.name,
+        file,                 // passed to getImageInfo() for the richer walk
+        exif, meta: {}, sidecar,
       };
 
       // For video files, extract a representative frame as the canvas base.

@@ -29,11 +29,105 @@ async function _throttledFetch(url) {
   return fetch(url, { headers: { 'Accept-Language': 'en' } });
 }
 
+// ─── Schema version + migration ────────────────────────────
+//
+// Bump CURRENT_SIDECAR_VERSION whenever the saved shape changes. On read
+// we migrate in-memory (non-destructive) so callers always see a complete
+// object. On write we migrate again and stamp the current version so the
+// file on disk heals itself the next time the user saves anything.
+//
+// v1 → v2: added `annotation.usageScenarios`, `asset.title`, `asset.contentRating`.
+
+export const CURRENT_SIDECAR_VERSION = 2;
+
+/**
+ * Factory: produces a fully-populated sidecar object with sensible defaults.
+ * Safe to deep-merge against — every section exists.
+ */
+export function createEmptySidecar() {
+  return {
+    $version: CURRENT_SIDECAR_VERSION,
+    source: {
+      filename:  '',
+      sizeBytes: 0,
+    },
+    exif: {
+      cameraMake:   null,
+      cameraModel:  null,
+      focalLength:  null,
+      aperture:     null,
+      iso:          null,
+      shutterSpeed: null,
+      dateTaken:    null,
+      gpsLat:       null,
+      gpsLng:       null,
+      gpsAltitude:  null,
+    },
+    geo: {
+      city:        '',
+      region:      '',
+      country:     '',
+      countryCode: '',
+    },
+    annotation: {
+      rating:         null,
+      flag:           null,
+      tags:           [],
+      caption:        '',
+      usageScenarios: [],
+    },
+    asset: {
+      title:         '',
+      contentRating: 'general',
+    },
+    computed:   {},
+    processing: [],
+  };
+}
+
+/**
+ * Upgrade an arbitrary sidecar object to the current schema. Missing
+ * sections/fields are filled from the empty template; unknown keys are
+ * preserved (we never want to silently drop user data). Idempotent.
+ */
+export function migrateSidecar(data) {
+  if (!data || typeof data !== 'object') return createEmptySidecar();
+  const empty = createEmptySidecar();
+  const out = {};
+
+  // Merge each known section, preserving existing values where present.
+  for (const section of Object.keys(empty)) {
+    if (section === '$version') continue;
+    const defaults = empty[section];
+    const existing = data[section];
+    if (Array.isArray(defaults)) {
+      out[section] = Array.isArray(existing) ? existing : defaults;
+    } else if (defaults && typeof defaults === 'object') {
+      out[section] = {
+        ...defaults,
+        ...(existing && typeof existing === 'object' && !Array.isArray(existing) ? existing : {}),
+      };
+    } else {
+      out[section] = existing !== undefined ? existing : defaults;
+    }
+  }
+
+  // Preserve any unknown top-level keys so we don't drop data on round-trip.
+  for (const k of Object.keys(data)) {
+    if (!(k in empty) && k !== '$version') out[k] = data[k];
+  }
+
+  out.$version = CURRENT_SIDECAR_VERSION;
+  return out;
+}
+
 // ─── Read / Write ─────────────────────────────────────────
 
 /**
  * Read sidecar for `filename` from `dirHandle`.
- * Returns parsed object or null if the sidecar doesn't exist / is malformed.
+ * Returns a schema-complete object (migrated in-memory) or null if the
+ * sidecar doesn't exist / is malformed. The file on disk is NOT modified
+ * here — the next writeSidecar() call persists the upgraded shape.
  */
 export async function readSidecar(dirHandle, filename) {
   if (!dirHandle) return null;
@@ -41,7 +135,8 @@ export async function readSidecar(dirHandle, filename) {
     const fh   = await dirHandle.getFileHandle(`${filename}${SIDECAR_EXT}`);
     const file  = await fh.getFile();
     const text  = await file.text();
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    return migrateSidecar(parsed);
   } catch {
     return null;
   }
@@ -49,13 +144,15 @@ export async function readSidecar(dirHandle, filename) {
 
 /**
  * Write sidecar for `filename` to `dirHandle`.
- * Creates or overwrites `filename.json`.
+ * Always migrates + stamps $version before serialising, so files saved by
+ * an older build get healed on the next edit.
  */
 export async function writeSidecar(dirHandle, filename, data) {
   if (!dirHandle) throw new Error('No directory handle');
+  const migrated = migrateSidecar(data);
   const fh       = await dirHandle.getFileHandle(`${filename}${SIDECAR_EXT}`, { create: true });
   const writable  = await fh.createWritable();
-  await writable.write(JSON.stringify(data, null, 2));
+  await writable.write(JSON.stringify(migrated, null, 2));
   await writable.close();
 }
 
@@ -170,6 +267,9 @@ export const SIDECAR_SCHEMA_KEYS = [
   'sidecar.annotation.flag',
   'sidecar.annotation.tags',
   'sidecar.annotation.caption',
+  'sidecar.annotation.usageScenarios',
+  'sidecar.asset.title',
+  'sidecar.asset.contentRating',
   'sidecar.geo.city',
   'sidecar.geo.region',
   'sidecar.geo.country',
@@ -183,8 +283,83 @@ export const SIDECAR_SCHEMA_KEYS = [
   'sidecar.exif.dateTaken',
   'sidecar.exif.gpsLat',
   'sidecar.exif.gpsLng',
+  'sidecar.exif.gpsAltitude',
   'sidecar.computed.sharpnessScore',
   'sidecar.computed.blurLabel',
   'sidecar.source.filename',
   'sidecar.source.sizeBytes',
+];
+
+/**
+ * Structured view of the sidecar schema — mirrors the section layout of
+ * the sidecar drawer (src/components/sidecar-drawer.js) so other UIs (the
+ * variable picker, autocomplete help, etc.) can render a matching
+ * hierarchy with the same group names and expand/collapse defaults.
+ *
+ * `defaultOpen` matches the drawer: Annotation is always expanded;
+ * Location is expanded by default; Camera & EXIF / Computed / Source
+ * collapse by default.
+ */
+export const SIDECAR_SCHEMA_GROUPS = [
+  {
+    title: 'Annotation',
+    defaultOpen: true,
+    keys: [
+      { key: 'sidecar.annotation.rating',         label: 'Rating'          },
+      { key: 'sidecar.annotation.flag',           label: 'Flag'            },
+      { key: 'sidecar.annotation.tags',           label: 'Tags'            },
+      { key: 'sidecar.annotation.caption',        label: 'Caption'         },
+      { key: 'sidecar.annotation.usageScenarios', label: 'Usage Scenarios' },
+    ],
+  },
+  {
+    title: 'Asset',
+    defaultOpen: true,
+    keys: [
+      { key: 'sidecar.asset.title',         label: 'Title'          },
+      { key: 'sidecar.asset.contentRating', label: 'Content Rating' },
+    ],
+  },
+  {
+    title: 'Location',
+    defaultOpen: true,
+    keys: [
+      { key: 'sidecar.geo.city',        label: 'City'         },
+      { key: 'sidecar.geo.region',      label: 'Region'       },
+      { key: 'sidecar.geo.country',     label: 'Country'      },
+      { key: 'sidecar.geo.countryCode', label: 'Country Code' },
+    ],
+  },
+  {
+    title: 'Camera & EXIF',
+    defaultOpen: false,
+    keys: [
+      { key: 'sidecar.exif.cameraMake',   label: 'Camera Make'   },
+      { key: 'sidecar.exif.cameraModel',  label: 'Camera Model'  },
+      { key: 'sidecar.exif.focalLength',  label: 'Focal Length'  },
+      { key: 'sidecar.exif.aperture',     label: 'Aperture'      },
+      { key: 'sidecar.exif.iso',          label: 'ISO'           },
+      { key: 'sidecar.exif.shutterSpeed', label: 'Shutter Speed' },
+      { key: 'sidecar.exif.dateTaken',    label: 'Date Taken'    },
+      { key: 'sidecar.exif.gpsLat',       label: 'GPS Latitude'  },
+      { key: 'sidecar.exif.gpsLng',       label: 'GPS Longitude' },
+      { key: 'sidecar.exif.gpsAltitude',  label: 'GPS Altitude'  },
+    ],
+  },
+  {
+    title: 'Computed',
+    defaultOpen: false,
+    keys: [
+      { key: 'sidecar.computed.sharpnessScore', label: 'Sharpness Score' },
+      { key: 'sidecar.computed.blurLabel',      label: 'Blur Label'      },
+    ],
+  },
+  {
+    title: 'Source',
+    defaultOpen: false,
+    keys: [
+      { key: 'sidecar.source.filename',  label: 'Filename'  },
+      { key: 'sidecar.source.sizeBytes', label: 'Size (bytes)' },
+    ],
+  },
 ];

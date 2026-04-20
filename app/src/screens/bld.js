@@ -496,8 +496,18 @@ export async function render(container, hash) {
       }
 
       const exif = await extractExif(file);
+
+      // Load sidecar JSON (best-effort) so {{sidecar.*}} tokens resolve in the preview.
+      let sidecar = null;
+      try {
+        const { getFolder }   = await import('../data/folders.js');
+        const { readSidecar } = await import('../data/sidecar.js');
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
+      } catch { /* best-effort */ }
+
       const context = {
-        filename: file.name, exif, meta: {}, variables: new Map(),
+        filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
         originalFile: file,   // needed by video transforms
         _previewMode: true,   // signals processor to use fast canvas path
       };
@@ -524,7 +534,7 @@ export async function render(container, hash) {
         if (prevId) {
           const proc2 = new ImageProcessor();
           const ctx2 = {
-            filename: file.name, exif, meta: {}, variables: new Map(),
+            filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
             originalFile: file, _previewMode: true,
           };
           beforeUrl = await proc2.previewDataUrl(imageSource, draft.nodes, ctx2, prevId);
