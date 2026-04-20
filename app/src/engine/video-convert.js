@@ -571,7 +571,7 @@ async function getVideoInfo(file) {
  * @param {{ fps?: number, width?: number, height?: number, bitrate?: number, onLog?: function }} options
  * @returns {Promise<Blob>}
  */
-export async function concatVideos(files, { fps = 30, width, height, bitrate = 8_000_000, onLog } = {}) {
+export async function concatVideos(files, { fps = 30, width, height, bitrate = 8_000_000, transitionMode = 'none', transitionDuration = 1, onLog } = {}) {
   const log = (msg) => onLog?.('info', msg);
   if (!files.length) throw new Error('concatVideos: no files provided');
 
@@ -611,6 +611,10 @@ export async function concatVideos(files, { fps = 30, width, height, bitrate = 8
   });
   encoder.configure(codecConfig);
 
+  const { WebGLCompositor } = await import('./stitcher.js');
+  const compositor = (transitionMode !== 'none' && transitionDuration > 0) ? new WebGLCompositor(encW, encH) : null;
+  const transFrames = compositor ? Math.round(transitionDuration * outFPS) : 0;
+
   const canvas = document.createElement('canvas');
   canvas.width  = encW;
   canvas.height = encH;
@@ -618,68 +622,136 @@ export async function concatVideos(files, { fps = 30, width, height, bitrate = 8
   let frameIndex = 0;
 
   const encodeWork = async () => {
-    for (let fi = 0; fi < files.length; fi++) {
-      const file  = files[fi];
-      const info  = infos[fi];
-      const total = Math.ceil(info.duration * outFPS);
+    let activeVideo = null;
+    let nextVideo = null;
 
-      const url   = URL.createObjectURL(file);
+    const loadVideoElement = async (file) => {
+      const url = URL.createObjectURL(file);
       const video = document.createElement('video');
-      video.muted    = true;
+      video.muted = true;
       video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
       document.body.appendChild(video);
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = resolve;
+        video.onerror = () => reject(new Error(`Failed to load: ${file.name}`));
+        video.src = url;
+        video.load();
+      });
+      const seek = (time) => new Promise((resolve, reject) => {
+        video.onseeked = resolve;
+        video.onerror = () => reject(new Error('Seek failed'));
+        video.currentTime = time;
+      });
+      return { element: video, url, seek };
+    };
 
-      try {
-        await new Promise((resolve, reject) => {
-          video.onloadedmetadata = resolve;
-          video.onerror = () => reject(new Error(`Failed to load: ${file.name}`));
-          video.src = url;
-          video.load();
-        });
+    const cleanupVideoId = (vid) => {
+      if (!vid) return;
+      document.body.removeChild(vid.element);
+      URL.revokeObjectURL(vid.url);
+    };
 
-        const dur = info.duration.toFixed(1);
-        log(`File ${fi + 1}/${files.length}: ${file.name} (${dur}s)`);
+    activeVideo = await loadVideoElement(files[0]);
 
-        let lastLoggedPct = -1;
+    for (let fi = 0; fi < files.length; fi++) {
+      const file = files[fi];
+      const info = infos[fi];
+      const totalFrames = Math.ceil(info.duration * outFPS);
+      const isLastClip = (fi === files.length - 1);
+      
+      const dur = info.duration.toFixed(1);
+      log(`File ${fi + 1}/${files.length}: ${file.name} (${dur}s)`);
 
-        for (let f = 0; f < total; f++) {
-          const time = f / outFPS;
-          if (time >= info.duration) break;
+      if (!isLastClip) {
+        nextVideo = await loadVideoElement(files[fi+1]);
+      } else {
+        nextVideo = null;
+      }
 
-          await new Promise((resolve, reject) => {
-            video.onseeked = resolve;
-            video.onerror  = () => reject(new Error(`Seek failed in: ${file.name}`));
-            video.currentTime = time;
-          });
+      // If fi == 0, we start at frame 0. If fi > 0, we've already rendered `transFrames` of THIS video 
+      // during the PREVIOUS clip's transition. So our standalone phase starts at `transFrames`.
+      const startFrameOffset = (fi === 0 || transFrames === 0) ? 0 : transFrames;
+      
+      // Guard against clips shorter than the transition duration
+      const validTransFrames = Math.min(transFrames, totalFrames);
+      
+      const standaloneFramesToPlay = isLastClip 
+         ? totalFrames - startFrameOffset
+         : totalFrames - validTransFrames - startFrameOffset;
 
-          ctx.clearRect(0, 0, outW, outH);
-          ctx.drawImage(video, 0, 0, outW, outH);
+      if (standaloneFramesToPlay < 0) {
+        log(`  Warning: clip ${fi} is too short for full transition.`);
+      }
 
-          // Throttle if the encoder queue is backing up
-          while (encoder.encodeQueueSize > 10) {
-            await new Promise(r => setTimeout(r, 0));
-          }
-
-          const ts = frameIndex * (1_000_000 / outFPS);
-          const vf = new VideoFrame(canvas, { timestamp: ts });
-          encoder.encode(vf, { keyFrame: f === 0 });
-          vf.close();
-          frameIndex++;
-
-          // Log progress every 10%
-          const pct = Math.floor((f / total) * 10) * 10;
-          if (pct > lastLoggedPct) {
+      // 1) Standalone Phase
+      let lastLoggedPct = -1;
+      for (let f = 0; f < Math.max(0, standaloneFramesToPlay); f++) {
+         const localFrame = startFrameOffset + f;
+         const time = localFrame / outFPS;
+         if (time >= info.duration) break;
+         
+         await activeVideo.seek(time);
+         
+         ctx.clearRect(0, 0, outW, outH);
+         ctx.drawImage(activeVideo.element, 0, 0, outW, outH);
+         
+         while (encoder.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 0));
+         const ts = frameIndex * (1_000_000 / outFPS);
+         const vf = new VideoFrame(canvas, { timestamp: ts });
+         encoder.encode(vf, { keyFrame: frameIndex % 30 === 0 });
+         vf.close();
+         frameIndex++;
+         
+         // Log progress
+         const pct = Math.floor((localFrame / totalFrames) * 10) * 10;
+         if (pct > lastLoggedPct) {
             lastLoggedPct = pct;
             log(`  ${pct}% — ${time.toFixed(1)}s / ${dur}s`);
-          }
-        }
-
-        // Flush after each clip to ensure clean keyframe boundaries
-        await encoder.flush();
-      } finally {
-        document.body.removeChild(video);
-        URL.revokeObjectURL(url);
+         }
       }
+      
+      // 2) Transition Phase
+      if (nextVideo && validTransFrames > 0) {
+         log(`  [Transition] ${transitionMode} into ${files[fi+1].name}`);
+         for (let f = 0; f < validTransFrames; f++) {
+            const timeA = (startFrameOffset + Math.max(0, standaloneFramesToPlay) + f) / outFPS;
+            const timeB = f / outFPS; // next clip starts from 0
+            
+            await Promise.all([
+               activeVideo.seek(Math.min(timeA, info.duration - 0.01)),
+               nextVideo.seek(Math.min(timeB, infos[fi+1].duration - 0.01))
+            ]);
+            
+            const gl = compositor.gl;
+            const fromTex = compositor.createTexture(activeVideo.element);
+            const toTex = compositor.createTexture(nextVideo.element);
+            
+            compositor.renderFrame({
+              programName: transitionMode,
+              fromTex, toTex,
+              progress: f / (validTransFrames - 1),
+              fromMotion: null, toMotion: null
+            });
+            
+            gl.deleteTexture(fromTex);
+            gl.deleteTexture(toTex);
+            
+            ctx.clearRect(0, 0, outW, outH);
+            ctx.drawImage(compositor.canvas, 0, 0, outW, outH);
+            
+            while (encoder.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 0));
+            const ts = frameIndex * (1_000_000 / outFPS);
+            const vf = new VideoFrame(canvas, { timestamp: ts });
+            encoder.encode(vf, { keyFrame: frameIndex % 30 === 0 });
+            vf.close();
+            frameIndex++;
+         }
+      }
+      
+      cleanupVideoId(activeVideo);
+      activeVideo = nextVideo;
+      
+      await encoder.flush();
     }
 
     await encoder.flush();

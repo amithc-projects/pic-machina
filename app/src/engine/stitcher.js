@@ -89,10 +89,81 @@ const TRANSITIONS = {
       vec2 p = dist > 0.0 ? (floor(uv / squareSize) + 0.5) * squareSize : uv;
       return mix(getFromColor(p), getToColor(p), progress);
     }
+  `,
+  dipToBlack: `
+    vec4 transition(vec2 uv) {
+      if (progress < 0.5) {
+        return mix(getFromColor(uv), vec4(0.0, 0.0, 0.0, 1.0), progress * 2.0);
+      } else {
+        return mix(vec4(0.0, 0.0, 0.0, 1.0), getToColor(uv), (progress - 0.5) * 2.0);
+      }
+    }
+  `,
+  pushLeft: `
+    vec4 transition(vec2 uv) {
+      vec2 f_uv = uv + vec2(progress, 0.0);
+      vec2 t_uv = uv + vec2(progress - 1.0, 0.0);
+      if (uv.x < 1.0 - progress) {
+        return getFromColor(f_uv);
+      } else {
+        return getToColor(t_uv);
+      }
+    }
+  `,
+  pushRight: `
+    vec4 transition(vec2 uv) {
+      vec2 f_uv = uv + vec2(-progress, 0.0);
+      vec2 t_uv = uv + vec2(1.0 - progress, 0.0);
+      if (uv.x > progress) {
+        return getFromColor(f_uv);
+      } else {
+        return getToColor(t_uv);
+      }
+    }
+  `,
+  whipPan: `
+    vec4 transition(vec2 uv) {
+      // 1. Calculate base push
+      vec2 f_uv = uv + vec2(progress, 0.0);
+      vec2 t_uv = uv + vec2(progress - 1.0, 0.0);
+      
+      // 2. Base color choice (like Push Left)
+      vec4 color = vec4(0.0);
+      
+      // 3. Apply heavy directional blur near the middle of the transition
+      // Max blur amount at progress = 0.5
+      float blurLevel = sin(progress * 3.14159);
+      float blurScale = blurLevel * 0.15; // Max 15% UV shift per tap
+      
+      // Multi-tap horizontal blur
+      int taps = 7;
+      float weightSum = 0.0;
+      
+      for(int i = -3; i <= 3; i++) {
+        float offset = float(i) * blurScale / 3.0;
+        vec2 sample_uv = uv + vec2(offset, 0.0);
+        
+        vec2 sf_uv = sample_uv + vec2(progress, 0.0);
+        vec2 st_uv = sample_uv + vec2(progress - 1.0, 0.0);
+        
+        vec4 sampleColor = vec4(0.0);
+        if (sample_uv.x < 1.0 - progress) {
+          sampleColor = getFromColor(sf_uv);
+        } else {
+          sampleColor = getToColor(st_uv);
+        }
+        
+        // Simple Gaussian distribution approx
+        float weight = exp(-float(i*i)*0.2); 
+        color += sampleColor * weight;
+        weightSum += weight;
+      }
+      return color / weightSum;
+    }
   `
 };
 
-class WebGLCompositor {
+export class WebGLCompositor {
   constructor(width, height) {
     this.canvas = new OffscreenCanvas(width, height);
     this.gl = this.canvas.getContext('webgl');

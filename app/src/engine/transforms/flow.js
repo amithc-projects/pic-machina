@@ -99,7 +99,11 @@ registry.register({
     { name: 'transitionMode',     label: 'Transition Effect',         type: 'select',
       options: [
         { label: 'Crossfade',        value: 'crossfade'  },
+        { label: 'Dip to Black',     value: 'dipToBlack' },
         { label: 'Wipe Right',       value: 'wipeRight'  },
+        { label: 'Push Left',        value: 'pushLeft'   },
+        { label: 'Push Right',       value: 'pushRight'  },
+        { label: 'Whip Pan',         value: 'whipPan'    },
         { label: 'Circle Crop Wipe', value: 'circleCrop' },
         { label: 'Pixelize / Glitch',value: 'pixelize'   },
         { label: 'Random Shuffle',   value: 'random'     }
@@ -634,6 +638,21 @@ registry.register({
     { name: 'width',    label: 'Output Width (px — leave blank to use first video\'s width)',  type: 'number', defaultValue: '' },
     { name: 'height',   label: 'Output Height (px — leave blank to use first video\'s height)', type: 'number', defaultValue: '' },
     { name: 'bitrate',  label: 'Bitrate (bps)',        type: 'number', defaultValue: 8000000 },
+    { name: 'transitionMode', label: 'Transition Effect', type: 'select',
+      options: [
+        { label: 'None (Hard Cut)',  value: 'none'       },
+        { label: 'Crossfade',        value: 'crossfade'  },
+        { label: 'Dip to Black',     value: 'dipToBlack' },
+        { label: 'Wipe Right',       value: 'wipeRight'  },
+        { label: 'Push Left',        value: 'pushLeft'   },
+        { label: 'Push Right',       value: 'pushRight'  },
+        { label: 'Whip Pan',         value: 'whipPan'    },
+        { label: 'Circle Crop Wipe', value: 'circleCrop' },
+        { label: 'Pixelize / Glitch',value: 'pixelize'   },
+        { label: 'Random Shuffle',   value: 'random'     }
+      ],
+      defaultValue: 'none' },
+    { name: 'transitionDuration', label: 'Transition Duration (sec)', type: 'number', defaultValue: 1 },
   ],
   apply() { /* handled by Processor as aggregation node — collects files, then concatenates */ }
 });

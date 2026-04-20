@@ -329,6 +329,8 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
           width:   p.width   || undefined,
           height:  p.height  || undefined,
           bitrate: p.bitrate || 8_000_000,
+          transitionMode: p.transitionMode || 'none',
+          transitionDuration: Number(p.transitionDuration) || 0,
           onLog,
         });
         let fname = p.filename || 'concatenated.mp4';
