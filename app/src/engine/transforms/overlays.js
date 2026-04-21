@@ -1066,11 +1066,16 @@ registry.register({
   icon: 'subtitles',
   description: 'Dynamically parses external SRT or WEBVTT subtitle tracks and stamps active captions over the video at their specified timestamps.',
   params: [
-     { name: 'subtitleFile',   label: 'Subtitle URI (.srt / .vtt)', type: 'text', defaultValue: '' },
+     { name: 'subtitleFile',   label: 'Subtitle Track (.srt / .vtt)', type: 'file-text', accept: '.srt,.vtt,.txt' },
      { name: 'fontFamily',     label: 'Font Family',      type: 'select', options: [ { label: 'Inter', value: 'Inter' }, { label: 'Monospace', value: 'monospace' }, { label: 'Outfit', value: 'Outfit' } ], defaultValue: 'Inter' },
      { name: 'fontSize',       label: 'Base Font Size',   type: 'range', min: 16, max: 200, step: 2, defaultValue: 48 },
-     { name: 'textColor',      label: 'Text Color',       type: 'color', defaultValue: '#ffffff' },
+     { name: 'textColor',      label: 'Default Text Color',type: 'color', defaultValue: '#ffffff' },
+     { name: 'speaker1Color',  label: '[Speaker 1] Color',type: 'color', defaultValue: '#3b82f6' },
+     { name: 'speaker2Color',  label: '[Speaker 2] Color',type: 'color', defaultValue: '#f472b6' },
+     { name: 'speaker3Color',  label: '[Speaker 3] Color',type: 'color', defaultValue: '#22c55e' },
      { name: 'outlineColor',   label: 'Outline / Shadow Color', type: 'color', defaultValue: '#000000' },
+     { name: 'boxBgColor',     label: 'Box Background Color', type: 'color', defaultValue: '#000000' },
+     { name: 'boxBgOpacity',   label: 'Box Opacity',      type: 'range', min: 0, max: 1, step: 0.1, defaultValue: 0 },
      { name: 'bottomOffset',   label: 'Bottom Padding (px)', type: 'range', min: 0, max: 300, step: 10, defaultValue: 60 },
   ],
   async applyPerFrame(ctx, p, context) {
@@ -1079,7 +1084,10 @@ registry.register({
      let subs = _sharedSubtitleCache.get(p.subtitleFile);
      if (!subs) {
          try {
-             const rawText = await fetch(p.subtitleFile).then(r => r.text());
+             let rawText = p.subtitleFile;
+             if (rawText.trim().startsWith('http://') || rawText.trim().startsWith('https://')) {
+                  rawText = await fetch(rawText.trim()).then(r => r.text());
+             }
              const { parseSubtitles } = await import('../../utils/subtitles.js');
              subs = parseSubtitles(rawText);
              _sharedSubtitleCache.set(p.subtitleFile, subs);
@@ -1103,12 +1111,34 @@ registry.register({
      const H = ctx.canvas.height;
      
      // Build stacked string if multiple overlaps exist in SRT
-     const escapedText = activeSubs.map(s => s.text.replace(/\\n/g, '<br/>').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br/>');
+     let escapedText = activeSubs.map(s => s.text.replace(/\\n/g, '<br/>').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br/>');
+     
+     // Detect Speaker Tags and adjust color
+     let textCol = p.textColor || '#ffffff';
+     const speakerMatch = escapedText.match(/^\[Speaker\s*(\d+)\]/i);
+     if (speakerMatch) {
+         // Trim the label from the start of the visible text
+         escapedText = escapedText.replace(/^\[Speaker\s*\d+\]\s*:?\s*/i, '');
+         const num = speakerMatch[1];
+         if (num === '1') textCol = p.speaker1Color || '#3b82f6';
+         else if (num === '2') textCol = p.speaker2Color || '#f472b6';
+         else if (num === '3') textCol = p.speaker3Color || '#22c55e';
+     }
      
      // Native Netflix-style text shadow dropshadow rendering
      const shadowCol = p.outlineColor || '#000000';
-     const textCol   = p.textColor || '#ffffff';
      const fSize     = p.fontSize || 48;
+     
+     // Box Background
+     let bgCSS = '';
+     if ((p.boxBgOpacity ?? 0) > 0) {
+         const hex = (p.boxBgColor || '#000000').replace('#', '');
+         const bigint = parseInt(hex.length === 3 ? hex.split('').map(x=>x+x).join('') : hex, 16);
+         const r = (bigint >> 16) & 255;
+         const g = (bigint >> 8) & 255;
+         const b = bigint & 255;
+         bgCSS = `background-color: rgba(${r}, ${g}, ${b}, ${p.boxBgOpacity}); padding: 12px 24px; border-radius: 8px;`;
+     }
      
      // We use multiple hard shadows to mimic a stroke
      const shadowCSS = `
@@ -1123,7 +1153,7 @@ registry.register({
        <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
          <foreignObject width="100%" height="100%">
            <div xmlns="http://www.w3.org/1999/xhtml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; box-sizing: border-box; padding-bottom: ${p.bottomOffset ?? 60}px;">
-             <div style="font-family: ${p.fontFamily || 'Inter'}; font-size: ${fSize}px; font-weight: 700; color: ${textCol}; text-shadow: ${shadowCSS}; text-align: center; max-width: 80%; line-height: 1.3;">
+             <div style="font-family: ${p.fontFamily || 'Inter'}; font-size: ${fSize}px; font-weight: 700; color: ${textCol}; text-shadow: ${shadowCSS}; text-align: center; max-width: 80%; line-height: 1.3; ${bgCSS}">
                ${escapedText}
              </div>
            </div>
