@@ -25,7 +25,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     // These ship their own WASM bundles - exclude from Vite's pre-bundling
-    exclude: ['@imgly/background-removal', '@mediapipe/tasks-vision', 'onnxruntime-web'],
+    exclude: ['@imgly/background-removal', '@mediapipe/tasks-vision', 'onnxruntime-web', '@xenova/transformers'],
   },
   server: {
     // Respect PORT/HOST set by portless (or other proxy tools)

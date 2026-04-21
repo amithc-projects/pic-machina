@@ -1035,7 +1035,8 @@ registry.register({
      const W = ctx.canvas.width;
      const H = ctx.canvas.height;
      
-     if (!p.htmlContent) return; // Silent skip if empty
+     const interpolatedHTML = interpolate(p.htmlContent || '', context);
+     if (!interpolatedHTML) return; // Silent skip if empty
      
      const [alignItems, justifyContent] = (p.justifyLayout || 'flex-start,flex-start').split(',');
      
@@ -1043,7 +1044,7 @@ registry.register({
        <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
          <foreignObject width="100%" height="100%">
            <div xmlns="http://www.w3.org/1999/xhtml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: ${alignItems}; justify-content: ${justifyContent}; box-sizing: border-box; font-family: ${p.fontFamily || 'Inter'}; transform: scale(${p.globalScale || 1}); transform-origin: top left; padding: 20px;">
-             ${p.htmlContent}
+             ${interpolatedHTML}
            </div>
          </foreignObject>
        </svg>
@@ -1079,21 +1080,22 @@ registry.register({
      { name: 'bottomOffset',   label: 'Bottom Padding (px)', type: 'range', min: 0, max: 300, step: 10, defaultValue: 60 },
   ],
   async applyPerFrame(ctx, p, context) {
-     if (!p.subtitleFile) return;
+     const rawSubtitleParam = interpolate(p.subtitleFile || '', context);
+     if (!rawSubtitleParam) return;
      
-     let subs = _sharedSubtitleCache.get(p.subtitleFile);
+     let subs = _sharedSubtitleCache.get(rawSubtitleParam);
      if (!subs) {
          try {
-             let rawText = p.subtitleFile;
+             let rawText = rawSubtitleParam;
              if (rawText.trim().startsWith('http://') || rawText.trim().startsWith('https://')) {
                   rawText = await fetch(rawText.trim()).then(r => r.text());
              }
              const { parseSubtitles } = await import('../../utils/subtitles.js');
              subs = parseSubtitles(rawText);
-             _sharedSubtitleCache.set(p.subtitleFile, subs);
+             _sharedSubtitleCache.set(rawSubtitleParam, subs);
          } catch (err) {
              console.error('[overlay-subtitles] Failed to fetch or parse subtitles:', err);
-             _sharedSubtitleCache.set(p.subtitleFile, []); 
+             _sharedSubtitleCache.set(rawSubtitleParam, []); 
              return;
          }
      }
