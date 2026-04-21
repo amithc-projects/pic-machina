@@ -27,6 +27,18 @@ registry.register({
   apply() { /* handled by Processor */ }
 });
 
+// ─── Export Variable to File ──────────────────────────────
+registry.register({
+  id: 'flow-export-variable', name: 'Export Variable', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'text_snippet',
+  description: 'Saves the contents of an engine variable (like autoCaptions) directly to the root output folder alongside your images/videos.',
+  params: [
+    { name: 'variableName', label: 'Internal Variable Name', type: 'text', defaultValue: 'autoCaptions' },
+    { name: 'fileName',     label: 'Output Filename ({{vars}} supported)', type: 'text', defaultValue: '{{filename | sanitized}}.srt' },
+  ],
+  apply() { /* handled by Processor natively to avoid sandbox limits */ }
+});
+
 // ─── Save/Load State ──────────────────────────────────────
 registry.register({
   id: 'flow-save', name: 'Save State', category: 'Flow Control', categoryKey: 'flow',

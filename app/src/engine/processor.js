@@ -241,6 +241,24 @@ export class ImageProcessor {
       return;
     }
 
+    // ── Export Variable to File ────
+    if (id === 'flow-export-variable') {
+      const varName = (node.params?.variableName || 'autoCaptions').replace(/[\{\}]/g, ''); 
+      const textData = context.variables.get(varName);
+
+      if (typeof textData !== 'string') {
+        context.log?.('warn', `[flow-export-variable] Variable "{{${varName}}}" was empty or not text data. Skipping.`);
+        return;
+      }
+
+      const outName = interpolate(node.params?.fileName || 'exported.txt', context);
+      const blob = new Blob([textData], { type: 'text/plain;charset=utf-8' });
+
+      results.push({ blob, filename: outName, subfolder: context.outputSubfolder });
+      context.log?.('ok', `Exported sidecar variable → ${outName}`);
+      return;
+    }
+
     // ── GIF from saved states ──
     if (id === 'flow-gif-from-states') {
       const labels = (node.params?.panels || '').split(',').map(s => s.trim()).filter(Boolean);
