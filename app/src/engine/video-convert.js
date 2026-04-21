@@ -214,13 +214,18 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
         const strength = computeStrength(sample.timestamp, timeRange);
 
         // Apply all transforms with strength-scaled params
-        if (strength > 0 || !strengthParam) {
+        if (strength > 0) {
+          ctx.save();
+          if (!strengthParam && strength < 1) {
+            ctx.globalAlpha = strength; // Native fade fallback
+          }
           for (const step of steps) {
             const p = scaleParams(step.params || {}, strengthParam, strength);
-            await step.fn(ctx, p, fileContext);
+            await step.fn(ctx, p, { ...fileContext, timestampSec: sample.timestamp });
           }
+          ctx.restore();
         }
-        // strength === 0 with a strengthParam → skip effect, pass frame through as-is
+        // strength === 0 → skip effect, pass frame through as-is
 
         frameCount++;
 
@@ -362,11 +367,16 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
 
         // Restore clean frame then apply effect
         ctx.drawImage(baseCanvas, 0, 0);
-        if (strength > 0 || !strengthParam) {
+        if (strength > 0) {
+          ctx.save();
+          if (!strengthParam && strength < 1) {
+            ctx.globalAlpha = strength; // Native fade fallback
+          }
           for (const step of steps) {
             const p = scaleParams(step.params || {}, strengthParam, strength);
-            await step.fn(ctx, p, fileContext);
+            await step.fn(ctx, p, { ...fileContext, timestampSec: start + t });
           }
+          ctx.restore();
         }
         await encodeCanvas(f === 0);
       }

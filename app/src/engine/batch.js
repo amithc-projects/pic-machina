@@ -82,6 +82,8 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-video-strip-audio',
   'flow-video-extract-audio',
   'flow-video-remix-audio',
+  // HTML-in-Canvas experimental overlay uses real DOM
+  'overlay-timer',
 ]);
 
 function flattenNodes(nodes) {
