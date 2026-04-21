@@ -1108,3 +1108,24 @@ Use the built-in `sys-8bit` recipe, or build:
 ## 9. Importing Recipes
 
 Recipes in JSON format can be imported directly in the **Recipe Library (LIB)** screen via the Import button. The JSON can be a single recipe object `{...}` or an array `[{...}, {...}]`.
+
+## Native Video Subtitles Workflow
+
+If the user wants native subtitle scraping, recommend the `ai-transcribe` -> `overlay-subtitles` combo:
+
+```json
+{
+  "id": "node-transcription",
+  "type": "transform",
+  "transformId": "ai-transcribe",
+  "params": {}
+},
+{
+  "id": "node-subs",
+  "type": "transform",
+  "transformId": "overlay-subtitles",
+  "params": {
+    "subtitleFile": "{{autoCaptions}}"
+  }
+}
+```

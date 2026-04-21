@@ -146,8 +146,6 @@ export class ImageProcessor {
     const nodeTreeHasExport = (ns) => ns.some(n => {
       if (n.type === 'transform') {
         if (EXPORT_IDS.has(n.transformId)) return true;
-        // video-effect transforms produce their own output — suppress auto-export
-        return registry.get(n.transformId)?.categoryKey === 'video-effect';
       }
       if (n.type === 'branch')   return (n.branches || []).some(b => nodeTreeHasExport(b.nodes || []));
       if (n.type === 'conditional') return nodeTreeHasExport(n.thenNodes || []) || nodeTreeHasExport(n.elseNodes || []);
@@ -421,33 +419,14 @@ export class ImageProcessor {
         return;
       }
 
-      const file = context.originalFile;
-      if (!file) { context.log?.('warn', `${id}: no source file — skipping`); return; }
-      const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
-      if (!VIDEO_EXTS.has(ext)) { context.log?.('warn', `${id}: skipping non-video file "${file.name}"`); return; }
-      if (!_perFrameFn) { context.log?.('warn', `${id}: no applyPerFrame or sourceTransformId — skipping`); return; }
-      try {
-        const { processVideoEffect } = await import('./video-convert.js');
-        const p = node.params || {};
-        const blob = await processVideoEffect(
-          file,
-          _perFrameFn,
-          p,
-          {
-            bitrate: p.bitrate || 8_000_000,
-            onLog: context.log,
-            fileContext: context,
-            timeRange: node.timeRange || null,
-            strengthParam: _videoEffectDef.strengthParam || null,
-          }
-        );
-        const suffix = interpolate(p.suffix || '', context);
-        const base   = context.filename.replace(/\.[^.]+$/, '');
-        results.push({ blob, filename: `${base}${suffix}.mp4`, subfolder: context.outputSubfolder });
-        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.mp4`);
-      } catch (err) {
-        context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
-      }
+      // Batch mode: accumulate into queue so all effects bind into one single export!
+      if (!context._videoTransformQueue) context._videoTransformQueue = [];
+      context._videoTransformQueue.push({ 
+         fn: _perFrameFn, 
+         params: node.params || {}, 
+         timeRange: node.timeRange || null,
+         strengthParam: _videoEffectDef.strengthParam || null
+      });
       return;
     }
 

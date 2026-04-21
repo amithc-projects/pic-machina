@@ -210,22 +210,23 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
         canvas.height = rawH;
         sample.draw(ctx, 0, 0, rawW, rawH);
 
-        // Phase 6: compute strength for this frame's timestamp
-        const strength = computeStrength(sample.timestamp, timeRange);
-
-        // Apply all transforms with strength-scaled params
-        if (strength > 0) {
-          ctx.save();
-          if (!strengthParam && strength < 1) {
-            ctx.globalAlpha = strength; // Native fade fallback
-          }
-          for (const step of steps) {
-            const p = scaleParams(step.params || {}, strengthParam, strength);
+        // Phase 6: compute strength and evaluate for EACH queued effect independently!
+        for (const step of steps) {
+          const stepTimeRange = step.timeRange ?? timeRange;
+          const strength = computeStrength(sample.timestamp, stepTimeRange);
+          
+          if (strength > 0) {
+            ctx.save();
+            const strengthParamStr = step.strengthParam ?? strengthParam;
+            if (!strengthParamStr && strength < 1) {
+              ctx.globalAlpha = strength; // Native fade fallback
+            }
+            const p = scaleParams(step.params || {}, strengthParamStr, strength);
             await step.fn(ctx, p, { ...fileContext, timestampSec: sample.timestamp });
+            ctx.restore();
           }
-          ctx.restore();
         }
-        // strength === 0 → skip effect, pass frame through as-is
+        // If a step's strength === 0, it skips naturally
 
         frameCount++;
 
