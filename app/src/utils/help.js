@@ -27,6 +27,13 @@ export function showHelpModal() {
             <span style="font-size:14px; font-weight:500;">Tutorial Video Pending...</span>
           </div>
         </div>
+        </div>
+        <div style="display:flex; justify-content:center; align-items:center; border-top:1px solid var(--ps-border); padding-top:16px;">
+           <button class="btn-primary" id="help-btn-docs" style="display:flex;align-items:center;gap:6px;font-size:13px;padding:8px 16px;">
+             <span class="material-symbols-outlined" style="font-size:16px">menu_book</span>
+             Browse Transformations Documentation
+           </button>
+        </div>
       </div>
     </div>
   `;
@@ -40,5 +47,11 @@ export function showHelpModal() {
   modal.querySelector('#help-bk-close').onclick = () => {
     videoEl.pause();
     modal.remove();
+  };
+  
+  modal.querySelector('#help-btn-docs').onclick = () => {
+    videoEl.pause();
+    modal.remove();
+    window.location.hash = '#hlp';
   };
 }

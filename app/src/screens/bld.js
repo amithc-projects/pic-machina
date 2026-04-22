@@ -101,9 +101,9 @@ function buildNodeRow(item, isSelected) {
       <span class="material-symbols-outlined" style="font-size:14px;color:${color};flex-shrink:0">${icon}</span>
       <span class="bld-node-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>
       ${node.disabled ? '<span class="ic-badge" style="font-size:10px">off</span>' : ''}
-      <div class="bld-node-info-icon" style="margin-right:8px; display:inline-flex" title="${escHtml(registry.get(node.transformId)?.description || 'No description available')}">
-        <span class="material-symbols-outlined dropdown-toggle" style="font-size:16px;color:var(--ps-blue)">info</span>
-      </div>
+      <a href="#hlp?id=${node.transformId}" class="bld-node-info-icon" style="margin-right:8px; display:inline-flex; text-decoration:none;" title="View Documentation for ${label}">
+        <span class="material-symbols-outlined dropdown-toggle" style="font-size:16px;color:var(--ps-blue)">help</span>
+      </a>
       <div class="bld-node-actions">
         <button class="btn-icon bld-btn-toggle" data-id="${node.id}" title="${node.disabled ? 'Enable' : 'Disable'}">
           <span class="material-symbols-outlined" style="font-size:14px">${node.disabled ? 'visibility_off' : 'visibility'}</span>
@@ -144,7 +144,7 @@ function buildAddNodeModal(grouped, blocks = []) {
         <div class="bld-add-cat" style="color:${color}">${cat}</div>
         <div class="bld-add-grid">
           ${transforms.map(t => `
-            <button class="bld-add-item" data-transform-id="${t.id}">
+            <button class="bld-add-item" data-transform-id="${t.id}" style="position:relative;">
               <span class="material-symbols-outlined" style="font-size:18px;color:${color}">${t.icon || 'tune'}</span>
               <span class="bld-add-item-name">${t.name}</span>
             </button>
@@ -167,32 +167,43 @@ function buildAddNodeModal(grouped, blocks = []) {
 
   return `
     <div id="bld-add-modal" class="bld-modal-overlay" style="display:none">
-      <div class="bld-modal">
+      <div class="bld-modal" style="width:1200px; max-width:95vw;">
         <div class="bld-modal-header">
           <span class="bld-modal-title">Add Step</span>
           <div class="flex items-center gap-2">
+            <button class="btn-secondary is-active" id="bld-toggle-help-btn" style="margin-right:12px;font-size:12px;padding:4px 8px;gap:6px;transition:background 0.2s;background:var(--ps-blue);color:#fff;border-color:var(--ps-blue);">
+               <span class="material-symbols-outlined" style="font-size:14px;">menu_book</span>
+               Hide Help
+            </button>
             <input type="text" id="bld-add-search" class="ic-input" placeholder="Search transforms & blocks…" style="width:220px" autocomplete="off">
             <button class="btn-icon" id="bld-add-close">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
         </div>
-        <div class="bld-add-body" id="bld-add-sections">
-          ${sections}
-          <div class="bld-add-section bld-add-section--blocks">
-            <div class="bld-add-cat" style="color:#a855f7">Blocks</div>
-            ${blockItems}
+        <div style="display:flex; flex:1; overflow:hidden;">
+          <div style="flex:1; display:flex; flex-direction:column; min-width:300px;">
+            <div class="bld-add-body" id="bld-add-sections">
+              ${sections}
+              <div class="bld-add-section bld-add-section--blocks">
+                <div class="bld-add-cat" style="color:#a855f7">Blocks</div>
+                ${blockItems}
+              </div>
+            </div>
+            <div class="bld-modal-footer">
+              <button class="btn-secondary bld-add-branch-btn" data-type="branch">
+                <span class="material-symbols-outlined" style="font-size:14px">device_hub</span>
+                Add Branch
+              </button>
+              <button class="btn-secondary bld-add-branch-btn" data-type="conditional">
+                <span class="material-symbols-outlined" style="font-size:14px">alt_route</span>
+                Add Conditional
+              </button>
+            </div>
           </div>
-        </div>
-        <div class="bld-modal-footer">
-          <button class="btn-secondary bld-add-branch-btn" data-type="branch">
-            <span class="material-symbols-outlined" style="font-size:14px">device_hub</span>
-            Add Branch
-          </button>
-          <button class="btn-secondary bld-add-branch-btn" data-type="conditional">
-            <span class="material-symbols-outlined" style="font-size:14px">alt_route</span>
-            Add Conditional
-          </button>
+          <div id="bld-add-help-pane" style="display:flex; flex-direction:column; flex:1; border-left:1px solid var(--ps-border); background:var(--ps-bg-app); min-width:0; overflow:hidden; position:relative;">
+            <div class="empty-state">Hover over a transformation to view its detailed documentation.</div>
+          </div>
         </div>
       </div>
     </div>`;
@@ -771,7 +782,8 @@ export async function render(container, hash) {
 
   // Add transform node
   container.querySelectorAll('.bld-add-item:not(.bld-add-block-item)').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', e => {
+      if (e.target.closest('.bld-inline-help-btn')) return; // Ignore help clicks
       const tid = btn.dataset.transformId;
       const def = registry.get(tid);
       const params = {};
@@ -785,6 +797,69 @@ export async function render(container, hash) {
       addModal.style.display = 'none';
       // Open NED to configure
       navigate(`#ned?recipe=${draft.id}&node=${node.id}`);
+    });
+  });
+
+  // Hover-driven Help Pane Flow
+  let isHelpPaneOpen = true;
+  let currentHelpRenderId = null;
+  let helpHoverTimeout = null;
+
+  const bldToggleHelpBtn = container.querySelector('#bld-toggle-help-btn');
+  const modalBox = container.querySelector('.bld-modal');
+  const helpPane = container.querySelector('#bld-add-help-pane');
+
+  bldToggleHelpBtn?.addEventListener('click', () => {
+    isHelpPaneOpen = !isHelpPaneOpen;
+    bldToggleHelpBtn.innerHTML = isHelpPaneOpen 
+      ? `<span class="material-symbols-outlined" style="font-size:14px;">menu_book</span> Hide Help`
+      : `<span class="material-symbols-outlined" style="font-size:14px;">menu_book</span> Show Help`;
+
+    if (isHelpPaneOpen) {
+      bldToggleHelpBtn.classList.add('is-active');
+      bldToggleHelpBtn.style.background = 'var(--ps-blue)';
+      bldToggleHelpBtn.style.color = '#fff';
+      bldToggleHelpBtn.style.borderColor = 'var(--ps-blue)';
+      modalBox.style.width = '1200px';
+      modalBox.style.maxWidth = '95vw';
+      helpPane.style.display = 'flex';
+      helpPane.style.flexDirection = 'column';
+      
+      // Default placeholder if nothing hovered yet
+      if (!currentHelpRenderId) {
+         helpPane.innerHTML = `<div class="empty-state">Hover over a transformation to view its detailed documentation.</div>`;
+      }
+    } else {
+      bldToggleHelpBtn.classList.remove('is-active');
+      bldToggleHelpBtn.style.background = '';
+      bldToggleHelpBtn.style.color = '';
+      bldToggleHelpBtn.style.borderColor = '';
+      modalBox.style.width = '';
+      modalBox.style.maxWidth = '';
+      helpPane.style.display = 'none';
+    }
+  });
+
+  container.querySelectorAll('.bld-add-item').forEach(btn => {
+    btn.addEventListener('mouseenter', e => {
+      if (!isHelpPaneOpen) return;
+      const helpId = btn.dataset.transformId || btn.dataset.blockId;
+      if (currentHelpRenderId === helpId) return;
+
+      clearTimeout(helpHoverTimeout);
+      helpHoverTimeout = setTimeout(async () => {
+        currentHelpRenderId = helpId;
+        helpPane.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;"><div class="spinner"></div></div>`;
+        try {
+           const hlpMod = await import('./hlp.js');
+           await hlpMod.renderDetail(helpPane, helpId);
+           const backBtn = helpPane.querySelector('#hlp-back');
+           if (backBtn) backBtn.style.display = 'none';
+        } catch(err) {
+           console.error('Help Error:', err);
+           helpPane.innerHTML = `<div class="empty-state">Failed to load Help module:<br/>${err.message}</div>`;
+        }
+      }, 100); // 100ms debounce to ignore fast sweeps
     });
   });
 
