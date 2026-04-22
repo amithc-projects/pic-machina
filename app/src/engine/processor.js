@@ -431,10 +431,10 @@ export class ImageProcessor {
     }
 
     // ── Canvas transforms on video files → queue for single-pass per-frame processing ──
-    // Any geo-*, color-*, or overlay-* transform applied to a video file is queued here.
+    // Any geo-*, color-*, overlay-*, or ai-* transform applied to a video file is queued here.
     // The queue is flushed (in one mediabunny encode pass) when flow-export or
     // flow-video-wall is reached, so chained transforms cost only one encode, not N.
-    const CANVAS_CATEGORY_KEYS = new Set(['geo', 'color', 'overlay']);
+    const CANVAS_CATEGORY_KEYS = new Set(['geo', 'color', 'overlay', 'ai']);
     const def_canvas = registry.get(id);
     const _file = context.originalFile;
     const _ext  = _file?.name.slice(_file.name.lastIndexOf('.') + 1).toLowerCase();

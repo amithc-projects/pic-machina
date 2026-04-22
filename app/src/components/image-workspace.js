@@ -231,7 +231,7 @@ export class ImageWorkspace {
         const handle = await pickFolder('input');
         await dbSaveFolderHistory('input', handle);
         const files = await listImages(handle, this.options.fileFilter || {});
-        if (files.length > 0) this.loadFiles(files);
+        this.loadFiles(files);
         this._loadFolderMRU();
       } catch (err) {
         if (err.name !== 'AbortError') console.error(err);
@@ -254,7 +254,7 @@ export class ImageWorkspace {
         await setCurrentFolder(handle);
         await dbSaveFolderHistory('input', handle);
         const files = await listImages(handle, this.options.fileFilter || {});
-        if (files.length > 0) this.loadFiles(files);
+        this.loadFiles(files);
         this._loadFolderMRU();
       } catch (err) {
         console.error(err);
@@ -277,7 +277,7 @@ export class ImageWorkspace {
       const handle = await getFolder('input');
       if (!handle) return;
       const files = await listImages(handle, fileFilter);
-      if (files.length > 0) this.loadFiles(files);
+      this.loadFiles(files);
     } catch { /* ignore — no folder set or permission denied */ }
   }
 
@@ -303,8 +303,29 @@ export class ImageWorkspace {
   }
 
   loadFiles(filesArr) {
-    this.files = filesArr;
-    this.activeFile = this.files[0];
+    this.files = filesArr || [];
+    
+    if (this.files.length === 0) {
+      this.activeFile = null;
+      this.stage.innerHTML = `
+        <div class="empty-state" style="padding:24px;text-align:center;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+           <span class="material-symbols-outlined" style="font-size:36px;color:var(--ps-text-muted)">image</span>
+           <div style="font-size:12px;margin-top:8px">No matching files in folder</div>
+        </div>`;
+      this.carousel.style.display = 'none';
+      if (this.modeToggleGroup) this.modeToggleGroup.style.display = 'none';
+      this.cmpControls.style.display = 'none';
+      this.options.onFilesChange(this.files, this.activeFile);
+      return;
+    }
+
+    if (this.activeFile) {
+      const stillExists = this.files.find(f => f.name === this.activeFile.name);
+      this.activeFile = stillExists || this.files[0];
+    } else {
+      this.activeFile = this.files[0];
+    }
+    
     this.options.onFilesChange(this.files, this.activeFile);
     this.renderCarousel();
     this.triggerProcess();

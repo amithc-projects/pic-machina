@@ -348,9 +348,9 @@ export async function render(container, hash) {
             <div style="margin-top:12px">
               <label class="ic-label">Media Type</label>
               <select id="bld-input-type" class="ic-input">
-                <option value="image" ${draft.inputType === 'image' || !draft.inputType ? 'selected' : ''}>Images Only</option>
+                <option value="image" ${draft.inputType === 'image' ? 'selected' : ''}>Images Only</option>
                 <option value="video" ${draft.inputType === 'video' ? 'selected' : ''}>Videos Only</option>
-                <option value="any" ${draft.inputType === 'any' ? 'selected' : ''}>Images & Videos</option>
+                <option value="any" ${draft.inputType === 'any' || !draft.inputType ? 'selected' : ''}>Images & Videos</option>
               </select>
             </div>
 
@@ -673,9 +673,12 @@ export async function render(container, hash) {
   });
 
   // ── Media Type ────────────────────────────────────────────
-  container.querySelector('#bld-input-type')?.addEventListener('change', e => {
+  container.querySelector('#bld-input-type')?.addEventListener('change', async e => {
     draft.inputType = e.target.value;
     markDirty();
+    const { fileFilterForRecipe } = await import('../data/folders.js');
+    workspace.options.fileFilter = fileFilterForRecipe(draft);
+    await workspace.loadCurrentFolder(workspace.options.fileFilter);
   });
 
   // ── Cover colour swatches ─────────────────────────────────

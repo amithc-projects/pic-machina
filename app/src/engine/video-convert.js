@@ -139,17 +139,22 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
   bitrate = 8_000_000, onLog, fileContext = {},
   timeRange = null, strengthParam = null,
 } = {}) {
-  // Freeze mode requires a separate code path (frame insertion)
-  if (timeRange?.mode === 'freeze') {
-    return processVideoEffectFreeze(file, applyFnOrSteps, params, {
-      bitrate, onLog, fileContext, timeRange, strengthParam,
-    });
-  }
-
   // Normalise to array of steps
   const steps = Array.isArray(applyFnOrSteps)
     ? applyFnOrSteps
-    : [{ fn: applyFnOrSteps, params }];
+    : [{ fn: applyFnOrSteps, params, timeRange, strengthParam }];
+
+  // If timeRange is not explicitly provided in options, check if any step requests freeze mode.
+  // Freeze mode alters the timeline (inserts frames), so it takes over the entire encode pass.
+  const freezeStep = steps.find(s => s.timeRange?.mode === 'freeze');
+  const activeTimeRange = timeRange || freezeStep?.timeRange;
+
+  // Freeze mode requires a separate code path (frame insertion)
+  if (activeTimeRange?.mode === 'freeze') {
+    return processVideoEffectFreeze(file, steps, params, {
+      bitrate, onLog, fileContext, timeRange: activeTimeRange, strengthParam,
+    });
+  }
 
   const log = (msg) => onLog?.('info', msg);
   const ext = getInputExt(file);
@@ -369,15 +374,16 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
         // Restore clean frame then apply effect
         ctx.drawImage(baseCanvas, 0, 0);
         if (strength > 0) {
-          ctx.save();
-          if (!strengthParam && strength < 1) {
-            ctx.globalAlpha = strength; // Native fade fallback
-          }
           for (const step of steps) {
-            const p = scaleParams(step.params || {}, strengthParam, strength);
+            ctx.save();
+            const effectiveStrengthParam = step.strengthParam || strengthParam;
+            if (!effectiveStrengthParam && strength < 1) {
+              ctx.globalAlpha = strength; // Native fade fallback
+            }
+            const p = scaleParams(step.params || {}, effectiveStrengthParam, strength);
             await step.fn(ctx, p, { ...fileContext, timestampSec: start + t });
+            ctx.restore();
           }
-          ctx.restore();
         }
         await encodeCanvas(f === 0);
       }
