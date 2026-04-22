@@ -37,6 +37,16 @@ let currentCleanup = null;
 
 // ─── Router ───────────────────────────────────────────────
 async function navigate(hash) {
+  // Normalize missing hash
+  if (!hash) hash = `#${DEFAULT_SCREEN}`;
+  
+  // If we are programmatically navigating to a new hash, update the URL
+  // and let the window 'hashchange' event trigger the actual render pass.
+  if (location.hash !== hash) {
+    location.hash = hash;
+    return;
+  }
+
   const screenId = (hash.replace('#', '') || DEFAULT_SCREEN).split('/')[0].split('?')[0];
   const loader = SCREENS[screenId] || SCREENS[DEFAULT_SCREEN];
 

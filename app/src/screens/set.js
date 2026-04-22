@@ -430,10 +430,16 @@ export async function render(container, hash) {
       }
     };
 
-    // Small delay to let QUE render, then start
-    setTimeout(() => {
-      window._queRunAgain();
+    // Wait for QUE screen to render before starting
+    const checkReady = setInterval(() => {
+      if (window._queProgress) {
+        clearInterval(checkReady);
+        window._queRunAgain();
+      }
     }, 50);
+    
+    // Safety timeout just in case it never renders
+    setTimeout(() => clearInterval(checkReady), 5000);
   });
 
   // ── Background preview generation ────────────────────
