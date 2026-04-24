@@ -382,17 +382,20 @@ registry.register({
         runningMode: 'VIDEO',
         numPoses: 1,
       });
-      context._poseTimestamp = 0;
+      context._poseTimestamp = -1; // Initialize to -1 so first frame can be 0
     }
 
     // MediaPipe VIDEO mode requires monotonically increasing timestamps (ms).
-    context._poseTimestamp = (context._poseTimestamp || 0) + 1;
+    // Use the actual frame timestamp (converted to ms), but ensure it is strictly greater than the last one.
+    const actualTsMs = Math.round((context.timestampSec || 0) * 1000);
+    context._poseTimestamp = Math.max(context._poseTimestamp + 1, actualTsMs);
     const ts = context._poseTimestamp;
 
     let result;
     try {
       result = context._poseLandmarker.detectForVideo(ctx.canvas, ts);
-    } catch {
+    } catch (err) {
+      console.error('[video-pose-landmarks] detectForVideo error at ts', ts, err);
       return;
     }
     if (!result?.landmarks?.length) return;

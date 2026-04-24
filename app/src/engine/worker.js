@@ -64,7 +64,7 @@ self.onmessage = async (e) => {
   }
 };
 
-async function runBatch({ recipe, files, outputConfig, runId }) {
+async function runBatch({ recipe, files, outputConfig, runId, inputHandle }) {
   const processor = new ImageProcessor();
   let successCount = 0, failCount = 0;
   const total = files.length;
@@ -119,6 +119,22 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         try { asset = await ingestFile(file); } catch { /* non-fatal */ }
       }
 
+      let fileSidecar = null;
+      if (inputHandle) {
+        try {
+          const { readSidecar } = await import('../data/sidecar.js');
+          fileSidecar = await readSidecar(inputHandle, file.name);
+        } catch { /* best effort */ }
+      }
+
+      const variables = new Map();
+      if (fileSidecar) {
+        try {
+          const { flattenSidecarVars } = await import('../data/sidecar.js');
+          flattenSidecarVars(fileSidecar).forEach((v, k) => variables.set(k, v));
+        } catch { /* ignore */ }
+      }
+
       const context = {
         originalImage: image,
         originalFile:  file,
@@ -126,12 +142,13 @@ async function runBatch({ recipe, files, outputConfig, runId }) {
         ext,
         exif,
         meta:      {},
-        variables: new Map(),
+        variables,
         recipe:    runParams,
         outputSubfolder: outputConfig.subfolder || 'output',
-        sidecar:   { ...(asset?.geo ?? {}), ...(asset?.sidecar ?? {}) },
+        sidecar:   fileSidecar ?? { ...(asset?.geo ?? {}), ...(asset?.sidecar ?? {}) },
         assetHash: asset?.hash ?? null,
         runState,
+        inputHandle,
         log: (level, msg) => log(runId, level, msg),
       };
 

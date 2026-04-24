@@ -103,6 +103,7 @@ export async function render(container, hash) {
                 <span class="material-symbols-outlined">swap_horiz</span>Change
               </button>
             </div>
+            <div id="set-recipe-desc" class="text-muted" style="font-size: 12px; margin-top: 8px; line-height: 1.4; display: none;"></div>
           </section>
 
           <!-- Input folder -->
@@ -430,10 +431,16 @@ export async function render(container, hash) {
       }
     };
 
-    // Small delay to let QUE render, then start
-    setTimeout(() => {
-      window._queRunAgain();
+    // Wait for QUE screen to render before starting
+    const checkReady = setInterval(() => {
+      if (window._queProgress) {
+        clearInterval(checkReady);
+        window._queRunAgain();
+      }
     }, 50);
+    
+    // Safety timeout just in case it never renders
+    setTimeout(() => clearInterval(checkReady), 5000);
   });
 
   // ── Background preview generation ────────────────────
@@ -833,6 +840,18 @@ export async function render(container, hash) {
     if (name) name.textContent = currentRecipe?.name || 'No recipe selected';
     const editBtn = container.querySelector('#btn-edit-recipe');
     if (editBtn) editBtn.style.display = currentRecipe ? '' : 'none';
+
+    const descEl = container.querySelector('#set-recipe-desc');
+    if (descEl) {
+      if (currentRecipe) {
+        const stepCount = currentRecipe.nodes ? currentRecipe.nodes.length : 0;
+        const stepText = stepCount === 1 ? '1 step' : `${stepCount} steps`;
+        descEl.innerHTML = `<strong>${stepText}</strong> &nbsp;·&nbsp; ${currentRecipe.description || 'No description provided.'}`;
+        descEl.style.display = 'block';
+      } else {
+        descEl.style.display = 'none';
+      }
+    }
 
     // Default subfolder to sanitized recipe name
     const subfolderEl = container.querySelector('#set-subfolder');

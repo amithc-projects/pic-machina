@@ -179,6 +179,16 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}</label>
           <textarea id="${id}" name="${param.name}" class="ic-input" rows="4">${escHtml(String(val))}</textarea>
         </div>`;
+        
+    case 'file-text':
+      return `
+        <div class="ned-field">
+          <label class="ned-field-label" for="${id}" style="display:flex; justify-content:space-between; align-items:center;">
+             <span>${renderLabelHtml(param.label, id)}</span>
+             <input type="file" id="${id}-file" accept="${param.accept || '.srt,.vtt,.txt'}" style="font-size:10px; max-width:160px;">
+          </label>
+          <textarea id="${id}" name="${param.name}" class="ic-input" rows="6" placeholder="Paste contents here, or use the file upload button above...">${escHtml(String(val))}</textarea>
+        </div>`;
 
     default: // 'text'
       return `
@@ -316,6 +326,24 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
             }
           });
         }
+      }
+    }
+    
+    if (p.type === 'file-text') {
+      const fileInput = container.querySelector(`#${id}-file`);
+      const textInput = container.querySelector(`#${id}`);
+      if (fileInput && textInput) {
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            textInput.value = ev.target.result;
+            // dispatch input event so changes save to recipe state automatically
+            textInput.dispatchEvent(new Event('input', { bubbles: true }));
+          };
+          reader.readAsText(file);
+        });
       }
     }
 

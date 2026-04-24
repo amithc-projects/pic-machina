@@ -909,7 +909,7 @@
     "id": "meta-geocode",
     "name": "Geocode",
     "category": "Metadata",
-    "description": "Reverse-geocode GPS coords via Nominatim. Sets {{city}}, {{country}}, {{state}}, {{county}}, {{postcode}}, {{country_code}}, {{suburb}}, {{road}} — plus a combined {{location}} string.",
+    "description": "Reverse-geocode GPS coords via Nominatim. Sets {{city}}, {{country}}, {{state}}, {{county}}, {{postcode}}, {{country_code}}, {{suburb}}, {{road}} \u2014 plus a combined {{location}} string.",
     "icon": "location_on",
     "params": [
       {
@@ -2424,6 +2424,42 @@
         "label": "Block Size (px)",
         "type": "range",
         "defaultValue": 8
+      }
+    ]
+  },
+  {
+    "id": "ai-transcribe",
+    "name": "Auto-Transcribe (Whisper)",
+    "description": "Evaluates the primary audio track natively using WebAssembly & Transformers.js. Generates perfectly timed SRT captions and outputs them to a recipe variable.",
+    "category": "Audio & Video",
+    "icon": "graphic_eq",
+    "params": [
+      {
+        "name": "outputVariable",
+        "label": "Output Variable Name",
+        "type": "text",
+        "defaultValue": "autoCaptions"
+      }
+    ]
+  },
+  {
+    "id": "flow-export-variable",
+    "name": "Export Variable",
+    "description": "Saves the contents of an engine variable (like autoCaptions) directly to the root output folder alongside your images/videos.",
+    "category": "Flow Control",
+    "icon": "text_snippet",
+    "params": [
+      {
+        "name": "variableName",
+        "label": "Internal Variable Name",
+        "type": "text",
+        "defaultValue": "autoCaptions"
+      },
+      {
+        "name": "fileName",
+        "label": "Output Filename ({{vars}} supported)",
+        "type": "text",
+        "defaultValue": "{{filename | sanitized}}.srt"
       }
     ]
   }

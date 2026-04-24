@@ -27,6 +27,18 @@ registry.register({
   apply() { /* handled by Processor */ }
 });
 
+// ─── Export Variable to File ──────────────────────────────
+registry.register({
+  id: 'flow-export-variable', name: 'Export Variable', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'text_snippet',
+  description: 'Saves the contents of an engine variable (like autoCaptions) directly to the root output folder alongside your images/videos.',
+  params: [
+    { name: 'variableName', label: 'Internal Variable Name', type: 'text', defaultValue: 'autoCaptions' },
+    { name: 'fileName',     label: 'Output Filename ({{vars}} supported)', type: 'text', defaultValue: '{{filename | sanitized}}.srt' },
+  ],
+  apply() { /* handled by Processor natively to avoid sandbox limits */ }
+});
+
 // ─── Save/Load State ──────────────────────────────────────
 registry.register({
   id: 'flow-save', name: 'Save State', category: 'Flow Control', categoryKey: 'flow',
@@ -99,8 +111,19 @@ registry.register({
     { name: 'transitionMode',     label: 'Transition Effect',         type: 'select',
       options: [
         { label: 'Crossfade',        value: 'crossfade'  },
+        { label: 'Dip to Black',     value: 'dipToBlack' },
+        { label: 'Film Burn',        value: 'filmBurn'   },
+        { label: 'Zoom Fade',        value: 'zoomFade'   },
+        { label: 'Luma Wipe',        value: 'lumaWipe'   },
         { label: 'Wipe Right',       value: 'wipeRight'  },
+        { label: 'Push Left',        value: 'pushLeft'   },
+        { label: 'Push Right',       value: 'pushRight'  },
+        { label: 'Whip Pan',         value: 'whipPan'    },
+        { label: 'Liquid Swirl',     value: 'liquidSwirl'},
         { label: 'Circle Crop Wipe', value: 'circleCrop' },
+        { label: 'Radial Wipe',      value: 'radialWipe' },
+        { label: 'Venetian Blinds',  value: 'venetianBlinds' },
+        { label: 'VHS Glitch',       value: 'vhsGlitch'  },
         { label: 'Pixelize / Glitch',value: 'pixelize'   },
         { label: 'Random Shuffle',   value: 'random'     }
       ],
@@ -648,6 +671,52 @@ registry.register({
     { name: 'width',    label: 'Output Width (px — leave blank to use first video\'s width)',  type: 'number', defaultValue: '' },
     { name: 'height',   label: 'Output Height (px — leave blank to use first video\'s height)', type: 'number', defaultValue: '' },
     { name: 'bitrate',  label: 'Bitrate (bps)',        type: 'number', defaultValue: 8000000 },
+    { name: 'transitionMode', label: 'Transition Effect', type: 'select',
+      options: [
+        { label: 'None (Hard Cut)',  value: 'none'       },
+        { label: 'Crossfade',        value: 'crossfade'  },
+        { label: 'Dip to Black',     value: 'dipToBlack' },
+        { label: 'Film Burn',        value: 'filmBurn'   },
+        { label: 'Zoom Fade',        value: 'zoomFade'   },
+        { label: 'Luma Wipe',        value: 'lumaWipe'   },
+        { label: 'Wipe Right',       value: 'wipeRight'  },
+        { label: 'Push Left',        value: 'pushLeft'   },
+        { label: 'Push Right',       value: 'pushRight'  },
+        { label: 'Whip Pan',         value: 'whipPan'    },
+        { label: 'Liquid Swirl',     value: 'liquidSwirl'},
+        { label: 'Circle Crop Wipe', value: 'circleCrop' },
+        { label: 'Radial Wipe',      value: 'radialWipe' },
+        { label: 'Venetian Blinds',  value: 'venetianBlinds' },
+        { label: 'VHS Glitch',       value: 'vhsGlitch'  },
+        { label: 'Pixelize / Glitch',value: 'pixelize'   },
+        { label: 'Random Shuffle',   value: 'random'     }
+      ],
+      defaultValue: 'none' },
+    { name: 'transitionDuration', label: 'Transition Duration (sec)', type: 'number', defaultValue: 1 },
   ],
   apply() { /* handled by Processor as aggregation node — collects files, then concatenates */ }
+});
+
+// ─── Video: Scroll Animation ──────────────────────────────
+registry.register({
+  id: 'flow-video-scroll', name: 'Video: Scroll Animation', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'swap_vert',
+  description: 'Animate a long/tall screenshot or panorama into a smooth scrolling video.',
+  params: [
+    { name: 'width',      label: 'Output Width (px)',     type: 'number', defaultValue: 1080 },
+    { name: 'height',     label: 'Output Height (px)',    type: 'number', defaultValue: 1920 },
+    { name: 'duration',   label: 'Duration (sec)',        type: 'number', defaultValue: 10 },
+    { name: 'startPause', label: 'Start Pause (sec)',     type: 'number', defaultValue: 1 },
+    { name: 'endPause',   label: 'End Pause (sec)',       type: 'number', defaultValue: 2 },
+    { name: 'easing',     label: 'Easing',                type: 'select',
+      options: [
+        { label: 'Ease In/Out', value: 'ease-in-out' },
+        { label: 'Linear',      value: 'linear' }
+      ],
+      defaultValue: 'ease-in-out' },
+    { name: 'fps',        label: 'FPS',                   type: 'number', defaultValue: 30 },
+    { name: 'bitrate',    label: 'Bitrate (bps)',         type: 'number', defaultValue: 8000000 },
+    { name: 'suffix',     label: 'Filename Suffix',       type: 'text',   defaultValue: '_scrolled' },
+  ],
+  apply() { /* handled by Processor — converts single image to mp4 */ }
 });

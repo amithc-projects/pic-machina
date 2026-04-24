@@ -104,6 +104,9 @@ export async function render(container, hash) {
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <button class="btn-icon" onclick="window.location.hash='#hlp?id=${def?.id || node.transformId}'" title="View Documentation for this Step">
+            <span class="material-symbols-outlined" style="color:var(--ps-blue)">help</span>
+          </button>
           <button class="btn-icon" id="ned-btn-info" title="Image info for test image">
             <span class="material-symbols-outlined">info</span>
           </button>

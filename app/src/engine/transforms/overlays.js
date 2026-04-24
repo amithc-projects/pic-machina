@@ -4,6 +4,8 @@
 
 import { registry } from '../registry.js';
 import { interpolate } from '../../utils/variables.js';
+// Top level subtitle cache for overlay-subtitles
+const _sharedSubtitleCache = new Map();
 
 // ─── Rich Text ────────────────────────────────────────────
 registry.register({
@@ -450,7 +452,7 @@ registry.register({
     { name: 'zoom',     label: 'Zoom Level', type: 'range', min: 5, max: 18, defaultValue: 14 },
     { name: 'style',    label: 'Map Style',  type: 'select',
       options: [{ label: 'Street', value: 'street' }], defaultValue: 'street' },
-    { name: 'size',     label: 'Map Size (px)', type: 'number', defaultValue: 256 },
+    { name: 'size',     label: 'Size (px or %)', type: 'text', defaultValue: '25%' },
     { name: 'opacity',  label: 'Opacity (%)',   type: 'range', min: 0, max: 100, defaultValue: 85 },
     { name: 'anchor',   label: 'Anchor',        type: 'select',
       options: [
@@ -460,6 +462,7 @@ registry.register({
         { label: 'Top Left (Inside)', value: 'top-left' },
         { label: 'Outside Bounds - Left', value: 'outside-left' },
         { label: 'Outside Bounds - Right', value: 'outside-right' },
+        { label: 'Outside Bounds - Top', value: 'outside-top' },
         { label: 'Outside Bounds - Bottom', value: 'outside-bottom' },
       ],
       defaultValue: 'bottom-right' },
@@ -473,10 +476,45 @@ registry.register({
     }
     const { lat, lng } = gps;
     const zoom = p.zoom || 14;
-    const sz   = p.size || 256;
     const W = ctx.canvas.width, H = ctx.canvas.height;
     const margin = p.margin ?? 16;
     const anchor = p.anchor || 'bottom-right';
+
+    const parseBlockDim = (val, originalSize, isOutside) => {
+      const s = String(val || '').trim();
+      if (s.endsWith('%')) {
+        let p = parseFloat(s) / 100;
+        if (isOutside) {
+          p = Math.max(0.01, Math.min(0.95, p)); // Cap at 95%
+          // If we want the block to be p% of the FINAL size, block = original * (p / (1 - p))
+          return Math.max(1, Math.round(originalSize * (p / (1 - p))));
+        } else {
+          return Math.max(1, Math.round(originalSize * p));
+        }
+      }
+      // Fixed px value
+      const valNum = parseFloat(s) || 256;
+      // For fixed pixels, we treat it as map size (so add margins for block size)
+      return isOutside ? valNum + margin * 2 : valNum;
+    };
+
+    let mapW, mapH;
+    let blockW = 0, blockH = 0;
+
+    if (anchor === 'outside-left' || anchor === 'outside-right') {
+      blockW = parseBlockDim(p.size ?? '25%', W, true);
+      mapW = Math.max(1, blockW - margin * 2);
+      mapH = Math.max(1, H - margin * 2);
+      blockH = H;
+    } else if (anchor === 'outside-top' || anchor === 'outside-bottom') {
+      blockH = parseBlockDim(p.size ?? '25%', H, true);
+      mapH = Math.max(1, blockH - margin * 2);
+      mapW = Math.max(1, W - margin * 2);
+      blockW = W;
+    } else {
+      const minDim = Math.min(W, H);
+      mapW = mapH = parseBlockDim(p.size ?? '25%', minDim, false);
+    }
 
     // Extrude canvas for outside anchors
     let drawX = 0, drawY = 0;
@@ -485,64 +523,140 @@ registry.register({
       orig.width = W; orig.height = H;
       orig.getContext('2d').drawImage(ctx.canvas, 0, 0);
 
-      const blockW = anchor !== 'outside-bottom' ? sz + margin * 2 : W;
-      const blockH = anchor === 'outside-bottom' ? sz + margin * 2 : H;
-
       if (anchor === 'outside-left') {
         ctx.canvas.width = W + blockW;
         ctx.canvas.height = H;
-        drawX = blockW; // image shifts right
+        drawX = blockW;
       } else if (anchor === 'outside-right') {
         ctx.canvas.width = W + blockW;
         ctx.canvas.height = H;
+      } else if (anchor === 'outside-top') {
+        ctx.canvas.width = W;
+        ctx.canvas.height = H + blockH;
+        drawY = blockH;
       } else if (anchor === 'outside-bottom') {
         ctx.canvas.width = W;
         ctx.canvas.height = H + blockH;
       }
       
-      // Paint bg white for the extruded part (matches pad background usually)
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.drawImage(orig, drawX, drawY);
     }
 
-    // Tile maths
-    const tileX = Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
-    const tileY = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
-    const tileUrl = `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`;
+    // Map & Stitching logic
+    const exactTileX = (lng + 180) / 360 * Math.pow(2, zoom);
+    const exactTileY = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom);
+    
+    const centerPxX = exactTileX * 256;
+    const centerPxY = exactTileY * 256;
+
+    const minPxX = centerPxX - mapW / 2;
+    const minPxY = centerPxY - mapH / 2;
+    const maxPxX = centerPxX + mapW / 2;
+    const maxPxY = centerPxY + mapH / 2;
+
+    const minTileX = Math.floor(minPxX / 256);
+    const maxTileX = Math.floor(maxPxX / 256);
+    const minTileY = Math.floor(minPxY / 256);
+    const maxTileY = Math.floor(maxPxY / 256);
+
+    const numTiles = (maxTileX - minTileX + 1) * (maxTileY - minTileY + 1);
+    if (numTiles > 100) {
+      console.warn(`[overlay-map] Refusing to fetch ${numTiles} tiles (too large or zoomed in too much).`);
+      return;
+    }
 
     try {
-      const resp = await fetch(tileUrl, { headers: { 'User-Agent': 'ImageChef/1.0' } });
-      const blob = await resp.blob();
-      const url  = URL.createObjectURL(blob);
-      await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          let x, y;
-          if (anchor === 'outside-left') {
-             x = margin; y = H - sz - margin; 
-          } else if (anchor === 'outside-right') {
-             x = W + margin; y = H - sz - margin;
-          } else if (anchor === 'outside-bottom') {
-             x = margin; y = H + margin;
-          } else {
-             // Inside anchors
-             x = anchor.includes('right') ? W - sz - margin : margin;
-             y = anchor.includes('bottom') ? H - sz - margin : margin;
-          }
+      const mapCanvas = document.createElement('canvas');
+      mapCanvas.width = mapW;
+      mapCanvas.height = mapH;
+      const mCtx = mapCanvas.getContext('2d');
+      mCtx.fillStyle = '#f0eedf'; // Default OSM land color
+      mCtx.fillRect(0, 0, mapW, mapH);
 
-          ctx.save();
-          ctx.globalAlpha = (p.opacity ?? 85) / 100;
-          ctx.drawImage(img, x, y, sz, sz);
-          ctx.restore();
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(); };
-        img.src = url;
-      });
+      const fetchTile = async (tx, ty) => {
+        const url = `https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`;
+        try {
+          const resp = await fetch(url, { headers: { 'User-Agent': 'ImageChef/1.0' } });
+          if (!resp.ok) return null;
+          const blob = await resp.blob();
+          const img = await createImageBitmap(blob);
+          return { tx, ty, img };
+        } catch { return null; }
+      };
+
+      const tasks = [];
+      for (let tx = minTileX; tx <= maxTileX; tx++) {
+        for (let ty = minTileY; ty <= maxTileY; ty++) {
+          tasks.push(fetchTile(tx, ty));
+        }
+      }
+
+      const results = await Promise.all(tasks);
+      for (const res of results) {
+        if (!res) continue;
+        const tileDrawX = (res.tx * 256) - minPxX;
+        const tileDrawY = (res.ty * 256) - minPxY;
+        mCtx.drawImage(res.img, tileDrawX, tileDrawY, 256, 256);
+        if (res.img.close) res.img.close();
+      }
+
+      // Draw map pin at the exact center
+      const pinX = mapW / 2;
+      const pinY = mapH / 2;
+      
+      const pinScale = Math.max(0.5, Math.min(mapW, mapH) / 256);
+      mCtx.save();
+      mCtx.translate(pinX, pinY);
+      mCtx.scale(pinScale, pinScale);
+      
+      mCtx.beginPath();
+      mCtx.moveTo(0, 0); // bottom tip
+      mCtx.bezierCurveTo(-10, -10, -15, -20, -15, -30);
+      mCtx.arc(0, -30, 15, Math.PI, 0);
+      mCtx.bezierCurveTo(15, -20, 10, -10, 0, 0);
+      
+      mCtx.shadowColor = 'rgba(0,0,0,0.5)';
+      mCtx.shadowBlur = 4;
+      mCtx.shadowOffsetX = 0;
+      mCtx.shadowOffsetY = 2;
+      mCtx.fillStyle = '#ea4335';
+      mCtx.fill();
+      
+      mCtx.shadowColor = 'transparent';
+      mCtx.lineWidth = 2;
+      mCtx.strokeStyle = '#ffffff';
+      mCtx.stroke();
+      
+      mCtx.beginPath();
+      mCtx.arc(0, -30, 6, 0, Math.PI * 2);
+      mCtx.fillStyle = '#5c100b';
+      mCtx.fill();
+      mCtx.restore();
+
+      // Composite map onto the main canvas
+      let x, y;
+      if (anchor === 'outside-left') {
+         x = margin; y = margin;
+      } else if (anchor === 'outside-right') {
+         x = W + margin; y = margin;
+      } else if (anchor === 'outside-top') {
+         x = margin; y = margin;
+      } else if (anchor === 'outside-bottom') {
+         x = margin; y = H + margin;
+      } else {
+         x = anchor.includes('right') ? W - mapW - margin : margin;
+         y = anchor.includes('bottom') ? H - mapH - margin : margin;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = (p.opacity ?? 85) / 100;
+      ctx.drawImage(mapCanvas, x, y, mapW, mapH);
+      ctx.restore();
+
     } catch (err) {
-      console.warn('[overlay-map] tile fetch failed:', err);
+      console.warn('[overlay-map] map generation failed:', err);
     }
   }
 });
@@ -922,3 +1036,253 @@ registry.register({
     }
   }
 });
+
+// ─── Native HTML Timer (SVG ForeignObject) ────────────────
+registry.register({
+  id: 'overlay-timer', name: 'Animated Timer (HTML)', category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'timer',
+  description: 'Render a buttery-smooth live countdown or countup timer using DOM-to-Canvas via SVG foreignObject.',
+  params: [
+     { name: 'mode',          label: 'Mode',     type: 'select', options: [ { label: 'Countdown', value: 'countdown' }, { label: 'Count Up', value: 'countup' } ], defaultValue: 'countdown' },
+     { name: 'duration',      label: 'Duration (sec)',  type: 'number', defaultValue: 30 },
+     { name: 'startOffset',   label: 'Video Start Time',type: 'number', defaultValue: 0 },
+     { name: 'visualization', label: 'Visualization',   type: 'select', options: [ { label: 'Text Only', value: 'text' }, { label: 'Circle Progress', value: 'circle' } ], defaultValue: 'circle' },
+     { name: 'anchor',        label: 'Anchor',          type: 'select', options: [ { label: 'Top Left', value: 'top-left' }, { label: 'Top Right', value: 'top-right' }, { label: 'Bottom Left', value: 'bottom-left' }, { label: 'Bottom Right', value: 'bottom-right' }, { label: 'Center', value: 'center' } ], defaultValue: 'bottom-right' },
+     { name: 'offsetX',       label: 'Offset X (px)',   type: 'number', defaultValue: 60 },
+     { name: 'offsetY',       label: 'Offset Y (px)',   type: 'number', defaultValue: 60 },
+     { name: 'size',          label: 'Timer Size (px)', type: 'number', defaultValue: 120 },
+     { name: 'color',         label: 'Accent Color',    type: 'color',  defaultValue: '#ff3366' },
+     { name: 'bgColor',       label: 'Background',      type: 'color',  defaultValue: 'rgba(0,0,0,0.5)' },
+  ],
+  async apply(ctx, p, context) {
+     const W = ctx.canvas.width;
+     const H = ctx.canvas.height;
+     
+     const ts = context.timestampSec || 0;
+     const timerStartSec = p.startOffset || 0;
+     const dur = p.duration || 30;
+     
+     const elapsed = Math.max(0, ts - timerStartSec);
+     let MathTimeLeft = dur - elapsed;
+     let displayTime = p.mode === 'countup' ? elapsed : MathTimeLeft;
+     displayTime = Math.max(0, Math.min(dur, displayTime));
+     
+     const m = Math.floor(displayTime / 60);
+     const s = Math.floor(displayTime % 60);
+     const str = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+     
+     let progress = p.mode === 'countdown' ? (Math.max(0, MathTimeLeft) / dur) : (Math.min(elapsed, dur) / dur);
+     
+     // Layout mapping
+     const anchor = p.anchor || 'bottom-right';
+     let alignItems = 'flex-end', justifyContent = 'flex-end';
+     if (anchor === 'top-left')     { alignItems = 'flex-start'; justifyContent = 'flex-start'; }
+     else if (anchor === 'top-right')    { alignItems = 'flex-start'; justifyContent = 'flex-end'; }
+     else if (anchor === 'bottom-left')  { alignItems = 'flex-end';   justifyContent = 'flex-start'; }
+     else if (anchor === 'center')       { alignItems = 'center';     justifyContent = 'center'; }
+     
+     const ox = p.offsetX ?? 60;
+     const oy = p.offsetY ?? 60;
+     const sz = p.size ?? 120;
+     const color = p.color || '#ff3366';
+     const bg = p.bgColor || 'rgba(0,0,0,0.5)';
+     
+     let innerHtml = '';
+     
+     if (p.visualization === 'text') {
+         // Text pill visualization
+         innerHtml = `
+            <div style="background-color: ${bg}; color: ${color}; font-family: 'Inter', monospace; font-size: ${sz * 0.4}px; font-weight: bold; padding: ${sz * 0.15}px ${sz * 0.3}px; border-radius: ${sz * 0.1}px; border: 2px solid ${color};">
+              ${str}
+            </div>
+         `;
+     } else {
+         // Circle progress visualization
+         const circPerimeter = 2 * Math.PI * 40;
+         const dashOffset = circPerimeter * (1 - progress);
+         innerHtml = `
+           <div style="position: relative; width: ${sz}px; height: ${sz}px; border-radius: 50%; background-color: ${bg}; display: flex; align-items: center; justify-content: center;">
+             <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg);" viewBox="0 0 100 100">
+               <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="8"></circle>
+               <circle cx="50" cy="50" r="40" fill="none" stroke="${color}" stroke-width="8" stroke-dasharray="${circPerimeter}" stroke-dashoffset="${dashOffset}" stroke-linecap="round"></circle>
+             </svg>
+             <span style="font-family: 'Inter', monospace; font-size: ${sz * 0.25}px; font-weight: bold; color: #ffffff; z-index: 2; margin-left: 2px;">${str}</span>
+           </div>
+         `;
+     }
+     
+     const svg = `
+       <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+         <foreignObject width="100%" height="100%">
+           <div xmlns="http://www.w3.org/1999/xhtml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: ${alignItems}; justify-content: ${justifyContent}; box-sizing: border-box; padding: ${oy}px ${ox}px;">
+             ${innerHtml}
+           </div>
+         </foreignObject>
+       </svg>
+     `;
+     
+     const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
+     
+     await new Promise((resolve) => {
+         const img = new Image();
+         img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
+         img.onerror = () => resolve();
+         img.src = dataUri;
+     });
+  }
+});
+
+// ─── Native HTML Rich Block (SVG ForeignObject) ─────────────
+registry.register({
+  id: 'overlay-html-block', name: 'Raw HTML & Styles', category: 'Overlays & Typography', categoryKey: 'video-effect',
+  icon: 'html',
+  description: 'Inject direct HTML strings with inline CSS styling directly onto the visual canvas. Supports multiple paragraphs, layout tags, and absolute positioning constraints. Natively leverages timeRange to act as an insertable title card when Freeze logic is enabled.',
+  params: [
+     { name: 'htmlContent',    label: 'HTML Content',     type: 'textarea', defaultValue: '<div style="color: white; font-size: 64px; text-align: center; margin-top: 100px;">\\n  Hello <b>World</b>\\n</div>' },
+     { name: 'fontFamily',     label: 'Base Font Family', type: 'select', options: [ { label: 'Inter', value: 'Inter' }, { label: 'Monospace', value: 'monospace' }, { label: 'Serif', value: 'serif' } ], defaultValue: 'Inter' },
+     { name: 'globalScale',    label: 'Global Font Scale',type: 'range', min: 0.5, max: 4, step: 0.1, defaultValue: 1 },
+     { name: 'justifyLayout',  label: 'Box Justification',type: 'select', options: [ { label: 'Top Left', value: 'flex-start,flex-start' }, { label: 'Center', value: 'center,center' }, { label: 'Stretch', value: 'stretch,stretch' } ], defaultValue: 'flex-start,flex-start' },
+  ],
+  async applyPerFrame(ctx, p, context) {
+     const W = ctx.canvas.width;
+     const H = ctx.canvas.height;
+     
+     const interpolatedHTML = interpolate(p.htmlContent || '', context);
+     if (!interpolatedHTML) return; // Silent skip if empty
+     
+     const [alignItems, justifyContent] = (p.justifyLayout || 'flex-start,flex-start').split(',');
+     
+     const svg = `
+       <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+         <foreignObject width="100%" height="100%">
+           <div xmlns="http://www.w3.org/1999/xhtml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: ${alignItems}; justify-content: ${justifyContent}; box-sizing: border-box; font-family: ${p.fontFamily || 'Inter'}; transform: scale(${p.globalScale || 1}); transform-origin: top left; padding: 20px;">
+             ${interpolatedHTML}
+           </div>
+         </foreignObject>
+       </svg>
+     `;
+     
+     const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
+     
+     await new Promise((resolve) => {
+         const img = new Image();
+         img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
+         img.onerror = () => resolve();
+         img.src = dataUri;
+     });
+  }
+});
+
+// ─── Native Subtitles (SRT/VTT to SVG) ───────────────────────
+registry.register({
+  id: 'overlay-subtitles', name: 'Add Subtitles (.SRT)', category: 'Overlays & Typography', categoryKey: 'video-effect',
+  icon: 'subtitles',
+  description: 'Dynamically parses external SRT or WEBVTT subtitle tracks and stamps active captions over the video at their specified timestamps.',
+  params: [
+     { name: 'subtitleFile',   label: 'Subtitle Track (.srt / .vtt)', type: 'file-text', accept: '.srt,.vtt,.txt' },
+     { name: 'fontFamily',     label: 'Font Family',      type: 'select', options: [ { label: 'Inter', value: 'Inter' }, { label: 'Monospace', value: 'monospace' }, { label: 'Outfit', value: 'Outfit' } ], defaultValue: 'Inter' },
+     { name: 'fontSize',       label: 'Base Font Size',   type: 'range', min: 16, max: 200, step: 2, defaultValue: 48 },
+     { name: 'textColor',      label: 'Default Text Color',type: 'color', defaultValue: '#ffffff' },
+     { name: 'speaker1Color',  label: '[Speaker 1] Color',type: 'color', defaultValue: '#3b82f6' },
+     { name: 'speaker2Color',  label: '[Speaker 2] Color',type: 'color', defaultValue: '#f472b6' },
+     { name: 'speaker3Color',  label: '[Speaker 3] Color',type: 'color', defaultValue: '#22c55e' },
+     { name: 'outlineColor',   label: 'Outline / Shadow Color', type: 'color', defaultValue: '#000000' },
+     { name: 'boxBgColor',     label: 'Box Background Color', type: 'color', defaultValue: '#000000' },
+     { name: 'boxBgOpacity',   label: 'Box Opacity',      type: 'range', min: 0, max: 1, step: 0.1, defaultValue: 0 },
+     { name: 'bottomOffset',   label: 'Bottom Padding (px)', type: 'range', min: 0, max: 300, step: 10, defaultValue: 60 },
+  ],
+  async applyPerFrame(ctx, p, context) {
+     const rawSubtitleParam = interpolate(p.subtitleFile || '', context);
+     if (!rawSubtitleParam) return;
+     
+     let subs = _sharedSubtitleCache.get(rawSubtitleParam);
+     if (!subs) {
+         try {
+             let rawText = rawSubtitleParam;
+             if (rawText.trim().startsWith('http://') || rawText.trim().startsWith('https://')) {
+                  rawText = await fetch(rawText.trim()).then(r => r.text());
+             }
+             const { parseSubtitles } = await import('../../utils/subtitles.js');
+             subs = parseSubtitles(rawText);
+             _sharedSubtitleCache.set(rawSubtitleParam, subs);
+         } catch (err) {
+             console.error('[overlay-subtitles] Failed to fetch or parse subtitles:', err);
+             _sharedSubtitleCache.set(rawSubtitleParam, []); 
+             return;
+         }
+     }
+     
+     if (subs.length === 0) return;
+     
+     // Find the subtitle that is currently active for this timestamp
+     // Note: video-convert passes timestampSec exactly on each frame.
+     const ts = context.timestampSec || 0;
+     const activeSubs = subs.filter(sub => ts >= sub.start && ts <= sub.end);
+     
+     if (activeSubs.length === 0) return;
+     
+     const W = ctx.canvas.width;
+     const H = ctx.canvas.height;
+     
+     // Build stacked string if multiple overlaps exist in SRT
+     let escapedText = activeSubs.map(s => s.text.replace(/\\n/g, '<br/>').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br/>');
+     
+     // Detect Speaker Tags and adjust color
+     let textCol = p.textColor || '#ffffff';
+     const speakerMatch = escapedText.match(/^\[Speaker\s*(\d+)\]/i);
+     if (speakerMatch) {
+         // Trim the label from the start of the visible text
+         escapedText = escapedText.replace(/^\[Speaker\s*\d+\]\s*:?\s*/i, '');
+         const num = speakerMatch[1];
+         if (num === '1') textCol = p.speaker1Color || '#3b82f6';
+         else if (num === '2') textCol = p.speaker2Color || '#f472b6';
+         else if (num === '3') textCol = p.speaker3Color || '#22c55e';
+     }
+     
+     // Native Netflix-style text shadow dropshadow rendering
+     const shadowCol = p.outlineColor || '#000000';
+     const fSize     = p.fontSize || 48;
+     
+     // Box Background
+     let bgCSS = '';
+     if ((p.boxBgOpacity ?? 0) > 0) {
+         const hex = (p.boxBgColor || '#000000').replace('#', '');
+         const bigint = parseInt(hex.length === 3 ? hex.split('').map(x=>x+x).join('') : hex, 16);
+         const r = (bigint >> 16) & 255;
+         const g = (bigint >> 8) & 255;
+         const b = bigint & 255;
+         bgCSS = `background-color: rgba(${r}, ${g}, ${b}, ${p.boxBgOpacity}); padding: 12px 24px; border-radius: 8px;`;
+     }
+     
+     // We use multiple hard shadows to mimic a stroke
+     const shadowCSS = `
+       2px 2px 0 ${shadowCol}, -1px -1px 0 ${shadowCol},
+       1px -1px 0 ${shadowCol}, -1px 1px 0 ${shadowCol},
+       1px 1px 0 ${shadowCol}, 0 2px 0 ${shadowCol},
+       2px 0 0 ${shadowCol}, 0 -1px 0 ${shadowCol},
+       -1px 0 0 ${shadowCol}, 0 3px 6px rgba(0,0,0,0.5)
+     `.trim();
+     
+     const svg = `
+       <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+         <foreignObject width="100%" height="100%">
+           <div xmlns="http://www.w3.org/1999/xhtml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; box-sizing: border-box; padding-bottom: ${p.bottomOffset ?? 60}px;">
+             <div style="font-family: ${p.fontFamily || 'Inter'}; font-size: ${fSize}px; font-weight: 700; color: ${textCol}; text-shadow: ${shadowCSS}; text-align: center; max-width: 80%; line-height: 1.3; ${bgCSS}">
+               ${escapedText}
+             </div>
+           </div>
+         </foreignObject>
+       </svg>
+     `;
+     
+     const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
+     
+     await new Promise((resolve) => {
+         const img = new Image();
+         img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
+         img.onerror = () => resolve();
+         img.src = dataUri;
+     });
+  }
+});
+

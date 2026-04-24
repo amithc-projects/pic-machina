@@ -83,13 +83,15 @@ All transforms are registered by their `transformId` string.
 | `overlay-ribbon` | Ribbon / Badge | `text`, `position` (TL/TR/BL/BR), `bgColor`, `textColor`, `size` | Corner badge overlay |
 | `overlay-qrcode` | QR Code | `content`, `size`, `anchor`, `margin`, `errorCorrection` | Generates QR code from any URL or text |
 | `overlay-grid` | Grid Overlay | `spacing`, `color`, `opacity`, `lineWidth` | Technical/engineering grid |
-| `overlay-map` | Map View | `zoom`, `size`, `opacity`, `anchor`, `margin` | OpenStreetMap tile at EXIF GPS location — requires GPS metadata |
+| `overlay-map` | Map View | `zoom`, `size`, `opacity`, `anchor`, `margin` | OpenStreetMap tile at EXIF GPS location. `size` accepts px or % to build responsive rectangular layouts matching the bounds of the image (outside-left/right/top/bottom). |
 | `overlay-light-leak` | Light Leak | `edge`, `color`, `opacity`, `spread`, `blendMode` | Analog-style light bleed from one edge |
 | `overlay-canvas-texture` | Canvas Texture | `intensity`, `scale`, `blendMode` | Procedural canvas/paper grain overlay |
 | `overlay-polaroid-frame` | Polaroid Frame | `borderColor`, `borderSide`, `borderBottom`, `caption` | Expands canvas with white border and caption; designed to precede `flow-animate-stack` |
 | `overlay-scanlines` | CRT Scanlines | `spacing`, `opacity`, `color` | Horizontal CRT-style scan line overlay |
 | `overlay-template` | Template Frame | `templateId` | Warps the current image into the primary slot of a saved Perspective Template; renders the template background around it |
 | `overlay-device-mockup` | Device Mockup | `family`, `model`, `variant` | Wraps the current image inside a physical device chassis using dynamic clipping and glare overlays |
+| `overlay-html-block` | Raw HTML | `htmlContent`, `justifyLayout`, `globalScale` | Renders fully interactive HTML markup into the canvas sequence dynamically. |
+| `overlay-subtitles` | Add Subtitles | `subtitleFile`, `captionColor`, `shadowOpacity` | Stamps perfectly timed text blocks onto the timeline securely parsing SRT files or direct {{autoCaptions}} tags. |
 
 ---
 
@@ -114,6 +116,7 @@ All transforms are registered by their `transformId` string.
 | `ai-analyse-people` | Analyse People | `faceConfidence`, `poseConfidence`, `maxPoses` | MediaPipe pose & face detection to asset store |
 | `ai-clipping-mask` | Clipping Mask | `shape` (Circle/RoundedRect/Diamond), `feathering` | Shape-based mask using AI segmentation |
 | `ai-glow-eyes` | Glowing Eyes | `color`, `intensity` (0–100), `irisScale` (60–200%), `glowSpread` (150–600%), `darkPupil`, `confidence` | FaceLandmarker iris landmarks (468/473) for pixel-accurate iris centre; screen-mode additive glow with hot-white core + outer diffuse skin illumination. Used in Vampire GFX recipe. |
+| `ai-transcribe` | Auto-Transcribe (Whisper) | `outputVariable` | Fast, local offline Audio-to-text recognition generating perfectly timed variables securely. |
 
 ### InSPyReNet-based transforms (requires `#mdl` download)
 
@@ -136,6 +139,8 @@ All transforms are registered by their `transformId` string.
 | `flow-save` | Save State | `label` | Saves current canvas to a named slot |
 | `flow-load` | Load State | `label` | Restores a previously saved canvas slot |
 | `flow-compose-grid` | Compose Grid | `panels` (comma-separated labels), `columns`, `gap`, `bgColor` | Assembles saved states into a grid |
+| `flow-export-variable` | Export Variable | `variableName`, `fileName` | Bypasses the canvas pipeline to physically dump a working variables securely to the target filesystem as an independent sidecar! |
+| `flow-video-scroll` | Scrolling Video | `duration`, `fps`, `filename` | Takes a tall/wide image (like a webpage screenshot) and outputs a smooth MP4 video that scrolls across the image over time. |
 
 ### Aggregation Nodes (Cross-Image Output)
 

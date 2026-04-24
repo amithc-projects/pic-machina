@@ -89,10 +89,165 @@ const TRANSITIONS = {
       vec2 p = dist > 0.0 ? (floor(uv / squareSize) + 0.5) * squareSize : uv;
       return mix(getFromColor(p), getToColor(p), progress);
     }
+  `,
+  dipToBlack: `
+    vec4 transition(vec2 uv) {
+      if (progress < 0.5) {
+        return mix(getFromColor(uv), vec4(0.0, 0.0, 0.0, 1.0), progress * 2.0);
+      } else {
+        return mix(vec4(0.0, 0.0, 0.0, 1.0), getToColor(uv), (progress - 0.5) * 2.0);
+      }
+    }
+  `,
+  pushLeft: `
+    vec4 transition(vec2 uv) {
+      vec2 f_uv = uv + vec2(progress, 0.0);
+      vec2 t_uv = uv + vec2(progress - 1.0, 0.0);
+      if (uv.x < 1.0 - progress) {
+        return getFromColor(f_uv);
+      } else {
+        return getToColor(t_uv);
+      }
+    }
+  `,
+  pushRight: `
+    vec4 transition(vec2 uv) {
+      vec2 f_uv = uv + vec2(-progress, 0.0);
+      vec2 t_uv = uv + vec2(1.0 - progress, 0.0);
+      if (uv.x > progress) {
+        return getFromColor(f_uv);
+      } else {
+        return getToColor(t_uv);
+      }
+    }
+  `,
+  whipPan: `
+    vec4 transition(vec2 uv) {
+      // 1. Calculate base push
+      vec2 f_uv = uv + vec2(progress, 0.0);
+      vec2 t_uv = uv + vec2(progress - 1.0, 0.0);
+      
+      // 2. Base color choice (like Push Left)
+      vec4 color = vec4(0.0);
+      
+      // 3. Apply heavy directional blur near the middle of the transition
+      // Max blur amount at progress = 0.5
+      float blurLevel = sin(progress * 3.14159);
+      float blurScale = blurLevel * 0.15; // Max 15% UV shift per tap
+      
+      // Multi-tap horizontal blur
+      int taps = 7;
+      float weightSum = 0.0;
+      
+      for(int i = -3; i <= 3; i++) {
+        float offset = float(i) * blurScale / 3.0;
+        vec2 sample_uv = uv + vec2(offset, 0.0);
+        
+        vec2 sf_uv = sample_uv + vec2(progress, 0.0);
+        vec2 st_uv = sample_uv + vec2(progress - 1.0, 0.0);
+        
+        vec4 sampleColor = vec4(0.0);
+        if (sample_uv.x < 1.0 - progress) {
+          sampleColor = getFromColor(sf_uv);
+        } else {
+          sampleColor = getToColor(st_uv);
+        }
+        
+        // Simple Gaussian distribution approx
+        float weight = exp(-float(i*i)*0.2); 
+        color += sampleColor * weight;
+        weightSum += weight;
+      }
+      return color / weightSum;
+    }
+  `,
+  filmBurn: `
+    vec4 transition(vec2 uv) {
+      vec4 f = getFromColor(uv);
+      vec4 t = getToColor(uv);
+      vec4 color = mix(f, t, progress);
+      float flash = smoothstep(0.0, 0.5, progress) * (1.0 - smoothstep(0.5, 1.0, progress));
+      vec3 burnColor = vec3(1.0, 0.8, 0.6) * flash * 1.5;
+      return min(color + vec4(burnColor, 0.0), 1.0);
+    }
+  `,
+  zoomFade: `
+    vec4 transition(vec2 uv) {
+      vec2 center = vec2(0.5, 0.5);
+      float s1 = 1.0 - progress * 0.5;
+      vec2 uv1 = (uv - center) * s1 + center;
+      float s2 = 1.5 - progress * 0.5;
+      vec2 uv2 = (uv - center) * s2 + center;
+      return mix(getFromColor(uv1), getToColor(uv2), progress);
+    }
+  `,
+  lumaWipe: `
+    vec4 transition(vec2 uv) {
+      vec4 f = getFromColor(uv);
+      vec4 t = getToColor(uv);
+      float luma = dot(t.rgb, vec3(0.299, 0.587, 0.114));
+      float p = smoothstep(luma * 0.5, luma * 0.5 + 0.5, progress);
+      return mix(f, t, p);
+    }
+  `,
+  vhsGlitch: `
+    float rand(vec2 co){
+        return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    }
+    vec4 transition(vec2 uv) {
+      float env = smoothstep(0.0, 0.5, progress) * (1.0 - smoothstep(0.5, 1.0, progress));
+      float glitchLine = rand(vec2(floor(uv.y * 20.0), 1.0)) * 2.0 - 1.0;
+      vec2 disp = vec2(glitchLine * env * 0.15, 0.0);
+      vec4 f = getFromColor(uv + disp);
+      vec4 t = getToColor(uv - disp);
+      float r = mix(getFromColor(uv + disp + vec2(0.02*env, 0)).r, getToColor(uv - disp + vec2(0.02*env, 0)).r, progress);
+      float g = mix(f.g, t.g, progress);
+      float b = mix(getFromColor(uv + disp - vec2(0.02*env, 0)).b, getToColor(uv - disp - vec2(0.02*env, 0)).b, progress);
+      return vec4(r, g, b, 1.0);
+    }
+  `,
+  venetianBlinds: `
+    vec4 transition(vec2 uv) {
+      float stripes = 12.0;
+      float stripIndex = floor(uv.y * stripes);
+      float p = progress * 1.2 - (stripIndex / stripes) * 0.2;
+      p = clamp(p, 0.0, 1.0);
+      float localY = fract(uv.y * stripes);
+      if (localY < p) {
+        return getToColor(uv);
+      } else {
+        return getFromColor(uv);
+      }
+    }
+  `,
+  liquidSwirl: `
+    vec4 transition(vec2 uv) {
+      vec2 center = vec2(0.5, 0.5);
+      vec2 toCenter = uv - center;
+      float dist = length(toCenter);
+      float angle = progress * 3.14159 * 2.5 * (1.0 - dist);
+      float s = sin(angle);
+      float c = cos(angle);
+      vec2 swirled = vec2(toCenter.x * c - toCenter.y * s, toCenter.x * s + toCenter.y * c);
+      swirled += center;
+      return mix(getFromColor(swirled), getToColor(uv), progress);
+    }
+  `,
+  radialWipe: `
+    vec4 transition(vec2 uv) {
+      vec2 toCenter = uv - vec2(0.5);
+      float angle = atan(toCenter.y, toCenter.x);
+      angle = (angle / (2.0 * 3.14159)) + 0.5; 
+      if (angle <= progress) {
+        return getToColor(uv);
+      } else {
+        return getFromColor(uv);
+      }
+    }
   `
 };
 
-class WebGLCompositor {
+export class WebGLCompositor {
   constructor(width, height) {
     this.canvas = new OffscreenCanvas(width, height);
     this.gl = this.canvas.getContext('webgl');

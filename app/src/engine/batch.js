@@ -83,6 +83,8 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-video-strip-audio',
   'flow-video-extract-audio',
   'flow-video-remix-audio',
+  // HTML-in-Canvas experimental overlay uses real DOM
+  'overlay-timer',
 ]);
 
 function flattenNodes(nodes) {
@@ -330,6 +332,8 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
           width:   p.width   || undefined,
           height:  p.height  || undefined,
           bitrate: p.bitrate || 8_000_000,
+          transitionMode: p.transitionMode || 'none',
+          transitionDuration: Number(p.transitionDuration) || 0,
           onLog,
         });
         let fname = p.filename || 'concatenated.mp4';
@@ -831,6 +835,7 @@ export async function startBatch({ recipe, files, inputHandle, outputHandle, sub
       files,
       outputConfig: { subfolder, blocks: blocksById, runParams },
       runId: run.id,
+      inputHandle,
     }
   });
 

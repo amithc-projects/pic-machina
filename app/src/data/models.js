@@ -23,6 +23,14 @@ export const MODEL_REGISTRY = [
     precision: 'fp16',
     inputSize: 1024,
   },
+  {
+    id: 'whisper-tiny-en',
+    name: 'Auto-Transcription (Whisper Tiny)',
+    description: 'Lightning-fast on-device speech transcription. Evaluates video audio locally to generate precisely timed closed captions (SRT) without any cloud costs.',
+    url: 'Xenova/whisper-tiny.en',
+    sizeBytes: 42_000_000,
+    backend: 'transformers',
+  }
 ];
 
 export function getModelMeta(id) {
@@ -72,6 +80,37 @@ export async function listDownloadedModels() {
 export async function downloadModel(id, onProgress, signal) {
   const meta = getModelMeta(id);
   if (!meta) throw new Error(`Unknown model: ${id}`);
+
+  if (meta.backend === 'transformers') {
+      const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      env.allowLocalModels = false;
+      env.useBrowserCache = true;
+      
+      const fileProgress = new Map();
+      let totalLoaded = 0;
+      let totalSize = meta.sizeBytes;
+      
+      await pipeline('automatic-speech-recognition', meta.url, {
+          progress_callback: (prog) => {
+              if (prog.status === 'progress' && onProgress) {
+                  fileProgress.set(prog.file, prog.loaded);
+                  let currentLoaded = 0;
+                  for (const val of fileProgress.values()) currentLoaded += val;
+                  onProgress({ loaded: currentLoaded, total: totalSize });
+              }
+          }
+      });
+      
+      const record = {
+        id,
+        name: meta.name,
+        downloadedAt: Date.now(),
+        sizeBytes: meta.sizeBytes,
+        bytes: new ArrayBuffer(1) // Placeholder to satisfy IDB UI checker
+      };
+      await dbPut('models', record);
+      return record;
+  }
 
   const resp = await fetch(meta.url, { signal });
   if (!resp.ok) throw new Error(`Download failed: HTTP ${resp.status}`);

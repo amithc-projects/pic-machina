@@ -95,3 +95,11 @@ A visual portfolio layer that lets users highlight and document their best runs.
   - Optional embedding of user-edited titles/tags/locations back into IPTC/XMP image headers during export.
 - [ ] **Task 6.3: Project Re-hydration**
   - Logic to "Drop a ZIP" to restore the Asset Store and full application state from an archive.
+
+## Phase 7: Advanced Imagery & Color (PLANNED)
+- [ ] **Task 7.1: Cinematic Color Grading (LUTs)**
+  - Support for uploading `.cube` or `.3dl` Look-Up Tables to apply professional, cinematic color grading consistently across media batches.
+- [ ] **Task 7.2: Histogram Level Adjustments**
+  - Add nodes to programmatically adjust and normalize image histogram levels (shadows, midtones, highlights) to ensure consistent exposure.
+- [x] **Task 7.3: Scrolling Screen Capture Animation (`flow-video-scroll`)**
+  - A transformation that takes a long/tall image (e.g., a full-page website screenshot), scales it to fit the viewport width, and creates a video that slowly scrolls from top to bottom, pausing briefly at the end to allow for easy reading.

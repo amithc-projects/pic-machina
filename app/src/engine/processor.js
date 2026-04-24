@@ -141,13 +141,11 @@ export class ImageProcessor {
         'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap',
         'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip',
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
-        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio',
+        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-scroll',
     ]);
     const nodeTreeHasExport = (ns) => ns.some(n => {
       if (n.type === 'transform') {
         if (EXPORT_IDS.has(n.transformId)) return true;
-        // video-effect transforms produce their own output — suppress auto-export
-        return registry.get(n.transformId)?.categoryKey === 'video-effect';
       }
       if (n.type === 'branch')   return (n.branches || []).some(b => nodeTreeHasExport(b.nodes || []));
       if (n.type === 'conditional') return nodeTreeHasExport(n.thenNodes || []) || nodeTreeHasExport(n.elseNodes || []);
@@ -238,6 +236,24 @@ export class ImageProcessor {
       const base = context.filename.replace(/\.[^.]+$/, '');
       const ext  = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif' }[fmt] || 'jpg';
       results.push({ blob, filename: `${base}${suffix}.${ext}`, subfolder: effectiveSubfolder });
+      return;
+    }
+
+    // ── Export Variable to File ────
+    if (id === 'flow-export-variable') {
+      const varName = (node.params?.variableName || 'autoCaptions').replace(/[\{\}]/g, ''); 
+      const textData = context.variables.get(varName);
+
+      if (typeof textData !== 'string') {
+        context.log?.('warn', `[flow-export-variable] Variable "{{${varName}}}" was empty or not text data. Skipping.`);
+        return;
+      }
+
+      const outName = interpolate(node.params?.fileName || 'exported.txt', context);
+      const blob = new Blob([textData], { type: 'text/plain;charset=utf-8' });
+
+      results.push({ blob, filename: outName, subfolder: context.outputSubfolder });
+      context.log?.('ok', `Exported sidecar variable → ${outName}`);
       return;
     }
 
@@ -332,6 +348,25 @@ export class ImageProcessor {
       return; // Never modifies the master canvas
     }
 
+    // ── Video: Scroll Animation ──
+    if (id === 'flow-video-scroll') {
+      if (context._previewMode) return; // not run during preview
+      const file = context.originalFile;
+      if (!file) { context.log?.('warn', `flow-video-scroll: no source file available — skipping`); return; }
+      try {
+        const { createVideoScroll } = await import('./video-convert.js');
+        const p = node.params || {};
+        const blob = await createVideoScroll(file, { ...p, onLog: context.log });
+        const suffix = interpolate(p.suffix || '_scrolled', context);
+        const base = context.filename.replace(/\.[^.]+$/, '');
+        results.push({ blob, filename: `${base}${suffix}.mp4`, subfolder: context.outputSubfolder });
+        context.log?.('ok', `flow-video-scroll: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.mp4`);
+      } catch (err) {
+        context.log?.('error', `flow-video-scroll failed for "${file.name}": ${err.message}`);
+      }
+      return;
+    }
+
     // ── Per-file video operations (mediabunny) ──
     const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
     if (['flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps',
@@ -406,41 +441,22 @@ export class ImageProcessor {
         return;
       }
 
-      const file = context.originalFile;
-      if (!file) { context.log?.('warn', `${id}: no source file — skipping`); return; }
-      const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
-      if (!VIDEO_EXTS.has(ext)) { context.log?.('warn', `${id}: skipping non-video file "${file.name}"`); return; }
-      if (!_perFrameFn) { context.log?.('warn', `${id}: no applyPerFrame or sourceTransformId — skipping`); return; }
-      try {
-        const { processVideoEffect } = await import('./video-convert.js');
-        const p = node.params || {};
-        const blob = await processVideoEffect(
-          file,
-          _perFrameFn,
-          p,
-          {
-            bitrate: p.bitrate || 8_000_000,
-            onLog: context.log,
-            fileContext: context,
-            timeRange: node.timeRange || null,
-            strengthParam: _videoEffectDef.strengthParam || null,
-          }
-        );
-        const suffix = interpolate(p.suffix || '', context);
-        const base   = context.filename.replace(/\.[^.]+$/, '');
-        results.push({ blob, filename: `${base}${suffix}.mp4`, subfolder: context.outputSubfolder });
-        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.mp4`);
-      } catch (err) {
-        context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
-      }
+      // Batch mode: accumulate into queue so all effects bind into one single export!
+      if (!context._videoTransformQueue) context._videoTransformQueue = [];
+      context._videoTransformQueue.push({ 
+         fn: _perFrameFn, 
+         params: node.params || {}, 
+         timeRange: node.timeRange || null,
+         strengthParam: _videoEffectDef.strengthParam || null
+      });
       return;
     }
 
     // ── Canvas transforms on video files → queue for single-pass per-frame processing ──
-    // Any geo-*, color-*, or overlay-* transform applied to a video file is queued here.
+    // Any geo-*, color-*, overlay-*, or ai-* transform applied to a video file is queued here.
     // The queue is flushed (in one mediabunny encode pass) when flow-export or
     // flow-video-wall is reached, so chained transforms cost only one encode, not N.
-    const CANVAS_CATEGORY_KEYS = new Set(['geo', 'color', 'overlay']);
+    const CANVAS_CATEGORY_KEYS = new Set(['geo', 'color', 'overlay', 'ai']);
     const def_canvas = registry.get(id);
     const _file = context.originalFile;
     const _ext  = _file?.name.slice(_file.name.lastIndexOf('.') + 1).toLowerCase();
