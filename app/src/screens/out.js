@@ -498,20 +498,9 @@ export async function render(container, hash) {
 
     // Browse folder viewer
     container.querySelectorAll('.out-btn-browse').forEach(btn => {
-      btn.addEventListener('click', async e => {
+      btn.addEventListener('click', e => {
         e.stopPropagation();
-        const runId = btn.dataset.runId;
-        const run = await getRun(runId);
-        if (!run) return;
-        let outputHandle = run.outputHandleObj || await getFolder('output');
-        if (!outputHandle) return;
-        try {
-          const subHandle = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
-          window._icFldTargetHandle = subHandle;
-          navigate('#fld');
-        } catch (err) {
-          window.AuroraToast?.show({ variant: 'danger', title: 'Subfolder not found', description: err.message });
-        }
+        navigate(`#fld?run=${btn.dataset.runId}&from=out`);
       });
     });
 

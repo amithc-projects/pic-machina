@@ -200,6 +200,14 @@ export async function render(container, hash) {
           </button>
           <button class="fld-chip" data-filter="other">Other</button>
         </div>
+        ${runId ? `
+        <div class="fld-run-filter-wrap" id="fld-run-filter-wrap">
+          <div style="width:1px;height:18px;background:var(--ps-border);margin:0 2px"></div>
+          <button class="fld-chip fld-chip--run is-active" id="fld-run-filter-btn" title="Toggle between run results and all files in folder">
+            <span class="material-symbols-outlined" style="font-size:12px">filter_alt</span>
+            Run results
+          </button>
+        </div>` : ''}
       </div>
 
       <div class="fld-body" id="fld-body">
@@ -313,6 +321,10 @@ export async function render(container, hash) {
   let viewMode   = localStorage.getItem('ic-view-mode') || 'filmstrip';
   let filterType = 'all';
   let sortKey    = 'name';
+  // Run-scoped filter: when navigating from que/out with a runId, show only files
+  // whose lastModified falls within the run's execution window (±buffer).
+  let runFilter  = !!runId;
+  const RUN_FILTER_BUF_MS = 15_000; // 15 s buffer around run window
   let selected   = null; // MediaEntry | null
   let selectedSet = new Set(); // Set<string> filenames (primary selection)
   let lastIdx    = -1;   // for shift-select
@@ -354,6 +366,17 @@ export async function render(container, hash) {
   // ── Sort ───────────────────────────────────────────────────
   container.querySelector('#fld-sort')?.addEventListener('change', e => {
     sortKey = e.target.value;
+    applyFilter();
+  });
+
+  // ── Run filter toggle ───────────────────────────────────────
+  container.querySelector('#fld-run-filter-btn')?.addEventListener('click', () => {
+    runFilter = !runFilter;
+    const btn = container.querySelector('#fld-run-filter-btn');
+    if (btn) {
+      btn.classList.toggle('is-active', runFilter);
+      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px">${runFilter ? 'filter_alt' : 'filter_alt_off'}</span> ${runFilter ? 'Run results' : 'All files'}`;
+    }
     applyFilter();
   });
 
@@ -552,7 +575,19 @@ export async function render(container, hash) {
   }
 
   function applyFilter() {
-    filtered = allEntries.filter(ent => filterType === 'all' || fileType(ent.file.name) === filterType);
+    const runStart = run?.startedAt  ? run.startedAt  - RUN_FILTER_BUF_MS : null;
+    const runEnd   = run?.finishedAt ? run.finishedAt + RUN_FILTER_BUF_MS
+                   : run?.startedAt  ? Date.now()     + RUN_FILTER_BUF_MS
+                   : null;
+
+    filtered = allEntries.filter(ent => {
+      if (filterType !== 'all' && fileType(ent.file.name) !== filterType) return false;
+      if (runFilter && runStart !== null) {
+        const ts = ent.file.lastModified;
+        if (ts < runStart || ts > runEnd) return false;
+      }
+      return true;
+    });
     // Sort files
     filtered.sort((a, b) => {
       if (sortKey === 'type') return fileType(a.file.name).localeCompare(fileType(b.file.name)) || a.file.name.localeCompare(b.file.name);
@@ -570,9 +605,13 @@ export async function render(container, hash) {
     if (!main) return;
 
     if (!filtered.length && !filteredFolders.length) {
+      const emptyMsg = runFilter
+        ? 'No output files found for this run. Toggle "Run results" to see all files in the folder.'
+        : 'No files match the current filter.';
       main.innerHTML = `<div class="empty-state" style="height:100%">
         <span class="material-symbols-outlined">filter_none</span>
         <div class="empty-state-title">No files match</div>
+        <div class="empty-state-desc">${emptyMsg}</div>
       </div>`;
       updateSelectionUI();
       return;
@@ -1587,6 +1626,9 @@ function injectFldStyles() {
     .fld-chip.is-active { background:var(--ps-blue); border-color:var(--ps-blue); color:#fff; }
     .fld-chip-count { background:rgba(255,255,255,0.2); border-radius:10px; padding:0 5px; font-size:10px; }
     .fld-chip.is-active .fld-chip-count { background:rgba(255,255,255,0.25); }
+    .fld-chip--run { gap:4px; }
+    .fld-chip--run:not(.is-active) { border-color:var(--ps-border); color:var(--ps-text-muted); }
+    .fld-run-filter-wrap { display:flex; align-items:center; gap:6px; }
 
     /* Body layout */
     .fld-body { display:flex; flex:1; overflow:hidden; }
