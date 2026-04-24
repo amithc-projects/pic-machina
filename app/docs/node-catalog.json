@@ -839,6 +839,39 @@
     ]
   },
   {
+    "id": "flow-video-speed",
+    "name": "Video: Change Speed",
+    "category": "Flow Control",
+    "description": "Speed up or slow down a segment of a video. The segment before and after plays at normal speed; audio in the affected segment is silenced. Leave segStart/segEnd blank to apply to the whole video. Skips non-video files.",
+    "icon": "slow_motion_video",
+    "params": [
+      {
+        "name": "speedFactor",
+        "label": "Speed Factor (e.g. 0.5 = half speed, 2 = double speed)",
+        "type": "number",
+        "defaultValue": 2
+      },
+      {
+        "name": "segStart",
+        "label": "Segment Start (seconds — leave blank for beginning of video)",
+        "type": "number",
+        "defaultValue": ""
+      },
+      {
+        "name": "segEnd",
+        "label": "Segment End (seconds — leave blank for end of video)",
+        "type": "number",
+        "defaultValue": ""
+      },
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": "_speed"
+      }
+    ]
+  },
+  {
     "id": "flow-video-concat",
     "name": "Video: Concatenate",
     "category": "Flow Control",

@@ -177,6 +177,7 @@ These transforms operate on individual video files using the mediabunny conversi
 | `flow-video-trim` | Video: Trim | `start` (s), `end` (s), `suffix` | Cut to a specific time range |
 | `flow-video-compress` | Video: Compress | `quality` (low/medium/high/custom), `bitrate` (Mbps), `suffix` | Reduce file size via lower bitrate |
 | `flow-video-change-fps` | Video: Change Frame Rate | `fps` (12/24/25/30/60), `suffix` | Retarget the video frame rate |
+| `flow-video-speed` | Video: Change Speed | `speedFactor` (e.g. 0.5 = slow-mo, 2 = fast-forward), `segStart` (s), `segEnd` (s), `suffix` | Speed up or slow down a segment of a video. The before/after segments play at normal speed; audio in the affected segment is silenced. Leave `segStart`/`segEnd` blank to apply to the whole video. |
 | `flow-video-strip-audio` | Video: Strip Audio | `suffix` | Remove all audio tracks |
 | `flow-video-extract-audio` | Video: Extract Audio | `format` (mp3/wav/flac/ogg/aac), `suffix` | Export audio track as a standalone audio file |
 | `flow-video-remix-audio` | Video: Remix Audio | `channels` (keep/1/2), `sampleRate` (keep/22050/44100/48000), `suffix` | Adjust audio channel layout and/or sample rate |
