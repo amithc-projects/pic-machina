@@ -335,6 +335,7 @@ export class ImageProcessor {
     // ── Per-file video operations (mediabunny) ──
     const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
     if (['flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps',
+         'flow-video-speed',
          'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio'].includes(id)) {
       if (context._previewMode) return; // full conversion not run during preview
       const file = context.originalFile;
@@ -346,6 +347,7 @@ export class ImageProcessor {
       }
       try {
         const { convertVideo, trimVideo, compressVideo, changeFPS,
+                changeVideoSpeed,
                 stripAudio, extractAudio, remixAudio } = await import('./video-convert.js');
         const p = node.params || {};
         let blob;
@@ -353,6 +355,7 @@ export class ImageProcessor {
         else if (id === 'flow-video-trim')          blob = await trimVideo(file, p);
         else if (id === 'flow-video-compress')      blob = await compressVideo(file, p);
         else if (id === 'flow-video-change-fps')    blob = await changeFPS(file, p);
+        else if (id === 'flow-video-speed')         blob = await changeVideoSpeed(file, { ...p, onLog: context.log });
         else if (id === 'flow-video-strip-audio')   blob = await stripAudio(file, p);
         else if (id === 'flow-video-extract-audio') blob = await extractAudio(file, p);
         else if (id === 'flow-video-remix-audio')   blob = await remixAudio(file, p);

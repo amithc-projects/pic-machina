@@ -287,7 +287,8 @@ export async function render(container, hash) {
         'flow-video-concat',
         // Video-only transforms (no canvas output, file is mutated via mediabunny)
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress',
-        'flow-video-change-fps', 'flow-video-strip-audio', 'flow-video-extract-audio',
+        'flow-video-change-fps', 'flow-video-speed',
+        'flow-video-strip-audio', 'flow-video-extract-audio',
         'flow-video-remix-audio',
       ]);
       if (NO_PREVIEW_IDS.has(node.transformId)) {

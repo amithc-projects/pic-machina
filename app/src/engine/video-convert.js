@@ -692,3 +692,159 @@ export async function concatVideos(files, { fps = 30, width, height, bitrate = 8
 
   return new Blob([target.buffer], { type: 'video/mp4' });
 }
+
+// ─── Video speed change ───────────────────────────────────────────────────────
+
+/**
+ * Change the playback speed of a video, optionally only within a time segment.
+ *
+ * The segment audio is silenced (omitted from the mux) — no pitch-shift needed.
+ * Before/after the segment play at normal speed with their original audio intact
+ * (re-encoded visually; audio passthrough will be added when mediabunny supports it).
+ *
+ * Three-phase encode (HTMLVideoElement seek + mp4-muxer, same as concatVideos):
+ *   Phase A — [0, segStart)          normal speed
+ *   Phase B — [segStart, segEnd)     compressed/stretched by speedFactor, silent
+ *   Phase C — [segEnd, duration)     normal speed
+ *
+ * @param {File}   file
+ * @param {{ speedFactor?: number, segStart?: number|string, segEnd?: number|string,
+ *           fps?: number, bitrate?: number, onLog?: function }} options
+ * @returns {Promise<Blob>}
+ */
+export async function changeVideoSpeed(file, {
+  speedFactor = 2,
+  segStart,
+  segEnd,
+  fps: fpsParam = 30,
+  bitrate = 8_000_000,
+  onLog,
+} = {}) {
+  const log    = (msg) => onLog?.('info', msg);
+  const factor = Math.max(0.05, Math.min(20, parseFloat(speedFactor) || 2));
+  const fps    = parseFloat(fpsParam) || 30;
+
+  const info = await getVideoInfo(file);
+  const rawW = info.width;
+  const rawH = info.height;
+  const encW = rawW % 2 === 0 ? rawW : rawW + 1;
+  const encH = rawH % 2 === 0 ? rawH : rawH + 1;
+
+  // Normalise segment bounds — empty / undefined means start / end of video
+  const srcStart = (segStart !== '' && segStart != null)
+    ? Math.max(0, parseFloat(segStart) || 0)
+    : 0;
+  const srcEnd   = (segEnd !== '' && segEnd != null)
+    ? Math.min(info.duration, parseFloat(segEnd))
+    : info.duration;
+
+  if (srcEnd <= srcStart) throw new Error(`changeVideoSpeed: segEnd (${srcEnd}) must be > segStart (${srcStart})`);
+
+  const url   = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  document.body.appendChild(video);
+
+  try {
+    await new Promise((res, rej) => {
+      video.onloadedmetadata = res;
+      video.onerror = () => rej(new Error(`Failed to load: ${file.name}`));
+      video.src = url;
+      video.load();
+    });
+
+    const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+    const target = new ArrayBufferTarget();
+    const muxer  = new Muxer({
+      target,
+      video: { codec: 'avc', width: encW, height: encH },
+      fastStart: 'in-memory',
+    });
+
+    let encoderReject;
+    const encoderError = new Promise((_, rej) => { encoderReject = rej; });
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error:  (e) => encoderReject(new Error(`VideoEncoder error: ${e.message ?? e}`)),
+    });
+    encoder.configure({ codec: avcCodec(encW, encH), width: encW, height: encH, bitrate: parseInt(bitrate) || 8_000_000 });
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = encW;
+    canvas.height = encH;
+    const ctx = canvas.getContext('2d');
+    let frameIndex = 0;
+
+    const seekTo = (t) => new Promise((res, rej) => {
+      video.onseeked = res;
+      video.onerror  = () => rej(new Error('Seek failed'));
+      video.currentTime = Math.max(0, Math.min(t, info.duration - 0.001));
+    });
+
+    const encodeFrame = async (isKey = false) => {
+      while (encoder.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 0));
+      const ts = frameIndex * (1_000_000 / fps);
+      const vf = new VideoFrame(canvas, { timestamp: ts });
+      encoder.encode(vf, { keyFrame: isKey });
+      vf.close();
+      frameIndex++;
+    };
+
+    const encodeWork = async () => {
+      // ── Phase A: before segment (normal speed) ──────────────
+      const framesA = Math.ceil(srcStart * fps);
+      if (framesA > 0) {
+        log(`Speed — A: ${framesA} frames (0 – ${srcStart.toFixed(2)}s, 1×)`);
+        for (let f = 0; f < framesA; f++) {
+          const t = f / fps;
+          if (t >= info.duration) break;
+          await seekTo(t);
+          ctx.drawImage(video, 0, 0, encW, encH);
+          await encodeFrame(f === 0);
+        }
+      }
+
+      // ── Phase B: segment at modified speed, audio silent ────
+      const segDur  = srcEnd - srcStart;
+      // output frames = output_duration * fps = (segDur / factor) * fps
+      const framesB = Math.ceil((segDur / factor) * fps);
+      const label   = factor > 1 ? `${factor}× fast` : `${factor}× slow`;
+      log(`Speed — B: ${framesB} frames (${srcStart.toFixed(2)}–${srcEnd.toFixed(2)}s, ${label}, silent)`);
+      for (let f = 0; f < framesB; f++) {
+        // For each output frame, advance (factor/fps) through source
+        const srcT = srcStart + f * factor / fps;
+        if (srcT >= srcEnd) break;
+        await seekTo(srcT);
+        ctx.drawImage(video, 0, 0, encW, encH);
+        await encodeFrame(f === 0 && framesA === 0);
+      }
+
+      // ── Phase C: after segment (normal speed) ───────────────
+      const framesC = Math.ceil((info.duration - srcEnd) * fps);
+      if (framesC > 0) {
+        log(`Speed — C: ${framesC} frames (${srcEnd.toFixed(2)}s – end, 1×)`);
+        for (let f = 0; f < framesC; f++) {
+          const t = srcEnd + f / fps;
+          if (t >= info.duration) break;
+          await seekTo(t);
+          ctx.drawImage(video, 0, 0, encW, encH);
+          await encodeFrame(false);
+        }
+      }
+
+      await encoder.flush();
+      encoder.close();
+      muxer.finalize();
+    };
+
+    await Promise.race([encodeWork(), encoderError]);
+
+    const outDuration = (srcStart + segDur / factor + Math.max(0, info.duration - srcEnd)).toFixed(1);
+    log(`Speed done — ${frameIndex} frames, ~${outDuration}s (source ${info.duration.toFixed(1)}s, ${factor}×)`);
+    return new Blob([target.buffer], { type: 'video/mp4' });
+  } finally {
+    document.body.removeChild(video);
+    URL.revokeObjectURL(url);
+  }
+}
