@@ -294,7 +294,13 @@ export async function render(container, hash) {
           </div>
 
           <div class="bld-config-form">
-            <label class="ic-label">Thumbnail</label>
+            <label class="ic-label">Name</label>
+            <input type="text" id="bld-name" class="ic-input" value="${escHtml(draft.name)}" placeholder="Recipe name…">
+
+            <label class="ic-label" style="margin-top:12px">Description</label>
+            <textarea id="bld-desc" class="ic-input" rows="3" placeholder="What does this recipe do?">${escHtml(draft.description || '')}</textarea>
+
+            <label class="ic-label" style="margin-top:12px">Thumbnail</label>
             <div id="bld-thumb-preview" style="width:100%;height:80px;border-radius:6px;border:1px solid var(--ps-border);background:var(--ps-bg-overlay);margin-bottom:6px;overflow:hidden;${draft.thumbnail ? `background-image:url(${draft.thumbnail});background-size:cover;background-position:center;` : ''}"></div>
             <div style="display:flex;gap:6px">
               <label class="btn-secondary" style="flex:1;justify-content:center;cursor:pointer;font-size:12px;">
@@ -309,12 +315,6 @@ export async function render(container, hash) {
               <span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">content_paste</span>
               Paste image anywhere to set
             </div>
-
-            <label class="ic-label" style="margin-top:12px">Name</label>
-            <input type="text" id="bld-name" class="ic-input" value="${escHtml(draft.name)}" placeholder="Recipe name…">
-
-            <label class="ic-label" style="margin-top:12px">Description</label>
-            <textarea id="bld-desc" class="ic-input" rows="3" placeholder="What does this recipe do?">${escHtml(draft.description || '')}</textarea>
 
             <label class="ic-label" style="margin-top:12px; display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--ps-text); font-weight:normal; text-transform:none; letter-spacing:0;">
               <input type="checkbox" id="bld-is-ordered" ${draft.isOrdered ? 'checked' : ''}>
