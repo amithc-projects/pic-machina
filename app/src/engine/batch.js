@@ -78,6 +78,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-video-trim',
   'flow-video-compress',
   'flow-video-change-fps',
+  'flow-video-speed',       // seek-based re-encode — needs HTMLVideoElement (main thread only)
   'flow-video-concat',
   'flow-video-strip-audio',
   'flow-video-extract-audio',
