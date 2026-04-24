@@ -170,6 +170,21 @@ export class ImageProcessor {
         const injected = await injectExif(blob, context);
         results.push({ blob: injected, filename: context.filename, subfolder: context.outputSubfolder });
       }
+    } else if (context._videoTransformQueue?.length > 0 && targetNodeId === undefined) {
+      // hasExports=true (e.g. a video-file-op like trim ran earlier) but canvas transforms
+      // were subsequently queued (e.g. chroma key after trim) — flush them now so the
+      // final output reflects all pipeline steps. The resulting file reuses context.filename
+      // so it overwrites the intermediate file pushed by the video-file-op.
+      try {
+        const { processVideoEffect } = await import('./video-convert.js');
+        const queue = context._videoTransformQueue;
+        context._videoTransformQueue = [];
+        const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+        results.push({ blob, filename: context.filename.replace(/\.[^.]+$/, '.mp4'), subfolder: context.outputSubfolder });
+        context.log?.('ok', `Flushed video transform queue → ${context.filename.replace(/\.[^.]+$/, '.mp4')}`);
+      } catch (err) {
+        context.log?.('error', `Video transform queue flush failed: ${err.message}`);
+      }
     }
 
     return results;
@@ -408,8 +423,12 @@ export class ImageProcessor {
                       : blob.type.includes('flac') ? 'flac'
                       : blob.type.includes('wav')  ? 'wav'
                       : 'mp4';
-        results.push({ blob, filename: `${base}${suffix}.${outExt}`, subfolder: context.outputSubfolder });
-        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.${outExt}`);
+        const newFilename = `${base}${suffix}.${outExt}`;
+        results.push({ blob, filename: newFilename, subfolder: context.outputSubfolder });
+        context.log?.('ok', `${id}: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${newFilename}`);
+        // Update context so subsequent transforms (e.g. chroma key after trim) work on the new file
+        context.originalFile = new File([blob], newFilename, { type: blob.type });
+        context.filename = newFilename;
       } catch (err) {
         context.log?.('error', `${id} failed for "${file.name}": ${err.message}`);
       }
