@@ -743,6 +743,100 @@ export async function render(container, hash) {
     });
   }
 
+  // ── File preview modal (double-click from grid or list) ─────────
+  function showFilePreviewModal(ent, allEntries, startIdx) {
+    const existing = document.getElementById('fld-preview-modal');
+    if (existing) existing.remove();
+
+    let currentIdx = startIdx ?? allEntries.indexOf(ent);
+    let blobUrl = null;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'fld-preview-modal';
+    overlay.className = 'fld-preview-overlay';
+
+    const render = () => {
+      const cur = allEntries[currentIdx];
+      const type = fileType(cur.file.name);
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      blobUrl = URL.createObjectURL(cur.file);
+
+      overlay.innerHTML = `
+        <div class="fld-preview-box">
+          <div class="fld-preview-header">
+            <span class="material-symbols-outlined" style="color:var(--ps-blue);font-size:18px">${type === 'video' ? 'movie' : 'image'}</span>
+            <span class="fld-preview-title">${escHtml(cur.file.name)}</span>
+            <span class="fld-preview-counter">${currentIdx + 1} / ${allEntries.length}</span>
+            <button class="btn-icon fld-preview-close" title="Close (Esc)">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="fld-preview-media">
+            ${type === 'video'
+              ? `<video class="fld-preview-video" src="${blobUrl}" controls autoplay></video>`
+              : `<img class="fld-preview-img" src="${blobUrl}" alt="${escHtml(cur.file.name)}">`}
+            ${currentIdx > 0
+              ? `<button class="fld-preview-nav fld-preview-nav--prev" title="Previous"><span class="material-symbols-outlined">chevron_left</span></button>`
+              : ''}
+            ${currentIdx < allEntries.length - 1
+              ? `<button class="fld-preview-nav fld-preview-nav--next" title="Next"><span class="material-symbols-outlined">chevron_right</span></button>`
+              : ''}
+          </div>
+          <div class="fld-preview-footer">
+            <span class="fld-preview-meta">${formatBytes(cur.file.size)}</span>
+            <span class="fld-preview-meta">${new Date(cur.file.lastModified).toLocaleString()}</span>
+          </div>
+        </div>`;
+
+      overlay.querySelector('.fld-preview-close')?.addEventListener('click', close);
+      overlay.querySelector('.fld-preview-nav--prev')?.addEventListener('click', e => { e.stopPropagation(); currentIdx--; render(); });
+      overlay.querySelector('.fld-preview-nav--next')?.addEventListener('click', e => { e.stopPropagation(); currentIdx++; render(); });
+    };
+
+    const close = () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      blobUrl = null;
+      overlay.remove();
+      document.removeEventListener('keydown', onKey);
+    };
+
+    const onKey = e => {
+      if (e.key === 'Escape') { close(); }
+      else if (e.key === 'ArrowLeft'  && currentIdx > 0)                    { currentIdx--; render(); }
+      else if (e.key === 'ArrowRight' && currentIdx < allEntries.length - 1) { currentIdx++; render(); }
+    };
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+    render();
+  }
+
+  // ── Async dimension loader for list/grid cells ────────────────
+  async function loadDimensions(file, spanEl) {
+    try {
+      const type = fileType(file.name);
+      if (type === 'image') {
+        const bitmap = await createImageBitmap(file);
+        spanEl.textContent = `${bitmap.width} × ${bitmap.height}`;
+        bitmap.close?.();
+      } else if (type === 'video') {
+        const url = URL.createObjectURL(file);
+        await new Promise(resolve => {
+          const v = document.createElement('video');
+          v.preload = 'metadata';
+          v.onloadedmetadata = () => {
+            spanEl.textContent = `${v.videoWidth} × ${v.videoHeight}`;
+            URL.revokeObjectURL(url);
+            resolve();
+          };
+          v.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+          v.src = url;
+        });
+      }
+    } catch { /* best-effort */ }
+  }
+
   function handleFileClick(ent, index, e) {
     const isCmd = e.metaKey || e.ctrlKey;
     const isShift = e.shiftKey;
@@ -887,6 +981,10 @@ export async function render(container, hash) {
       cell.addEventListener('click', e => {
         handleFileClick(ent, i, e);
       });
+      cell.addEventListener('dblclick', e => {
+        e.stopPropagation();
+        showFilePreviewModal(ent, filtered, i);
+      });
       grid.appendChild(cell);
     });
 
@@ -1004,7 +1102,9 @@ export async function render(container, hash) {
             <th class="fld-list-th" style="width:40px"></th>
             <th class="fld-list-th">Name</th>
             <th class="fld-list-th" style="width:80px">Type</th>
-            <th class="fld-list-th" style="width:80px">Size</th>
+            <th class="fld-list-th" style="width:70px">Size</th>
+            <th class="fld-list-th" style="width:110px">Modified</th>
+            <th class="fld-list-th" style="width:100px">Dimensions</th>
             <th class="fld-list-th" style="width:80px;text-align:right">Actions</th>
           </tr>
         </thead>
@@ -1027,6 +1127,10 @@ export async function render(container, hash) {
       if (listPreviewUrl) blobUrls.push(listPreviewUrl);
 
       const isSel = selectedSet.has(ent.file.name);
+      const modDate = ent.file.lastModified
+        ? new Date(ent.file.lastModified).toLocaleDateString(undefined, { day:'2-digit', month:'short', year:'numeric' })
+        : '—';
+
       tr.innerHTML = `
         <td class="fld-list-td">
           ${type === 'video'
@@ -1040,6 +1144,8 @@ export async function render(container, hash) {
         </td>
         <td class="fld-list-td">${type === 'video' ? '<span class="ic-badge ic-badge--blue">MP4</span>' : `<span class="ic-badge">${extOf(ent.file.name).slice(1).toUpperCase()}</span>`}</td>
         <td class="fld-list-td mono text-sm text-muted">${formatBytes(ent.file.size)}</td>
+        <td class="fld-list-td fld-list-modified">${modDate}</td>
+        <td class="fld-list-td fld-list-dims"><span class="fld-list-dims-val">—</span></td>
         <td class="fld-list-td" style="text-align:right">
           <button class="btn-icon fld-list-dl" data-idx="${i}" title="Download">
             <span class="material-symbols-outlined" style="font-size:15px">download</span>
@@ -1049,11 +1155,18 @@ export async function render(container, hash) {
       tr.addEventListener('click', e => {
         if (!e.target.closest('.fld-list-dl')) handleFileClick(ent, i, e);
       });
+      tr.addEventListener('dblclick', e => {
+        if (!e.target.closest('.fld-list-dl')) showFilePreviewModal(ent, filtered, i);
+      });
       tr.querySelector('.fld-list-dl')?.addEventListener('click', e => {
         e.stopPropagation();
         downloadFile(ent.file);
       });
       tbody.appendChild(tr);
+
+      // Load dimensions asynchronously
+      const dimsSpan = tr.querySelector('.fld-list-dims-val');
+      if (dimsSpan && (type === 'image' || type === 'video')) loadDimensions(ent.file, dimsSpan);
     });
 
     // Folders after files
@@ -1066,6 +1179,8 @@ export async function render(container, hash) {
         </td>
         <td class="fld-list-td"><span class="fld-list-name">${escHtml(folder.name)}</span></td>
         <td class="fld-list-td"><span class="ic-badge" style="background:rgba(0,119,255,.12);color:var(--ps-blue)">Folder</span></td>
+        <td class="fld-list-td"></td>
+        <td class="fld-list-td"></td>
         <td class="fld-list-td"></td>
         <td class="fld-list-td"></td>`;
       tr.addEventListener('click', () => enterFolder(folder));
@@ -1627,6 +1742,58 @@ function injectFldStyles() {
     .fld-list-thumb { width:36px; height:36px; object-fit:cover; border-radius:6px; display:block; }
     .fld-list-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; }
     .fld-list-name { font-size:12px; color:var(--ps-text); font-family:var(--font-mono); }
+    .fld-list-modified { font-size:11px; color:var(--ps-text-muted); white-space:nowrap; }
+    .fld-list-dims { font-size:11px; color:var(--ps-text-muted); font-family:var(--font-mono); white-space:nowrap; }
+
+    /* File preview modal */
+    .fld-preview-overlay {
+      position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.88);
+      backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center;
+      padding:16px;
+    }
+    .fld-preview-box {
+      background:var(--ps-bg-surface); border-radius:14px; border:1px solid var(--ps-border);
+      display:flex; flex-direction:column; max-width:92vw; max-height:92vh;
+      box-shadow:0 32px 80px rgba(0,0,0,0.6); overflow:hidden;
+    }
+    .fld-preview-header {
+      display:flex; align-items:center; gap:8px; padding:12px 16px;
+      border-bottom:1px solid var(--ps-border); flex-shrink:0;
+    }
+    .fld-preview-title {
+      font-size:13px; font-weight:600; font-family:var(--font-mono);
+      color:var(--ps-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
+    }
+    .fld-preview-counter {
+      font-size:11px; color:var(--ps-text-muted); font-family:var(--font-mono);
+      white-space:nowrap; flex-shrink:0;
+    }
+    .fld-preview-media {
+      flex:1; overflow:hidden; position:relative; min-height:0;
+      background:#000; display:flex; align-items:center; justify-content:center;
+    }
+    .fld-preview-img {
+      max-width:100%; max-height:80vh; object-fit:contain; display:block;
+    }
+    .fld-preview-video {
+      max-width:100%; max-height:80vh; display:block; background:#000;
+    }
+    .fld-preview-nav {
+      position:absolute; top:50%; transform:translateY(-50%);
+      background:rgba(0,0,0,0.5); border:none; color:#fff; cursor:pointer;
+      width:44px; height:44px; border-radius:50%; display:flex; align-items:center;
+      justify-content:center; transition:background 150ms; z-index:2;
+    }
+    .fld-preview-nav:hover { background:rgba(0,0,0,0.8); }
+    .fld-preview-nav--prev { left:12px; }
+    .fld-preview-nav--next { right:12px; }
+    .fld-preview-nav .material-symbols-outlined { font-size:28px; }
+    .fld-preview-footer {
+      display:flex; gap:16px; align-items:center; padding:10px 16px;
+      border-top:1px solid var(--ps-border); flex-shrink:0;
+    }
+    .fld-preview-meta { font-size:11px; color:var(--ps-text-muted); font-family:var(--font-mono); }
+    .fld-preview-close { flex-shrink:0; }
 
     /* Filmstrip preview detail content (reused by renderDetailContent) */
     .fld-detail-inner { display:flex; flex-direction:column; height:100%; }
