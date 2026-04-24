@@ -569,6 +569,20 @@ registry.register({
   apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
 });
 
+// ─── Video: Change Speed ──────────────────────────────────
+registry.register({
+  id: 'flow-video-speed', name: 'Video: Change Speed', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'slow_motion_video',
+  description: 'Speed up or slow down a segment of a video. Audio in the segment is silenced; before/after play normally. Skips non-video files.',
+  params: [
+    { name: 'speedFactor', label: 'Speed Factor ({{vars}} ok) — e.g. 0.5 = half speed, 2 = double speed', type: 'number', defaultValue: 2 },
+    { name: 'segStart', label: 'Segment Start — seconds (leave blank for beginning of video)', type: 'number', defaultValue: '' },
+    { name: 'segEnd',   label: 'Segment End — seconds (leave blank for end of video)',       type: 'number', defaultValue: '' },
+    { name: 'suffix',   label: 'Filename Suffix', type: 'text', defaultValue: '_speed' },
+  ],
+  apply() { /* handled by Processor — runs seek-based re-encode via changeVideoSpeed */ }
+});
+
 // ─── Video: Change Frame Rate ─────────────────────────────
 registry.register({
   id: 'flow-video-change-fps', name: 'Video: Change Frame Rate', category: 'Flow Control', categoryKey: 'flow',
