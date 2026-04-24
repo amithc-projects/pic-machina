@@ -840,7 +840,7 @@ export async function changeVideoSpeed(file, {
 
     await Promise.race([encodeWork(), encoderError]);
 
-    const outDuration = (srcStart + segDur / factor + Math.max(0, info.duration - srcEnd)).toFixed(1);
+    const outDuration = (srcStart + (srcEnd - srcStart) / factor + Math.max(0, info.duration - srcEnd)).toFixed(1);
     log(`Speed done — ${frameIndex} frames, ~${outDuration}s (source ${info.duration.toFixed(1)}s, ${factor}×)`);
     return new Blob([target.buffer], { type: 'video/mp4' });
   } finally {
