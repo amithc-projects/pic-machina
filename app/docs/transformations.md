@@ -83,7 +83,7 @@ All transforms are registered by their `transformId` string.
 | `overlay-ribbon` | Ribbon / Badge | `text`, `position` (TL/TR/BL/BR), `bgColor`, `textColor`, `size` | Corner badge overlay |
 | `overlay-qrcode` | QR Code | `content`, `size`, `anchor`, `margin`, `errorCorrection` | Generates QR code from any URL or text |
 | `overlay-grid` | Grid Overlay | `spacing`, `color`, `opacity`, `lineWidth` | Technical/engineering grid |
-| `overlay-map` | Map View | `zoom`, `size`, `opacity`, `anchor`, `margin` | OpenStreetMap tile at EXIF GPS location — requires GPS metadata |
+| `overlay-map` | Map View | `zoom`, `size`, `opacity`, `anchor`, `margin` | OpenStreetMap tile at EXIF GPS location. `size` accepts px or % to build responsive rectangular layouts matching the bounds of the image (outside-left/right/top/bottom). |
 | `overlay-light-leak` | Light Leak | `edge`, `color`, `opacity`, `spread`, `blendMode` | Analog-style light bleed from one edge |
 | `overlay-canvas-texture` | Canvas Texture | `intensity`, `scale`, `blendMode` | Procedural canvas/paper grain overlay |
 | `overlay-polaroid-frame` | Polaroid Frame | `borderColor`, `borderSide`, `borderBottom`, `caption` | Expands canvas with white border and caption; designed to precede `flow-animate-stack` |
@@ -140,6 +140,7 @@ All transforms are registered by their `transformId` string.
 | `flow-load` | Load State | `label` | Restores a previously saved canvas slot |
 | `flow-compose-grid` | Compose Grid | `panels` (comma-separated labels), `columns`, `gap`, `bgColor` | Assembles saved states into a grid |
 | `flow-export-variable` | Export Variable | `variableName`, `fileName` | Bypasses the canvas pipeline to physically dump a working variables securely to the target filesystem as an independent sidecar! |
+| `flow-video-scroll` | Scrolling Video | `duration`, `fps`, `filename` | Takes a tall/wide image (like a webpage screenshot) and outputs a smooth MP4 video that scrolls across the image over time. |
 
 ### Aggregation Nodes (Cross-Image Output)
 

@@ -452,7 +452,7 @@ registry.register({
     { name: 'zoom',     label: 'Zoom Level', type: 'range', min: 5, max: 18, defaultValue: 14 },
     { name: 'style',    label: 'Map Style',  type: 'select',
       options: [{ label: 'Street', value: 'street' }], defaultValue: 'street' },
-    { name: 'size',     label: 'Map Size (px)', type: 'number', defaultValue: 256 },
+    { name: 'size',     label: 'Size (px or %)', type: 'text', defaultValue: '25%' },
     { name: 'opacity',  label: 'Opacity (%)',   type: 'range', min: 0, max: 100, defaultValue: 85 },
     { name: 'anchor',   label: 'Anchor',        type: 'select',
       options: [
@@ -462,6 +462,7 @@ registry.register({
         { label: 'Top Left (Inside)', value: 'top-left' },
         { label: 'Outside Bounds - Left', value: 'outside-left' },
         { label: 'Outside Bounds - Right', value: 'outside-right' },
+        { label: 'Outside Bounds - Top', value: 'outside-top' },
         { label: 'Outside Bounds - Bottom', value: 'outside-bottom' },
       ],
       defaultValue: 'bottom-right' },
@@ -475,10 +476,45 @@ registry.register({
     }
     const { lat, lng } = gps;
     const zoom = p.zoom || 14;
-    const sz   = p.size || 256;
     const W = ctx.canvas.width, H = ctx.canvas.height;
     const margin = p.margin ?? 16;
     const anchor = p.anchor || 'bottom-right';
+
+    const parseBlockDim = (val, originalSize, isOutside) => {
+      const s = String(val || '').trim();
+      if (s.endsWith('%')) {
+        let p = parseFloat(s) / 100;
+        if (isOutside) {
+          p = Math.max(0.01, Math.min(0.95, p)); // Cap at 95%
+          // If we want the block to be p% of the FINAL size, block = original * (p / (1 - p))
+          return Math.max(1, Math.round(originalSize * (p / (1 - p))));
+        } else {
+          return Math.max(1, Math.round(originalSize * p));
+        }
+      }
+      // Fixed px value
+      const valNum = parseFloat(s) || 256;
+      // For fixed pixels, we treat it as map size (so add margins for block size)
+      return isOutside ? valNum + margin * 2 : valNum;
+    };
+
+    let mapW, mapH;
+    let blockW = 0, blockH = 0;
+
+    if (anchor === 'outside-left' || anchor === 'outside-right') {
+      blockW = parseBlockDim(p.size ?? '25%', W, true);
+      mapW = Math.max(1, blockW - margin * 2);
+      mapH = Math.max(1, H - margin * 2);
+      blockH = H;
+    } else if (anchor === 'outside-top' || anchor === 'outside-bottom') {
+      blockH = parseBlockDim(p.size ?? '25%', H, true);
+      mapH = Math.max(1, blockH - margin * 2);
+      mapW = Math.max(1, W - margin * 2);
+      blockW = W;
+    } else {
+      const minDim = Math.min(W, H);
+      mapW = mapH = parseBlockDim(p.size ?? '25%', minDim, false);
+    }
 
     // Extrude canvas for outside anchors
     let drawX = 0, drawY = 0;
@@ -487,64 +523,140 @@ registry.register({
       orig.width = W; orig.height = H;
       orig.getContext('2d').drawImage(ctx.canvas, 0, 0);
 
-      const blockW = anchor !== 'outside-bottom' ? sz + margin * 2 : W;
-      const blockH = anchor === 'outside-bottom' ? sz + margin * 2 : H;
-
       if (anchor === 'outside-left') {
         ctx.canvas.width = W + blockW;
         ctx.canvas.height = H;
-        drawX = blockW; // image shifts right
+        drawX = blockW;
       } else if (anchor === 'outside-right') {
         ctx.canvas.width = W + blockW;
         ctx.canvas.height = H;
+      } else if (anchor === 'outside-top') {
+        ctx.canvas.width = W;
+        ctx.canvas.height = H + blockH;
+        drawY = blockH;
       } else if (anchor === 'outside-bottom') {
         ctx.canvas.width = W;
         ctx.canvas.height = H + blockH;
       }
       
-      // Paint bg white for the extruded part (matches pad background usually)
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.drawImage(orig, drawX, drawY);
     }
 
-    // Tile maths
-    const tileX = Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
-    const tileY = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
-    const tileUrl = `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`;
+    // Map & Stitching logic
+    const exactTileX = (lng + 180) / 360 * Math.pow(2, zoom);
+    const exactTileY = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom);
+    
+    const centerPxX = exactTileX * 256;
+    const centerPxY = exactTileY * 256;
+
+    const minPxX = centerPxX - mapW / 2;
+    const minPxY = centerPxY - mapH / 2;
+    const maxPxX = centerPxX + mapW / 2;
+    const maxPxY = centerPxY + mapH / 2;
+
+    const minTileX = Math.floor(minPxX / 256);
+    const maxTileX = Math.floor(maxPxX / 256);
+    const minTileY = Math.floor(minPxY / 256);
+    const maxTileY = Math.floor(maxPxY / 256);
+
+    const numTiles = (maxTileX - minTileX + 1) * (maxTileY - minTileY + 1);
+    if (numTiles > 100) {
+      console.warn(`[overlay-map] Refusing to fetch ${numTiles} tiles (too large or zoomed in too much).`);
+      return;
+    }
 
     try {
-      const resp = await fetch(tileUrl, { headers: { 'User-Agent': 'ImageChef/1.0' } });
-      const blob = await resp.blob();
-      const url  = URL.createObjectURL(blob);
-      await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          let x, y;
-          if (anchor === 'outside-left') {
-             x = margin; y = H - sz - margin; 
-          } else if (anchor === 'outside-right') {
-             x = W + margin; y = H - sz - margin;
-          } else if (anchor === 'outside-bottom') {
-             x = margin; y = H + margin;
-          } else {
-             // Inside anchors
-             x = anchor.includes('right') ? W - sz - margin : margin;
-             y = anchor.includes('bottom') ? H - sz - margin : margin;
-          }
+      const mapCanvas = document.createElement('canvas');
+      mapCanvas.width = mapW;
+      mapCanvas.height = mapH;
+      const mCtx = mapCanvas.getContext('2d');
+      mCtx.fillStyle = '#f0eedf'; // Default OSM land color
+      mCtx.fillRect(0, 0, mapW, mapH);
 
-          ctx.save();
-          ctx.globalAlpha = (p.opacity ?? 85) / 100;
-          ctx.drawImage(img, x, y, sz, sz);
-          ctx.restore();
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(); };
-        img.src = url;
-      });
+      const fetchTile = async (tx, ty) => {
+        const url = `https://tile.openstreetmap.org/${zoom}/${tx}/${ty}.png`;
+        try {
+          const resp = await fetch(url, { headers: { 'User-Agent': 'ImageChef/1.0' } });
+          if (!resp.ok) return null;
+          const blob = await resp.blob();
+          const img = await createImageBitmap(blob);
+          return { tx, ty, img };
+        } catch { return null; }
+      };
+
+      const tasks = [];
+      for (let tx = minTileX; tx <= maxTileX; tx++) {
+        for (let ty = minTileY; ty <= maxTileY; ty++) {
+          tasks.push(fetchTile(tx, ty));
+        }
+      }
+
+      const results = await Promise.all(tasks);
+      for (const res of results) {
+        if (!res) continue;
+        const tileDrawX = (res.tx * 256) - minPxX;
+        const tileDrawY = (res.ty * 256) - minPxY;
+        mCtx.drawImage(res.img, tileDrawX, tileDrawY, 256, 256);
+        if (res.img.close) res.img.close();
+      }
+
+      // Draw map pin at the exact center
+      const pinX = mapW / 2;
+      const pinY = mapH / 2;
+      
+      const pinScale = Math.max(0.5, Math.min(mapW, mapH) / 256);
+      mCtx.save();
+      mCtx.translate(pinX, pinY);
+      mCtx.scale(pinScale, pinScale);
+      
+      mCtx.beginPath();
+      mCtx.moveTo(0, 0); // bottom tip
+      mCtx.bezierCurveTo(-10, -10, -15, -20, -15, -30);
+      mCtx.arc(0, -30, 15, Math.PI, 0);
+      mCtx.bezierCurveTo(15, -20, 10, -10, 0, 0);
+      
+      mCtx.shadowColor = 'rgba(0,0,0,0.5)';
+      mCtx.shadowBlur = 4;
+      mCtx.shadowOffsetX = 0;
+      mCtx.shadowOffsetY = 2;
+      mCtx.fillStyle = '#ea4335';
+      mCtx.fill();
+      
+      mCtx.shadowColor = 'transparent';
+      mCtx.lineWidth = 2;
+      mCtx.strokeStyle = '#ffffff';
+      mCtx.stroke();
+      
+      mCtx.beginPath();
+      mCtx.arc(0, -30, 6, 0, Math.PI * 2);
+      mCtx.fillStyle = '#5c100b';
+      mCtx.fill();
+      mCtx.restore();
+
+      // Composite map onto the main canvas
+      let x, y;
+      if (anchor === 'outside-left') {
+         x = margin; y = margin;
+      } else if (anchor === 'outside-right') {
+         x = W + margin; y = margin;
+      } else if (anchor === 'outside-top') {
+         x = margin; y = margin;
+      } else if (anchor === 'outside-bottom') {
+         x = margin; y = H + margin;
+      } else {
+         x = anchor.includes('right') ? W - mapW - margin : margin;
+         y = anchor.includes('bottom') ? H - mapH - margin : margin;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = (p.opacity ?? 85) / 100;
+      ctx.drawImage(mapCanvas, x, y, mapW, mapH);
+      ctx.restore();
+
     } catch (err) {
-      console.warn('[overlay-map] tile fetch failed:', err);
+      console.warn('[overlay-map] map generation failed:', err);
     }
   }
 });

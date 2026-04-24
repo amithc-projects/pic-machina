@@ -781,3 +781,128 @@ export async function concatVideos(files, { fps = 30, width, height, bitrate = 8
 
   return new Blob([target.buffer], { type: 'video/mp4' });
 }
+
+// ─── Phase 7: Scrolling Screen Capture Animation ──────────────────────────────
+
+export async function createVideoScroll(file, {
+  width = 1080, height = 1920, duration = 10, startPause = 1, endPause = 2,
+  easing = 'ease-in-out', fps = 30, bitrate = 8_000_000, onLog
+} = {}) {
+  const log = (msg) => onLog?.('info', msg);
+  log(`createVideoScroll: preparing "${file.name}"...`);
+
+  // Read the image
+  const imgBitmap = await createImageBitmap(file);
+  const imgW = imgBitmap.width;
+  const imgH = imgBitmap.height;
+
+  // Determine target dimensions and scaling
+  const outW = parseInt(width) || 1080;
+  const outH = parseInt(height) || 1920;
+  const outFPS = parseFloat(fps) || 30;
+
+  // Make dimensions multiples of 2 for H.264
+  const encW = outW % 2 === 0 ? outW : outW + 1;
+  const encH = outH % 2 === 0 ? outH : outH + 1;
+
+  // Determine direction: "auto" logic
+  // If the image's aspect ratio is much taller than video aspect ratio -> vertical
+  // If wider -> horizontal
+  const targetRatio = encW / encH;
+  const imgRatio = imgW / imgH;
+  
+  let scale, maxScrollX, maxScrollY;
+  if (imgRatio < targetRatio) {
+    // Image is proportionally taller than the target -> Vertical scroll
+    scale = encW / imgW;
+    const scaledH = imgH * scale;
+    maxScrollX = 0;
+    maxScrollY = Math.max(0, scaledH - encH);
+  } else {
+    // Image is proportionally wider than target -> Horizontal pan
+    scale = encH / imgH;
+    const scaledW = imgW * scale;
+    maxScrollY = 0;
+    maxScrollX = Math.max(0, scaledW - encW);
+  }
+  
+  const scaledImgW = imgW * scale;
+  const scaledImgH = imgH * scale;
+
+  // Setup encoder
+  const codecConfig = {
+    codec: avcCodec(encW, encH),
+    width: encW,
+    height: encH,
+    bitrate: parseInt(bitrate) || 8_000_000,
+  };
+
+  const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+  const target = new ArrayBufferTarget();
+  const muxer  = new Muxer({
+    target,
+    video: { codec: 'avc', width: encW, height: encH },
+    fastStart: 'in-memory',
+  });
+
+  let encoderReject;
+  const encoderError = new Promise((_, reject) => { encoderReject = reject; });
+
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: (e) => encoderReject(new Error(`VideoEncoder error: ${e.message ?? e}`)),
+  });
+  encoder.configure(codecConfig);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = encW;
+  canvas.height = encH;
+  const ctx = canvas.getContext('2d');
+  
+  // High quality smoothing
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const totalFrames = Math.round(duration * outFPS);
+  const scrollDuration = Math.max(0, duration - startPause - endPause);
+
+  const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const getProgress = (t) => {
+    if (t <= startPause) return 0;
+    if (t >= duration - endPause) return 1;
+    if (scrollDuration === 0) return 1;
+    const p = (t - startPause) / scrollDuration;
+    return easing === 'linear' ? p : easeInOutCubic(p);
+  };
+
+  const encodeWork = async () => {
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+      const time = frameIndex / outFPS;
+      const progress = getProgress(time);
+      const scrollX = progress * maxScrollX;
+      const scrollY = progress * maxScrollY;
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, encW, encH);
+      
+      // Draw the scaled image with offset
+      ctx.drawImage(imgBitmap, -scrollX, -scrollY, scaledImgW, scaledImgH);
+
+      const frame = new VideoFrame(canvas, { timestamp: Math.round(time * 1e6) });
+      encoder.encode(frame, { keyFrame: frameIndex % Math.round(outFPS * 2) === 0 });
+      frame.close();
+
+      if (frameIndex % Math.round(outFPS) === 0) {
+        log(`Encoded scroll frame ${frameIndex}/${totalFrames} (${time.toFixed(1)}s)`);
+      }
+    }
+    await encoder.flush();
+    encoder.close();
+    muxer.finalize();
+  };
+
+  await Promise.race([encodeWork(), encoderError]);
+  imgBitmap.close();
+
+  return new Blob([target.buffer], { type: 'video/mp4' });
+}

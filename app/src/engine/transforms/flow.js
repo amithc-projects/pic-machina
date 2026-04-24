@@ -682,3 +682,27 @@ registry.register({
   ],
   apply() { /* handled by Processor as aggregation node — collects files, then concatenates */ }
 });
+
+// ─── Video: Scroll Animation ──────────────────────────────
+registry.register({
+  id: 'flow-video-scroll', name: 'Video: Scroll Animation', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'swap_vert',
+  description: 'Animate a long/tall screenshot or panorama into a smooth scrolling video.',
+  params: [
+    { name: 'width',      label: 'Output Width (px)',     type: 'number', defaultValue: 1080 },
+    { name: 'height',     label: 'Output Height (px)',    type: 'number', defaultValue: 1920 },
+    { name: 'duration',   label: 'Duration (sec)',        type: 'number', defaultValue: 10 },
+    { name: 'startPause', label: 'Start Pause (sec)',     type: 'number', defaultValue: 1 },
+    { name: 'endPause',   label: 'End Pause (sec)',       type: 'number', defaultValue: 2 },
+    { name: 'easing',     label: 'Easing',                type: 'select',
+      options: [
+        { label: 'Ease In/Out', value: 'ease-in-out' },
+        { label: 'Linear',      value: 'linear' }
+      ],
+      defaultValue: 'ease-in-out' },
+    { name: 'fps',        label: 'FPS',                   type: 'number', defaultValue: 30 },
+    { name: 'bitrate',    label: 'Bitrate (bps)',         type: 'number', defaultValue: 8000000 },
+    { name: 'suffix',     label: 'Filename Suffix',       type: 'text',   defaultValue: '_scrolled' },
+  ],
+  apply() { /* handled by Processor — converts single image to mp4 */ }
+});

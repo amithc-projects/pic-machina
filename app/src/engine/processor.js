@@ -141,7 +141,7 @@ export class ImageProcessor {
         'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap',
         'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip',
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
-        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio',
+        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-scroll',
     ]);
     const nodeTreeHasExport = (ns) => ns.some(n => {
       if (n.type === 'transform') {
@@ -346,6 +346,25 @@ export class ImageProcessor {
         context.runState.triggerStates[node.id] = fieldState;
       }
       return; // Never modifies the master canvas
+    }
+
+    // ── Video: Scroll Animation ──
+    if (id === 'flow-video-scroll') {
+      if (context._previewMode) return; // not run during preview
+      const file = context.originalFile;
+      if (!file) { context.log?.('warn', `flow-video-scroll: no source file available — skipping`); return; }
+      try {
+        const { createVideoScroll } = await import('./video-convert.js');
+        const p = node.params || {};
+        const blob = await createVideoScroll(file, { ...p, onLog: context.log });
+        const suffix = interpolate(p.suffix || '_scrolled', context);
+        const base = context.filename.replace(/\.[^.]+$/, '');
+        results.push({ blob, filename: `${base}${suffix}.mp4`, subfolder: context.outputSubfolder });
+        context.log?.('ok', `flow-video-scroll: produced ${(blob.size / 1024 / 1024).toFixed(1)} MB → ${base}${suffix}.mp4`);
+      } catch (err) {
+        context.log?.('error', `flow-video-scroll failed for "${file.name}": ${err.message}`);
+      }
+      return;
     }
 
     // ── Per-file video operations (mediabunny) ──

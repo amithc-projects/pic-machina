@@ -3,7 +3,7 @@ import json
 import re
 
 TRANSFORMS_DIR = os.path.join(os.path.dirname(__file__), '../src/engine/transforms')
-OUTPUT_FILE = os.path.join(os.path.dirname(__file__), '../docs/node-catalog.json')
+OUTPUT_FILE = '/tmp/node-catalog.json'
 
 def parse_value(val):
     if not val:

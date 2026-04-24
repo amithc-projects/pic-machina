@@ -834,6 +834,7 @@ export async function startBatch({ recipe, files, inputHandle, outputHandle, sub
       files,
       outputConfig: { subfolder, blocks: blocksById, runParams },
       runId: run.id,
+      inputHandle,
     }
   });
 
