@@ -1479,3 +1479,162 @@ registry.register({
     ctx.clip(); ctx.drawImage(tmp, 0, 0); ctx.restore();
   }
 });
+
+// ─── Chroma Key (Green Screen) ────────────────────────────
+registry.register({
+  id: 'ai-chroma-key',
+  name: 'Chroma Key (Green Screen)',
+  category: 'AI & Composition',
+  categoryKey: 'ai',
+  icon: 'theater_comedy',
+  description: 'Remove a solid-colour background (green/blue screen) via pixel-level hue matching, with optional AI edge refinement using InSPyReNet.',
+  params: [
+    { name: 'keyColor',         label: 'Key Colour',                            type: 'color',  defaultValue: '#00b140' },
+    { name: 'tolerance',        label: 'Tolerance (hue degrees, {{vars}} ok)',   type: 'range',  min: 0, max: 90,  defaultValue: 30 },
+    { name: 'softness',         label: 'Softness (feather width)',               type: 'range',  min: 0, max: 60,  defaultValue: 12 },
+    { name: 'spillSuppression', label: 'Spill Suppression (%)',                  type: 'range',  min: 0, max: 100, defaultValue: 60 },
+    { name: 'aiRefine',         label: 'AI Edge Refinement (InSPyReNet)',        type: 'toggle', defaultValue: false },
+    { name: 'bgFill', label: 'Background Fill', type: 'select',
+      options: [
+        { label: 'None (Transparent)', value: 'none'  },
+        { label: 'Solid Colour',       value: 'color' },
+        { label: 'Image File',         value: 'image' },
+      ],
+      defaultValue: 'none' },
+    { name: 'bgColor', label: 'Fill Colour',       type: 'color', defaultValue: '#000000' },
+    { name: 'bgImage', label: 'Background Image',  type: 'file',  defaultValue: '' },
+  ],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-chroma-key] Skipping — requires main thread.');
+      return;
+    }
+
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const tolerance        = parseFloat(p.tolerance        ?? 30);
+    const softness         = parseFloat(p.softness         ?? 12);
+    const spillSuppression = parseFloat(p.spillSuppression ?? 60) / 100;
+
+    // ── Parse key colour → HSL ─────────────────────────────
+    const hex = (p.keyColor || '#00b140').replace('#', '');
+    const kr  = parseInt(hex.slice(0, 2), 16) / 255;
+    const kg  = parseInt(hex.slice(2, 4), 16) / 255;
+    const kb  = parseInt(hex.slice(4, 6), 16) / 255;
+    const kMax = Math.max(kr, kg, kb), kMin = Math.min(kr, kg, kb);
+    const kDelta = kMax - kMin;
+    let keyHue = 0;
+    if (kDelta > 0) {
+      if (kMax === kr) keyHue = 60 * (((kg - kb) / kDelta) % 6);
+      else if (kMax === kg) keyHue = 60 * ((kb - kr) / kDelta + 2);
+      else keyHue = 60 * ((kr - kg) / kDelta + 4);
+      if (keyHue < 0) keyHue += 360;
+    }
+
+    // ── Phase 1: canvas chroma key ─────────────────────────
+    const imageData = ctx.getImageData(0, 0, W, H);
+    const data = imageData.data;
+    const chromaAlpha = new Float32Array(W * H); // 0.0–1.0
+
+    for (let i = 0; i < W * H; i++) {
+      const ri = data[i * 4] / 255;
+      const gi = data[i * 4 + 1] / 255;
+      const bi = data[i * 4 + 2] / 255;
+      const cMax = Math.max(ri, gi, bi), cMin = Math.min(ri, gi, bi);
+      const delta = cMax - cMin;
+
+      let hue = 0;
+      if (delta > 0) {
+        if (cMax === ri) hue = 60 * (((gi - bi) / delta) % 6);
+        else if (cMax === gi) hue = 60 * ((bi - ri) / delta + 2);
+        else hue = 60 * ((ri - gi) / delta + 4);
+        if (hue < 0) hue += 360;
+      }
+
+      let hueDiff = Math.abs(hue - keyHue);
+      if (hueDiff > 180) hueDiff = 360 - hueDiff;
+
+      let alpha;
+      if (delta < 0.05) {
+        // Near-grey — keep (avoids keying out white/grey areas)
+        alpha = 1;
+      } else if (hueDiff <= tolerance) {
+        alpha = 0;
+      } else if (hueDiff <= tolerance + softness) {
+        alpha = (hueDiff - tolerance) / softness;
+      } else {
+        alpha = 1;
+      }
+
+      chromaAlpha[i] = alpha;
+
+      // Spill suppression — reduce key-colour cast on edges
+      if (alpha > 0 && spillSuppression > 0) {
+        const excess = data[i * 4 + 1] - Math.max(data[i * 4], data[i * 4 + 2]); // green excess
+        if (excess > 0) {
+          data[i * 4 + 1] = Math.round(data[i * 4 + 1] - excess * spillSuppression * (1 - alpha + 1));
+        }
+      }
+    }
+
+    // ── Phase 2: optional AI edge refinement ──────────────
+    let finalAlpha = chromaAlpha;
+    if (p.aiRefine) {
+      try {
+        const { isModelReady, getSaliencyMask } = await import('../ai/inspyrenet.js');
+        const ready = await isModelReady();
+        if (ready) {
+          // Run AI on original canvas (before we clear it)
+          const tmpCanvas = document.createElement('canvas');
+          tmpCanvas.width = W; tmpCanvas.height = H;
+          tmpCanvas.getContext('2d').putImageData(ctx.getImageData(0, 0, W, H), 0, 0);
+          const maskObj = await getSaliencyMask(tmpCanvas, { log: context?.log });
+          const aiMask  = maskObj.mask; // Uint8ClampedArray 0–255, 255=subject
+
+          // Combine: take the minimum (intersection) — pixel must pass both tests
+          finalAlpha = new Float32Array(W * H);
+          for (let i = 0; i < W * H; i++) {
+            finalAlpha[i] = Math.min(chromaAlpha[i], aiMask[i] / 255);
+          }
+          context?.log?.('info', '[ai-chroma-key] AI refinement applied');
+        } else {
+          context?.log?.('warn', '[ai-chroma-key] AI refine skipped — InSPyReNet model not downloaded');
+        }
+      } catch (err) {
+        context?.log?.('warn', `[ai-chroma-key] AI refine failed: ${err.message || err}`);
+      }
+    }
+
+    // Apply combined alpha to pixel data
+    for (let i = 0; i < W * H; i++) {
+      data[i * 4 + 3] = Math.round(finalAlpha[i] * 255);
+    }
+    ctx.clearRect(0, 0, W, H);
+
+    // Build subject canvas with keyed-out BG
+    const subjectCanvas = document.createElement('canvas');
+    subjectCanvas.width = W; subjectCanvas.height = H;
+    subjectCanvas.getContext('2d').putImageData(imageData, 0, 0);
+
+    // ── Phase 3: background fill ───────────────────────────
+    const bgFill = p.bgFill || 'none';
+    if (bgFill === 'color') {
+      ctx.fillStyle = p.bgColor || '#000000';
+      ctx.fillRect(0, 0, W, H);
+    } else if (bgFill === 'image' && p.bgImage) {
+      try {
+        const resp   = await fetch(p.bgImage);
+        const blob   = await resp.blob();
+        const bitmap = await createImageBitmap(blob);
+        const scale  = Math.max(W / bitmap.width, H / bitmap.height);
+        const dw = bitmap.width * scale, dh = bitmap.height * scale;
+        ctx.drawImage(bitmap, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        bitmap.close?.();
+      } catch (imgErr) {
+        context?.log?.('warn', `[ai-chroma-key] Could not load background image: ${imgErr.message || imgErr}`);
+      }
+    }
+
+    // Composite keyed subject over background
+    ctx.drawImage(subjectCanvas, 0, 0);
+  }
+});

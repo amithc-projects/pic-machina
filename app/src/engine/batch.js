@@ -59,6 +59,8 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-gif-from-states',
   // ai-ocr-tag reads from IndexedDB asset store (needs main thread path for IDB)
   'ai-ocr-tag',
+  // ai-chroma-key uses onnxruntime-web (via InSPyReNet) when AI refine is on — main thread only
+  'ai-chroma-key',
   // ai-analyse-people uses MediaPipe which requires the main thread
   'ai-analyse-people',
   // Geometry transformers using MediaPipe AI (Tasks Vision) require the main thread
