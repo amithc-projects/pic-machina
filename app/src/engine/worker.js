@@ -306,6 +306,11 @@ function log(runId, level, msg) {
 
 async function loadImage(file) {
   // Web Workers have no HTMLImageElement — use createImageBitmap instead.
+  // Video files can't be decoded as bitmaps — return a dummy 1×1 so the
+  // processor can still run (video transforms read context.originalFile directly).
+  const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+  const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+  if (VIDEO_EXTS.has(ext)) return createImageBitmap(new ImageData(1, 1));
   const bitmap = await createImageBitmap(file);
   return bitmap;
 }
