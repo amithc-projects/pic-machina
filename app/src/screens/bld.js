@@ -301,7 +301,9 @@ export async function render(container, hash) {
             <textarea id="bld-desc" class="ic-input" rows="3" placeholder="What does this recipe do?">${escHtml(draft.description || '')}</textarea>
 
             <label class="ic-label" style="margin-top:12px">Thumbnail</label>
-            <div id="bld-thumb-preview" style="width:100%;height:80px;border-radius:6px;border:1px solid var(--ps-border);background:var(--ps-bg-overlay);margin-bottom:6px;overflow:hidden;${draft.thumbnail ? `background-image:url(${draft.thumbnail});background-size:cover;background-position:center;` : ''}"></div>
+            <div id="bld-thumb-preview" style="width:100%;height:80px;border-radius:6px;border:1px solid var(--ps-border);background:var(--ps-bg-overlay);margin-bottom:6px;overflow:hidden;position:relative;">
+              ${draft.thumbnail ? `<img src="${draft.thumbnail}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;" alt="">` : ''}
+            </div>
             <div style="display:flex;gap:6px">
               <label class="btn-secondary" style="flex:1;justify-content:center;cursor:pointer;font-size:12px;">
                 <span class="material-symbols-outlined" style="font-size:14px;margin-right:4px">upload</span>Browse
@@ -705,9 +707,10 @@ export async function render(container, hash) {
       const preview = container.querySelector('#bld-thumb-preview');
       const paintPreview = (url) => {
         if (!preview) return;
-        preview.style.backgroundImage = `url(${url})`;
-        preview.style.backgroundSize = 'cover';
-        preview.style.backgroundPosition = 'center';
+        // Use <img> so animated GIFs play correctly (background-image freezes them)
+        let img = preview.querySelector('img');
+        if (!img) { img = document.createElement('img'); img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;'; preview.appendChild(img); }
+        img.src = url;
       };
       // Progressive render: show the instant baseline crop first so the UI
       // doesn't stall while the (optional) smart crop runs inference.
@@ -728,7 +731,7 @@ export async function render(container, hash) {
     draft.thumbnail = null;
     const preview = container.querySelector('#bld-thumb-preview');
     if (preview) {
-      preview.style.backgroundImage = '';
+      preview.querySelector('img')?.remove();
     }
     const clearBtn = container.querySelector('#bld-thumb-clear');
     if (clearBtn) clearBtn.style.display = 'none';
@@ -1235,9 +1238,9 @@ export async function render(container, hash) {
             draft.thumbnail = saved.thumbnail;
             const preview = container.querySelector('#bld-thumb-preview');
             if (preview) {
-              preview.style.backgroundImage = `url(${draft.thumbnail})`;
-              preview.style.backgroundSize = 'cover';
-              preview.style.backgroundPosition = 'center';
+              let img = preview.querySelector('img');
+              if (!img) { img = document.createElement('img'); img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;'; preview.appendChild(img); }
+              img.src = draft.thumbnail;
             }
             const clearBtn = container.querySelector('#bld-thumb-clear');
             if (clearBtn) clearBtn.style.display = '';

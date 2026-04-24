@@ -103,23 +103,38 @@ export async function setRecipeThumbnail(recipeId, file, opts = {}) {
   const recipe = await getRecipe(recipeId);
   if (!recipe) throw new Error(`Recipe ${recipeId} not found`);
 
-  // 1. Baseline cover-crop thumbnail (fast, no inference).
-  let { dataUrl, blob } = await generateBaselineThumbnail(file, { width: 480, height: 300 });
+  // GIFs must be stored as-is — running them through a canvas crop converts
+  // them to a static JPEG and destroys the animation.
+  const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+  let dataUrl, blob, smart = false;
 
-  // Progressive-render hook: caller can update the DOM with this baseline
-  // data URL immediately, then swap to the smart version when the smart
-  // rebuild lands in IDB.
-  try { opts.onBaseline?.(dataUrl); } catch { /* non-fatal */ }
+  if (isGif) {
+    dataUrl = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+    blob = file;
+    try { opts.onBaseline?.(dataUrl); } catch { /* non-fatal */ }
+  } else {
+    // 1. Baseline cover-crop thumbnail (fast, no inference).
+    ({ dataUrl, blob } = await generateBaselineThumbnail(file, { width: 480, height: 300 }));
 
-  // 2. Optionally replace with a content-aware crop. Silently falls back if
-  //    the model isn't downloaded or no subject is found.
-  let smart = false;
-  if (getSettings()?.thumbnails?.smart) {
-    const smartResult = await generateSmartThumbnail(file, { width: 480, height: 300 });
-    if (smartResult) {
-      dataUrl = smartResult.dataUrl;
-      blob    = smartResult.blob;
-      smart   = true;
+    // Progressive-render hook: caller can update the DOM with this baseline
+    // data URL immediately, then swap to the smart version when the smart
+    // rebuild lands in IDB.
+    try { opts.onBaseline?.(dataUrl); } catch { /* non-fatal */ }
+
+    // 2. Optionally replace with a content-aware crop. Silently falls back if
+    //    the model isn't downloaded or no subject is found.
+    if (getSettings()?.thumbnails?.smart) {
+      const smartResult = await generateSmartThumbnail(file, { width: 480, height: 300 });
+      if (smartResult) {
+        dataUrl = smartResult.dataUrl;
+        blob    = smartResult.blob;
+        smart   = true;
+      }
     }
   }
 

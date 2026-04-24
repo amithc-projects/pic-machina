@@ -26,9 +26,9 @@ const COVER_GRADIENTS = {
 };
 
 function getCoverStyle(recipe) {
-  if (recipe.thumbnail) {
-    return `background-image:url(${recipe.thumbnail});background-size:cover;background-position:center;`;
-  }
+  // When a thumbnail exists it is rendered as an <img> (so GIFs animate),
+  // so we only set the gradient/background here for the no-thumbnail case.
+  if (recipe.thumbnail) return '';
   const grad = COVER_GRADIENTS[recipe.coverColor] || 'linear-gradient(135deg, #111318 0%, #1e293b 100%)';
   if (recipe.isSystem) {
     return `background: url(./samples/${recipe.id}.jpg) center/cover, ${grad};`;
@@ -45,6 +45,7 @@ function recipeCardHTML(recipe) {
   return `
     <article class="lib-card" data-id="${recipe.id}" tabindex="0" role="button" aria-label="Recipe: ${recipe.name}">
       <div class="lib-card__cover" style="${getCoverStyle(recipe)}">
+        ${recipe.thumbnail ? `<img src="${recipe.thumbnail}" class="lib-card__thumb-img" alt="">` : ''}
         <div class="lib-card__cover-overlay">
           <div class="lib-card__badges">
             ${isSystem
@@ -566,6 +567,13 @@ function injectStyles() {
       height: 140px;
       position: relative;
       overflow: hidden;
+    }
+    .lib-card__thumb-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
     }
     .lib-card__cover-overlay {
       position: absolute; inset: 0;
