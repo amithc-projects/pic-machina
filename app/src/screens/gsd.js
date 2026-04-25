@@ -147,8 +147,8 @@ export async function render(container) {
       <section class="wel-slide" id="slide-outcomes">
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
-            <p class="wel-eyebrow">Real outcomes — not features</p>
-            <h2 class="wel-h2">What you can do in an afternoon</h2>
+            <p class="wel-eyebrow">Time saving</p>
+            <h2 class="wel-h2">What you can do in minutes</h2>
           </header>
           <div class="wel-detail-wrap wel-detail-wrap--outcomes" data-kind="outcomes">
             <div class="wel-outcomes">
@@ -169,7 +169,7 @@ export async function render(container) {
       <section class="wel-slide" id="slide-personas">
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
-            <p class="wel-eyebrow">Who it's for</p>
+            <p class="wel-eyebrow">Who it's for ?</p>
             <h2 class="wel-h2">Built for anyone with a folder full of media</h2>
           </header>
           <div class="wel-detail-wrap wel-detail-wrap--personas" data-kind="personas">
@@ -192,22 +192,28 @@ export async function render(container) {
             <p class="wel-eyebrow">How it works</p>
             <h2 class="wel-h2">Three steps. That's the whole product.</h2>
           </header>
-          <div class="wel-steps">
-            <div class="wel-step">
-              <div class="wel-step__num">1</div>
-              <h3>Pick a recipe</h3>
-              <p>Start from a ready-made one, or describe what you want and let
-              AI build it for you.</p>
+          <div class="wel-timeline">
+            <div class="wel-tl-track" aria-hidden="true">
+              <span class="wel-tl-node wel-tl-node--1">1</span>
+              <span class="wel-tl-line"></span>
+              <span class="wel-tl-node wel-tl-node--2">2</span>
+              <span class="wel-tl-line"></span>
+              <span class="wel-tl-node wel-tl-node--3">3</span>
             </div>
-            <div class="wel-step">
-              <div class="wel-step__num">2</div>
-              <h3>Point it at your images</h3>
-              <p>A folder, a selection, or a single file — whatever you have.</p>
-            </div>
-            <div class="wel-step">
-              <div class="wel-step__num">3</div>
-              <h3>Press Run</h3>
-              <p>Get a tidy export folder, every time.</p>
+            <div class="wel-tl-labels">
+              <div class="wel-tl-label">
+                <h3>Pick a recipe</h3>
+                <p>Start from a ready-made one, or describe what you want and let
+                AI build it for you.</p>
+              </div>
+              <div class="wel-tl-label">
+                <h3>Point it at your images</h3>
+                <p>A folder, a selection, or a single file — whatever you have.</p>
+              </div>
+              <div class="wel-tl-label">
+                <h3>Press Run</h3>
+                <p>Get a tidy export folder, every time.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -244,7 +250,7 @@ export async function render(container) {
             </div>
             <div class="wel-stats__item">
               <div class="wel-stats__num">100%</div>
-              <div class="wel-stats__label">local — your photos never leave your machine</div>
+              <div class="wel-stats__label">local — your photos and videos never leave your machine</div>
             </div>
           </div>
         </div>
@@ -252,12 +258,30 @@ export async function render(container) {
 
       <!-- Slide 8: Closing CTA -->
       <section class="wel-slide wel-slide--cta" id="slide-cta">
+        <svg class="wel-deco wel-deco--plane" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+          <path d="M10 60 L110 15 L80 110 L62 70 L10 60 Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M62 70 L110 15" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M62 70 L70 95" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <svg class="wel-deco wel-deco--arrow" viewBox="0 0 200 140" fill="none" aria-hidden="true">
+          <path d="M10 20 C 60 10, 130 30, 170 90"
+                stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" fill="none"
+                stroke-dasharray="3 6"/>
+          <path d="M158 78 L172 92 L156 100"
+                stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
         <div class="wel-slide__inner wel-closing">
-          <h2>Stop redoing the same edits.<br/>Start running them.</h2>
-          <button class="wel-btn wel-btn--primary wel-btn--lg" data-go="#lib">
-            <span class="material-symbols-outlined">play_arrow</span>
-            Try a recipe now
-          </button>
+          <h2 class="wel-closing__title">Ready to make<br/>something amazing?</h2>
+          <p class="wel-closing__sub">PicMachina is free to try. No credit card required.</p>
+          <div class="wel-closing__cta">
+            <button class="wel-btn wel-btn--primary wel-btn--lg" data-go="#lib">
+              <span class="material-symbols-outlined">upload</span>
+              Open your first photo
+            </button>
+            <a href="#shc" class="wel-closing__link">Explore on your own</a>
+          </div>
           <p class="wel-closing__hint">
             Looking for engine internals, the node catalogue, or AI integrations?
             <a href="#pow" class="wel-link">Visit the Power Users page →</a>
@@ -324,10 +348,14 @@ function backBtn() {
   `;
 }
 
-function persona(id, icon, title, body) {
+function persona(id, _icon, title, body) {
   return `
     <button class="wel-persona" data-tile="${id}" type="button">
-      <span class="material-symbols-outlined wel-persona__icon">${icon}</span>
+      <div class="wel-persona__portrait" data-persona="${id}">
+        <span class="material-symbols-outlined wel-persona__person">person</span>
+        <span class="wel-persona__play"><span class="material-symbols-outlined">play_circle</span></span>
+        <span class="wel-persona__filename">persona-${id}.jpg</span>
+      </div>
       <h3>${title}</h3>
       <p>${body}</p>
       <span class="wel-persona__cta">
@@ -339,18 +367,44 @@ function persona(id, icon, title, body) {
 }
 
 // ─── Floating features positioning ────────────────────────────
+// Frame layout: words live in a ring around a central "safe zone"
+// where the headline lives. Each word fades in with its own delay so
+// the cloud assembles one word at a time. All words share one accent
+// colour — distinct from the central headline.
+const FRAME_LAYOUT = (() => {
+  // Distribute 50 slots: 17 top, 17 bottom, 8 left, 8 right.
+  // Bands hug the central panel more tightly; side strips stay clear of
+  // the right-edge dot-nav (~24-60px) and left padding.
+  const slots = [];
+  // Top band (y: 4–22%, full width band, 3 stacked rows)
+  for (let i = 0; i < 17; i++) {
+    const t = i / 16;
+    slots.push({ x: 8 + t * 80, y: 4 + (i % 3) * 6 });
+  }
+  // Bottom band (y: 78–96%)
+  for (let i = 0; i < 17; i++) {
+    const t = i / 16;
+    slots.push({ x: 8 + t * 80, y: 80 + (i % 3) * 6 });
+  }
+  // Left strip (x: 4–14%, y: 28–72%) — closer to centre
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7;
+    slots.push({ x: 5 + (i % 2) * 8, y: 28 + t * 44 });
+  }
+  // Right strip (x: 80–90%) — pulled in from edge so it never sits behind
+  // the fixed dot-nav on the right of the viewport.
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7;
+    slots.push({ x: 82 + (i % 2) * 8, y: 28 + t * 44 });
+  }
+  return slots;
+})();
+
 function flyStyle(i, total) {
-  // pseudo-random but deterministic
-  const seed = (i * 9301 + 49297) % 233280;
-  const rand = (n) => ((seed * (n + 1)) % 1000) / 1000;
-  const angle = rand(1) * Math.PI * 2;
-  const radius = 12 + rand(2) * 38; // 12% to 50% from centre
-  const x = 50 + Math.cos(angle) * radius;
-  const y = 50 + Math.sin(angle) * radius * 0.85;
-  const delay = -(i / total) * 14; // stagger across the 14s loop
-  const duration = 12 + rand(3) * 6;
-  const z = rand(4);
-  return `--fx:${x.toFixed(2)}%; --fy:${y.toFixed(2)}%; --fd:${delay.toFixed(2)}s; --fdur:${duration.toFixed(2)}s; --fz:${z.toFixed(2)};`;
+  const slot = FRAME_LAYOUT[i % FRAME_LAYOUT.length];
+  // Stagger so the cloud assembles over ~22s; full cycle 32s.
+  const delay = (i / total) * 22;
+  return `left:${slot.x.toFixed(2)}%; top:${slot.y.toFixed(2)}%; animation-delay:${delay.toFixed(2)}s;`;
 }
 
 // ─── Wiring ───────────────────────────────────────────────────
@@ -849,11 +903,53 @@ function injectStyles() {
     .wel-persona:hover { border-color: var(--wel-line-2); transform: translateY(-2px); }
     .wel-persona.is-active { border-color: var(--wel-violet); box-shadow: 0 8px 24px rgba(139,92,246,0.22); }
     .wel-detail-wrap.is-expanded .wel-persona.is-active .wel-persona__cta { display: none; }
-    .wel-persona__icon {
-      font-size: 32px !important;
-      color: var(--wel-violet);
-      display: block;
-      margin-bottom: 12px;
+    /* Video-still portrait (replaces icon) */
+    .wel-persona__portrait {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      background:
+        radial-gradient(120% 80% at 50% 30%, rgba(139,92,246,0.35), rgba(20,28,46,0) 60%),
+        linear-gradient(180deg, #2a1a4a 0%, #1a2238 60%, #0f1626 100%);
+      border: 1px solid var(--wel-line-2);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .wel-persona__portrait[data-persona="creator"]      { background: radial-gradient(120% 80% at 50% 30%, rgba(96,165,250,0.35), rgba(20,28,46,0) 60%), linear-gradient(180deg, #1e3a8a 0%, #1a2238 60%, #0f1626 100%); }
+    .wel-persona__portrait[data-persona="shop"]         { background: radial-gradient(120% 80% at 50% 30%, rgba(251,146,60,0.30), rgba(20,28,46,0) 60%), linear-gradient(180deg, #7c2d12 0%, #1a2238 60%, #0f1626 100%); }
+    .wel-persona__portrait[data-persona="photographer"] { background: radial-gradient(120% 80% at 50% 30%, rgba(34,211,238,0.30), rgba(20,28,46,0) 60%), linear-gradient(180deg, #155e75 0%, #1a2238 60%, #0f1626 100%); }
+    .wel-persona__portrait[data-persona="library"]      { background: radial-gradient(120% 80% at 50% 30%, rgba(244,114,182,0.30), rgba(20,28,46,0) 60%), linear-gradient(180deg, #831843 0%, #1a2238 60%, #0f1626 100%); }
+
+    .wel-persona__person {
+      font-size: 110px !important;
+      color: rgba(255,255,255,0.55);
+      position: absolute;
+      left: 50%; bottom: 0;
+      transform: translateX(-50%);
+      filter: drop-shadow(0 6px 18px rgba(0,0,0,0.4));
+    }
+    .wel-persona__play {
+      position: absolute;
+      top: 12px; right: 12px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+    }
+    .wel-persona__play .material-symbols-outlined { font-size: 22px; }
+    .wel-persona__filename {
+      position: absolute;
+      bottom: 8px; left: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 10px;
+      color: rgba(255,255,255,0.55);
+      background: rgba(0,0,0,0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
     }
     .wel-persona h3 { font-size: 16px; margin: 0 0 6px; font-weight: 600; }
     .wel-persona p  { font-size: 13.5px; }
@@ -924,70 +1020,98 @@ function injectStyles() {
     .wel-ba__placeholder--after .material-symbols-outlined { color: var(--wel-violet); }
     .wel-ba__placeholder small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 
-    /* ─── Steps ────────────────────────────────────────────── */
-    .wel-steps {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    /* ─── Timeline (How it works) ──────────────────────────── */
+    .wel-timeline {
+      display: grid;
+      grid-template-rows: auto auto;
+      row-gap: 28px;
+      width: 100%;
     }
-    .wel-step {
-      background: var(--wel-panel);
-      border: 1px solid var(--wel-line);
-      border-radius: 16px;
-      padding: 32px 28px;
+    .wel-tl-track {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr auto;
+      align-items: center;
+      gap: 12px;
     }
-    .wel-step__num {
-      width: 38px; height: 38px;
+    .wel-tl-node {
+      width: 64px; height: 64px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--wel-blue), var(--wel-violet));
-      color: white; font-weight: 700; font-size: 16px;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 14px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 22px;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+      border: 2px solid rgba(255,255,255,0.18);
     }
-    .wel-step h3 { font-size: 19px; margin: 0 0 8px; font-weight: 600; }
-    .wel-step p  { font-size: 15px; }
+    .wel-tl-node--1 { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+    .wel-tl-node--2 { background: linear-gradient(135deg, #fb923c, #ef4444); }
+    .wel-tl-node--3 { background: linear-gradient(135deg, #d9e056, #a3b520); color: #1a2238; }
+    .wel-tl-line {
+      height: 0;
+      border-top: 2px dotted var(--wel-line-2);
+    }
+    .wel-tl-labels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      text-align: center;
+    }
+    .wel-tl-label h3 { font-size: 19px; margin: 0 0 8px; font-weight: 600; }
+    .wel-tl-label p  { font-size: 15px; }
 
-    /* ─── Floating features slide ──────────────────────────── */
+    /* ─── Features cloud slide ─────────────────────────────── */
     .wel-slide--features {
       overflow: hidden;
       background:
-        radial-gradient(900px 500px at 50% 50%, rgba(59,130,246,0.16), transparent 60%),
+        radial-gradient(900px 500px at 50% 50%, rgba(59,130,246,0.10), transparent 60%),
         var(--wel-bg);
     }
     .wel-features-bg {
       position: absolute; inset: 0;
-      perspective: 900px;
       pointer-events: none;
     }
     .wel-fly {
       position: absolute;
-      left: var(--fx);
-      top:  var(--fy);
       transform: translate(-50%, -50%);
       font-size: 14px;
       font-weight: 600;
-      color: var(--wel-text);
-      background: rgba(20,28,46,0.55);
-      border: 1px solid var(--wel-line);
-      backdrop-filter: blur(4px);
-      padding: 6px 12px;
+      color: var(--wel-blue-2);
+      background: rgba(20,28,46,0.65);
+      border: 1px solid rgba(96,165,250,0.55);
+      padding: 5px 12px;
       border-radius: 999px;
       white-space: nowrap;
-      animation: wel-fly var(--fdur) linear var(--fd) infinite;
-      will-change: transform, opacity;
+      max-width: 22vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0;
+      animation: wel-pop 32s linear infinite;
+      will-change: opacity, transform;
     }
-    @keyframes wel-fly {
-      0%   { transform: translate(-50%, -50%) translateZ(-800px); opacity: 0; }
-      12%  { opacity: 0.9; }
-      80%  { opacity: 1; }
-      100% { transform: translate(-50%, -50%) translateZ(500px); opacity: 0; }
+    @keyframes wel-pop {
+      0%               { opacity: 0; transform: translate(-50%, -50%) scale(.85); }
+      2%               { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      90%              { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100%             { opacity: 0; transform: translate(-50%, -50%) scale(.95); }
     }
+
+    /* Opaque central panel — sits above the cloud, tightly bound so
+       words can never overlap its rendered text. */
     .wel-features-inner {
       position: relative;
-      z-index: 1;
+      z-index: 2;
       text-align: center;
-      max-width: 720px;
-      background: radial-gradient(420px 240px at 50% 50%, rgba(10,15,28,0.85), rgba(10,15,28,0.0) 75%);
-      padding: 40px 24px;
-      border-radius: 24px;
+      max-width: 600px;
+      padding: 36px 32px;
+      border-radius: 20px;
+      background: #0c1326;
+      border: 1px solid var(--wel-line-2);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.55), 0 0 0 8px rgba(10,15,28,0.85);
+    }
+    .wel-features-inner .wel-eyebrow { color: #fff !important; opacity: .85; }
+    .wel-features-inner .wel-h2 {
+      background: linear-gradient(90deg, #fff, #cbd5f5);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
     }
     .wel-features-sub {
       margin-top: 16px !important;
@@ -1018,16 +1142,82 @@ function injectStyles() {
         radial-gradient(800px 360px at 50% 0%, rgba(96,165,250,0.22), transparent 60%),
         radial-gradient(700px 340px at 50% 100%, rgba(139,92,246,0.18), transparent 60%),
         var(--wel-bg);
+      overflow: hidden;
     }
-    .wel-closing { text-align: center; }
-    .wel-closing h2 {
-      font-size: clamp(32px, 5vw, 56px);
-      letter-spacing: -0.02em;
-      margin: 0 0 32px; font-weight: 700; line-height: 1.1;
+    .wel-closing {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
     }
-    .wel-closing__hint { margin-top: 28px; color: var(--wel-mute); font-size: 14px; }
+    .wel-closing__title {
+      font-family: "Playfair Display", "Cormorant Garamond", "Georgia", "Times New Roman", serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: clamp(40px, 6vw, 72px);
+      letter-spacing: -0.01em;
+      line-height: 1.05;
+      margin: 0 0 18px;
+      color: var(--wel-text);
+    }
+    .wel-closing__sub {
+      font-size: clamp(15px, 1.4vw, 18px);
+      color: var(--wel-dim);
+      margin: 0 0 36px !important;
+    }
+    .wel-closing__cta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .wel-closing__cta .wel-btn--primary {
+      padding: 18px 36px;
+      font-size: 17px;
+      border-radius: 14px;
+    }
+    .wel-closing__link {
+      color: var(--wel-dim);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      padding-bottom: 1px;
+      transition: color .18s ease, border-color .18s ease;
+    }
+    .wel-closing__link:hover { color: var(--wel-text); border-bottom-color: var(--wel-line-2); }
+    .wel-closing__hint { margin-top: 48px !important; color: var(--wel-mute); font-size: 13.5px; }
     .wel-link { color: var(--wel-blue-2); text-decoration: none; font-weight: 600; }
     .wel-link:hover { text-decoration: underline; }
+
+    /* Decorative SVGs on the closing slide */
+    .wel-deco {
+      position: absolute;
+      pointer-events: none;
+      color: var(--wel-blue-2);
+      opacity: 0.55;
+      z-index: 0;
+    }
+    .wel-deco--plane {
+      top: 12%;
+      right: 12%;
+      width: clamp(80px, 10vw, 140px);
+      height: auto;
+      transform: rotate(-12deg);
+      color: var(--wel-violet);
+    }
+    .wel-deco--arrow {
+      bottom: 18%;
+      left: 12%;
+      width: clamp(140px, 16vw, 220px);
+      height: auto;
+      transform: rotate(8deg);
+    }
+    @media (max-width: 900px) {
+      .wel-deco--plane { right: 4%; top: 6%; opacity: 0.4; }
+      .wel-deco--arrow { left: 4%; bottom: 6%; opacity: 0.4; }
+    }
 
     /* ─── Side dot-nav ─────────────────────────────────────── */
     .wel-dots {
@@ -1067,8 +1257,11 @@ function injectStyles() {
       .wel-personas { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 900px) {
-      .wel-tiles, .wel-steps, .wel-stats { grid-template-columns: 1fr; }
+      .wel-tiles, .wel-stats { grid-template-columns: 1fr; }
       .wel-outcomes { grid-template-columns: 1fr; }
+      .wel-tl-track { display: none; }
+      .wel-tl-labels { grid-template-columns: 1fr; gap: 20px; }
+      .wel-fly { font-size: 12px; padding: 3px 8px; }
       .wel-detail-wrap { grid-template-columns: 1fr; }
       .wel-detail-wrap.is-expanded { grid-template-columns: 1fr; gap: 20px; }
       .wel-dots { right: 12px; }
