@@ -13,6 +13,38 @@ import { initTabs } from '../aurora/tabs.js';
 import { countNodes } from '../utils/nodes.js';
 import { showConfirm } from '../utils/dialogs.js';
 
+// Curated tag → category map. Tags not listed here fall into "Other".
+// Keys are normalised to lowercase; matching is case-insensitive.
+const TAG_CATEGORIES = (() => {
+  const groups = {
+    'Era':         ['1970s', '80s', '8-bit', 'vintage', 'retro', 'retrowave', 'classic', 'cga', 'crt'],
+    'Style':       ['cartoon', 'noir', 'cyberpunk', 'synthwave', 'vaporwave', 'popart', 'warhol', 'impressionist',
+                    'painting', 'sketch', 'comic', 'graphic novel', 'fantasy', 'horror', 'illustration', 'artistic',
+                    'art', 'pixel art', 'cel shading', 'minimal', 'bold', 'moody', 'cinematic'],
+    'Look':        ['aerochrome', 'analog', 'lomo', 'polaroid', 'faded', 'fade', 'glitch', 'halftone', 'dither',
+                    'grain', 'blur', 'glow', 'neon', 'duotone', 'monochrome', 'black-and-white', 'black and white',
+                    'tint', 'tilt-shift', 'infrared', 'overlay', 'matte', 'edges', 'sharpness'],
+    'Format':      ['gif', 'webp', 'png', 'jpeg', 'video', 'film', 'animation', 'slideshow', 'slideshow video',
+                    'reels', 'tiktok', 'instagram', 'social', 'thumbnail', 'thumbnails', 'icons', 'preview', 'web'],
+    'Function':    ['resize', 'crop', 'sort', 'organise', 'watermark', 'stack', 'swap', 'export', 'triage',
+                    'aggreagation', 'aggregation', 'composite', 'filter', 'effect', 'border', 'frames'],
+    'Metadata':    ['exif', 'gps', 'geocode', 'copyright', 'date', 'location', 'privacy', 'id', 'security'],
+    'Composition': ['square', 'portrait', 'landscape', 'panorama', 'picture-in-picture', 'split-layout', 'grid',
+                    'circular', 'aspect ratio', 'wall'],
+    'Subject':     ['faces', 'people', 'talking head', 'room', 'travel', 'gallery', 'folder', 'background'],
+    'Tech':        ['ai', 'ml', 'performance', 'quality', 'corporate', 'creative', 'branding', 'template',
+                    'typography', 'text', 'caption', 'logo', 'map', 'metadata', 'miniature'],
+  };
+  const map = {};
+  for (const [cat, tags] of Object.entries(groups)) {
+    for (const t of tags) map[t.toLowerCase()] = cat;
+  }
+  return map;
+})();
+const CATEGORY_ORDER = ['Era', 'Style', 'Look', 'Format', 'Function', 'Composition', 'Subject', 'Metadata', 'Tech', 'Other'];
+const POPULAR_LIMIT = 8;
+const COLLAPSE_THRESHOLD = 8; // Below this many tags, render the simple inline row
+
 // Category colours for cover gradients
 const COVER_GRADIENTS = {
   '#0077ff': 'linear-gradient(135deg, #0a1628 0%, #0044cc 100%)',
@@ -145,11 +177,7 @@ export async function render(container) {
         </div>
       </div>
 
-      <div id="lib-tag-filter-row" class="lib-tag-filter-row" style="display:none">
-        <span class="text-xs text-muted" style="flex-shrink:0">Filter by tag:</span>
-        <div id="lib-tag-chips" class="lib-tag-chips"></div>
-        <button id="lib-tag-clear" class="btn-ghost" style="font-size:11px;padding:2px 8px;display:none">Clear</button>
-      </div>
+      <div id="lib-tag-filter-row" class="lib-tag-filter-row" style="display:none"></div>
 
       <div class="lib-body overflow-y-auto flex-1">
         <div id="lib-panel-all"    role="tabpanel" aria-labelledby="lib-tab-all">
@@ -236,31 +264,190 @@ export async function render(container) {
     })();
   }
 
+  let tagSearchQuery = '';
+
+  function categoryFor(tag) {
+    return TAG_CATEGORIES[tag.toLowerCase()] || 'Other';
+  }
+
+  function tagPillHTML(tag) {
+    const active = activeTags.has(tag) ? ' is-active' : '';
+    return `<button class="lib-tag-chip${active}" data-tag="${tag}">${tag}</button>`;
+  }
+
   function renderTagChips() {
     const allTags = [...new Set(recipes.flatMap(r => r.tags || []))].sort();
-    const row  = container.querySelector('#lib-tag-filter-row');
-    const chips = container.querySelector('#lib-tag-chips');
-    const clear = container.querySelector('#lib-tag-clear');
-    if (!row || !chips) return;
-    if (!allTags.length) { row.style.display = 'none'; return; }
-    row.style.display = 'flex';
-    chips.innerHTML = allTags.map(t =>
-      `<button class="lib-tag-chip ${activeTags.has(t) ? 'is-active' : ''}" data-tag="${t}">${t}</button>`
+    const row = container.querySelector('#lib-tag-filter-row');
+    if (!row) return;
+
+    if (!allTags.length) {
+      row.style.display = 'none';
+      row.innerHTML = '';
+      return;
+    }
+    row.style.display = '';
+
+    // Compact mode: small tag set → keep the original simple row
+    if (allTags.length <= COLLAPSE_THRESHOLD) {
+      row.classList.add('lib-tag-filter-row--simple');
+      row.classList.remove('is-open');
+      row.innerHTML = `
+        <span class="text-xs text-muted" style="flex-shrink:0">Filter by tag:</span>
+        <div class="lib-tag-chips">${allTags.map(tagPillHTML).join('')}</div>
+        ${activeTags.size ? '<button class="btn-ghost lib-tag-clear" style="font-size:11px;padding:2px 8px">Clear</button>' : ''}
+      `;
+      bindTagInteractions(row);
+      return;
+    }
+
+    // Rich mode
+    row.classList.remove('lib-tag-filter-row--simple');
+    const open = sessionStorage.getItem('lib-tag-filter-open') === '1';
+    row.classList.toggle('is-open', open);
+
+    // Frequency for popular row
+    const counts = new Map();
+    recipes.forEach(r => (r.tags || []).forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
+    const popular = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, POPULAR_LIMIT).map(([t]) => t);
+
+    // Group remaining tags by category
+    const byCategory = {};
+    for (const t of allTags) {
+      const cat = categoryFor(t);
+      (byCategory[cat] = byCategory[cat] || []).push(t);
+    }
+
+    // Selected summary in collapsed bar
+    const selected = [...activeTags];
+    const visibleCount = 5;
+    const visible = selected.slice(0, visibleCount);
+    const overflow = selected.length - visible.length;
+    const summaryChips = visible.map(t =>
+      `<button class="lib-tag-chip is-active" data-tag="${t}" data-source="summary">${t}<span class="material-symbols-outlined" style="font-size:14px;margin-left:2px">close</span></button>`
     ).join('');
-    if (clear) clear.style.display = activeTags.size ? '' : 'none';
-    chips.querySelectorAll('.lib-tag-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
+    const overflowPill = overflow > 0
+      ? `<span class="lib-tag-summary__more">+${overflow} more</span>`
+      : '';
+    const summaryLabel = selected.length === 0
+      ? '<span class="lib-tag-summary__all">All</span>'
+      : '';
+
+    // Search-filtered render of category groups
+    const q = tagSearchQuery.trim().toLowerCase();
+    const matches = (t) => !q || t.toLowerCase().includes(q);
+    const groupsHTML = q
+      ? (() => {
+          // Flat ranked list when searching
+          const hits = allTags.filter(matches).sort((a, b) => {
+            const ap = a.toLowerCase().startsWith(q) ? 0 : 1;
+            const bp = b.toLowerCase().startsWith(q) ? 0 : 1;
+            return ap - bp || a.localeCompare(b);
+          });
+          if (!hits.length) {
+            return '<div class="lib-tag-empty">No tags match "' + q + '"</div>';
+          }
+          return `<div class="lib-tag-group">
+            <div class="lib-tag-group__head">Matches</div>
+            <div class="lib-tag-chips">${hits.map(tagPillHTML).join('')}</div>
+          </div>`;
+        })()
+      : CATEGORY_ORDER
+          .filter(cat => byCategory[cat]?.length)
+          .map(cat => `<div class="lib-tag-group">
+            <div class="lib-tag-group__head">${cat}</div>
+            <div class="lib-tag-chips">${byCategory[cat].map(tagPillHTML).join('')}</div>
+          </div>`)
+          .join('');
+
+    const popularHTML = popular.length && !q ? `
+      <div class="lib-tag-group lib-tag-group--popular">
+        <div class="lib-tag-group__head">Popular</div>
+        <div class="lib-tag-chips">${popular.map(tagPillHTML).join('')}</div>
+      </div>` : '';
+
+    const selectedStripHTML = selected.length ? `
+      <div class="lib-tag-group lib-tag-group--selected">
+        <div class="lib-tag-group__head">Selected</div>
+        <div class="lib-tag-chips">${selected.map(tagPillHTML).join('')}</div>
+      </div>` : '';
+
+    row.innerHTML = `
+      <div class="lib-tag-summary" role="button" tabindex="0" aria-expanded="${open}">
+        <span class="material-symbols-outlined lib-tag-summary__caret">chevron_right</span>
+        <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-muted)">sell</span>
+        <span class="lib-tag-summary__label">Tags</span>
+        <span class="lib-tag-summary__chips">${summaryLabel}${summaryChips}${overflowPill}</span>
+        ${activeTags.size ? '<button class="btn-ghost lib-tag-clear" style="font-size:11px;padding:2px 8px;margin-left:auto">Clear</button>' : ''}
+      </div>
+      <div class="lib-tag-body">
+        <div class="lib-tag-body__inner">
+          <div class="lib-tag-search-wrap">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" class="lib-tag-search" placeholder="Search tags…" value="${q}" autocomplete="off">
+          </div>
+          ${selectedStripHTML}
+          ${popularHTML}
+          ${groupsHTML}
+        </div>
+      </div>
+    `;
+    bindTagInteractions(row);
+  }
+
+  function bindTagInteractions(row) {
+    // Pill toggle
+    row.querySelectorAll('.lib-tag-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const t = btn.dataset.tag;
         if (activeTags.has(t)) activeTags.delete(t); else activeTags.add(t);
         renderTagChips();
         applyFilter(container.querySelector('#lib-search')?.value || '');
+        // Restore search box focus + caret if we were typing
+        if (tagSearchQuery) row.querySelector('.lib-tag-search')?.focus();
       });
     });
-    clear?.addEventListener('click', () => {
-      activeTags.clear();
-      renderTagChips();
-      applyFilter(container.querySelector('#lib-search')?.value || '');
+
+    // Clear button (must stop propagation so summary toggle doesn't fire)
+    row.querySelectorAll('.lib-tag-clear').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        activeTags.clear();
+        renderTagChips();
+        applyFilter(container.querySelector('#lib-search')?.value || '');
+      });
     });
+
+    // Summary bar toggles open/close
+    const summary = row.querySelector('.lib-tag-summary');
+    const toggleOpen = () => {
+      const open = !row.classList.contains('is-open');
+      row.classList.toggle('is-open', open);
+      summary.setAttribute('aria-expanded', String(open));
+      sessionStorage.setItem('lib-tag-filter-open', open ? '1' : '0');
+    };
+    summary?.addEventListener('click', toggleOpen);
+    summary?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(); }
+    });
+
+    // Search input
+    const search = row.querySelector('.lib-tag-search');
+    if (search) {
+      search.addEventListener('input', (e) => {
+        tagSearchQuery = e.target.value;
+        // Re-render only the body. Easier: full re-render then refocus.
+        const caret = e.target.selectionStart;
+        renderTagChips();
+        const next = container.querySelector('.lib-tag-search');
+        if (next) {
+          next.focus();
+          try { next.setSelectionRange(caret, caret); } catch {}
+        }
+      });
+      // Stop summary toggle when interacting with the search row
+      search.addEventListener('click', e => e.stopPropagation());
+    }
   }
 
   function applyFilter(query = '') {
@@ -520,12 +707,99 @@ function injectStyles() {
     }
     .lib-tabs-row [role="tab"]:hover { color: var(--ps-text); }
 
+    /* Tag filter — collapsible section */
     .lib-tag-filter-row {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding: 8px 20px; border-bottom: 1px solid var(--ps-border);
+      display: flex; flex-direction: column;
+      border-bottom: 1px solid var(--ps-border);
       background: var(--ps-bg-surface); flex-shrink: 0;
     }
-    .lib-tag-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+    /* Compact mode: small tag set keeps the original inline layout */
+    .lib-tag-filter-row--simple {
+      flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 20px;
+    }
+
+    .lib-tag-summary {
+      all: unset;
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 20px;
+      cursor: pointer;
+      user-select: none;
+      min-height: 36px;
+      flex-wrap: wrap;
+    }
+    .lib-tag-summary:hover { background: var(--ps-bg-raised); }
+    .lib-tag-summary__caret {
+      font-size: 18px !important;
+      color: var(--ps-text-muted);
+      transition: transform 180ms ease;
+    }
+    .lib-tag-filter-row.is-open .lib-tag-summary__caret { transform: rotate(90deg); }
+    .lib-tag-summary__label {
+      font-size: 12px; font-weight: 600; color: var(--ps-text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .lib-tag-summary__chips {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      flex: 1; min-width: 0;
+    }
+    .lib-tag-summary__chips .lib-tag-chip {
+      display: inline-flex; align-items: center;
+    }
+    .lib-tag-summary__all {
+      font-size: 12px; color: var(--ps-text-faint);
+    }
+    .lib-tag-summary__more {
+      font-size: 11px; color: var(--ps-text-muted);
+      padding: 3px 8px; border-radius: 12px;
+      background: var(--ps-bg-raised); border: 1px solid var(--ps-border);
+    }
+
+    .lib-tag-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 240ms ease;
+    }
+    .lib-tag-filter-row.is-open .lib-tag-body { max-height: 520px; overflow-y: auto; }
+    .lib-tag-body__inner {
+      padding: 4px 20px 14px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .lib-tag-search-wrap {
+      position: relative;
+      max-width: 320px;
+    }
+    .lib-tag-search-wrap > .material-symbols-outlined {
+      position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+      font-size: 17px; color: var(--ps-text-faint); pointer-events: none;
+    }
+    .lib-tag-search {
+      width: 100%; box-sizing: border-box;
+      padding: 6px 10px 6px 32px;
+      font-size: 12px;
+      background: var(--ps-bg-raised);
+      border: 1px solid var(--ps-border);
+      border-radius: 6px;
+      color: var(--ps-text);
+      font-family: var(--font-primary);
+      outline: none;
+    }
+    .lib-tag-search:focus { border-color: var(--ps-blue); }
+
+    .lib-tag-group { display: flex; flex-direction: column; gap: 6px; }
+    .lib-tag-group__head {
+      font-size: 10px; font-weight: 600;
+      color: var(--ps-text-faint);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .lib-tag-group--selected .lib-tag-group__head { color: var(--ps-blue); }
+    .lib-tag-empty {
+      font-size: 12px; color: var(--ps-text-muted);
+      padding: 8px 0;
+    }
+
+    .lib-tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .lib-tag-chip {
       padding: 3px 10px; font-size: 11px; border-radius: 12px;
       border: 1px solid var(--ps-border); background: var(--ps-bg-raised);
