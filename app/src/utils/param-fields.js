@@ -190,6 +190,35 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           <textarea id="${id}" name="${param.name}" class="ic-input" rows="6" placeholder="Paste contents here, or use the file upload button above...">${escHtml(String(val))}</textarea>
         </div>`;
 
+    case 'file': {
+      // Image file browse + preview. The hidden input carries the data-URL value
+      // so collectParams() reads it like any other text field.
+      const hasVal = !!(val && String(val).length > 0);
+      return `
+        <div class="ned-field">
+          <label class="ned-field-label">${escHtml(param.label || 'Image')}</label>
+          <input type="hidden" id="${id}" name="${param.name}" value="${escHtml(String(val))}">
+          <div class="ned-file-wrap" id="${id}-wrap">
+            <div class="ned-file-preview-area" id="${id}-preview-area">
+              ${hasVal
+                ? `<img class="ned-file-thumb" id="${id}-thumb" src="${escHtml(String(val))}" alt="Preview">`
+                : `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">image</span><span>No image selected</span></div>`}
+            </div>
+            <div class="ned-file-actions">
+              <label class="btn-secondary btn-sm ned-file-browse-label" title="Browse for image file">
+                <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
+                Browse…
+                <input type="file" id="${id}-file" accept="${param.accept || 'image/*'}" style="display:none">
+              </label>
+              <button class="btn-secondary btn-sm ned-file-clear-btn" id="${id}-clear"
+                      title="Clear image" style="display:${hasVal ? 'flex' : 'none'}">
+                <span class="material-symbols-outlined" style="font-size:14px">close</span>
+              </button>
+            </div>
+          </div>
+        </div>`;
+    }
+
     default: // 'text'
       return `
         <div class="ned-field">
@@ -251,6 +280,18 @@ export function injectParamFieldStyles() {
     .ned-var-bind-btn { transition:color 150ms; }
     .ned-var-bind-btn:hover { color:var(--ps-blue) !important; }
     .ned-var-input { border-color:var(--ps-blue) !important; }
+
+    /* Image file browse field */
+    .ned-file-wrap { display:flex; flex-direction:column; gap:6px; }
+    .ned-file-preview-area { border-radius:8px; overflow:hidden; background:var(--ps-bg-app); border:1px solid var(--ps-border); min-height:72px; display:flex; align-items:center; justify-content:center; }
+    .ned-file-thumb { width:100%; max-height:140px; object-fit:contain; display:block; }
+    .ned-file-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:16px; color:var(--ps-text-faint); }
+    .ned-file-empty .material-symbols-outlined { font-size:28px; }
+    .ned-file-empty span:last-child { font-size:11px; }
+    .ned-file-actions { display:flex; align-items:center; gap:6px; }
+    .ned-file-browse-label { display:flex; align-items:center; gap:4px; cursor:pointer; }
+    .ned-file-clear-btn { display:flex; align-items:center; color:var(--ps-text-muted); }
+    .ned-file-clear-btn:hover { color:var(--ps-red, #ef4444); }
   `;
   document.head.appendChild(s);
 }
@@ -343,6 +384,48 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
             textInput.dispatchEvent(new Event('input', { bubbles: true }));
           };
           reader.readAsText(file);
+        });
+      }
+    }
+
+    if (p.type === 'file') {
+      const hiddenInput  = container.querySelector(`#${id}`);
+      const fileInput    = container.querySelector(`#${id}-file`);
+      const previewArea  = container.querySelector(`#${id}-preview-area`);
+      const clearBtn     = container.querySelector(`#${id}-clear`);
+
+      const setPreview = (dataUrl) => {
+        if (!previewArea) return;
+        if (dataUrl) {
+          previewArea.innerHTML = `<img class="ned-file-thumb" id="${id}-thumb" src="${dataUrl}" alt="Preview">`;
+          if (clearBtn) clearBtn.style.display = 'flex';
+        } else {
+          previewArea.innerHTML = `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">image</span><span>No image selected</span></div>`;
+          if (clearBtn) clearBtn.style.display = 'none';
+        }
+      };
+
+      if (fileInput && hiddenInput) {
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target.result;
+            hiddenInput.value = dataUrl;
+            setPreview(dataUrl);
+            hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (clearBtn && hiddenInput) {
+        clearBtn.addEventListener('click', () => {
+          hiddenInput.value = '';
+          if (fileInput) fileInput.value = '';
+          setPreview(null);
+          hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
         });
       }
     }
