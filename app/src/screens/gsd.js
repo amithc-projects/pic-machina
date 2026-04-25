@@ -1,25 +1,20 @@
 /**
- * PicMachina — GSD: Get Started
+ * PicMachina — GSD: Get Started (benefits-focused, scroll-snap landing)
  *
- * Landing / introduction screen. Ports the Claude-designed prototype at
- * `getting-started-page-designed-by-claude.html` to a vanilla-JS screen
- * module with no framework dependencies.
+ * Vertical stack of full-viewport slides with CSS scroll-snap (Apple-style).
+ * Three interactive slides — Why-switch, Outcomes, Personas — let the user
+ * click a tile: the other tiles slide away, the chosen tile docks on the
+ * left, and a detail panel reveals on the right. The detail panel content
+ * varies by slide:
+ *   • Why-switch → video placeholder
+ *   • Outcomes   → split before/after placeholder
+ *   • Personas   → video testimonial placeholder
  *
- * Sections (vertical stack, max-width 1200):
- *   1. Hero — two variants ("Live Pipeline" / "Guided Tour"), toggled by a
- *      segmented control at the top-right.
- *   2. Pipeline Diagram — 7 node categories with live recipe counts.
- *   3. Personas — Individuals / Photographers / Creators / Enterprise.
- *   4. Smart Automation — "Just Ask Claude" card with a typewriter prompt.
- *   5. Keyboard Shortcuts strip.
- *
- * All CTAs navigate to real in-app hashes via `main.js`'s `navigate()` shim
- * (falling back to `location.hash`). Recipe / model / category counts are
- * read from the live data layer so the page never goes stale.
+ * A "Powerful in dozens of ways" slide shows ~50 feature labels floating
+ * outward from the centre, repeating.
  */
 
 import { getAllRecipes } from '../data/recipes.js';
-import { listDownloadedModels } from '../data/models.js';
 
 // ─── Utils ────────────────────────────────────────────────────
 function go(hash) {
@@ -27,1611 +22,1067 @@ function go(hash) {
   location.hash = hash;
 }
 
-const NODE_CATEGORIES = [
-  'AI & Composition',
-  'Color & Tone',
-  'Flow Control',
-  'Geometric & Framing',
-  'Metadata',
-  'Overlays & Typography',
-  'Video Effects',
+async function getStats() {
+  const recipes = await getAllRecipes().catch(() => []);
+  return { recipeCount: recipes.length };
+}
+
+const SLIDES = [
+  { id: 'hero',     label: 'Welcome' },
+  { id: 'why',      label: 'Why' },
+  { id: 'outcomes', label: 'Outcomes' },
+  { id: 'personas', label: 'Who it\'s for' },
+  { id: 'how',      label: 'How' },
+  { id: 'features', label: 'Features' },
+  { id: 'stats',    label: 'At a glance' },
+  { id: 'cta',      label: 'Get started' },
 ];
 
-async function getCounts() {
-  const [recipes, models] = await Promise.all([
-    getAllRecipes().catch(() => []),
-    listDownloadedModels().catch(() => []),
-  ]);
-  return {
-    recipeCount: recipes.length,
-    modelCount: models.length,
-    categoryCount: NODE_CATEGORIES.length,
-  };
-}
+// 50 feature labels for the floating cloud
+const FEATURES = [
+  'Background Removal', 'Watermarking', 'Smart Crop', 'Face Swap', 'Colour Match',
+  'Auto-Levels', 'Slideshow Builder', 'Video Trim', 'Frame Extraction', 'GIF Export',
+  'Batch Resize', 'Format Convert', 'Multi-Size Export', 'EXIF Strip', 'Geotag Edit',
+  'AI Upscaling', 'Style Transfer', 'Mask Generation', 'Object Removal', 'Sky Replace',
+  'Tone Mapping', 'HDR Merge', 'Panorama Stitch', 'Border & Frame', 'Caption Overlay',
+  'Logo Stamp', 'Sequence Numbering', 'Filename Templates', 'Folder Routing', 'CSV Import',
+  'Drag & Drop Recipes', 'Block Builder', 'Live Preview', 'Undo History', 'Run Queue',
+  'Output Browser', 'Template Library', 'AI Recipe Author', 'Conditional Steps', 'Loop Steps',
+  'Webhooks', 'Local-First', 'GPU Acceleration', 'Privacy by Default', 'Cross-Platform',
+  'Keyboard Shortcuts', 'Dark & Light', 'Plugin API', 'Smart Naming', 'Audio Tracks',
+];
+
+// ─── Detail panel content ─────────────────────────────────────
+const WHY_DETAILS = {
+  hours: {
+    title: 'Save hours every week',
+    blurb: 'Watch a real run finish in the time it takes to make coffee.',
+    video: 'why-hours.mp4',
+  },
+  same: {
+    title: 'The same result, every time',
+    blurb: '500 product shots, identical crop, watermark and colour profile.',
+    video: 'why-same.mp4',
+  },
+  channel: {
+    title: 'One workflow, every channel',
+    blurb: 'A single source image fanned out to web, social and print.',
+    video: 'why-channel.mp4',
+  },
+};
+
+const OUTCOME_DETAILS = {
+  bg:        { title: 'Strip backgrounds from 200 product photos',     blurb: 'Drag the folder, hit Run.' },
+  slide:     { title: 'Make a slideshow video from a holiday folder',  blurb: 'Pick the music, you\'re done.' },
+  watermark: { title: 'Watermark and resize a year of blog images',    blurb: 'One recipe, applied to the lot.' },
+  swap:      { title: 'Swap faces or colours across a batch',          blurb: 'Consistent edits, zero manual tweaking.' },
+  social:    { title: 'Build a social pack — square, portrait, story', blurb: 'Every aspect ratio in one go.' },
+  vid:       { title: 'Turn a video into stills, or stills into a video', blurb: 'Both directions, no extra tools.' },
+};
+
+const PERSONA_DETAILS = {
+  creator:      { title: 'Content creators',           blurb: '"I publish 5 videos a week — PicMachina makes the thumbnails."', video: 'persona-creator.mp4' },
+  shop:         { title: 'Small shops & marketplaces', blurb: '"Every listing photo perfectly on-brand, in minutes."',          video: 'persona-shop.mp4' },
+  photographer: { title: 'Photographers',              blurb: '"Client galleries delivered in every format the brief asks for."', video: 'persona-photographer.mp4' },
+  library:      { title: 'Anyone with a messy library',blurb: '"My 30,000-photo backlog, finally organised."',                  video: 'persona-library.mp4' },
+};
 
 // ─── Main render ──────────────────────────────────────────────
 export async function render(container) {
   injectStyles();
-
-  const counts = await getCounts();
+  const stats = await getStats();
 
   container.innerHTML = `
-    <div class="gsd-screen">
-      <header class="gsd-header">
-        <div class="gsd-header__title">
-          <span class="material-symbols-outlined" style="color:#60a5fa">rocket_launch</span>
-          <h1>Get Started</h1>
-        </div>
-        <div class="gsd-header__right">
-          <div class="gsd-pill gsd-pill--status">
-            <span class="gsd-dot gsd-dot--green"></span>
-            <span class="mono">engine ready · ${counts.modelCount} model${counts.modelCount === 1 ? '' : 's'} loaded</span>
-          </div>
-          <div class="gsd-hero-switch" role="tablist" aria-label="Hero variant">
-            <button class="gsd-hero-switch__btn is-active" data-variant="pipeline" role="tab" aria-selected="true">Live Pipeline</button>
-            <button class="gsd-hero-switch__btn" data-variant="tour" role="tab" aria-selected="false">Guided Tour</button>
-          </div>
-        </div>
-      </header>
+    <div class="wel-screen" id="wel-scroller">
 
-      <div class="gsd-body">
-        <section id="gsd-hero"></section>
-        <section id="gsd-pipeline"></section>
-        <section id="gsd-personas"></section>
-        <section id="gsd-automation"></section>
-        <section id="gsd-claude-skills"></section>
-        <section id="gsd-shortcuts"></section>
-      </div>
-    </div>
-  `;
-
-  // Mount sections
-  renderHero(container.querySelector('#gsd-hero'), 'pipeline', counts);
-  renderPipelineDiagram(container.querySelector('#gsd-pipeline'), counts);
-  renderPersonas(container.querySelector('#gsd-personas'));
-  renderAutomation(container.querySelector('#gsd-automation'));
-  renderClaudeSkills(container.querySelector('#gsd-claude-skills'));
-  renderShortcuts(container.querySelector('#gsd-shortcuts'));
-
-  // Hero variant toggle
-  const heroEl = container.querySelector('#gsd-hero');
-  container.querySelectorAll('.gsd-hero-switch__btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      container.querySelectorAll('.gsd-hero-switch__btn').forEach((b) => {
-        b.classList.toggle('is-active', b === btn);
-        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
-      });
-      stopHeroTimers();
-      renderHero(heroEl, btn.dataset.variant, counts);
-    });
-  });
-
-  // Return a cleanup function so main.js can stop the intervals when the
-  // user navigates away.
-  return () => stopHeroTimers();
-}
-
-// ─── Global timer registry (killed on navigation away) ────────
-const _timers = [];
-function track(id) { _timers.push(id); return id; }
-function stopHeroTimers() {
-  while (_timers.length) clearInterval(_timers.pop());
-}
-
-// ═══════════════════════════════════════════════════════════════
-// HERO A — Live Pipeline
-// ═══════════════════════════════════════════════════════════════
-function renderLivePipelineHero(host, counts) {
-  host.innerHTML = `
-    <div class="gsd-hero gsd-hero--pipeline">
-      <div class="gsd-hero__bg"></div>
-      <div class="gsd-hero__grid-bg"></div>
-      <div class="gsd-hero__inner">
-        <div class="gsd-hero__copy">
-          <div class="gsd-pill gsd-pill--accent">
-            <span class="gsd-dot gsd-dot--blue pulse-dot"></span>
-            <span class="mono">Local · Private · Fast</span>
-          </div>
-          <h1 class="gsd-hero__headline">
-            Imagine the outcome.
-            <span class="serif"> Automate</span> the rest.
+      <!-- Slide 1: Hero -->
+      <section class="wel-slide wel-slide--hero" id="slide-hero">
+        <div class="wel-slide__inner wel-hero">
+          <h1 class="wel-hero__title">
+            Edit one photo.<br/>
+            <span class="wel-accent">Apply it to a thousand.</span>
           </h1>
-          <p class="gsd-hero__lede">
-            A visual node engine that turns messy folders of media into
-            perfectly-processed deliverables. Runs entirely on your machine.
+          <p class="wel-hero__sub">
+            PicMachina turns the fiddly bits of image and video work — resizing,
+            watermarking, swapping backgrounds, exporting for every platform —
+            into one-click recipes you can reuse forever.
           </p>
-          <div class="gsd-hero__ctas">
-            <button class="gsd-btn gsd-btn--primary" data-action="new-recipe">
-              <span class="material-symbols-outlined">add</span>
-              Create New Recipe
+          <div class="wel-hero__cta">
+            <button class="wel-btn wel-btn--primary" data-go="#lib">
+              <span class="material-symbols-outlined">play_arrow</span>
+              Process my first batch
             </button>
-            <button class="gsd-btn gsd-btn--secondary" data-action="browse-recipes">
-              <span class="material-symbols-outlined">library_books</span>
-              Browse ${counts.recipeCount} Recipes
-            </button>
-            <button class="gsd-btn gsd-btn--ghost mono" data-action="launcher">
-              ⌘ K <span style="opacity:.7">— open launcher</span>
+            <button class="wel-btn wel-btn--ghost" data-go="#shc">
+              <span class="material-symbols-outlined">auto_awesome</span>
+              See what's possible
             </button>
           </div>
-          <div class="gsd-stats">
-            <div><div class="gsd-stats__k mono">${counts.recipeCount}</div><div class="gsd-stats__v">recipes ready</div></div>
-            <div><div class="gsd-stats__k mono">${counts.categoryCount}</div><div class="gsd-stats__v">node categories</div></div>
-            <div><div class="gsd-stats__k mono">100%</div><div class="gsd-stats__v">on-device</div></div>
+          <div class="wel-scroll-hint">
+            <span class="material-symbols-outlined">keyboard_arrow_down</span>
+            <span>Scroll to explore</span>
           </div>
         </div>
-        <div class="gsd-pipeline-card">
-          <div class="gsd-pipeline-card__chrome">
-            <span class="gsd-traffic gsd-traffic--red"></span>
-            <span class="gsd-traffic gsd-traffic--amber"></span>
-            <span class="gsd-traffic gsd-traffic--green"></span>
-            <span class="mono gsd-pipeline-card__filename">cinematic_portrait.recipe</span>
-            <span class="gsd-pipeline-card__running">
-              <span class="gsd-dot gsd-dot--green pulse-dot"></span> running
-            </span>
-          </div>
-          <svg class="gsd-pipeline-svg" viewBox="0 0 560 240">
-            <defs>
-              <linearGradient id="gsdEdgeGrad" x1="0" x2="1">
-                <stop offset="0%" stop-color="#3b82f6" stop-opacity=".1"/>
-                <stop offset="100%" stop-color="#3b82f6" stop-opacity=".8"/>
-              </linearGradient>
-            </defs>
-            <g id="gsd-edges"></g>
-            <g id="gsd-nodes"></g>
-          </svg>
-          <div class="mono gsd-pipeline-card__log">
-            <span style="color:var(--gsd-green)">●</span>
-            <span>processed <b>portrait_04.jpg</b> → /exports/final/</span>
-            <span style="flex:1"></span>
-            <span>1.3s</span>
-            <span style="color:var(--gsd-dim)">·</span>
-            <span>1 / 1</span>
-          </div>
-          <div class="gsd-pipeline-card__chip float-slow">
-            <span class="material-symbols-outlined" style="font-size:14px">auto_awesome</span>
-            Live demo
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+      </section>
 
-  // Animated node/edge state
-  const nodes = [
-    { label: 'Input',    sub: 'portrait_04.jpg', x: 40,  y: 90,  color: 'var(--gsd-teal)',   source: true,  icon: 'image' },
-    { label: 'Analyse',  sub: 'detect faces',    x: 230, y: 40,  color: 'var(--gsd-cyan)',   icon: 'face' },
-    { label: 'Amend',    sub: 'cinematic LUT',   x: 230, y: 140, color: 'var(--gsd-orange)', icon: 'tune' },
-    { label: 'Annotate', sub: 'add caption',     x: 420, y: 40,  color: 'var(--gsd-amber)',  icon: 'text_fields' },
-    { label: 'Output',   sub: '/exports/final/', x: 420, y: 140, color: 'var(--gsd-green)',  icon: 'download' },
-  ];
-  const edges = [
-    { from: 0, to: 1, phase: 0 },
-    { from: 0, to: 2, phase: 0 },
-    { from: 1, to: 3, phase: 1 },
-    { from: 2, to: 3, phase: 2 },
-    { from: 2, to: 4, phase: 2 },
-    { from: 3, to: 4, phase: 3 },
-  ];
-
-  const edgePath = (a, b) => {
-    const x1 = a.x + 140, y1 = a.y + 30, x2 = b.x, y2 = b.y + 30;
-    const mx = (x1 + x2) / 2;
-    return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
-  };
-
-  const edgesG = host.querySelector('#gsd-edges');
-  const nodesG = host.querySelector('#gsd-nodes');
-
-  edges.forEach((e, i) => {
-    const a = nodes[e.from], b = nodes[e.to];
-    edgesG.insertAdjacentHTML('beforeend', `
-      <g data-edge="${i}">
-        <path d="${edgePath(a, b)}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
-        <path class="gsd-edge-active march" d="${edgePath(a, b)}" fill="none" stroke="url(#gsdEdgeGrad)" stroke-width="2" style="display:none"/>
-      </g>
-    `);
-  });
-
-  nodes.forEach((n, i) => {
-    nodesG.insertAdjacentHTML('beforeend', `
-      <g data-node="${i}" transform="translate(${n.x},${n.y})">
-        <rect class="gsd-node-rect" width="140" height="60" rx="10"
-          fill="rgba(20,28,46,0.6)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-        <circle cx="14" cy="20" r="9" fill="${n.color}" opacity=".18"/>
-        <circle cx="14" cy="20" r="5" fill="${n.color}"/>
-        <text x="30" y="24" fill="#e7ecf5" font-size="12" font-weight="600" font-family="Inter, system-ui">${n.label}</text>
-        <text x="14" y="46" fill="#98a3b8" font-size="10" font-family="JetBrains Mono, monospace">${n.sub}</text>
-        ${n.source ? '' : `<circle cx="0" cy="30" r="3" fill="#0a0f1c" stroke="${n.color}" stroke-width="1.5"/>`}
-        <circle cx="140" cy="30" r="3" fill="#0a0f1c" stroke="${n.color}" stroke-width="1.5"/>
-      </g>
-    `);
-  });
-
-  // Phase animation loop — recycles every ~4s (4 phases × 1s each).
-  let tick = 0;
-  const update = () => {
-    tick = (tick + 1) % 80;
-    const phase = Math.floor(tick / 20);
-    host.querySelectorAll('[data-edge]').forEach((g, i) => {
-      const e = edges[i];
-      const active = phase >= e.phase;
-      const fx = g.querySelector('.gsd-edge-active');
-      if (fx) fx.style.display = active ? '' : 'none';
-    });
-    host.querySelectorAll('[data-node]').forEach((g, i) => {
-      const active = i === 0 || (i === 1 && phase >= 1) || (i === 2 && phase >= 1) || (i === 3 && phase >= 2) || (i === 4 && phase >= 3);
-      const rect = g.querySelector('.gsd-node-rect');
-      if (!rect) return;
-      rect.setAttribute('fill', active ? 'rgba(20,28,46,1)' : 'rgba(20,28,46,0.6)');
-      rect.setAttribute('stroke', active ? nodes[i].color : 'rgba(255,255,255,0.08)');
-      rect.setAttribute('stroke-width', active ? '1.5' : '1');
-    });
-  };
-  update();
-  track(setInterval(update, 50));
-
-  // CTA handlers
-  host.querySelector('[data-action="new-recipe"]').addEventListener('click', () => go('#lib'));
-  host.querySelector('[data-action="browse-recipes"]').addEventListener('click', () => go('#lib'));
-  host.querySelector('[data-action="launcher"]').addEventListener('click', () => go('#lib'));
-}
-
-// ═══════════════════════════════════════════════════════════════
-// HERO B — Guided Tour (5-step rail + preview panes)
-// ═══════════════════════════════════════════════════════════════
-function renderGuidedTourHero(host) {
-  const steps = [
-    { n: 1, label: 'Drop files',  sub: 'Any folder, any format.', icon: 'upload',         color: 'var(--gsd-teal)'   },
-    { n: 2, label: 'Pick a recipe', sub: 'Or build your own.',    icon: 'library_books',  color: 'var(--gsd-cyan)'   },
-    { n: 3, label: 'Tweak',       sub: 'Parameters are live.',    icon: 'tune',           color: 'var(--gsd-amber)'  },
-    { n: 4, label: 'Preview',     sub: 'Before / after.',         icon: 'image',          color: 'var(--gsd-orange)' },
-    { n: 5, label: 'Run',         sub: 'Bulk or batch.',          icon: 'play_arrow',     color: 'var(--gsd-green)'  },
-  ];
-
-  host.innerHTML = `
-    <div class="gsd-hero gsd-hero--tour">
-      <div class="gsd-hero__bg gsd-hero__bg--green"></div>
-      <div class="gsd-hero__grid-bg"></div>
-      <div class="gsd-hero__inner gsd-hero__inner--tour">
-        <div class="gsd-tour__headers">
-          <div>
-            <div class="gsd-pill gsd-pill--green">
-              <span class="gsd-dot gsd-dot--green pulse-dot"></span>
-              <span class="mono">Five-step first run</span>
+      <!-- Slide 2: Why-switch -->
+      <section class="wel-slide" id="slide-why">
+        <div class="wel-slide__inner">
+          <header class="wel-slide__head">
+            <p class="wel-eyebrow">The benefits</p>
+            <h2 class="wel-h2">Why people switch to PicMachina</h2>
+          </header>
+          <div class="wel-detail-wrap" data-kind="why">
+            <div class="wel-tiles">
+              ${tile('hours',   'schedule', 'Save hours every week',         'Drop in a folder, pick a recipe, walk away. What used to take an afternoon in Photoshop runs in minutes — untouched.')}
+              ${tile('same',    'repeat',   'The same result, every time',   'Recipes are repeatable. Your thumbnails, product shots and social posts come out identical whether it\'s 5 images or 5,000.')}
+              ${tile('channel', 'share',    'One workflow, every channel',   'Web-ready, Instagram, YouTube thumbnails, print — every size and format from a single source image.')}
+              ${backBtn()}
             </div>
-            <h1 class="gsd-hero__headline gsd-hero__headline--tour">
-              From <span class="serif">zero</span> to a finished<br>batch in under a minute.
-            </h1>
+            <aside class="wel-detail" aria-live="polite"></aside>
           </div>
-          <div class="gsd-tour__copy">
-            <p>
-              Follow the rail below or skip straight to a recipe. Everything
-              runs locally — your files never leave this machine.
-            </p>
-            <div class="gsd-tour__ctas">
-              <button class="gsd-btn gsd-btn--primary" data-action="start-tour">
-                <span class="material-symbols-outlined">play_arrow</span>
-                Start the tour
-              </button>
-              <button class="gsd-btn gsd-btn--secondary" data-action="skip-tour">
-                <span class="material-symbols-outlined">close</span>
-                Skip
-              </button>
+        </div>
+      </section>
+
+      <!-- Slide 3: Outcomes -->
+      <section class="wel-slide" id="slide-outcomes">
+        <div class="wel-slide__inner">
+          <header class="wel-slide__head">
+            <p class="wel-eyebrow">Real outcomes — not features</p>
+            <h2 class="wel-h2">What you can do in an afternoon</h2>
+          </header>
+          <div class="wel-detail-wrap wel-detail-wrap--outcomes" data-kind="outcomes">
+            <div class="wel-outcomes">
+              ${outcomeCard('bg',        'content_cut',              'Strip backgrounds from 200 product photos',          'Drag the folder, hit Run.')}
+              ${outcomeCard('slide',     'movie',                    'Make a slideshow video from a holiday folder',       'Pick the music, you\'re done.')}
+              ${outcomeCard('watermark', 'branding_watermark',       'Watermark and resize a year of blog images',         'One recipe, applied to the lot.')}
+              ${outcomeCard('swap',      'face_retouching_natural',  'Swap faces or colours across a batch',               'Consistent edits, zero manual tweaking.')}
+              ${outcomeCard('social',    'aspect_ratio',             'Build a social pack — square, portrait, story',      'Every aspect ratio in one go.')}
+              ${outcomeCard('vid',       'movie_filter',             'Turn a video into stills, or stills into a video',   'Both directions, no extra tools.')}
+              ${backBtn()}
+            </div>
+            <aside class="wel-detail" aria-live="polite"></aside>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 4: Personas -->
+      <section class="wel-slide" id="slide-personas">
+        <div class="wel-slide__inner">
+          <header class="wel-slide__head">
+            <p class="wel-eyebrow">Who it's for</p>
+            <h2 class="wel-h2">Built for anyone with a folder full of media</h2>
+          </header>
+          <div class="wel-detail-wrap wel-detail-wrap--personas" data-kind="personas">
+            <div class="wel-personas">
+              ${persona('creator',      'podcasts',     'Content creators',           'Keeping a publishing schedule alive without burning out on edits.')}
+              ${persona('shop',         'storefront',   'Small shops & marketplaces', 'Every product photo on-brand and on-spec, automatically.')}
+              ${persona('photographer', 'photo_camera', 'Photographers',              'Client galleries delivered in every required size and format.')}
+              ${persona('library',      'photo_library','Anyone with a messy library','Order without hours of clicking.')}
+              ${backBtn()}
+            </div>
+            <aside class="wel-detail" aria-live="polite"></aside>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 5: How-it-works -->
+      <section class="wel-slide" id="slide-how">
+        <div class="wel-slide__inner">
+          <header class="wel-slide__head">
+            <p class="wel-eyebrow">How it works</p>
+            <h2 class="wel-h2">Three steps. That's the whole product.</h2>
+          </header>
+          <div class="wel-steps">
+            <div class="wel-step">
+              <div class="wel-step__num">1</div>
+              <h3>Pick a recipe</h3>
+              <p>Start from a ready-made one, or describe what you want and let
+              AI build it for you.</p>
+            </div>
+            <div class="wel-step">
+              <div class="wel-step__num">2</div>
+              <h3>Point it at your images</h3>
+              <p>A folder, a selection, or a single file — whatever you have.</p>
+            </div>
+            <div class="wel-step">
+              <div class="wel-step__num">3</div>
+              <h3>Press Run</h3>
+              <p>Get a tidy export folder, every time.</p>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="gsd-tour__rail">
-          ${steps.map((s, i) => `
-            <button class="gsd-tour__step ${i === 0 ? 'is-current' : ''}" data-step="${i}" style="--step-color:${s.color}">
-              <div class="gsd-tour__step-head">
-                <div class="gsd-tour__step-n mono">${s.n}</div>
-                <div class="mono gsd-tour__step-label-small">Step ${s.n}</div>
-              </div>
-              <div>
-                <div class="gsd-tour__step-title">${s.label}</div>
-                <div class="gsd-tour__step-sub">${s.sub}</div>
-              </div>
-              <div class="gsd-tour__progress"><div></div></div>
-            </button>
-          `).join('')}
+      <!-- Slide 6: Floating features -->
+      <section class="wel-slide wel-slide--features" id="slide-features">
+        <div class="wel-features-bg" aria-hidden="true">
+          ${FEATURES.map((f, i) => `<span class="wel-fly" style="${flyStyle(i, FEATURES.length)}">${f}</span>`).join('')}
         </div>
+        <div class="wel-slide__inner wel-features-inner">
+          <p class="wel-eyebrow">Powerful in dozens of ways</p>
+          <h2 class="wel-h2">${FEATURES.length}+ features.<br/>One simple workflow.</h2>
+          <p class="wel-features-sub">From background removal to AI upscaling — every tool you need to
+          take one image (or a folder of them) all the way to publish-ready.</p>
+        </div>
+      </section>
 
-        <div class="gsd-tour__pane" id="gsd-tour-pane"></div>
-      </div>
+      <!-- Slide 7: Stats -->
+      <section class="wel-slide" id="slide-stats">
+        <div class="wel-slide__inner">
+          <header class="wel-slide__head">
+            <p class="wel-eyebrow">At a glance</p>
+            <h2 class="wel-h2">Powerful, private, and ready right now</h2>
+          </header>
+          <div class="wel-stats">
+            <div class="wel-stats__item">
+              <div class="wel-stats__num">${stats.recipeCount}</div>
+              <div class="wel-stats__label">ready-made recipes — no setup needed</div>
+            </div>
+            <div class="wel-stats__item">
+              <div class="wel-stats__num">∞</div>
+              <div class="wel-stats__label">images per run — your hardware is the limit</div>
+            </div>
+            <div class="wel-stats__item">
+              <div class="wel-stats__num">100%</div>
+              <div class="wel-stats__label">local — your photos never leave your machine</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 8: Closing CTA -->
+      <section class="wel-slide wel-slide--cta" id="slide-cta">
+        <div class="wel-slide__inner wel-closing">
+          <h2>Stop redoing the same edits.<br/>Start running them.</h2>
+          <button class="wel-btn wel-btn--primary wel-btn--lg" data-go="#lib">
+            <span class="material-symbols-outlined">play_arrow</span>
+            Try a recipe now
+          </button>
+          <p class="wel-closing__hint">
+            Looking for engine internals, the node catalogue, or AI integrations?
+            <a href="#pow" class="wel-link">Visit the Power Users page →</a>
+          </p>
+        </div>
+      </section>
+
+      <!-- Side dot-nav -->
+      <nav class="wel-dots" aria-label="Page sections">
+        ${SLIDES.map(s => `
+          <button class="wel-dot" data-target="slide-${s.id}" aria-label="${s.label}">
+            <span class="wel-dot__pip"></span>
+            <span class="wel-dot__label">${s.label}</span>
+          </button>
+        `).join('')}
+      </nav>
+
     </div>
   `;
 
-  let current = 0;
-  const paneEl = host.querySelector('#gsd-tour-pane');
-  const stepBtns = host.querySelectorAll('.gsd-tour__step');
-
-  const setStep = (i) => {
-    current = i;
-    stepBtns.forEach((b, j) => b.classList.toggle('is-current', i === j));
-    paneEl.innerHTML = tourPane(i);
-  };
-
-  stepBtns.forEach((btn) => {
-    btn.addEventListener('click', () => setStep(Number(btn.dataset.step)));
-  });
-
-  // Auto-advance
-  setStep(0);
-  track(setInterval(() => setStep((current + 1) % steps.length), 2800));
-
-  // CTAs
-  host.querySelector('[data-action="start-tour"]').addEventListener('click', () => go('#lib'));
-  host.querySelector('[data-action="skip-tour"]').addEventListener('click', () => go('#lib'));
+  wireCTAs(container);
+  wireDots(container);
+  wireInteractiveTiles(container);
+  wireVisibility(container);
 }
 
-function tourPane(i) {
-  switch (i) {
-    case 0: return paneDrop();
-    case 1: return paneRecipe();
-    case 2: return paneTweak();
-    case 3: return paneBeforeAfter();
-    case 4: return paneRun();
+// ─── Card helpers ─────────────────────────────────────────────
+function tile(id, icon, title, body) {
+  return `
+    <button class="wel-tile" data-tile="${id}" type="button">
+      <div class="wel-tile__icon"><span class="material-symbols-outlined">${icon}</span></div>
+      <h3>${title}</h3>
+      <p>${body}</p>
+      <span class="wel-tile__cta">
+        <span class="material-symbols-outlined">play_circle</span>
+        Watch
+      </span>
+    </button>
+  `;
+}
+
+function outcomeCard(id, icon, title, sub) {
+  return `
+    <button class="wel-outcome" data-tile="${id}" type="button">
+      <span class="material-symbols-outlined wel-outcome__icon">${icon}</span>
+      <div class="wel-outcome__body">
+        <h3>${title}</h3>
+        <p>${sub}</p>
+      </div>
+      <span class="wel-outcome__cta">
+        <span class="material-symbols-outlined">compare</span>
+        Before / after
+      </span>
+    </button>
+  `;
+}
+
+function backBtn() {
+  return `
+    <button class="wel-back" type="button" aria-label="Back to all">
+      <span class="material-symbols-outlined">arrow_back</span>
+      Back to all
+    </button>
+  `;
+}
+
+function persona(id, icon, title, body) {
+  return `
+    <button class="wel-persona" data-tile="${id}" type="button">
+      <span class="material-symbols-outlined wel-persona__icon">${icon}</span>
+      <h3>${title}</h3>
+      <p>${body}</p>
+      <span class="wel-persona__cta">
+        <span class="material-symbols-outlined">play_circle</span>
+        Hear their story
+      </span>
+    </button>
+  `;
+}
+
+// ─── Floating features positioning ────────────────────────────
+function flyStyle(i, total) {
+  // pseudo-random but deterministic
+  const seed = (i * 9301 + 49297) % 233280;
+  const rand = (n) => ((seed * (n + 1)) % 1000) / 1000;
+  const angle = rand(1) * Math.PI * 2;
+  const radius = 12 + rand(2) * 38; // 12% to 50% from centre
+  const x = 50 + Math.cos(angle) * radius;
+  const y = 50 + Math.sin(angle) * radius * 0.85;
+  const delay = -(i / total) * 14; // stagger across the 14s loop
+  const duration = 12 + rand(3) * 6;
+  const z = rand(4);
+  return `--fx:${x.toFixed(2)}%; --fy:${y.toFixed(2)}%; --fd:${delay.toFixed(2)}s; --fdur:${duration.toFixed(2)}s; --fz:${z.toFixed(2)};`;
+}
+
+// ─── Wiring ───────────────────────────────────────────────────
+function wireCTAs(container) {
+  container.querySelectorAll('[data-go]').forEach((btn) => {
+    btn.addEventListener('click', () => go(btn.getAttribute('data-go')));
+  });
+}
+
+function wireDots(container) {
+  const dots = Array.from(container.querySelectorAll('.wel-dot'));
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      const target = container.querySelector('#' + dot.dataset.target);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+function wireInteractiveTiles(container) {
+  container.querySelectorAll('.wel-detail-wrap').forEach((wrap) => {
+    const kind = wrap.dataset.kind;
+    const detail = wrap.querySelector('.wel-detail');
+    const back = wrap.querySelector('.wel-back');
+
+    wrap.querySelectorAll('[data-tile]').forEach((tileEl) => {
+      tileEl.addEventListener('click', () => expandTile(wrap, detail, kind, tileEl));
+    });
+    back?.addEventListener('click', () => collapseWrap(wrap));
+  });
+}
+
+// Expand / collapse via the View Transitions API where available — the
+// browser captures the before/after layouts and morphs the selected tile
+// into its new docked position automatically. We assign a stable
+// `view-transition-name` on the active tile and the detail panel so they
+// each get tracked across the layout change.
+function expandTile(wrap, detail, kind, tileEl) {
+  if (wrap._busy) return;
+  wrap._busy = true;
+  const id = tileEl.dataset.tile;
+
+  const apply = () => {
+    const tiles = wrap.querySelectorAll('[data-tile]');
+    tiles.forEach(t => t.classList.toggle('is-active', t === tileEl));
+    tiles.forEach(t => { if (t !== tileEl) t.classList.add('is-hidden'); });
+    detail.innerHTML = renderDetail(kind, id);
+    wrap.classList.add('is-expanded');
+  };
+
+  runWithTransition(wrap, tileEl, detail, apply, () => { wrap._busy = false; });
+}
+
+function collapseWrap(wrap) {
+  if (wrap._busy) return;
+  wrap._busy = true;
+  const detail = wrap.querySelector('.wel-detail');
+  const activeTile = wrap.querySelector('[data-tile].is-active');
+
+  const apply = () => {
+    wrap.classList.remove('is-expanded');
+    wrap.querySelectorAll('[data-tile].is-hidden').forEach(t => t.classList.remove('is-hidden'));
+    wrap.querySelectorAll('[data-tile]').forEach(t => t.classList.remove('is-active'));
+    detail.innerHTML = '';
+  };
+
+  runWithTransition(wrap, activeTile, detail, apply, () => { wrap._busy = false; });
+}
+
+function runWithTransition(wrap, tileEl, detail, apply, done) {
+  if ('startViewTransition' in document) {
+    if (tileEl) tileEl.style.viewTransitionName = 'wel-vt-tile';
+    if (detail) detail.style.viewTransitionName = 'wel-vt-detail';
+    const t = document.startViewTransition(apply);
+    t.finished.finally(() => {
+      if (tileEl) tileEl.style.viewTransitionName = '';
+      if (detail) detail.style.viewTransitionName = '';
+      done();
+    });
+  } else {
+    apply();
+    done();
+  }
+}
+
+function renderDetail(kind, id) {
+  if (kind === 'why') {
+    const d = WHY_DETAILS[id] || {};
+    return `
+      <div class="wel-detail__pane wel-detail__pane--video">
+        <div class="wel-video-ph">
+          <span class="material-symbols-outlined">play_circle</span>
+          <p>Video coming soon</p>
+          <small>${d.video || ''}</small>
+        </div>
+        <div class="wel-detail__caption">
+          <h4>${d.title || ''}</h4>
+          <p>${d.blurb || ''}</p>
+        </div>
+      </div>
+    `;
+  }
+  if (kind === 'outcomes') {
+    const d = OUTCOME_DETAILS[id] || {};
+    return `
+      <div class="wel-detail__pane wel-detail__pane--ba">
+        <div class="wel-ba">
+          <div class="wel-ba__slot">
+            <span class="wel-ba__label">Before</span>
+            <div class="wel-ba__placeholder">
+              <span class="material-symbols-outlined">image</span>
+              <small>before-${id}</small>
+            </div>
+          </div>
+          <div class="wel-ba__slot">
+            <span class="wel-ba__label">After</span>
+            <div class="wel-ba__placeholder wel-ba__placeholder--after">
+              <span class="material-symbols-outlined">auto_awesome</span>
+              <small>after-${id}</small>
+            </div>
+          </div>
+        </div>
+        <div class="wel-detail__caption">
+          <h4>${d.title || ''}</h4>
+          <p>${d.blurb || ''}</p>
+        </div>
+      </div>
+    `;
+  }
+  if (kind === 'personas') {
+    const d = PERSONA_DETAILS[id] || {};
+    return `
+      <div class="wel-detail__pane wel-detail__pane--video">
+        <div class="wel-video-ph wel-video-ph--testimonial">
+          <span class="material-symbols-outlined">record_voice_over</span>
+          <p>Video testimonial coming soon</p>
+          <small>${d.video || ''}</small>
+        </div>
+        <div class="wel-detail__caption">
+          <h4>${d.title || ''}</h4>
+          <p>${d.blurb || ''}</p>
+        </div>
+      </div>
+    `;
   }
   return '';
 }
 
-function paneDrop() {
-  const items = [
-    { n: 'shoot_paris_2026/',   c: '124 items', icon: 'folder', col: 'var(--gsd-amber)'  },
-    { n: 'client_delivery.zip', c: '56 MB',     icon: 'folder', col: 'var(--gsd-violet)' },
-    { n: 'roll_042.cr3',        c: '1 file',    icon: 'image',  col: 'var(--gsd-cyan)'   },
-  ];
-  return `
-    <div class="gsd-pane gsd-pane--drop">
-      <div class="gsd-dropzone">
-        <div class="gsd-dropzone__icon">
-          <span class="material-symbols-outlined">upload</span>
-        </div>
-        <div class="gsd-dropzone__title">Drop files or a folder here</div>
-        <div class="mono gsd-dropzone__formats">.jpg · .png · .mp4 · .webp · .heic · and more</div>
-      </div>
-      <div>
-        <div class="gsd-pane__sub">Recently dropped</div>
-        ${items.map((f) => `
-          <div class="gsd-pane__row">
-            <span class="material-symbols-outlined" style="color:${f.col}">${f.icon}</span>
-            <div style="flex:1; min-width:0">
-              <div class="mono gsd-pane__row-title">${f.n}</div>
-              <div class="gsd-pane__row-sub">${f.c}</div>
-            </div>
-            <span class="material-symbols-outlined" style="color:var(--gsd-mute); font-size:18px">chevron_right</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function paneRecipe() {
-  const recipes = [
-    { n: 'Cinematic Portrait',    tags: ['portrait', 'LUT'],    col: 'var(--gsd-orange)' },
-    { n: 'Background Swap',       tags: ['bg', 'ai'],           col: 'var(--gsd-cyan)'   },
-    { n: 'Pop Art Warhol',        tags: ['color', 'art'],       col: 'var(--gsd-pink)'   },
-    { n: 'Classic Analog Film',   tags: ['grain', 'vintage'],   col: 'var(--gsd-amber)'  },
-    { n: 'Mask Cut In',           tags: ['geocode', 'text'],    col: 'var(--gsd-violet)' },
-    { n: 'Remove BG HQ',          tags: ['cutout'],             col: 'var(--gsd-teal)'   },
-  ];
-  return `
-    <div class="gsd-pane gsd-pane--recipe">
-      <div class="gsd-recipe-search">
-        <div class="gsd-recipe-search__input">
-          <span class="material-symbols-outlined">library_books</span>
-          <span>cine<span class="caret">|</span></span>
-        </div>
-        <span class="mono gsd-recipe-search__count">6 / 83 matches</span>
-      </div>
-      <div class="gsd-recipe-grid">
-        ${recipes.map((r, i) => `
-          <div class="gsd-recipe-card ${i === 0 ? 'is-selected' : ''}" style="--card-color:${r.col}">
-            <div class="gsd-recipe-card__thumb" style="background:linear-gradient(135deg, ${r.col}22, ${r.col}08)"></div>
-            <div class="gsd-recipe-card__name">${r.n}</div>
-            <div class="gsd-recipe-card__tags">
-              ${r.tags.map((t) => `<span class="mono">${t}</span>`).join('')}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function paneTweak() {
-  const params = [
-    { k: 'grain',    v: 0.42, col: 'var(--gsd-amber)'  },
-    { k: 'warmth',   v: 0.68, col: 'var(--gsd-orange)' },
-    { k: 'contrast', v: 0.55, col: 'var(--gsd-cyan)'   },
-    { k: 'vignette', v: 0.31, col: 'var(--gsd-violet)' },
-  ];
-  return `
-    <div class="gsd-pane gsd-pane--tweak">
-      <div>
-        <div class="mono gsd-pane__sub">Node · Cinematic LUT</div>
-        ${params.map((p) => `
-          <div class="gsd-tweak-row">
-            <div class="gsd-tweak-row__head">
-              <span class="mono">${p.k}</span>
-              <span class="mono" style="color:${p.col}">${p.v.toFixed(2)}</span>
-            </div>
-            <div class="gsd-tweak-row__track">
-              <div style="width:${p.v * 100}%; background:${p.col}"></div>
-              <div class="gsd-tweak-row__knob" style="left:${p.v * 100}%; background:${p.col}; box-shadow:0 0 0 3px ${p.col}33"></div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="gsd-tweak-preview">
-        <span class="mono gsd-tweak-preview__chip">preview · live</span>
-        <span class="material-symbols-outlined">image</span>
-      </div>
-    </div>
-  `;
-}
-
-function paneBeforeAfter() {
-  return `
-    <div class="gsd-pane gsd-pane--ba">
-      ${['before', 'after'].map((label, i) => `
-        <div class="gsd-ba-frame ${i === 1 ? 'is-after' : ''}">
-          <span class="mono gsd-ba-frame__label">${label}</span>
-          <span class="material-symbols-outlined">image</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-function paneRun() {
-  const tiles = Array.from({ length: 40 }).map((_, i) => {
-    const done = i < 25, run = i === 25;
-    const bg = done ? 'var(--gsd-teal)' : run ? 'var(--gsd-amber)' : 'rgba(255,255,255,0.05)';
-    return `<div class="gsd-run-tile" style="background:${bg}; opacity:${done ? 0.85 : 1}"></div>`;
-  }).join('');
-  return `
-    <div class="gsd-pane gsd-pane--run">
-      <div class="gsd-run-head">
-        <div>
-          <div class="gsd-run-head__title">cinematic_portrait · batch run</div>
-          <div class="mono gsd-run-head__sub">124 items · 7 nodes · est. 48s</div>
-        </div>
-        <div class="gsd-pill gsd-pill--green">
-          <span class="gsd-dot gsd-dot--green pulse-dot"></span>
-          <span class="mono">running</span>
-        </div>
-      </div>
-      <div class="gsd-run-bar"><div></div></div>
-      <div class="gsd-run-grid">${tiles}</div>
-      <div class="gsd-run-legend">
-        <span><span class="mono" style="color:var(--gsd-teal)">●</span> done 25</span>
-        <span><span class="mono" style="color:var(--gsd-amber)">●</span> processing 1</span>
-        <span><span class="mono" style="color:var(--gsd-mute)">●</span> queued 98</span>
-      </div>
-    </div>
-  `;
-}
-
-function renderHero(host, variant, counts) {
-  if (variant === 'tour') renderGuidedTourHero(host);
-  else renderLivePipelineHero(host, counts);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// PIPELINE DIAGRAM — 7 node categories
-// ═══════════════════════════════════════════════════════════════
-async function renderPipelineDiagram(host, counts) {
-  // Count recipes per category. This dynamic pass runs on every render so
-  // the page stays in sync as users add/remove recipes.
-  let perCategory = {};
-  try {
-    const [{ registry }, { getAllRecipes }] = await Promise.all([
-      import('../engine/registry.js'),
-      import('../data/recipes.js'),
-    ]);
-    const byId = new Map();
-    for (const def of registry.listAll?.() || registry.list?.() || []) {
-      byId.set(def.id, def.category || 'Uncategorised');
-    }
-    const recipes = await getAllRecipes();
-    const walk = (nodes) => {
-      if (!nodes) return;
-      for (const n of nodes) {
-        const cat = byId.get(n.transformId || n.type);
-        if (cat) perCategory[cat] = (perCategory[cat] || 0) + 1;
-        if (n.branches) n.branches.forEach((b) => walk(b.nodes));
-        if (n.thenNodes) walk(n.thenNodes);
-        if (n.elseNodes) walk(n.elseNodes);
-      }
-    };
-    recipes.forEach((r) => walk(r.nodes));
-  } catch {
-    // Non-fatal — falls back to static "—" labels below.
+function wireVisibility(container) {
+  const scroller = container.querySelector('#wel-scroller');
+  const dots = Array.from(container.querySelectorAll('.wel-dot'));
+  const slides = Array.from(container.querySelectorAll('.wel-slide'));
+  const setActive = (id) => {
+    dots.forEach(d => d.classList.toggle('is-active', d.dataset.target === id));
+  };
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting && e.intersectionRatio >= 0.4) {
+          e.target.classList.add('is-visible');
+        }
+      });
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setActive(visible.target.id);
+    }, { root: scroller, threshold: [0.4, 0.6, 0.8] });
+    slides.forEach(s => io.observe(s));
+  } else {
+    slides.forEach(s => s.classList.add('is-visible'));
   }
-
-  const rows = [
-    { label: 'Process',   sub: 'Extract · parse · metadata',     icon: 'code',        color: 'var(--gsd-teal)',   cat: 'Metadata' },
-    { label: 'Analyse',   sub: 'Local AI · detect · understand', icon: 'search',      color: 'var(--gsd-cyan)',   cat: 'AI & Composition' },
-    { label: 'Amend',     sub: 'LUTs · color · structure',       icon: 'tune',        color: 'var(--gsd-orange)', cat: 'Color & Tone' },
-    { label: 'Annotate',  sub: 'Captions · watermarks · titles', icon: 'text_fields', color: 'var(--gsd-amber)',  cat: 'Overlays & Typography' },
-    { label: 'Aggregate', sub: 'Compose · grid · collage',       icon: 'grid_view',   color: 'var(--gsd-violet)', cat: 'Flow Control' },
-    { label: 'Create',    sub: 'Generate new media from data',   icon: 'auto_awesome',color: 'var(--gsd-pink)',   cat: 'Geometric & Framing' },
-    { label: 'Organise',  sub: 'Route into intelligent folders', icon: 'account_tree',color: 'var(--gsd-blue)',   cat: 'Video Effects' },
-  ];
-
-  host.innerHTML = `
-    <div class="gsd-card gsd-pipeline-diagram">
-      <div class="gsd-pipeline-diagram__bg"></div>
-      <div class="gsd-pipeline-diagram__inner">
-        <div class="gsd-section-title">
-          <h2>What can PicMachina do?</h2>
-          <span class="mono">${counts.categoryCount} node categories · ${counts.recipeCount} recipes</span>
-        </div>
-        <div class="gsd-pipeline-diagram__grid">
-          <div class="gsd-pipeline-diagram__io">
-            <div class="mono gsd-pipeline-diagram__io-tag">Input</div>
-            <div class="gsd-pipeline-diagram__io-title">Any media</div>
-            <div class="gsd-pipeline-diagram__io-sub">Folders, zips, cameras, cloud drives.</div>
-            <div class="gsd-pipeline-diagram__formats">
-              ${['jpg', 'png', 'mp4', 'heic', 'raw', 'gif', 'webp'].map((x) => `<span class="mono">.${x}</span>`).join('')}
-            </div>
-          </div>
-          <div class="gsd-pipeline-diagram__core">
-            <div class="gsd-pipeline-diagram__connector gsd-pipeline-diagram__connector--left"></div>
-            <div class="gsd-pipeline-diagram__connector gsd-pipeline-diagram__connector--right"></div>
-            ${rows.map((r, i) => `
-              <div class="gsd-pipeline-row" style="--row-color:${r.color}">
-                <div class="gsd-pipeline-row__icon">
-                  <span class="material-symbols-outlined">${r.icon}</span>
-                </div>
-                <div class="gsd-pipeline-row__body">
-                  <div class="gsd-pipeline-row__title">
-                    ${r.label}
-                    <span class="mono gsd-pipeline-row__idx">${String(i + 1).padStart(2, '0')}</span>
-                  </div>
-                  <div class="gsd-pipeline-row__sub">${r.sub}</div>
-                </div>
-                <div class="mono gsd-pipeline-row__count">
-                  ${perCategory[r.cat] != null ? perCategory[r.cat] : '—'} nodes
-                </div>
-                <div class="gsd-pipeline-row__tick"></div>
-              </div>
-            `).join('')}
-          </div>
-          <div class="gsd-pipeline-diagram__io">
-            <div class="mono gsd-pipeline-diagram__io-tag">Output</div>
-            <div class="gsd-pipeline-diagram__io-title">Deliverables</div>
-            <div class="gsd-pipeline-diagram__io-sub">Organised, named, and ready to ship.</div>
-            <div class="gsd-pipeline-diagram__out-paths">
-              ${['/exports/final/', '/contact_sheets/', '/social_instagram/', '/client_drop.zip'].map((p) => `
-                <div class="mono"><span style="color:var(--gsd-green)">→</span> ${p}</div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  if (slides[0]) {
+    slides[0].classList.add('is-visible');
+    setActive(slides[0].id);
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// PERSONAS
-// ═══════════════════════════════════════════════════════════════
-function renderPersonas(host) {
-  const personas = [
-    {
-      k: 'individuals', label: 'Individuals', icon: 'person', color: 'var(--gsd-teal)',
-      desc: 'Auto-categorise messy photo dumps, compile vacation memories into simple timelapses, and efficiently format images for sharing or archiving without heavy editing software.',
-      stat: '4 starter recipes', samples: ['Holiday collage', 'Backup & rename', 'Face-group'],
-    },
-    {
-      k: 'photographers', label: 'Photographers', icon: 'photo_camera', color: 'var(--gsd-orange)',
-      desc: 'Batch process exports, apply uniform watermarks, auto-generate client contact sheets, extract EXIF for cataloguing, and standardise color profiles across large shoots.',
-      stat: '18 pro recipes', samples: ['Contact sheet', 'Watermark · uniform', 'EXIF → CSV'],
-    },
-    {
-      k: 'creators', label: 'Content Creators', icon: 'videocam', color: 'var(--gsd-pink)',
-      desc: 'Adapt multi-format media for Instagram, TikTok, and YouTube. Automatically overlay branding, pull highlights, and convert snippets into engaging GIFs.',
-      stat: '22 social recipes', samples: ['TikTok 9:16', 'Highlights reel', 'Thumbnail kit'],
-    },
-    {
-      k: 'enterprise', label: 'Enterprise Users', icon: 'apartment', color: 'var(--gsd-blue)',
-      desc: 'Build robust product photography pipelines, clear backgrounds via local AI, standardise margins across thousands of SKUs, and strip sensitive metadata for compliance.',
-      stat: '9 enterprise recipes', samples: ['SKU pipeline', 'BG clear · AI', 'Metadata sanitise'],
-    },
-  ];
-
-  host.innerHTML = `
-    <div class="gsd-personas">
-      <div class="gsd-section-title">
-        <h2>Who uses PicMachina?</h2>
-        <span class="mono">Pick a persona · see starter recipes</span>
-      </div>
-      <div class="gsd-personas__grid">
-        <div class="gsd-personas__rail">
-          ${personas.map((p, i) => `
-            <button class="gsd-persona-tab ${i === 0 ? 'is-active' : ''}" data-persona="${i}" style="--persona-color:${p.color}">
-              <div class="gsd-persona-tab__icon">
-                <span class="material-symbols-outlined">${p.icon}</span>
-              </div>
-              <div class="gsd-persona-tab__body">
-                <div class="gsd-persona-tab__label">${p.label}</div>
-                <div class="gsd-persona-tab__stat">${p.stat}</div>
-              </div>
-            </button>
-          `).join('')}
-        </div>
-        <div class="gsd-persona-detail" id="gsd-persona-detail"></div>
-      </div>
-    </div>
-  `;
-
-  const renderDetail = (idx) => {
-    const p = personas[idx];
-    const detailEl = host.querySelector('#gsd-persona-detail');
-    detailEl.style.setProperty('--persona-color', p.color);
-    detailEl.innerHTML = `
-      <div class="gsd-persona-detail__glow"></div>
-      <div class="gsd-persona-detail__head">
-        <div class="gsd-persona-tab__icon gsd-persona-tab__icon--lg">
-          <span class="material-symbols-outlined">${p.icon}</span>
-        </div>
-        <div>
-          <div class="gsd-persona-detail__title">${p.label}</div>
-          <div class="mono gsd-persona-detail__stat">${p.stat}</div>
-        </div>
-      </div>
-      <p class="gsd-persona-detail__desc">${p.desc}</p>
-      <div class="mono gsd-persona-detail__samples-tag">Starter recipes</div>
-      <div class="gsd-persona-detail__samples">
-        ${p.samples.map((s) => `
-          <button class="gsd-persona-chip" data-action="use-sample">
-            <span class="gsd-dot" style="background:${p.color}"></span>
-            <span>${s}</span>
-            <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
-          </button>
-        `).join('')}
-        <button class="gsd-persona-chip gsd-persona-chip--primary" data-action="persona-preset">
-          <span class="material-symbols-outlined">add</span>
-          Start from ${p.label.toLowerCase()} preset
-        </button>
-      </div>
-    `;
-    detailEl.querySelectorAll('[data-action]').forEach((b) => {
-      b.addEventListener('click', () => go('#lib'));
-    });
-  };
-
-  host.querySelectorAll('.gsd-persona-tab').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      host.querySelectorAll('.gsd-persona-tab').forEach((b) => b.classList.toggle('is-active', b === btn));
-      renderDetail(Number(btn.dataset.persona));
-    });
-  });
-
-  renderDetail(0);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SMART AUTOMATION — "Just Ask Claude"
-// ═══════════════════════════════════════════════════════════════
-function renderAutomation(host) {
-  const prompts = [
-    'deblur photos older than 2020 and re-save as webp',
-    'build a contact sheet per folder with watermark',
-    'extract faces, group, and rename by person',
-  ];
-
-  host.innerHTML = `
-    <div class="gsd-automation">
-      <div class="gsd-automation__bg"></div>
-      <div class="gsd-automation__inner">
-        <div>
-          <div class="gsd-pill gsd-pill--violet">
-            <span class="material-symbols-outlined" style="font-size:14px">auto_awesome</span>
-            <span class="mono">Just Ask Claude</span>
-          </div>
-          <h3 class="gsd-automation__headline">Smart automation, made simple.</h3>
-          <p class="gsd-automation__lede">
-            Describe what you want in plain English. Claude builds the
-            recipe — every node, every parameter — and you just hit Run.
-            No technical skills required.
-          </p>
-        </div>
-        <div class="gsd-automation__terminal">
-          <div class="mono gsd-pane__sub" style="margin-bottom:10px">Prompt</div>
-          <div class="mono gsd-automation__prompt" id="gsd-auto-prompt"><span class="caret" style="color:var(--gsd-blue-2)">▎</span></div>
-          <div class="gsd-automation__foot">
-            <div class="gsd-automation__dots" id="gsd-auto-dots">
-              ${prompts.map((_, i) => `<div class="gsd-automation__dot${i === 0 ? ' is-active' : ''}"></div>`).join('')}
-            </div>
-            <button class="gsd-btn gsd-btn--primary gsd-btn--sm" data-action="generate">
-              <span class="material-symbols-outlined">auto_fix_high</span>
-              Generate
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  const promptEl = host.querySelector('#gsd-auto-prompt');
-  const dotsEl   = host.querySelector('#gsd-auto-dots');
-
-  // Typewriter animation across the three sample prompts.
-  let pi = 0;
-  const typePrompt = () => {
-    const target = prompts[pi];
-    let i = 0;
-    promptEl.innerHTML = `<span class="caret" style="color:var(--gsd-blue-2)">▎</span>`;
-    const typer = track(setInterval(() => {
-      i++;
-      const shown = target.slice(0, i);
-      promptEl.innerHTML = `${shown}<span class="caret" style="color:var(--gsd-blue-2)">▎</span>`;
-      if (i >= target.length) {
-        clearInterval(typer);
-        // Remove from registry (already fired) — simplest: ignore.
-        track(setTimeout(() => {
-          pi = (pi + 1) % prompts.length;
-          dotsEl.querySelectorAll('.gsd-automation__dot').forEach((d, j) =>
-            d.classList.toggle('is-active', j === pi)
-          );
-          typePrompt();
-        }, 1800));
-      }
-    }, 28));
-  };
-  typePrompt();
-
-  host.querySelector('[data-action="generate"]').addEventListener('click', () => go('#lib'));
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CLAUDE SKILLS
-// ═══════════════════════════════════════════════════════════════
-function renderClaudeSkills(host) {
-  host.innerHTML = `
-    <div class="gsd-skills">
-      <div class="gsd-skills__bg"></div>
-      <div class="gsd-skills__inner">
-
-        <div class="gsd-skills__header">
-          <div class="gsd-pill gsd-pill--teal">
-            <span class="material-symbols-outlined" style="font-size:14px">psychology</span>
-            <span class="mono">Claude Skills</span>
-          </div>
-          <h3 class="gsd-skills__headline">Supercharge Pic Machina with AI</h3>
-          <p class="gsd-skills__lede">
-            These Claude.ai Project skills let you use AI to build recipes and
-            analyse images without writing a single line of code. Set them up once
-            in a Claude Project — then just chat.
-          </p>
-        </div>
-
-        <div class="gsd-skills__cards">
-
-          <!-- ── Skill 1: Recipe Architect ───────────────────── -->
-          <div class="gsd-skill-card">
-            <div class="gsd-skill-card__icon" style="background:linear-gradient(135deg,#6d28d933,#7c3aed22)">
-              <span class="material-symbols-outlined" style="color:#a78bfa;font-size:24px">receipt_long</span>
-            </div>
-            <div class="gsd-skill-card__body">
-              <div class="gsd-skill-card__title">Recipe Architect</div>
-              <div class="gsd-skill-card__desc">
-                Describe an image editing workflow in plain English — Claude generates
-                a complete, ready-to-import Pic Machina recipe JSON with every node
-                and parameter already configured.
-              </div>
-
-              <div class="gsd-skill-steps">
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">1</span>
-                  <span>Go to <a href="https://claude.ai" target="_blank" rel="noopener" class="gsd-link">claude.ai</a> and create a new <strong>Project</strong></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">2</span>
-                  <span>Open <strong>Project Instructions</strong> and paste the contents of <code>claude-recipe-prompt.md</code></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">3</span>
-                  <span>Add <code>node-catalog.json</code> and <code>recipe-bundle-schema.json</code> to <strong>Project Knowledge</strong></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">4</span>
-                  <span>Chat: <em>"Make a recipe that crops to square, adds a soft glow, and watermarks the bottom-right"</em></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">5</span>
-                  <span>Copy the JSON → <strong>Library → Import JSON</strong> → done!</span>
-                </div>
-              </div>
-
-              <div class="gsd-skill-card__files">
-                <div class="gsd-skill-files__label">Files needed</div>
-                <div class="gsd-skill-files__list">
-                  <button class="gsd-file-chip" data-download="claude-recipe-prompt.md">
-                    <span class="material-symbols-outlined">description</span>
-                    claude-recipe-prompt.md
-                    <span class="gsd-file-chip__badge">System Prompt</span>
-                  </button>
-                  <button class="gsd-file-chip" data-download="node-catalog.json">
-                    <span class="material-symbols-outlined">data_object</span>
-                    node-catalog.json
-                    <span class="gsd-file-chip__badge">Node Dictionary</span>
-                  </button>
-                  <button class="gsd-file-chip" data-download="recipe-bundle-schema.json">
-                    <span class="material-symbols-outlined">schema</span>
-                    recipe-bundle-schema.json
-                    <span class="gsd-file-chip__badge">Output Schema</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── Skill 2: Image Describer ────────────────────── -->
-          <div class="gsd-skill-card">
-            <div class="gsd-skill-card__icon" style="background:linear-gradient(135deg,#0e749933,#0891b222)">
-              <span class="material-symbols-outlined" style="color:#38bdf8;font-size:24px">image_search</span>
-            </div>
-            <div class="gsd-skill-card__body">
-              <div class="gsd-skill-card__title">
-                Image Describer
-                <span class="gsd-badge-new">New</span>
-              </div>
-              <div class="gsd-skill-card__desc">
-                Upload any image — Claude produces rich AI analysis JSON (scene,
-                subjects, colour palette, composition, generative prompts, DAM notes)
-                in the exact format Pic Machina's metadata sidecar expects. Works
-                standalone or wired to the <strong>AI endpoint</strong> in Settings.
-              </div>
-
-              <div class="gsd-skill-steps">
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">1</span>
-                  <span>Create a new Claude.ai <strong>Project</strong></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">2</span>
-                  <span>Paste <code>claude-image-prompt.md</code> into <strong>Project Instructions</strong></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">3</span>
-                  <span>Add <code>sidecar.schema.json</code> to <strong>Project Knowledge</strong></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">4</span>
-                  <span>Upload an image and say: <em>"Describe this image for PicMachina"</em></span>
-                </div>
-                <div class="gsd-skill-step">
-                  <span class="gsd-skill-step__num">5</span>
-                  <span>Copy the JSON → paste into any <code>.jpg.json</code> sidecar file, <strong>or</strong> host a simple endpoint and use <strong>Describe with AI</strong> in the metadata panel</span>
-                </div>
-              </div>
-
-              <div class="gsd-skill-card__files">
-                <div class="gsd-skill-files__label">Files needed</div>
-                <div class="gsd-skill-files__list">
-                  <button class="gsd-file-chip" data-download="claude-image-prompt.md">
-                    <span class="material-symbols-outlined">description</span>
-                    claude-image-prompt.md
-                    <span class="gsd-file-chip__badge">System Prompt</span>
-                  </button>
-                  <button class="gsd-file-chip" data-download="sidecar.schema.json">
-                    <span class="material-symbols-outlined">schema</span>
-                    sidecar.schema.json
-                    <span class="gsd-file-chip__badge">Output Schema</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="gsd-skill-card__tip">
-                <span class="material-symbols-outlined" style="font-size:14px;color:var(--gsd-cyan)">tips_and_updates</span>
-                <span>Connect it to the <strong>AI endpoint</strong> setting for one-click analysis directly inside the metadata panel — no copy-paste required.</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  `;
-
-  // File download handlers — fetch from /docs/ and trigger save
-  host.querySelectorAll('[data-download]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const filename = btn.dataset.download;
-      try {
-        const originalHtml = btn.innerHTML;
-        btn.style.opacity = '0.6';
-        const resp = await fetch(`/docs/${filename}`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const text = await resp.text();
-        const blob = new Blob([text], { type: filename.endsWith('.json') ? 'application/json' : 'text/markdown' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-        btn.style.opacity = '';
-      } catch (err) {
-        console.warn('[GSD] Download failed:', err);
-        btn.style.opacity = '';
-        window.AuroraToast?.show({ variant: 'warning', title: `Could not download ${filename}`, description: 'Try opening the /docs/ folder directly.' });
-      }
-    });
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SHORTCUTS
-// ═══════════════════════════════════════════════════════════════
-function renderShortcuts(host) {
-  const items = [
-    { keys: ['⌘', 'K'],      label: 'Open launcher'     },
-    { keys: ['⌘', 'N'],      label: 'New recipe'        },
-    { keys: ['⌘', '⇧', 'O'], label: 'Open folder'       },
-    { keys: ['⌘', 'R'],      label: 'Run last recipe'   },
-    { keys: ['⌘', '/'],      label: 'Ask Claude'        },
-  ];
-  host.innerHTML = `
-    <div class="gsd-shortcuts">
-      <div class="mono gsd-shortcuts__tag">Shortcuts</div>
-      ${items.map((x) => `
-        <div class="gsd-shortcuts__item">
-          <div class="gsd-shortcuts__keys">
-            ${x.keys.map((ch) => `<kbd class="mono">${ch}</kbd>`).join('')}
-          </div>
-          <span class="gsd-shortcuts__label">${x.label}</span>
-        </div>
-      `).join('')}
-      <div style="flex:1"></div>
-      <div class="mono gsd-shortcuts__meta">100% local · on-device processing</div>
-    </div>
-  `;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// STYLES (scoped)
-// ═══════════════════════════════════════════════════════════════
+// ─── Styles ───────────────────────────────────────────────────
 let _stylesInjected = false;
 function injectStyles() {
   if (_stylesInjected) return;
   _stylesInjected = true;
   const style = document.createElement('style');
+  style.id = 'wel-screen-styles';
   style.textContent = `
-    .gsd-screen {
-      --gsd-bg:       #0a0f1c;
-      --gsd-panel:    #141c2e;
-      --gsd-line:     rgba(255,255,255,0.07);
-      --gsd-line-2:   rgba(255,255,255,0.12);
-      --gsd-text:     #e7ecf5;
-      --gsd-dim:      #98a3b8;
-      --gsd-mute:     #6a7590;
-      --gsd-blue:     #3b82f6;
-      --gsd-blue-2:   #60a5fa;
-      --gsd-teal:     #2dd4bf;
-      --gsd-orange:   #fb923c;
-      --gsd-pink:     #f472b6;
-      --gsd-amber:    #fbbf24;
-      --gsd-violet:   #a78bfa;
-      --gsd-cyan:     #22d3ee;
-      --gsd-green:    #34d399;
-      --gsd-red:      #f87171;
+    .wel-screen {
+      --wel-bg:        #0a0f1c;
+      --wel-panel:     #141c2e;
+      --wel-panel-2:   #1a2238;
+      --wel-line:      rgba(255,255,255,0.08);
+      --wel-line-2:    rgba(255,255,255,0.14);
+      --wel-text:      #e7ecf5;
+      --wel-dim:       #98a3b8;
+      --wel-mute:      #6a7590;
+      --wel-blue:      #3b82f6;
+      --wel-blue-2:    #60a5fa;
+      --wel-violet:    #8b5cf6;
 
-      background: var(--gsd-bg);
-      color: var(--gsd-text);
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
+      position: relative;
       height: 100%;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+      color: var(--wel-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.55;
+      background: var(--wel-bg);
     }
-    .gsd-screen .mono  { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-    .gsd-screen .serif { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-style: italic; color: #cbd5e1; }
-    .gsd-screen button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
-    .gsd-screen h1, .gsd-screen h2, .gsd-screen h3 { margin: 0; }
+    .wel-screen::-webkit-scrollbar { width: 0; height: 0; }
+    .wel-screen { scrollbar-width: none; }
 
-    /* ── Header ── */
-    .gsd-header {
-      display: flex; align-items: center; gap: 10px;
-      padding: 18px 32px;
-      border-bottom: 1px solid var(--gsd-line);
-      background: rgba(10,15,28,0.6);
-      backdrop-filter: blur(8px);
-      position: sticky; top: 0; z-index: 20;
-    }
-    .gsd-header__title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-    .gsd-header__title h1 { font-size: 18px; font-weight: 600; letter-spacing: .2px; }
-    .gsd-header__right { display: flex; align-items: center; gap: 12px; }
+    .wel-screen h2, .wel-screen h3, .wel-screen h4 { color: var(--wel-text); }
+    .wel-screen p { color: var(--wel-dim); margin: 0; }
 
-    .gsd-hero-switch {
-      display: inline-flex; border: 1px solid var(--gsd-line-2); border-radius: 8px;
-      padding: 3px; background: rgba(255,255,255,0.03);
-    }
-    .gsd-hero-switch__btn {
-      padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--gsd-dim);
-      border-radius: 5px;
-    }
-    .gsd-hero-switch__btn.is-active {
-      background: rgba(59,130,246,0.2); color: #93c5fd;
-    }
-
-    /* ── Body ── */
-    .gsd-body {
-      padding: 28px 32px 48px;
-      display: flex; flex-direction: column; gap: 32px;
-      max-width: 1200px; margin: 0 auto;
-    }
-    .gsd-body > section { min-width: 0; }
-
-    /* ── Pills & dots ── */
-    .gsd-pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 5px 10px; border-radius: 999px;
-      background: rgba(255,255,255,0.05); border: 1px solid var(--gsd-line-2);
-      font-size: 11px;
-    }
-    .gsd-pill--accent { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); color: #93c5fd; }
-    .gsd-pill--green  { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: #6ee7b7; }
-    .gsd-pill--violet { background: rgba(167,139,250,0.15); border-color: rgba(167,139,250,0.35); color: #c4b5fd; }
-    .gsd-pill--status .mono { color: var(--gsd-mute); }
-    .gsd-pill .mono { letter-spacing: 1px; text-transform: uppercase; font-size: 11px; }
-
-    .gsd-dot { display: inline-block; width: 6px; height: 6px; border-radius: 3px; background: currentColor; }
-    .gsd-dot--green { background: var(--gsd-green); }
-    .gsd-dot--blue  { background: var(--gsd-blue-2); }
-
-    @keyframes gsdPulse { 0%, 100% { opacity: .4 } 50% { opacity: 1 } }
-    .pulse-dot { animation: gsdPulse 1.4s ease-in-out infinite; }
-
-    @keyframes gsdMarch { to { stroke-dashoffset: -24; } }
-    .march { stroke-dasharray: 6 6; animation: gsdMarch 1.2s linear infinite; }
-
-    @keyframes gsdFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-    .float-slow { animation: gsdFloat 3.2s ease-in-out infinite; }
-
-    @keyframes gsdCaret { 0%,49%{opacity:1} 50%,100%{opacity:0} }
-    .caret { animation: gsdCaret 1s step-end infinite; }
-
-    @keyframes gsdFillbar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-
-    /* ── Buttons ── */
-    .gsd-btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 18px; border-radius: 10px;
-      font-size: 14px; font-weight: 500; white-space: nowrap;
-      transition: transform .15s ease, background .15s ease, border-color .15s ease;
-    }
-    .gsd-btn .material-symbols-outlined { font-size: 18px; }
-    .gsd-btn--sm { padding: 7px 12px; font-size: 12px; }
-    .gsd-btn--sm .material-symbols-outlined { font-size: 16px; }
-    .gsd-btn--primary {
-      background: var(--gsd-blue); color: #fff; font-weight: 600;
-      box-shadow: 0 8px 24px rgba(59,130,246,0.35), 0 0 0 1px rgba(255,255,255,0.1) inset;
-    }
-    .gsd-btn--primary:hover { transform: translateY(-1px); }
-    .gsd-btn--secondary {
-      background: rgba(255,255,255,0.06); border: 1px solid var(--gsd-line-2);
-    }
-    .gsd-btn--secondary:hover { background: rgba(255,255,255,0.09); }
-    .gsd-btn--ghost { color: var(--gsd-dim); padding: 12px 14px; font-size: 13px; }
-    .gsd-btn--ghost:hover { color: var(--gsd-text); }
-
-    /* ── Hero (shared wrapper) ── */
-    .gsd-hero {
-      position: relative; border-radius: 20px; overflow: hidden;
-      background: linear-gradient(180deg, #0f1a30 0%, #0c1424 100%);
-      border: 1px solid var(--gsd-line-2);
-      padding: 40px 48px;
-    }
-    .gsd-hero__bg {
-      position: absolute; inset: 0; pointer-events: none;
-      background:
-        radial-gradient(600px 300px at 20% 0%, rgba(59,130,246,0.18), transparent 60%),
-        radial-gradient(500px 300px at 90% 100%, rgba(167,139,250,0.12), transparent 60%);
-    }
-    .gsd-hero__bg--green {
-      background:
-        radial-gradient(600px 300px at 20% 0%, rgba(52,211,153,0.14), transparent 60%),
-        radial-gradient(500px 300px at 90% 100%, rgba(59,130,246,0.14), transparent 60%);
-    }
-    .gsd-hero__grid-bg {
-      position: absolute; inset: 0; opacity: .5;
-      background-image:
-        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-      background-size: 48px 48px;
-      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-              mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-    }
-    .gsd-hero__inner { position: relative; display: grid; grid-template-columns: 1.1fr 1.3fr; gap: 48px; align-items: center; }
-    .gsd-hero__copy h1 { font-size: 56px; line-height: 1.02; letter-spacing: -1.2px; font-weight: 700; margin-top: 18px; }
-    .gsd-hero__headline .serif { font-size: 58px; }
-    .gsd-hero__lede { color: var(--gsd-dim); font-size: 16px; margin: 18px 0 0; max-width: 480px; line-height: 1.55; }
-    .gsd-hero__ctas { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
-    .gsd-stats { margin-top: 32px; display: flex; gap: 24px; padding-top: 22px; border-top: 1px solid var(--gsd-line); }
-    .gsd-stats__k { font-size: 22px; font-weight: 700; }
-    .gsd-stats__v { font-size: 11px; color: var(--gsd-mute); text-transform: uppercase; letter-spacing: 1px; }
-
-    /* ── Live Pipeline card ── */
-    .gsd-pipeline-card {
+    /* ─── Slide shell ──────────────────────────────────────── */
+    .wel-slide {
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 56px 28px;
+      box-sizing: border-box;
       position: relative;
-      background: rgba(8,13,25,0.7);
-      border: 1px solid var(--gsd-line-2);
+    }
+    .wel-slide__inner { width: 100%; max-width: 1200px; }
+    .wel-slide__head  { margin-bottom: 28px; max-width: 820px; }
+
+    .wel-eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 12px;
+      color: var(--wel-blue-2) !important;
+      margin: 0 0 10px !important;
+      font-weight: 600;
+    }
+    .wel-h2 {
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin: 0;
+      font-weight: 650;
+    }
+
+    /* Subtle fade-up when a slide enters view */
+    @media (prefers-reduced-motion: no-preference) {
+      .wel-slide__inner > * {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: opacity .7s ease, transform .7s ease;
+      }
+      .wel-slide.is-visible .wel-slide__inner > * { opacity: 1; transform: none; }
+      .wel-slide.is-visible .wel-slide__inner > *:nth-child(2) { transition-delay: .08s; }
+      .wel-slide.is-visible .wel-slide__inner > *:nth-child(3) { transition-delay: .16s; }
+    }
+
+    /* ─── Hero ─────────────────────────────────────────────── */
+    .wel-slide--hero {
+      background:
+        radial-gradient(1100px 520px at 15% 10%, rgba(96,165,250,0.22), transparent 60%),
+        radial-gradient(900px 420px at 110% 110%, rgba(139,92,246,0.18), transparent 60%),
+        linear-gradient(180deg, #111a2e 0%, #0c1326 100%);
+    }
+    .wel-hero { max-width: 880px; }
+    .wel-hero__title {
+      font-size: clamp(40px, 6.4vw, 76px);
+      line-height: 1.02;
+      letter-spacing: -0.025em;
+      margin: 0 0 26px;
+      font-weight: 700;
+    }
+    .wel-accent {
+      background: linear-gradient(90deg, var(--wel-blue-2), var(--wel-violet));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .wel-hero__sub {
+      font-size: clamp(16px, 1.5vw, 21px);
+      color: var(--wel-dim);
+      margin-bottom: 36px;
+      max-width: 700px;
+    }
+    .wel-hero__cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .wel-scroll-hint {
+      position: absolute; bottom: 32px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      color: var(--wel-mute); font-size: 12px;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      opacity: 0.7;
+      animation: wel-bob 2.2s ease-in-out infinite;
+    }
+    .wel-scroll-hint .material-symbols-outlined { font-size: 22px; }
+    @keyframes wel-bob {
+      0%, 100% { transform: translate(-50%, 0); }
+      50%      { transform: translate(-50%, 6px); }
+    }
+
+    /* ─── Buttons ──────────────────────────────────────────── */
+    .wel-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 24px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer;
+      transition: transform .12s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+    .wel-btn .material-symbols-outlined { font-size: 20px; }
+    .wel-btn--primary {
+      background: linear-gradient(135deg, var(--wel-blue) 0%, var(--wel-violet) 100%);
+      color: white;
+      box-shadow: 0 8px 24px rgba(59,130,246,0.32);
+    }
+    .wel-btn--primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(59,130,246,0.4); }
+    .wel-btn--ghost {
+      background: rgba(255,255,255,0.04);
+      color: var(--wel-text);
+      border-color: var(--wel-line-2);
+    }
+    .wel-btn--ghost:hover { background: rgba(255,255,255,0.08); border-color: var(--wel-blue-2); }
+    .wel-btn--lg { padding: 16px 30px; font-size: 16px; }
+
+    /* ─── Detail-wrap (interactive tiles) ──────────────────── */
+    /* Layout SNAPS — no transition on grid-template-columns.
+       The View Transitions API morphs the active tile and detail panel
+       smoothly between the two snapped states. */
+    .wel-detail-wrap {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      align-items: start;
+    }
+    .wel-detail-wrap.is-expanded {
+      grid-template-columns: minmax(340px, 380px) 1fr;
+      gap: 28px;
+    }
+
+    .wel-tiles, .wel-outcomes, .wel-personas {
+      display: grid;
+      gap: 20px;
+      min-width: 0;
+    }
+    .wel-tiles    { grid-template-columns: repeat(3, 1fr); }
+    .wel-outcomes { grid-template-columns: repeat(2, 1fr); }
+    .wel-personas { grid-template-columns: repeat(4, 1fr); }
+    .wel-detail-wrap.is-expanded .wel-tiles,
+    .wel-detail-wrap.is-expanded .wel-outcomes,
+    .wel-detail-wrap.is-expanded .wel-personas {
+      grid-template-columns: 1fr;
+    }
+
+    [data-tile] { transition: border-color .18s ease, transform .18s ease; }
+    [data-tile].is-hidden { display: none; }
+
+    .wel-detail { min-width: 0; }
+    .wel-detail-wrap:not(.is-expanded) .wel-detail { display: none; }
+
+    /* View transition tuning */
+    ::view-transition-group(wel-vt-tile),
+    ::view-transition-group(wel-vt-detail) {
+      animation-duration: .55s;
+      animation-timing-function: cubic-bezier(.4, 0, .2, 1);
+    }
+    ::view-transition-old(wel-vt-tile),
+    ::view-transition-new(wel-vt-tile) {
+      animation-duration: .35s;
+      animation-timing-function: ease-out;
+    }
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: .4s;
+    }
+
+    /* Back button — sits inside the grid, last child, full row.
+       Hidden by default; revealed once expanded so it appears directly
+       below the active tile on the left. */
+    .wel-back {
+      grid-column: 1 / -1;
+      justify-self: stretch;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.04);
+      color: var(--wel-blue-2);
+      border: 1px solid var(--wel-line-2);
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity .25s ease, background .18s ease, border-color .18s ease, color .18s ease;
+    }
+    .wel-back .material-symbols-outlined { font-size: 18px; }
+    .wel-back:hover {
+      background: rgba(96,165,250,0.12);
+      border-color: var(--wel-blue-2);
+      color: var(--wel-text);
+    }
+    .wel-detail-wrap.is-expanded .wel-back {
+      display: inline-flex;
+      opacity: 1;
+      transition: opacity .3s ease .25s;
+    }
+
+    /* ─── Why-switch tiles ─────────────────────────────────── */
+    .wel-tile {
+      text-align: left;
+      cursor: pointer;
+      background: var(--wel-panel);
+      border: 1px solid var(--wel-line);
       border-radius: 16px;
-      padding: 20px;
-      min-height: 340px;
-      box-shadow: 0 30px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.02) inset;
+      padding: 28px 24px;
+      color: inherit;
+      font: inherit;
+      transition: border-color .18s ease, transform .18s ease, max-height .45s ease, opacity .35s ease, padding .35s ease, border-width .35s ease;
     }
-    .gsd-pipeline-card__chrome { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
-    .gsd-traffic { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-    .gsd-traffic--red    { background: #ff5f56; }
-    .gsd-traffic--amber  { background: #ffbd2e; }
-    .gsd-traffic--green  { background: #27c93f; }
-    .gsd-pipeline-card__filename { margin-left: 10px; font-size: 11px; color: var(--gsd-mute); flex: 1; }
-    .gsd-pipeline-card__running {
-      font-size: 10px; color: var(--gsd-green); display: inline-flex; align-items: center; gap: 6px;
-      padding: 3px 7px; background: rgba(52,211,153,0.1); border-radius: 6px;
-      border: 1px solid rgba(52,211,153,0.25); font-family: 'JetBrains Mono', monospace;
+    .wel-tile:hover { border-color: var(--wel-blue-2); transform: translateY(-3px); }
+    .wel-tile.is-active { border-color: var(--wel-blue-2); box-shadow: 0 8px 24px rgba(59,130,246,0.18); }
+    .wel-detail-wrap.is-expanded .wel-tile.is-active .wel-tile__cta { display: none; }
+    .wel-tile__icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: rgba(96,165,250,0.14);
+      color: var(--wel-blue-2);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
     }
-    .gsd-pipeline-svg { width: 100%; height: 240px; display: block; }
-    .gsd-pipeline-card__log {
-      margin-top: 10px; font-size: 11px; color: var(--gsd-mute);
-      padding: 10px 12px; background: rgba(0,0,0,0.25);
-      border-radius: 8px; border: 1px solid var(--gsd-line);
-      display: flex; gap: 16px; align-items: center;
-    }
-    .gsd-pipeline-card__log b { color: var(--gsd-text); }
-    .gsd-pipeline-card__chip {
-      position: absolute; top: -14px; right: -14px;
-      padding: 8px 12px; background: linear-gradient(135deg, #3b82f6, #6366f1);
-      border-radius: 999px; font-size: 12px; font-weight: 600;
+    .wel-tile__icon .material-symbols-outlined { font-size: 26px; }
+    .wel-tile h3 { font-size: 18px; margin: 0 0 6px; font-weight: 600; }
+    .wel-tile p  { font-size: 14.5px; }
+    .wel-tile__cta {
       display: inline-flex; align-items: center; gap: 6px;
-      box-shadow: 0 10px 24px rgba(59,130,246,0.4);
+      margin-top: 14px;
+      color: var(--wel-blue-2);
+      font-size: 13px; font-weight: 600;
     }
+    .wel-tile__cta .material-symbols-outlined { font-size: 18px; }
 
-    /* ── Guided Tour hero ── */
-    .gsd-hero__inner--tour { display: block; }
-    .gsd-tour__headers { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: end; margin-bottom: 30px; }
-    .gsd-hero__headline--tour { font-size: 52px; letter-spacing: -1px; line-height: 1.05; margin-top: 18px; }
-    .gsd-tour__copy p { color: var(--gsd-dim); font-size: 15px; margin: 0; line-height: 1.6; max-width: 440px; }
-    .gsd-tour__ctas { display: flex; gap: 10px; margin-top: 18px; }
-    .gsd-tour__ctas .gsd-btn { padding: 11px 16px; font-size: 14px; }
+    /* ─── Outcome cards ────────────────────────────────────── */
+    .wel-outcome {
+      text-align: left; cursor: pointer;
+      background: var(--wel-panel);
+      border: 1px solid var(--wel-line);
+      border-radius: 14px;
+      padding: 22px 24px;
+      color: inherit; font: inherit;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 16px;
+      align-items: start;
+      transition: border-color .18s ease, transform .18s ease, max-height .45s ease, opacity .35s ease, padding .35s ease, border-width .35s ease;
+    }
+    .wel-outcome:hover { border-color: var(--wel-line-2); transform: translateY(-2px); }
+    .wel-outcome.is-active { border-color: var(--wel-blue-2); box-shadow: 0 8px 24px rgba(59,130,246,0.18); }
+    /* When the outcome card is the docked active tile, stack icon above text
+       so the title doesn't get squeezed into a narrow column. */
+    .wel-detail-wrap.is-expanded .wel-outcome.is-active {
+      grid-template-columns: 1fr;
+      row-gap: 12px;
+    }
+    .wel-detail-wrap.is-expanded .wel-outcome.is-active .wel-outcome__icon {
+      font-size: 32px !important;
+    }
+    .wel-detail-wrap.is-expanded .wel-outcome.is-active .wel-outcome__cta { display: none; }
+    .wel-outcome__icon {
+      font-size: 28px !important;
+      color: var(--wel-blue-2);
+      margin-top: 2px;
+    }
+    .wel-outcome__body { min-width: 0; }
+    .wel-outcome h3 { font-size: 16px; margin: 0 0 4px; font-weight: 600; }
+    .wel-outcome p  { font-size: 14px; }
+    .wel-outcome__cta {
+      grid-column: 1 / -1;
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 10px;
+      color: var(--wel-blue-2);
+      font-size: 13px; font-weight: 600;
+    }
+    .wel-outcome__cta .material-symbols-outlined { font-size: 18px; }
 
-    .gsd-tour__rail { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 22px; }
-    .gsd-tour__step {
-      text-align: left; padding: 14px 16px; border-radius: 12px;
-      background: rgba(20,28,46,0.5); border: 1px solid var(--gsd-line-2);
-      display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden;
-      transition: border-color .2s ease, background .2s ease;
+    /* ─── Personas ─────────────────────────────────────────── */
+    .wel-persona {
+      text-align: left; cursor: pointer;
+      background: var(--wel-panel-2);
+      border: 1px solid var(--wel-line);
+      border-radius: 14px;
+      padding: 24px 22px;
+      color: inherit; font: inherit;
+      transition: border-color .18s ease, transform .18s ease, max-height .45s ease, opacity .35s ease, padding .35s ease, border-width .35s ease;
     }
-    .gsd-tour__step.is-current { border-color: var(--step-color); background: rgba(20,28,46,1); }
-    .gsd-tour__step-head { display: flex; align-items: center; gap: 10px; }
-    .gsd-tour__step-n {
-      width: 26px; height: 26px; border-radius: 8px;
-      background: rgba(255,255,255,0.06); color: var(--gsd-dim);
-      display: grid; place-items: center; font-size: 12px; font-weight: 700;
+    .wel-persona:hover { border-color: var(--wel-line-2); transform: translateY(-2px); }
+    .wel-persona.is-active { border-color: var(--wel-violet); box-shadow: 0 8px 24px rgba(139,92,246,0.22); }
+    .wel-detail-wrap.is-expanded .wel-persona.is-active .wel-persona__cta { display: none; }
+    .wel-persona__icon {
+      font-size: 32px !important;
+      color: var(--wel-violet);
+      display: block;
+      margin-bottom: 12px;
     }
-    .gsd-tour__step.is-current .gsd-tour__step-n { background: var(--step-color); color: #0a0f1c; }
-    .gsd-tour__step-label-small { font-size: 10px; color: var(--gsd-mute); text-transform: uppercase; letter-spacing: 1px; }
-    .gsd-tour__step-title { font-size: 14px; font-weight: 600; }
-    .gsd-tour__step-sub   { font-size: 12px; color: var(--gsd-mute); margin-top: 2px; }
-    .gsd-tour__progress {
-      position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
-      background: rgba(255,255,255,0.04); display: none;
+    .wel-persona h3 { font-size: 16px; margin: 0 0 6px; font-weight: 600; }
+    .wel-persona p  { font-size: 13.5px; }
+    .wel-persona__cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 12px;
+      color: var(--wel-violet);
+      font-size: 13px; font-weight: 600;
     }
-    .gsd-tour__step.is-current .gsd-tour__progress { display: block; }
-    .gsd-tour__progress > div {
-      height: 100%; width: 100%; background: var(--step-color);
-      transform-origin: left; animation: gsdFillbar 2.6s linear;
-    }
+    .wel-persona__cta .material-symbols-outlined { font-size: 18px; }
 
-    .gsd-tour__pane {
-      background: rgba(8,13,25,0.7); border: 1px solid var(--gsd-line-2);
-      border-radius: 16px; padding: 22px; min-height: 260px;
-      box-shadow: 0 30px 60px rgba(0,0,0,0.45);
+    /* ─── Detail panel content ─────────────────────────────── */
+    .wel-detail__pane {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 100%;
+      min-height: 360px;
     }
+    .wel-detail__caption h4 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+    .wel-detail__caption p  { font-size: 14.5px; }
 
-    /* Tour panes */
-    .gsd-pane { min-height: 200px; }
-    .gsd-pane__sub { font-size: 13px; color: var(--gsd-dim); margin-bottom: 10px; }
-    .gsd-pane--drop { display: grid; grid-template-columns: 1.2fr 1fr; gap: 22px; align-items: center; }
-    .gsd-dropzone {
-      border: 2px dashed rgba(45,212,191,0.35); border-radius: 14px;
-      padding: 30px; background: rgba(45,212,191,0.04);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 200px;
+    .wel-video-ph {
+      flex: 1;
+      min-height: 280px;
+      border-radius: 14px;
+      background:
+        radial-gradient(600px 240px at 50% 40%, rgba(96,165,250,0.15), transparent 60%),
+        var(--wel-panel-2);
+      border: 1px dashed var(--wel-line-2);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px;
+      color: var(--wel-mute);
     }
-    .gsd-dropzone__icon {
-      width: 56px; height: 56px; border-radius: 16px;
-      background: rgba(45,212,191,0.15); display: grid; place-items: center; color: var(--gsd-teal);
-    }
-    .gsd-dropzone__icon .material-symbols-outlined { font-size: 28px; }
-    .gsd-dropzone__title { font-size: 16px; font-weight: 600; }
-    .gsd-dropzone__formats { font-size: 11px; color: var(--gsd-mute); }
-    .gsd-pane__row {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 10px;
-      background: rgba(255,255,255,0.03); border: 1px solid var(--gsd-line);
-      margin-bottom: 6px;
-    }
-    .gsd-pane__row-title { font-size: 12px; }
-    .gsd-pane__row-sub   { font-size: 11px; color: var(--gsd-mute); }
+    .wel-video-ph .material-symbols-outlined { font-size: 56px; color: var(--wel-blue-2); }
+    .wel-video-ph p { color: var(--wel-dim); margin: 0; font-weight: 500; }
+    .wel-video-ph small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .wel-video-ph--testimonial .material-symbols-outlined { color: var(--wel-violet); }
 
-    .gsd-recipe-search { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-    .gsd-recipe-search__input {
-      flex: 1; padding: 10px 12px; border: 1px solid var(--gsd-line-2); border-radius: 10px;
-      background: rgba(255,255,255,0.03); font-size: 13px; color: var(--gsd-dim);
-      display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace;
+    .wel-ba {
+      flex: 1;
+      min-height: 280px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
-    .gsd-recipe-search__input .material-symbols-outlined { color: var(--gsd-mute); font-size: 16px; }
-    .gsd-recipe-search__count { font-size: 11px; color: var(--gsd-mute); }
-    .gsd-recipe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .gsd-recipe-card {
-      padding: 14px; border-radius: 12px;
-      background: rgba(255,255,255,0.03); border: 1px solid var(--gsd-line-2);
+    .wel-ba__slot {
+      position: relative;
+      border-radius: 12px;
+      background: var(--wel-panel-2);
+      border: 1px dashed var(--wel-line-2);
+      overflow: hidden;
     }
-    .gsd-recipe-card.is-selected { border-color: var(--card-color); }
-    .gsd-recipe-card__thumb {
-      height: 70px; border-radius: 8px; margin-bottom: 10px; position: relative; overflow: hidden;
-    }
-    .gsd-recipe-card__thumb::after {
-      content: ''; position: absolute; inset: 0;
-      background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 8px, transparent 8px 16px);
-    }
-    .gsd-recipe-card__name { font-size: 13px; font-weight: 600; }
-    .gsd-recipe-card__tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
-    .gsd-recipe-card__tags span {
-      font-size: 10px; padding: 2px 6px; border-radius: 4px;
-      background: rgba(255,255,255,0.05); color: var(--gsd-dim);
-    }
-
-    .gsd-pane--tweak { display: grid; grid-template-columns: 1.1fr 1fr; gap: 22px; }
-    .gsd-tweak-row { margin-bottom: 14px; }
-    .gsd-tweak-row__head { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: var(--gsd-dim); }
-    .gsd-tweak-row__track { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.06); position: relative; }
-    .gsd-tweak-row__track > div { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
-    .gsd-tweak-row__knob {
-      position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
-      transform: translate(-50%, -50%);
-    }
-    .gsd-tweak-preview {
-      border-radius: 12px; background: linear-gradient(135deg, #3a2418, #1a1410);
-      position: relative; overflow: hidden; min-height: 200px;
-      display: grid; place-items: center;
-    }
-    .gsd-tweak-preview::before {
-      content: ''; position: absolute; inset: 0;
-      background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 4px);
-    }
-    .gsd-tweak-preview__chip {
-      position: absolute; left: 12px; top: 10px;
-      font-size: 10px; color: rgba(255,255,255,0.6);
-      padding: 3px 7px; background: rgba(0,0,0,0.4); border-radius: 4px;
-    }
-    .gsd-tweak-preview .material-symbols-outlined { color: rgba(255,255,255,0.25); font-size: 48px; }
-
-    .gsd-pane--ba { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .gsd-ba-frame {
-      border-radius: 12px; border: 1px solid var(--gsd-line-2); overflow: hidden;
-      position: relative; min-height: 210px; display: grid; place-items: center;
-      background: linear-gradient(135deg, #2a2f3a, #0a0f1c);
-    }
-    .gsd-ba-frame.is-after {
-      border-color: var(--gsd-orange);
-      background: linear-gradient(135deg, #3a2418, #0a0f1c);
-    }
-    .gsd-ba-frame::before {
-      content: ''; position: absolute; inset: 0;
-      background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 12px, transparent 12px 24px);
-    }
-    .gsd-ba-frame__label {
+    .wel-ba__label {
       position: absolute; top: 10px; left: 12px;
-      font-size: 11px; color: rgba(255,255,255,0.75);
-      padding: 3px 8px; border-radius: 6px; background: rgba(0,0,0,0.45);
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--wel-blue-2);
+      background: rgba(10,15,28,0.6);
+      padding: 4px 8px; border-radius: 999px;
     }
-    .gsd-ba-frame .material-symbols-outlined { color: rgba(255,255,255,0.2); font-size: 40px; position: relative; }
+    .wel-ba__placeholder {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 6px;
+      color: var(--wel-mute);
+    }
+    .wel-ba__placeholder .material-symbols-outlined { font-size: 40px; color: var(--wel-blue-2); }
+    .wel-ba__placeholder--after .material-symbols-outlined { color: var(--wel-violet); }
+    .wel-ba__placeholder small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 
-    .gsd-run-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .gsd-run-head__title { font-size: 15px; font-weight: 600; }
-    .gsd-run-head__sub   { font-size: 11px; color: var(--gsd-mute); }
-    .gsd-run-bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,0.06); overflow: hidden; margin-bottom: 16px; }
-    .gsd-run-bar > div { height: 100%; width: 62%; background: linear-gradient(90deg, var(--gsd-blue), var(--gsd-teal)); }
-    .gsd-run-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
-    .gsd-run-tile { aspect-ratio: 1 / 1; border-radius: 4px; }
-    .gsd-run-legend { display: flex; gap: 20px; margin-top: 16px; color: var(--gsd-dim); font-size: 12px; }
-
-    /* ── Pipeline Diagram ── */
-    .gsd-card {
-      background: var(--gsd-panel); border: 1px solid var(--gsd-line-2);
-      border-radius: 16px; padding: 32px; position: relative; overflow: hidden;
+    /* ─── Steps ────────────────────────────────────────────── */
+    .wel-steps {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
     }
-    .gsd-pipeline-diagram__bg {
-      position: absolute; inset: 0; pointer-events: none;
-      background: radial-gradient(600px 200px at 50% 0%, rgba(59,130,246,0.08), transparent 70%);
-    }
-    .gsd-pipeline-diagram__inner { position: relative; }
-    .gsd-section-title { display: flex; align-items: baseline; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; }
-    .gsd-section-title h2 { font-size: 28px; font-weight: 700; letter-spacing: -.5px; }
-    .gsd-section-title .mono { font-size: 11px; color: var(--gsd-mute); text-transform: uppercase; letter-spacing: 1.4px; }
-    .gsd-pipeline-diagram__grid { display: grid; grid-template-columns: 200px 1fr 200px; gap: 24px; align-items: stretch; }
-    .gsd-pipeline-diagram__io {
-      background: rgba(8,13,25,0.6); border: 1px solid var(--gsd-line-2);
-      border-radius: 14px; padding: 18px;
-      display: flex; flex-direction: column; justify-content: center;
-    }
-    .gsd-pipeline-diagram__io-tag { font-size: 10px; color: var(--gsd-mute); text-transform: uppercase; letter-spacing: 1.4px; margin-bottom: 10px; }
-    .gsd-pipeline-diagram__io-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-    .gsd-pipeline-diagram__io-sub   { font-size: 12px; color: var(--gsd-dim); }
-    .gsd-pipeline-diagram__formats { display: flex; gap: 4px; margin-top: 14px; flex-wrap: wrap; }
-    .gsd-pipeline-diagram__formats span {
-      font-size: 10px; padding: 2px 6px; border-radius: 4px;
-      background: rgba(255,255,255,0.05); border: 1px solid var(--gsd-line); color: var(--gsd-dim);
-    }
-    .gsd-pipeline-diagram__out-paths { margin-top: 14px; display: flex; flex-direction: column; gap: 4px; }
-    .gsd-pipeline-diagram__out-paths > div { font-size: 11px; color: var(--gsd-dim); display: inline-flex; align-items: center; gap: 6px; }
-
-    .gsd-pipeline-diagram__core { display: flex; flex-direction: column; gap: 10px; position: relative; }
-    .gsd-pipeline-diagram__connector {
-      position: absolute; top: 50%; width: 24px; height: 2px; transform: translateY(-50%);
-    }
-    .gsd-pipeline-diagram__connector--left  { left: -24px;  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15)); }
-    .gsd-pipeline-diagram__connector--right { right: -24px; background: linear-gradient(90deg, rgba(255,255,255,0.15), transparent); }
-
-    .gsd-pipeline-row {
-      display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 14px;
-      padding: 10px 14px; border-radius: 10px;
-      background: rgba(8,13,25,0.4); border: 1px solid var(--gsd-line);
-      position: relative;
-      transition: transform .2s ease, border-color .2s ease, background .2s ease;
-    }
-    .gsd-pipeline-row:hover { transform: translateY(-2px); border-color: var(--row-color); }
-    .gsd-pipeline-row__icon {
-      width: 32px; height: 32px; border-radius: 8px;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--row-color) 20%, transparent), color-mix(in srgb, var(--row-color) 5%, transparent));
-      border: 1px solid color-mix(in srgb, var(--row-color) 35%, transparent);
-      color: var(--row-color); display: grid; place-items: center;
-    }
-    .gsd-pipeline-row__icon .material-symbols-outlined { font-size: 18px; }
-    .gsd-pipeline-row__title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-    .gsd-pipeline-row__idx {
-      font-size: 10px; color: var(--gsd-mute); padding: 1px 6px;
-      border: 1px solid var(--gsd-line); border-radius: 4px;
-    }
-    .gsd-pipeline-row__sub { font-size: 12px; color: var(--gsd-dim); }
-    .gsd-pipeline-row__count { color: var(--gsd-mute); font-size: 11px; }
-    .gsd-pipeline-row__tick {
-      position: absolute; left: 0; top: 50%; width: 3px; height: 22px;
-      background: var(--row-color); border-radius: 2px; transform: translateY(-50%);
-    }
-
-    /* ── Personas ── */
-    .gsd-personas__grid { display: grid; grid-template-columns: 300px 1fr; gap: 22px; }
-    .gsd-personas__rail { display: flex; flex-direction: column; gap: 6px; }
-    .gsd-persona-tab {
-      text-align: left; padding: 12px 14px; border-radius: 10px;
-      background: transparent; border: 1px solid var(--gsd-line);
-      display: flex; align-items: center; gap: 12px;
-    }
-    .gsd-persona-tab.is-active { background: rgba(20,28,46,1); border-color: var(--persona-color); }
-    .gsd-persona-tab__icon {
-      width: 30px; height: 30px; border-radius: 8px; flex: 0 0 30px;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--persona-color) 20%, transparent), color-mix(in srgb, var(--persona-color) 5%, transparent));
-      border: 1px solid color-mix(in srgb, var(--persona-color) 35%, transparent);
-      color: var(--persona-color); display: grid; place-items: center;
-    }
-    .gsd-persona-tab__icon--lg { width: 44px; height: 44px; border-radius: 12px; flex: 0 0 44px; }
-    .gsd-persona-tab__icon .material-symbols-outlined { font-size: 18px; }
-    .gsd-persona-tab__icon--lg .material-symbols-outlined { font-size: 24px; }
-    .gsd-persona-tab__body { min-width: 0; flex: 1; }
-    .gsd-persona-tab__label { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .gsd-persona-tab__stat  { font-size: 11px; color: var(--gsd-mute); white-space: nowrap; }
-
-    .gsd-persona-detail {
-      background: var(--gsd-panel); border: 1px solid var(--gsd-line-2);
-      border-radius: 14px; padding: 24px; position: relative; overflow: hidden;
-    }
-    .gsd-persona-detail__glow {
-      position: absolute; top: 0; right: 0; width: 240px; height: 240px;
-      background: radial-gradient(circle at top right, color-mix(in srgb, var(--persona-color) 14%, transparent), transparent 60%);
-      pointer-events: none;
-    }
-    .gsd-persona-detail__head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; position: relative; }
-    .gsd-persona-detail__title { font-size: 18px; font-weight: 700; white-space: nowrap; }
-    .gsd-persona-detail__stat  { font-size: 11px; color: var(--gsd-mute); text-transform: uppercase; letter-spacing: 1.4px; }
-    .gsd-persona-detail__desc  { margin: 0; color: var(--gsd-dim); font-size: 14px; line-height: 1.6; max-width: 640px; position: relative; }
-    .gsd-persona-detail__samples-tag {
-      font-size: 10px; color: var(--gsd-mute); text-transform: uppercase; letter-spacing: 1.4px; margin: 22px 0 10px;
-      position: relative;
-    }
-    .gsd-persona-detail__samples { display: flex; gap: 10px; flex-wrap: wrap; position: relative; }
-    .gsd-persona-chip {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 12px; border-radius: 10px;
-      background: rgba(255,255,255,0.03); border: 1px solid var(--gsd-line-2);
-      font-size: 13px;
-    }
-    .gsd-persona-chip:hover { background: rgba(255,255,255,0.06); }
-    .gsd-persona-chip--primary {
-      background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); color: #93c5fd; font-weight: 500;
-    }
-    .gsd-persona-chip .gsd-dot { width: 6px; height: 6px; border-radius: 3px; }
-
-    /* ── Smart Automation ── */
-    .gsd-automation {
-      border-radius: 16px; padding: 32px;
-      background: linear-gradient(135deg, rgba(59,130,246,0.14), rgba(167,139,250,0.08));
-      border: 1px solid rgba(59,130,246,0.3);
-      position: relative; overflow: hidden;
-    }
-    .gsd-automation__bg {
-      position: absolute; top: -60px; right: -60px; width: 260px; height: 260px;
-      background: radial-gradient(circle, rgba(167,139,250,0.25), transparent 60%);
-      pointer-events: none;
-    }
-    .gsd-automation__inner {
-      display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px;
-      align-items: center; position: relative;
-    }
-    .gsd-automation__headline { font-size: 26px; font-weight: 700; letter-spacing: -.4px; margin: 12px 0 10px; }
-    .gsd-automation__lede { color: var(--gsd-dim); font-size: 14px; line-height: 1.6; margin: 0; max-width: 480px; }
-    .gsd-automation__terminal {
-      background: rgba(8,13,25,0.85); border: 1px solid var(--gsd-line-2);
-      border-radius: 12px; padding: 16px;
-    }
-    .gsd-automation__prompt { font-size: 14px; line-height: 1.5; min-height: 56px; color: var(--gsd-text); }
-    .gsd-automation__foot { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; }
-    .gsd-automation__dots { display: flex; gap: 6px; }
-    .gsd-automation__dot  { width: 24px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.1); transition: background .2s; }
-    .gsd-automation__dot.is-active { background: var(--gsd-blue-2); }
-
-    /* ── Shortcuts ── */
-    .gsd-shortcuts {
-      display: flex; gap: 18px; flex-wrap: wrap;
-      padding: 18px 24px; border-radius: 12px;
-      background: rgba(255,255,255,0.02); border: 1px solid var(--gsd-line);
-    }
-    .gsd-shortcuts__tag { font-size: 10px; color: var(--gsd-mute); text-transform: uppercase; letter-spacing: 1.4px; align-self: center; }
-    .gsd-shortcuts__item { display: inline-flex; align-items: center; gap: 8px; }
-    .gsd-shortcuts__keys { display: inline-flex; gap: 3px; }
-    .gsd-shortcuts__keys kbd {
-      font-size: 11px; padding: 3px 7px; border-radius: 5px;
-      background: rgba(255,255,255,0.06); border: 1px solid var(--gsd-line-2);
-      border-bottom-width: 2px;
-    }
-    .gsd-shortcuts__label { font-size: 12px; color: var(--gsd-dim); }
-    .gsd-shortcuts__meta  { font-size: 11px; color: var(--gsd-mute); align-self: center; }
-
-    /* ── Pills extra colours ── */
-    .gsd-pill--teal { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.3); color: #67e8f9; }
-
-    /* ── Claude Skills section ── */
-    .gsd-skills {
-      position: relative; border-radius: 20px; overflow: hidden;
-      background: linear-gradient(180deg, #0d1a2e 0%, #0a1220 100%);
-      border: 1px solid var(--gsd-line-2);
-      padding: 36px 40px;
-    }
-    .gsd-skills__bg {
-      position: absolute; inset: 0; pointer-events: none;
-      background:
-        radial-gradient(600px 300px at 10% 100%, rgba(34,211,238,0.08), transparent 60%),
-        radial-gradient(500px 300px at 90% 0%, rgba(167,139,250,0.08), transparent 60%);
-    }
-    .gsd-skills__inner { position: relative; }
-    .gsd-skills__header { margin-bottom: 28px; }
-    .gsd-skills__headline { font-size: 24px; font-weight: 700; letter-spacing: -.3px; margin: 10px 0 8px; }
-    .gsd-skills__lede { color: var(--gsd-dim); font-size: 14px; line-height: 1.6; margin: 0; max-width: 560px; }
-
-    .gsd-skills__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-
-    .gsd-skill-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--gsd-line-2);
+    .wel-step {
+      background: var(--wel-panel);
+      border: 1px solid var(--wel-line);
       border-radius: 16px;
-      padding: 22px;
-      display: flex; gap: 16px;
-      transition: border-color .2s;
+      padding: 32px 28px;
     }
-    .gsd-skill-card:hover { border-color: rgba(255,255,255,0.18); }
-    .gsd-skill-card__icon {
-      width: 48px; height: 48px; border-radius: 12px;
+    .wel-step__num {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--wel-blue), var(--wel-violet));
+      color: white; font-weight: 700; font-size: 16px;
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      margin-bottom: 14px;
     }
-    .gsd-skill-card__body { flex: 1; min-width: 0; }
-    .gsd-skill-card__title {
-      font-size: 16px; font-weight: 600; margin-bottom: 8px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .gsd-skill-card__desc { color: var(--gsd-dim); font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
+    .wel-step h3 { font-size: 19px; margin: 0 0 8px; font-weight: 600; }
+    .wel-step p  { font-size: 15px; }
 
-    .gsd-badge-new {
-      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-      padding: 2px 7px; border-radius: 999px;
-      background: rgba(34,211,238,0.15); color: var(--gsd-cyan);
-      border: 1px solid rgba(34,211,238,0.3);
+    /* ─── Floating features slide ──────────────────────────── */
+    .wel-slide--features {
+      overflow: hidden;
+      background:
+        radial-gradient(900px 500px at 50% 50%, rgba(59,130,246,0.16), transparent 60%),
+        var(--wel-bg);
     }
-
-    .gsd-skill-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
-    .gsd-skill-step {
-      display: flex; align-items: baseline; gap: 10px;
-      font-size: 13px; color: var(--gsd-dim); line-height: 1.5;
+    .wel-features-bg {
+      position: absolute; inset: 0;
+      perspective: 900px;
+      pointer-events: none;
     }
-    .gsd-skill-step__num {
-      flex-shrink: 0;
-      width: 20px; height: 20px; border-radius: 50%;
-      background: rgba(255,255,255,0.07); border: 1px solid var(--gsd-line-2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 600; color: var(--gsd-text);
-      margin-top: 1px;
+    .wel-fly {
+      position: absolute;
+      left: var(--fx);
+      top:  var(--fy);
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--wel-text);
+      background: rgba(20,28,46,0.55);
+      border: 1px solid var(--wel-line);
+      backdrop-filter: blur(4px);
+      padding: 6px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+      animation: wel-fly var(--fdur) linear var(--fd) infinite;
+      will-change: transform, opacity;
     }
-    .gsd-skill-step a.gsd-link { color: var(--gsd-blue-2); text-decoration: none; }
-    .gsd-skill-step a.gsd-link:hover { text-decoration: underline; }
-    .gsd-skill-step strong { color: var(--gsd-text); font-weight: 600; }
-    .gsd-skill-step em { color: var(--gsd-dim); font-style: italic; }
-    .gsd-skill-step code {
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-size: 11.5px; color: #a5f3fc;
-      background: rgba(34,211,238,0.07); padding: 1px 5px; border-radius: 4px;
+    @keyframes wel-fly {
+      0%   { transform: translate(-50%, -50%) translateZ(-800px); opacity: 0; }
+      12%  { opacity: 0.9; }
+      80%  { opacity: 1; }
+      100% { transform: translate(-50%, -50%) translateZ(500px); opacity: 0; }
     }
-
-    .gsd-skill-card__files { margin-bottom: 14px; }
-    .gsd-skill-files__label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--gsd-mute); margin-bottom: 8px; }
-    .gsd-skill-files__list { display: flex; flex-wrap: wrap; gap: 8px; }
-
-    .gsd-file-chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 10px; border-radius: 8px;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--gsd-line-2);
-      font-size: 12px; color: var(--gsd-text); cursor: pointer;
-      transition: background .15s, border-color .15s;
+    .wel-features-inner {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 720px;
+      background: radial-gradient(420px 240px at 50% 50%, rgba(10,15,28,0.85), rgba(10,15,28,0.0) 75%);
+      padding: 40px 24px;
+      border-radius: 24px;
     }
-    .gsd-file-chip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
-    .gsd-file-chip .material-symbols-outlined { font-size: 15px; color: var(--gsd-mute); }
-    .gsd-file-chip__badge {
-      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px;
-      color: var(--gsd-mute); background: rgba(255,255,255,0.05);
-      padding: 1px 5px; border-radius: 4px; margin-left: 2px;
+    .wel-features-sub {
+      margin-top: 16px !important;
+      font-size: 16px;
+      color: var(--wel-dim);
     }
 
-    .gsd-skill-card__tip {
-      display: flex; align-items: baseline; gap: 7px;
-      font-size: 12px; color: var(--gsd-mute); line-height: 1.5;
-      background: rgba(34,211,238,0.05); border: 1px solid rgba(34,211,238,0.12);
-      border-radius: 8px; padding: 9px 11px;
+    /* ─── Stats ────────────────────────────────────────────── */
+    .wel-stats {
+      padding: 40px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(96,165,250,0.08), rgba(139,92,246,0.05));
+      border: 1px solid var(--wel-line);
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      text-align: center;
     }
-    .gsd-skill-card__tip strong { color: var(--gsd-text); font-weight: 600; }
+    .wel-stats__num {
+      font-size: clamp(38px, 5vw, 56px);
+      font-weight: 700; letter-spacing: -0.02em; line-height: 1;
+      background: linear-gradient(90deg, var(--wel-blue-2), var(--wel-violet));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .wel-stats__label { color: var(--wel-dim); font-size: 14.5px; margin-top: 10px; }
 
-    /* ── Responsive collapse ── */
-    @media (max-width: 1000px) {
-      .gsd-hero { padding: 28px; }
-      .gsd-hero__inner { grid-template-columns: 1fr; gap: 28px; }
-      .gsd-hero__copy h1 { font-size: 42px; }
-      .gsd-hero__headline .serif { font-size: 44px; }
-      .gsd-tour__headers { grid-template-columns: 1fr; gap: 18px; align-items: start; }
-      .gsd-tour__rail { grid-template-columns: repeat(5, minmax(0,1fr)); }
-      .gsd-pipeline-diagram__grid { grid-template-columns: 1fr; }
-      .gsd-pipeline-diagram__connector { display: none; }
-      .gsd-personas__grid { grid-template-columns: 1fr; }
-      .gsd-automation__inner { grid-template-columns: 1fr; gap: 18px; }
-      .gsd-skills__cards { grid-template-columns: 1fr; }
+    /* ─── Closing ──────────────────────────────────────────── */
+    .wel-slide--cta {
+      background:
+        radial-gradient(800px 360px at 50% 0%, rgba(96,165,250,0.22), transparent 60%),
+        radial-gradient(700px 340px at 50% 100%, rgba(139,92,246,0.18), transparent 60%),
+        var(--wel-bg);
     }
-    @media (max-width: 700px) {
-      .gsd-body { padding: 18px; gap: 22px; }
-      .gsd-header { padding: 14px 18px; }
-      .gsd-header__right .gsd-pill--status { display: none; }
-      .gsd-pane--drop,
-      .gsd-pane--tweak,
-      .gsd-pane--ba { grid-template-columns: 1fr !important; }
-      .gsd-recipe-grid { grid-template-columns: repeat(2, 1fr); }
-      .gsd-tour__rail { grid-template-columns: repeat(2, 1fr); }
-      .gsd-run-grid { grid-template-columns: repeat(5, 1fr); }
+    .wel-closing { text-align: center; }
+    .wel-closing h2 {
+      font-size: clamp(32px, 5vw, 56px);
+      letter-spacing: -0.02em;
+      margin: 0 0 32px; font-weight: 700; line-height: 1.1;
+    }
+    .wel-closing__hint { margin-top: 28px; color: var(--wel-mute); font-size: 14px; }
+    .wel-link { color: var(--wel-blue-2); text-decoration: none; font-weight: 600; }
+    .wel-link:hover { text-decoration: underline; }
+
+    /* ─── Side dot-nav ─────────────────────────────────────── */
+    .wel-dots {
+      position: fixed; right: 24px; top: 50%;
+      transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 10px;
+      z-index: 5;
+    }
+    .wel-dot {
+      background: transparent; border: 0; padding: 6px 8px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      color: var(--wel-mute);
+      font-size: 12px; letter-spacing: 0.06em;
+    }
+    .wel-dot__pip {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      transition: all .2s ease;
+    }
+    .wel-dot__label {
+      opacity: 0; transform: translateX(6px);
+      transition: opacity .2s ease, transform .2s ease;
+      white-space: nowrap;
+    }
+    .wel-dot:hover .wel-dot__label { opacity: 1; transform: translateX(0); }
+    .wel-dot:hover .wel-dot__pip   { background: var(--wel-blue-2); }
+    .wel-dot.is-active .wel-dot__pip {
+      background: var(--wel-blue-2);
+      box-shadow: 0 0 0 4px rgba(96,165,250,0.18);
+      transform: scale(1.15);
+    }
+    .wel-dot.is-active { color: var(--wel-text); }
+
+    /* ─── Responsive ───────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .wel-personas { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .wel-tiles, .wel-steps, .wel-stats { grid-template-columns: 1fr; }
+      .wel-outcomes { grid-template-columns: 1fr; }
+      .wel-detail-wrap { grid-template-columns: 1fr; }
+      .wel-detail-wrap.is-expanded { grid-template-columns: 1fr; gap: 20px; }
+      .wel-dots { right: 12px; }
+      .wel-dot__label { display: none; }
+    }
+    @media (max-width: 560px) {
+      .wel-slide { padding: 40px 18px; }
+      .wel-personas { grid-template-columns: 1fr; }
+    }
+
+    /* Respect users who prefer no scroll-hijacking */
+    @media (prefers-reduced-motion: reduce) {
+      .wel-screen { scroll-snap-type: none; scroll-behavior: auto; }
+      .wel-scroll-hint, .wel-fly { animation: none; }
     }
   `;
   document.head.appendChild(style);
