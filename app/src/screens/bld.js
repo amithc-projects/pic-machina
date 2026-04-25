@@ -17,6 +17,7 @@ import { checkTransformAvailability } from '../engine/capabilities.js';
 import { extractExif } from '../engine/exif-reader.js';
 import { renderParamField } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
+import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../utils/video-scrubber.js';
 import { fileFilterForRecipe } from '../data/folders.js';
 
 // Category accent colours (match theme vars)
@@ -455,6 +456,10 @@ export async function render(container, hash) {
   let bldPreviewNodeId = null;
   let bldCompareRef = 'original';
 
+  // ── Video scrubber state ─────────────────────────────────────
+  let _bldScrubber = null;
+  let _bldActiveVideoFile = null;
+
   const { ImageWorkspace } = await import('../components/image-workspace.js');
   const wsContainer = container.querySelector('#bld-workspace-container');
 
@@ -486,6 +491,21 @@ export async function render(container, hash) {
         if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
         if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(activeFile);
       }
+      // Mount/remount video scrubber when the active file changes
+      _bldActiveVideoFile = activeFile;
+      if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
+      const scrubberMount = wsContainer.querySelector('#bld-scrubber-mount');
+      if (activeFile && isVideoFile(activeFile) && scrubberMount) {
+        _bldScrubber = await mountVideoScrubber(scrubberMount, activeFile, {
+          initialTime: getStoredSeekTime(activeFile.name),
+          onSeek: (t) => {
+            setStoredSeekTime(activeFile.name, t);
+            workspace.triggerProcess();
+          },
+        });
+      } else if (scrubberMount) {
+        scrubberMount.innerHTML = '';
+      }
     },
     onInfo: async (file) => {
       const panel = await getBldInfoPanel();
@@ -496,11 +516,12 @@ export async function render(container, hash) {
       const url = URL.createObjectURL(file);
       const isVideo = isVideoFile(file);
 
-      // For video files, extract a representative frame (~3s or 40% in) to use as
-      // the canvas base image. For images, load normally.
+      // For video files, extract a representative frame to use as the canvas base.
+      // Use the stored scrubber seek time if available, otherwise fall back to default.
       let imageSource;
       if (isVideo) {
-        const frameCanvas = await extractVideoFrame(url);
+        const seekTime = getStoredSeekTime(file.name);
+        const frameCanvas = await extractVideoFrame(url, seekTime);
         imageSource = frameCanvas;
       } else {
         const img = new Image();
@@ -566,6 +587,17 @@ export async function render(container, hash) {
       };
     }
   });
+
+  // Inject scrubber mount point between preview stage and carousel strip
+  {
+    const iwEl = wsContainer.querySelector('.ic-image-workspace');
+    const carousel = wsContainer.querySelector('.iw-carousel');
+    if (iwEl && carousel) {
+      const mount = document.createElement('div');
+      mount.id = 'bld-scrubber-mount';
+      iwEl.insertBefore(mount, carousel);
+    }
+  }
 
   if (window._icTestFolderFiles && window._icTestFolderFiles.length > 0) {
     workspace.setFiles(window._icTestFolderFiles);

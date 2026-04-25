@@ -10,13 +10,15 @@ export function isVideoFile(file) {
 }
 
 /**
- * Seek a video to ~3 s (or 40% of its duration, whichever is smaller) and
- * return an HTMLCanvasElement with that frame drawn onto it.
+ * Seek a video to the specified time (or ~3 s / 40% of duration by default)
+ * and return an HTMLCanvasElement with that frame drawn onto it.
  *
- * @param {string|File} source  A blob URL string or a File object.
+ * @param {string|File} source   A blob URL string or a File object.
+ * @param {number|null} seekTime Optional seek time in seconds. Defaults to
+ *                               Math.min(3, duration * 0.4) when null/undefined.
  * @returns {Promise<HTMLCanvasElement>}
  */
-export async function extractVideoFrame(source) {
+export async function extractVideoFrame(source, seekTime = null) {
   const url = typeof source === 'string' ? source : URL.createObjectURL(source);
   const ownUrl = typeof source !== 'string';
 
@@ -34,7 +36,9 @@ export async function extractVideoFrame(source) {
       video.load();
     });
 
-    const seekTo = Math.min(3, video.duration * 0.4);
+    const seekTo = seekTime !== null && isFinite(seekTime)
+      ? Math.max(0, Math.min(seekTime, video.duration))
+      : Math.min(3, video.duration * 0.4);
     await new Promise((res, rej) => {
       video.onseeked = res;
       video.onerror  = () => rej(new Error('Video seek failed'));

@@ -17,6 +17,7 @@ import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }               from '../utils/image-info.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
+import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../utils/video-scrubber.js';
 import { fileFilterForRecipe } from '../data/folders.js';
 import { renderTimeRangeSection, bindTimeRangeControls, injectTimeRangeStyles } from '../utils/time-range-strip.js';
 
@@ -242,6 +243,7 @@ export async function render(container, hash) {
   const { ImageWorkspace } = await import('../components/image-workspace.js');
   const wsContainer = container.querySelector('#ned-workspace-container');
   let testFile = null;
+  let _nedScrubber = null;
 
   // For video-specific steps show only videos; otherwise follow the recipe's inputType.
   // A step is video-specific if its transform ID starts with 'flow-video-' or it is a
@@ -269,6 +271,20 @@ export async function render(container, hash) {
       // Load filmstrip thumbnails for the time-range strip
       if (trControls && activeFile && isVideoFile(activeFile)) {
         trControls.loadFilmstrip(activeFile);
+      }
+      // Mount/remount video scrubber
+      if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
+      const scrubberMount = wsContainer.querySelector('#ned-scrubber-mount');
+      if (activeFile && isVideoFile(activeFile) && scrubberMount) {
+        _nedScrubber = await mountVideoScrubber(scrubberMount, activeFile, {
+          initialTime: getStoredSeekTime(activeFile.name),
+          onSeek: (t) => {
+            setStoredSeekTime(activeFile.name, t);
+            schedulePreview();
+          },
+        });
+      } else if (scrubberMount) {
+        scrubberMount.innerHTML = '';
       }
     },
     onInfo: async (file) => {
@@ -349,11 +365,12 @@ export async function render(container, hash) {
       };
 
       // For video files, extract a representative frame as the canvas base.
-      // For image files, load normally.
+      // Use the stored scrubber seek time if available.
       let imageSource;
       let beforeUrl;
       if (isVideoFile(file)) {
-        const frameCanvas = await extractVideoFrame(file);
+        const seekTime = getStoredSeekTime(file.name);
+        const frameCanvas = await extractVideoFrame(file, seekTime);
         imageSource = frameCanvas;
         beforeUrl = await new Promise(r => frameCanvas.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.88));
       } else {
@@ -395,6 +412,17 @@ export async function render(container, hash) {
       };
     }
   });
+
+  // Inject scrubber mount point between preview stage and carousel
+  {
+    const iwEl = wsContainer.querySelector('.ic-image-workspace');
+    const carousel = wsContainer.querySelector('.iw-carousel');
+    if (iwEl && carousel) {
+      const mount = document.createElement('div');
+      mount.id = 'ned-scrubber-mount';
+      iwEl.insertBefore(mount, carousel);
+    }
+  }
 
   if (window._icTestFolderFiles && window._icTestFolderFiles.length > 0) {
     const idx = window._icTestFolderFiles.findIndex(f => f.name === window._icTestImage?.file?.name);
