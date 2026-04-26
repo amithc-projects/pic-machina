@@ -257,15 +257,24 @@ export class ImageProcessor {
     // ── Export Variable to File ────
     if (id === 'flow-export-variable') {
       const varName = (node.params?.variableName || 'autoCaptions').replace(/[\{\}]/g, ''); 
-      const textData = context.variables.get(varName);
+      const varData = context.variables.get(varName);
 
-      if (typeof textData !== 'string') {
-        context.log?.('warn', `[flow-export-variable] Variable "{{${varName}}}" was empty or not text data. Skipping.`);
+      if (!varData) {
+        context.log?.('warn', `[flow-export-variable] Variable "{{${varName}}}" was empty. Skipping.`);
         return;
       }
 
       const outName = interpolate(node.params?.fileName || 'exported.txt', context);
-      const blob = new Blob([textData], { type: 'text/plain;charset=utf-8' });
+      
+      let blob;
+      if (varData instanceof Blob) {
+        blob = varData;
+      } else if (typeof varData === 'string') {
+        blob = new Blob([varData], { type: 'text/plain;charset=utf-8' });
+      } else {
+        context.log?.('warn', `[flow-export-variable] Variable "{{${varName}}}" is an unsupported type. Skipping.`);
+        return;
+      }
 
       results.push({ blob, filename: outName, subfolder: context.outputSubfolder });
       context.log?.('ok', `Exported sidecar variable → ${outName}`);
