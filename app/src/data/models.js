@@ -38,6 +38,14 @@ export const MODEL_REGISTRY = [
     url: 'onnx-community/Kokoro-82M-v1.0-ONNX',
     sizeBytes: 85_000_000,
     backend: 'transformers',
+  },
+  {
+    id: 'pyannote-segmentation',
+    name: 'Speaker Diarization (Pyannote)',
+    description: 'Identifies different speakers in an audio track. Used to prefix auto-generated captions with speaker labels (e.g., Speaker 1, Speaker 2).',
+    url: 'onnx-community/pyannote-segmentation-3.0',
+    sizeBytes: 15_000_000,
+    backend: 'transformers',
   }
 ];
 
@@ -112,10 +120,35 @@ export async function downloadModel(id, onProgress, signal) {
       }
 
       // For Whisper
-      const xenova = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
-      const pipeline = xenova.pipeline;
-      const env = xenova.env;
-      const pipelineTask = 'automatic-speech-recognition';
+      let pipelineTask = 'automatic-speech-recognition';
+      let hf;
+      
+      if (meta.id === 'whisper-tiny-en') {
+          hf = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      } else if (meta.id === 'pyannote-segmentation') {
+          hf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3');
+          // Pyannote uses AutoModel, not a standard pipeline, but we can cache it by calling from_pretrained
+          hf.env.allowLocalModels = false;
+          hf.env.useBrowserCache = true;
+          
+          if (onProgress) onProgress({ loaded: totalSize * 0.5, total: totalSize });
+          await hf.AutoProcessor.from_pretrained(meta.url);
+          await hf.AutoModelForAudioFrameClassification.from_pretrained(meta.url);
+          if (onProgress) onProgress({ loaded: totalSize, total: totalSize });
+          
+          const record = {
+            id,
+            name: meta.name,
+            downloadedAt: Date.now(),
+            sizeBytes: meta.sizeBytes,
+            bytes: new ArrayBuffer(1) // Placeholder to satisfy IDB UI checker
+          };
+          await dbPut('models', record);
+          return record;
+      }
+
+      const pipeline = hf.pipeline;
+      const env = hf.env;
 
       env.allowLocalModels = false;
       env.useBrowserCache = true;

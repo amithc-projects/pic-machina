@@ -1149,6 +1149,7 @@ export async function replaceAudio(videoFile, audioFile, {
       video.currentTime = Math.max(0, Math.min(t, info.duration - 0.001));
     });
 
+    const startTime = performance.now();
     const encodeVideoFrames = async () => {
       const totalFrames = Math.ceil(info.duration * fps);
       for (let f = 0; f < totalFrames; f++) {
@@ -1162,6 +1163,13 @@ export async function replaceAudio(videoFile, audioFile, {
         const vf = new VideoFrame(canvas, { timestamp: ts });
         videoEncoder.encode(vf, { keyFrame: f % Math.round(fps * 2) === 0 });
         vf.close();
+
+        if (f % Math.max(1, Math.round(fps * 2)) === 0) {
+          const pct = Math.round((f / totalFrames) * 100);
+          const elapsed = (performance.now() - startTime) / 1000;
+          const eta = Math.round((elapsed / Math.max(1, f)) * (totalFrames - f));
+          log(`${pct}% — ETA ${eta}s`);
+        }
       }
       await videoEncoder.flush();
       videoEncoder.close();

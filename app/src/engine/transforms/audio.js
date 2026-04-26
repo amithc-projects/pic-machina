@@ -125,7 +125,7 @@ registry.register({
   description: 'Translates text or precisely timed SRT captions into lifelike speech audio. Outputs to a variable that can be injected via the Replace Audio step.',
   params: [
     { name: 'inputVariable', label: 'Input Text/SRT Variable', type: 'text', defaultValue: 'autoCaptions' },
-    { name: 'voice', label: 'Voice Profile', type: 'select', options: [
+    { name: 'voice', label: 'Voice Profile (Speaker 1)', type: 'select', options: [
       { label: 'af_heart (American Female)', value: 'af_heart' },
       { label: 'af_alloy (American Female)', value: 'af_alloy' },
       { label: 'am_echo (American Male)', value: 'am_echo' },
@@ -133,6 +133,22 @@ registry.register({
       { label: 'bf_emma (British Female)', value: 'bf_emma' },
       { label: 'bm_george (British Male)', value: 'bm_george' }
     ], defaultValue: 'af_heart' },
+    { name: 'voice2', label: 'Voice Profile (Speaker 2)', type: 'select', options: [
+      { label: 'af_heart (American Female)', value: 'af_heart' },
+      { label: 'af_alloy (American Female)', value: 'af_alloy' },
+      { label: 'am_echo (American Male)', value: 'am_echo' },
+      { label: 'am_fenrir (American Male)', value: 'am_fenrir' },
+      { label: 'bf_emma (British Female)', value: 'bf_emma' },
+      { label: 'bm_george (British Male)', value: 'bm_george' }
+    ], defaultValue: 'am_echo' },
+    { name: 'voice3', label: 'Voice Profile (Speaker 3)', type: 'select', options: [
+      { label: 'af_heart (American Female)', value: 'af_heart' },
+      { label: 'af_alloy (American Female)', value: 'af_alloy' },
+      { label: 'am_echo (American Male)', value: 'am_echo' },
+      { label: 'am_fenrir (American Male)', value: 'am_fenrir' },
+      { label: 'bf_emma (British Female)', value: 'bf_emma' },
+      { label: 'bm_george (British Male)', value: 'bm_george' }
+    ], defaultValue: 'bf_emma' },
     { name: 'outputVariable', label: 'Output Variable Name', type: 'text', defaultValue: 'ttsAudio' },
   ],
   async apply(ctx, p, context) {
@@ -167,21 +183,74 @@ registry.register({
 
       if (isSrt) {
         const blocks = textData.split('\n\n');
+        let currentSentence = '';
+        let currentStartSec = -1;
+        let currentSpeakerId = 1;
+
         for (const block of blocks) {
           const lines = block.split('\n');
           if (lines.length >= 3) {
             const timeLine = lines[1];
-            const textLine = lines.slice(2).join(' ').trim();
+            let textLine = lines.slice(2).join(' ').trim().replace(/\s+/g, ' ');
+            
+            // Detect and strip speaker labels
+            const speakerMatch = textLine.match(/^\[?Speaker (\d+)\]?:?\s*/i);
+            if (speakerMatch) {
+                currentSpeakerId = parseInt(speakerMatch[1], 10);
+                textLine = textLine.substring(speakerMatch[0].length).trim();
+            }
+            
             if (textLine && timeLine.includes('-->')) {
-              const startStr = timeLine.split('-->')[0];
+              const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
               const startSec = parseSrtTime(startStr);
-              segments.push({ text: textLine, start: startSec });
-              maxDuration = Math.max(maxDuration, startSec + 30); // Pre-allocate room
+              const endSec = parseSrtTime(endStr);
+              const duration = Math.max(0, endSec - startSec);
+              
+              let remainingText = textLine;
+              let charsProcessed = 0;
+              const totalChars = Math.max(1, textLine.length);
+
+              while (remainingText.length > 0) {
+                // Find sentence terminator (., ?, !) optionally followed by quotes
+                const match = remainingText.match(/([\.\?\!][\s"'\”]*)/);
+                
+                if (match) {
+                  const splitIndex = match.index + match[0].length;
+                  const part1 = remainingText.substring(0, splitIndex);
+                  const part2 = remainingText.substring(splitIndex).trim();
+                  
+                  if (currentStartSec === -1) {
+                    const offsetTime = (charsProcessed / totalChars) * duration;
+                    currentStartSec = startSec + offsetTime;
+                  }
+                  
+                  currentSentence += (currentSentence ? ' ' : '') + part1;
+                  segments.push({ text: currentSentence.trim(), start: currentStartSec, speakerId: currentSpeakerId });
+                  maxDuration = Math.max(maxDuration, currentStartSec + 30);
+                  
+                  currentSentence = '';
+                  currentStartSec = -1;
+                  charsProcessed += part1.length + (remainingText.length - part1.length - part2.length);
+                  remainingText = part2;
+                } else {
+                  if (currentStartSec === -1) {
+                    const offsetTime = (charsProcessed / totalChars) * duration;
+                    currentStartSec = startSec + offsetTime;
+                  }
+                  currentSentence += (currentSentence ? ' ' : '') + remainingText;
+                  remainingText = '';
+                }
+              }
             }
           }
         }
+        
+        if (currentSentence.trim()) {
+           segments.push({ text: currentSentence.trim(), start: currentStartSec, speakerId: currentSpeakerId });
+           maxDuration = Math.max(maxDuration, currentStartSec + 30);
+        }
       } else {
-        segments.push({ text: textData.trim(), start: 0 });
+        segments.push({ text: textData.trim(), start: 0, speakerId: 1 });
       }
 
       log?.('info', `[flow-audio-tts] Generating audio for ${segments.length} segment(s)...`);
@@ -196,9 +265,13 @@ registry.register({
 
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
-        log?.('info', `[flow-audio-tts] Processing (${i+1}/${segments.length}): "${seg.text.substring(0, 30)}..."`);
+        let speakerVoice = p.voice || 'af_heart';
+        if (seg.speakerId === 2) speakerVoice = p.voice2 || 'am_echo';
+        if (seg.speakerId === 3) speakerVoice = p.voice3 || 'bf_emma';
         
-        const output = await tts.generate(seg.text, { voice: voiceId });
+        log?.('info', `[flow-audio-tts] Processing (${i+1}/${segments.length}) with ${speakerVoice}: "${seg.text.substring(0, 30)}..."`);
+        
+        const output = await tts.generate(seg.text, { voice: speakerVoice });
         generatedAudio.push({
           audioData: output.audio, // Float32Array
           start: seg.start
