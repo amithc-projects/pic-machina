@@ -170,16 +170,78 @@ export async function render(container, hash) {
   }
 
   async function openLightbox(pairs, startIdx) {
+    // Image-only path. The image workspace can't render videos, so video
+    // tiles are routed to openVideoLightbox instead (see thumb click
+    // handler below).
+    teardownVideoLightbox();
     currentPairs = pairs;
     container.querySelector('#out-lightbox').style.display = 'flex';
+    container.querySelector('#out-lb-content').style.display = '';
     const ws = await ensureWorkspace();
     const files = pairs.map(p => p.outputFile);
     ws.setFiles(files, startIdx);
+  }
 
+  /**
+   * Lightweight modal for video outputs. Reuses the existing lightbox
+   * backdrop and content frame but mounts a native `<video controls>`
+   * element instead of the image workspace, so video files actually play.
+   * Includes a download affordance and a close button.
+   */
+  function openVideoLightbox(file) {
+    teardownVideoLightbox();
+    // Hide the image workspace content so it doesn't show through behind
+    // the video pane.
+    const lbContent = container.querySelector('#out-lb-content');
+    if (lbContent) lbContent.style.display = 'none';
+
+    const lb = container.querySelector('#out-lightbox');
+    const url = URL.createObjectURL(file);
+    blobUrls.push(url);
+
+    const wrap = document.createElement('div');
+    wrap.id = 'out-vlb-wrap';
+    wrap.className = 'out-lightbox-content out-vlb';
+    wrap.innerHTML = `
+      <div class="out-vlb__bar">
+        <span class="out-vlb__name" title="${escHtml(file.name)}">${escHtml(file.name)}</span>
+        <button class="btn-secondary btn-sm out-vlb__download" title="Download">
+          <span class="material-symbols-outlined" style="font-size:14px">download</span>
+        </button>
+        <button class="btn-icon out-vlb__close" title="Close">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="out-vlb__stage">
+        <video class="out-vlb__video" src="${url}" controls autoplay playsinline></video>
+      </div>
+    `;
+    lb.appendChild(wrap);
+    lb.style.display = 'flex';
+
+    wrap.querySelector('.out-vlb__close')?.addEventListener('click', closeLightbox);
+    wrap.querySelector('.out-vlb__download')?.addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      a.click();
+    });
+  }
+
+  function teardownVideoLightbox() {
+    const wrap = container.querySelector('#out-vlb-wrap');
+    if (!wrap) return;
+    // Pause the video before removing the node so playback actually stops
+    // (some browsers keep audio playing if the element is detached mid-play).
+    wrap.querySelector('video')?.pause();
+    wrap.remove();
   }
 
   function closeLightbox() {
     container.querySelector('#out-lightbox').style.display = 'none';
+    teardownVideoLightbox();
+    const lbContent = container.querySelector('#out-lb-content');
+    if (lbContent) lbContent.style.display = '';
     currentPairs = [];
     blobUrls.forEach(u => URL.revokeObjectURL(u));
     blobUrls = [];
@@ -522,12 +584,18 @@ export async function render(container, hash) {
             });
           });
 
-          // Bind click handlers
+          // Bind click handlers — route video tiles to the native video
+          // player; everything else goes to the image-comparison workspace.
           galleryEl.querySelectorAll('.out-thumb').forEach(thumb => {
             thumb.addEventListener('click', e => {
               if (e.target.closest('button')) return;
               const idx = parseInt(thumb.dataset.pairIdx);
-              openLightbox(pairs, idx);
+              const pair = pairs[idx];
+              if (pair && isVideoFile(pair.outputFile)) {
+                openVideoLightbox(pair.outputFile);
+              } else {
+                openLightbox(pairs, idx);
+              }
             });
           });
           galleryEl.querySelectorAll('.out-thumb-compare').forEach(btn => {
@@ -816,6 +884,29 @@ function injectOutStyles() {
     .out-lightbox { position:fixed; inset:0; z-index:500; display:flex; align-items:center; justify-content:center; }
     .out-lightbox-bg { position:absolute; inset:0; background:rgba(0,0,0,0.85); }
     .out-lightbox-content { position:relative; z-index:1; width:92vw; height:90vh; background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,0.6); }
+
+    /* Video lightbox — separate from the image workspace path. Reuses the
+       same backdrop and frame size, but mounts a native <video> element. */
+    .out-vlb { padding:0; }
+    .out-vlb__bar {
+      display:flex; align-items:center; gap:8px;
+      padding:10px 14px; border-bottom:1px solid var(--ps-border);
+      background:var(--ps-bg-app);
+      flex-shrink:0;
+    }
+    .out-vlb__name {
+      flex:1; min-width:0;
+      font-size:13px; font-weight:500;
+      color:var(--ps-text);
+      font-family:var(--font-mono);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .out-vlb__stage {
+      flex:1; min-height:0;
+      background:#000;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .out-vlb__video { width:100%; height:100%; object-fit:contain; display:block; }
 
   `;
   document.head.appendChild(s);
