@@ -30,6 +30,14 @@ export const MODEL_REGISTRY = [
     url: 'Xenova/whisper-tiny.en',
     sizeBytes: 42_000_000,
     backend: 'transformers',
+  },
+  {
+    id: 'kokoro-82m',
+    name: 'Kokoro TTS (82M)',
+    description: 'Extremely high-quality, lightweight multi-speaker Text-to-Speech. Used for auto-dubbing and voiceover generation directly in the browser.',
+    url: 'onnx-community/Kokoro-82M-v1.0-ONNX',
+    sizeBytes: 85_000_000,
+    backend: 'transformers',
   }
 ];
 
@@ -82,15 +90,40 @@ export async function downloadModel(id, onProgress, signal) {
   if (!meta) throw new Error(`Unknown model: ${id}`);
 
   if (meta.backend === 'transformers') {
-      const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      let totalSize = meta.sizeBytes;
+
+      if (meta.id === 'kokoro-82m') {
+          const { KokoroTTS } = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm');
+          // Kokoro-JS uses Cache API implicitly. 
+          // We can't easily hook into its fetch progress, but we can await the load.
+          if (onProgress) onProgress({ loaded: totalSize * 0.5, total: totalSize }); // Fake intermediate
+          await KokoroTTS.from_pretrained(meta.url, { dtype: 'q8' });
+          if (onProgress) onProgress({ loaded: totalSize, total: totalSize });
+          
+          const record = {
+            id,
+            name: meta.name,
+            downloadedAt: Date.now(),
+            sizeBytes: meta.sizeBytes,
+            bytes: new ArrayBuffer(1) // Placeholder to satisfy IDB UI checker
+          };
+          await dbPut('models', record);
+          return record;
+      }
+
+      // For Whisper
+      const xenova = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+      const pipeline = xenova.pipeline;
+      const env = xenova.env;
+      const pipelineTask = 'automatic-speech-recognition';
+
       env.allowLocalModels = false;
       env.useBrowserCache = true;
       
       const fileProgress = new Map();
       let totalLoaded = 0;
-      let totalSize = meta.sizeBytes;
       
-      await pipeline('automatic-speech-recognition', meta.url, {
+      await pipeline(pipelineTask, meta.url, {
           progress_callback: (prog) => {
               if (prog.status === 'progress' && onProgress) {
                   fileProgress.set(prog.file, prog.loaded);

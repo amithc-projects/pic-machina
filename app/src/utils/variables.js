@@ -120,10 +120,23 @@ function applyPipe(value, pipe, ctx) {
 /**
  * Resolve a param that may be a {{recipe.x}} variable reference or a plain value.
  * Returns the raw interpolated string — caller should cast as needed (parseFloat etc.).
+ * If the string is EXACTLY a single token (e.g. "{{fileVar}}"), it returns the raw object (File, Array, etc.).
  * If val is not a string or doesn't contain tokens, it is returned as-is.
  */
 export function resolveParam(val, context) {
   if (typeof val === 'string' && val.includes('{{')) {
+    // Check if it's an exact single token
+    const exactMatch = val.trim().match(/^\{\{([^}]+)\}\}$/);
+    if (exactMatch) {
+      try {
+        const rawValue = resolveExpr(exactMatch[1].trim(), context);
+        if (rawValue !== null && rawValue !== undefined) {
+          return rawValue;
+        }
+      } catch {
+        // Fallthrough to standard string interpolation if it fails
+      }
+    }
     return interpolate(val, context);
   }
   return val;
@@ -138,9 +151,10 @@ export function resolveParams(params, context) {
   const out = {};
   for (const [k, v] of Object.entries(params)) {
     if (typeof v === 'string' && v.includes('{{')) {
-      const resolved = interpolate(v, context);
-      // If the original param was a template token (not mixed text), try to cast to number/boolean
-      if (/^\{\{[^}]+\}\}$/.test(v.trim())) {
+      const resolved = resolveParam(v, context);
+      
+      // If the original param was a template token and resolved to a string, try to cast
+      if (typeof resolved === 'string' && /^\{\{([^}]+)\}\}$/.test(v.trim())) {
         if (resolved === 'true')  { out[k] = true;  continue; }
         if (resolved === 'false') { out[k] = false; continue; }
         const n = Number(resolved);

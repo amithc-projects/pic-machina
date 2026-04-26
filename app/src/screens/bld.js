@@ -6,7 +6,7 @@
  * Accessed via #bld?id=<recipeId>
  */
 
-import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave, setRecipeThumbnail, clearRecipeThumbnail } from '../data/recipes.js';
+import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave, setRecipeThumbnail, clearRecipeThumbnail, getAllRecipes } from '../data/recipes.js';
 import { getAllBlocks } from '../data/blocks.js';
 import { navigate } from '../main.js';
 import { showConfirm } from '../utils/dialogs.js';
@@ -239,8 +239,28 @@ export async function render(container, hash) {
   bldCompareLayout = localStorage.getItem('ic-bld-cmp-mode') || 'slider';
 
   // Auto-expand config panel for brand-new recipes
-  const isNew = draft.name === 'Untitled Recipe' && !draft.description && !draft.nodes?.length;
+  const isNew = (!draft.name || draft.name === 'Untitled Recipe') && !draft.description && !draft.nodes?.length;
   let configOpen = isNew;
+
+  // ── Name checking and masking logic ───────────────────────
+  const allRecipes = await getAllRecipes();
+  const otherNames = allRecipes.filter(r => r.id !== draft.id && r.name).map(r => r.name.toLowerCase().trim());
+
+  function checkNamingState() {
+    const nameStr = (draft.name || '').trim();
+    const isUnnamed = !nameStr;
+    const isDuplicate = otherNames.includes(nameStr.toLowerCase());
+    const isInvalid = isUnnamed;
+
+    const bldScreen = container.querySelector('.bld-screen');
+    if (bldScreen) bldScreen.classList.toggle('is-unnamed', isInvalid);
+    
+    const hint = container.querySelector('#bld-name-hint');
+    if (hint) hint.style.display = isUnnamed ? 'flex' : 'none';
+    
+    const warn = container.querySelector('#bld-name-warn');
+    if (warn) warn.style.display = (!isUnnamed && isDuplicate) ? 'flex' : 'none';
+  }
 
   function getFlatItems() {
     return flattenNodes(draft.nodes);
@@ -295,13 +315,23 @@ export async function render(container, hash) {
           </div>
 
           <div class="bld-config-form">
-            <label class="ic-label">Name</label>
+            <label class="ic-label">Name <span style="color:var(--ps-red)">*</span></label>
             <input type="text" id="bld-name" class="ic-input" value="${escHtml(draft.name)}" placeholder="Recipe name…">
 
             <label class="ic-label" style="margin-top:12px">Description</label>
             <textarea id="bld-desc" class="ic-input" rows="3" placeholder="What does this recipe do?">${escHtml(draft.description || '')}</textarea>
 
-            <label class="ic-label" style="margin-top:12px">Thumbnail</label>
+            <div id="bld-name-hint" class="ic-badge ic-badge--amber" style="margin-top:12px; display:none; flex-wrap:wrap; white-space:normal; line-height:1.3">
+              <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; flex-shrink:0">info</span>
+              Please provide a Name to start building your recipe.
+            </div>
+            <div id="bld-name-warn" class="ic-badge ic-badge--amber" style="margin-top:12px; display:none; flex-wrap:wrap; white-space:normal; line-height:1.3; color:var(--ps-warning)">
+              <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; flex-shrink:0">warning</span>
+              A recipe with this name already exists.
+            </div>
+
+            <div id="bld-config-advanced" style="transition: opacity 0.2s">
+              <label class="ic-label" style="margin-top:12px">Thumbnail</label>
             <div id="bld-thumb-preview" style="width:100%;height:80px;border-radius:6px;border:1px solid var(--ps-border);background:var(--ps-bg-overlay);margin-bottom:6px;overflow:hidden;position:relative;">
               ${draft.thumbnail ? `<img src="${draft.thumbnail}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;" alt="">` : ''}
             </div>
@@ -371,6 +401,7 @@ export async function render(container, hash) {
                   : (draft.params || []).map((p, i) => buildParamRow(p, i)).join('')}
               </div>
             </div>
+            </div> <!-- bld-config-advanced -->
           </div>
         </div>
 
@@ -405,6 +436,13 @@ export async function render(container, hash) {
     ${buildAddNodeModal(grouped, allBlocks)}`;
 
   injectBldStyles();
+  checkNamingState();
+
+  if (isNew) {
+    setTimeout(() => {
+      container.querySelector('#bld-name')?.focus();
+    }, 50);
+  }
 
   // ── Config panel collapse ─────────────────────────────────
   const configPanel = container.querySelector('.bld-config');
@@ -557,6 +595,34 @@ export async function render(container, hash) {
       const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
       const afterTitle = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
 
+      // ── Check if the previewed step is non-previewable ────────
+      let overlayWarning = null;
+      if (nodeEnt) {
+        if (nodeEnt.node.type !== 'transform') {
+          // logic structures have no visual preview
+          overlayWarning = '(Not all steps are previewable)';
+        } else {
+          const NO_PREVIEW_IDS = new Set([
+            'flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx',
+            'flow-create-zip', 'flow-video-wall', 'flow-video-stitcher', 'flow-geo-timeline',
+            'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack',
+            'flow-template-aggregator', 'flow-face-swap', 'flow-gif-from-states',
+            'flow-video-concat',
+            'flow-video-convert', 'flow-video-trim', 'flow-video-compress',
+            'flow-video-change-fps', 'flow-video-speed',
+            'flow-video-strip-audio', 'flow-video-extract-audio',
+            'flow-video-remix-audio',
+          ]);
+          const tid = nodeEnt.node.transformId;
+          const def = registry.get(tid);
+          const isVideoStep = def?.sourceTransformId || def?.categoryKey === 'video-effect';
+
+          if (NO_PREVIEW_IDS.has(tid) || (!isVideo && isVideoStep)) {
+             overlayWarning = '(Not all steps are previewable)';
+          }
+        }
+      }
+
       let beforeUrl = isVideo && imageSource
         ? (() => { const c = imageSource; const b = document.createElement('canvas'); b.width = c.width; b.height = c.height; b.getContext('2d').drawImage(c, 0, 0); return new Promise(r => b.toBlob(bl => r(URL.createObjectURL(bl)), 'image/jpeg', 0.9)); })()
         : Promise.resolve(URL.createObjectURL(file));
@@ -583,6 +649,7 @@ export async function render(container, hash) {
         afterUrl,
         beforeLabel: beforeTitle,
         afterLabel: afterTitle,
+        overlayWarning,
         context
       };
     }
@@ -673,6 +740,7 @@ export async function render(container, hash) {
     if (cn) cn.textContent = draft.name || 'Untitled';
     const hn = container.querySelector('#bld-header-name');
     if (hn) hn.textContent = draft.name || 'Untitled Recipe';
+    checkNamingState();
     markDirty();
   });
 
@@ -1305,6 +1373,16 @@ function injectBldStyles() {
   s.textContent = `
     .bld-screen { display:flex; flex-direction:column; height:100%; }
     .bld-body { display:flex; flex:1; overflow:hidden; }
+
+    /* Naming mask */
+    .bld-screen.is-unnamed #bld-config-advanced,
+    .bld-screen.is-unnamed .bld-nodes-panel,
+    .bld-screen.is-unnamed #bld-workspace-container {
+      opacity: 0.15;
+      pointer-events: none;
+      user-select: none;
+      filter: grayscale(1);
+    }
 
     /* 3-column header */
     .bld-header-3col { display:grid !important; grid-template-columns:1fr auto 1fr; }

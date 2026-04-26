@@ -109,7 +109,7 @@ function recipeCardHTML(recipe) {
         </div>
       </div>
       <div class="lib-card__body">
-        <h3 class="lib-card__name">${recipe.name}</h3>
+        <h3 class="lib-card__name">${recipe.name || 'Unnamed Recipe'}</h3>
         <p class="lib-card__desc">${recipe.description || ''}</p>
         <div class="lib-card__meta">
           <span class="mono text-sm text-muted">
@@ -493,7 +493,7 @@ export async function render(container) {
   container.querySelector('#btn-new-recipe')?.addEventListener('click', async () => {
     const recipe = {
       id:          uuid(),
-      name:        'Untitled Recipe',
+      name:        '',
       description: '',
       isSystem:    false,
       coverColor:  '#0077ff',

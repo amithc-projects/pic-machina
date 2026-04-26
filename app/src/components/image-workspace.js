@@ -384,14 +384,21 @@ export class ImageWorkspace {
 
   renderCurrentState() {
     if (!this.lastRenderResult) return;
-    const { beforeUrl, afterUrl, beforeLabel, afterLabel } = this.lastRenderResult;
+    const { beforeUrl, afterUrl, beforeLabel, afterLabel, overlayWarning } = this.lastRenderResult;
 
     const effectiveCompareMode = this._tempCompareMode ?? this.compareMode;
+
+    const overlayHtml = overlayWarning ? `
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);background:rgba(0,0,0,0.7);color:var(--ps-text-muted);padding:8px 16px;border-radius:6px;font-size:13px;z-index:20;display:flex;align-items:center;gap:8px;pointer-events:none;backdrop-filter:blur(4px);white-space:nowrap;border:1px solid var(--ps-border);">
+        <span class="material-symbols-outlined" style="font-size:16px">visibility_off</span>
+        ${overlayWarning}
+      </div>` : '';
 
     if (!effectiveCompareMode) {
       this.stage.innerHTML = `
         <div class="iw-single-wrap">
           <img src="${afterUrl}" class="iw-cmp-img" style="position:relative" draggable="false">
+          ${overlayHtml}
           <span class="iw-cmp-label iw-cmp-label--r" style="display:flex;align-items:center;">
              ${afterLabel || 'Result'}
              <a href="${afterUrl}" target="_blank" title="Open in new tab" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
@@ -417,6 +424,7 @@ export class ImageWorkspace {
                <a href="${afterUrl}" target="_blank" title="Open in new tab" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
             </div>
             <img src="${afterUrl}" class="iw-side-img" draggable="false">
+            ${overlayHtml}
           </div>
         </div>`;
     } else {
@@ -424,6 +432,7 @@ export class ImageWorkspace {
         <div class="iw-cmp-wrap" id="iw-cmp-wrap">
           <img class="iw-cmp-img" id="iw-cmp-before" src="${beforeUrl}" draggable="false" style="clip-path:inset(0 50% 0 0)">
           <img class="iw-cmp-img" id="iw-cmp-after" src="${afterUrl}" draggable="false" style="clip-path:inset(0 0 0 50%)">
+          ${overlayHtml}
           <div class="iw-cmp-handle" id="iw-cmp-handle" style="left:50%">
             <div class="iw-cmp-handle-line"></div>
             <div class="iw-cmp-handle-knob"><span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span></div>

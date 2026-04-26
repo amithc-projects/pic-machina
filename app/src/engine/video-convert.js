@@ -1062,3 +1062,158 @@ export async function changeVideoSpeed(file, {
     URL.revokeObjectURL(url);
   }
 }
+export async function replaceAudio(videoFile, audioFile, {
+  bitrate = 8_000_000,
+  audioBitrate = 128_000,
+  onLog
+} = {}) {
+  const log = (msg) => onLog?.('info', msg);
+  log(`replaceAudio: preparing "${videoFile.name}" with audio "${audioFile.name}"...`);
+
+  // 1. Decode new audio file using Web Audio API
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+  const audioBuffer = await audioCtx.decodeAudioData(await audioFile.arrayBuffer());
+  await audioCtx.close();
+  
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  log(`Audio decoded: ${numChannels} channels, ${sampleRate}Hz, duration: ${audioBuffer.duration.toFixed(2)}s`);
+
+  // 2. Setup video extraction
+  const info = await getVideoInfo(videoFile);
+  const fps = 30; // Standardize to 30 for simplicity or use info
+  const rawW = info.width;
+  const rawH = info.height;
+  const encW = rawW % 2 === 0 ? rawW : rawW + 1;
+  const encH = rawH % 2 === 0 ? rawH : rawH + 1;
+
+  const url = URL.createObjectURL(videoFile);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  document.body.appendChild(video);
+
+  try {
+    await new Promise((res, rej) => {
+      video.onloadedmetadata = res;
+      video.onerror = () => rej(new Error(`Failed to load video: ${videoFile.name}`));
+      video.src = url;
+      video.load();
+    });
+
+    const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+    const target = new ArrayBufferTarget();
+    const muxer = new Muxer({
+      target,
+      video: { codec: 'avc', width: encW, height: encH },
+      audio: { codec: 'aac', numberOfChannels: numChannels, sampleRate: sampleRate },
+      fastStart: 'in-memory',
+    });
+
+    let encoderReject;
+    const encoderError = new Promise((_, rej) => { encoderReject = rej; });
+
+    // Video Encoder
+    const videoEncoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error: (e) => encoderReject(new Error(`VideoEncoder error: ${e.message ?? e}`)),
+    });
+    videoEncoder.configure({
+      codec: avcCodec(encW, encH),
+      width: encW,
+      height: encH,
+      bitrate: parseInt(bitrate) || 8_000_000
+    });
+
+    // Audio Encoder
+    const audioEncoder = new AudioEncoder({
+      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+      error: (e) => encoderReject(new Error(`AudioEncoder error: ${e.message ?? e}`)),
+    });
+    audioEncoder.configure({
+      codec: 'mp4a.40.2', // AAC-LC
+      sampleRate,
+      numberOfChannels: numChannels,
+      bitrate: audioBitrate
+    });
+
+    // Setup canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = encW;
+    canvas.height = encH;
+    const ctx = canvas.getContext('2d');
+    
+    const seekTo = (t) => new Promise((res, rej) => {
+      video.onseeked = res;
+      video.onerror = () => rej(new Error('Seek failed'));
+      video.currentTime = Math.max(0, Math.min(t, info.duration - 0.001));
+    });
+
+    const encodeVideoFrames = async () => {
+      const totalFrames = Math.ceil(info.duration * fps);
+      for (let f = 0; f < totalFrames; f++) {
+        const t = f / fps;
+        if (t >= info.duration) break;
+        await seekTo(t);
+        ctx.drawImage(video, 0, 0, encW, encH);
+
+        while (videoEncoder.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 0));
+        const ts = f * (1_000_000 / fps);
+        const vf = new VideoFrame(canvas, { timestamp: ts });
+        videoEncoder.encode(vf, { keyFrame: f % Math.round(fps * 2) === 0 });
+        vf.close();
+      }
+      await videoEncoder.flush();
+      videoEncoder.close();
+    };
+
+    const encodeAudioData = async () => {
+      // Create planar audio data
+      const planes = [];
+      for (let c = 0; c < numChannels; c++) {
+        planes.push(audioBuffer.getChannelData(c));
+      }
+      
+      const totalSamples = audioBuffer.length;
+      const chunkSize = sampleRate; // 1 second chunks
+      
+      for (let offset = 0; offset < totalSamples; offset += chunkSize) {
+        const frameCount = Math.min(chunkSize, totalSamples - offset);
+        
+        // Interleave or Planar? AudioData expects planar data in WebCodecs by default for f32-planar
+        const planarData = new Float32Array(frameCount * numChannels);
+        for (let c = 0; c < numChannels; c++) {
+          planarData.set(planes[c].subarray(offset, offset + frameCount), c * frameCount);
+        }
+        
+        const audioData = new AudioData({
+          format: 'f32-planar',
+          sampleRate,
+          numberOfFrames: frameCount,
+          numberOfChannels: numChannels,
+          timestamp: (offset / sampleRate) * 1_000_000,
+          data: planarData
+        });
+        
+        while (audioEncoder.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 0));
+        audioEncoder.encode(audioData);
+        audioData.close();
+      }
+      await audioEncoder.flush();
+      audioEncoder.close();
+    };
+
+    await Promise.race([
+      Promise.all([encodeVideoFrames(), encodeAudioData()]),
+      encoderError
+    ]);
+
+    muxer.finalize();
+    log(`replaceAudio complete: video ${info.duration.toFixed(1)}s, audio ${audioBuffer.duration.toFixed(1)}s`);
+    return new Blob([target.buffer], { type: 'video/mp4' });
+    
+  } finally {
+    document.body.removeChild(video);
+    URL.revokeObjectURL(url);
+  }
+}
