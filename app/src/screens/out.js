@@ -13,6 +13,7 @@ import { navigate }                            from '../main.js';
 import { formatDateTime, formatBytes, uuid, now } from '../utils/misc.js';
 import { showConfirm }                            from '../utils/dialogs.js';
 import { getSettings }                            from '../utils/settings.js';
+import { backfillRunThumbnails }                  from '../utils/run-thumbnail.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -34,6 +35,28 @@ function durationStr(run) {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms/1000).toFixed(1)}s`;
   return `${Math.floor(ms/60000)}m ${Math.round((ms%60000)/1000)}s`;
+}
+
+/**
+ * Render the thumbnail slot for a run row.
+ *  - If the run has a cached `thumbnail` data URL → render the image.
+ *  - Otherwise render a placeholder (spinner for completed runs that are
+ *    candidates for backfill, status icon for everything else).
+ */
+function thumbSlotHTML(run) {
+  if (run.thumbnail) {
+    return `<div class="out-run-thumb" data-thumb-id="${run.id}">
+      <img class="out-run-thumb__img" src="${run.thumbnail}" alt="" loading="lazy" decoding="async">
+    </div>`;
+  }
+  // Placeholder. Backfill step replaces innerHTML once the thumb is ready.
+  const placeholderIcon = run.status === 'completed' ? 'image' :
+                          run.status === 'running'   ? 'sync' :
+                          run.status === 'failed'    ? 'error' :
+                                                        'block';
+  return `<div class="out-run-thumb out-run-thumb--placeholder" data-thumb-id="${run.id}">
+    <span class="material-symbols-outlined">${placeholderIcon}</span>
+  </div>`;
 }
 
 export async function render(container, hash) {
@@ -226,6 +249,22 @@ export async function render(container, hash) {
     bindRunActions();
     initFilters(runs, container);
 
+    // Lazily fill in any missing thumbnails. Each run's first output is
+    // read from disk, scaled into a small JPEG, and persisted to its run
+    // record so subsequent renders are instant. We update the DOM in
+    // place as each thumbnail resolves.
+    backfillRunThumbnails(runs, (run, dataUrl) => {
+      const slot = container.querySelector(`.out-run-thumb[data-thumb-id="${run.id}"]`);
+      if (!slot) return;
+      if (!dataUrl) {
+        // Generation failed/skipped — leave the placeholder where it is.
+        slot.classList.add('out-run-thumb--unavailable');
+        return;
+      }
+      slot.classList.remove('out-run-thumb--placeholder');
+      slot.innerHTML = `<img class="out-run-thumb__img" src="${dataUrl}" alt="" loading="lazy" decoding="async">`;
+    }).catch(err => console.warn('[out] thumbnail backfill failed', err));
+
     // Auto-open run from ?run= query param (e.g. navigated from QUE "View Results")
     if (autoRunId) {
       const targetRow = container.querySelector(`.out-run-row[data-id="${autoRunId}"]`);
@@ -245,10 +284,12 @@ export async function render(container, hash) {
   }
 
   function runRowHTML(run) {
+    const thumbHTML = thumbSlotHTML(run);
     return `
       <div class="out-run-row" data-id="${run.id}">
         <div class="out-run-header" data-expand-id="${run.id}">
           <span class="material-symbols-outlined out-run-chevron" style="font-size:16px;color:var(--ps-text-faint);transition:transform 200ms">chevron_right</span>
+          ${thumbHTML}
           <div class="out-run-info">
             <div class="out-run-name">${escHtml(run.recipeName || 'Unknown Recipe')}</div>
             <div class="out-run-meta">
@@ -705,6 +746,23 @@ function injectOutStyles() {
     .out-run-row { background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:10px; overflow:hidden; }
     .out-run-header { display:flex; align-items:center; gap:10px; padding:12px 14px; cursor:pointer; transition:background 100ms; }
     .out-run-header:hover { background:var(--ps-bg-hover); }
+
+    /* Run thumbnail (left of the row info). 16:10 cover-crop matches the
+       JPEG written by ensureRunThumbnail(). */
+    .out-run-thumb {
+      flex-shrink: 0;
+      width: 64px; height: 40px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--ps-bg-app);
+      border: 1px solid var(--ps-border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--ps-text-faint);
+    }
+    .out-run-thumb__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .out-run-thumb--placeholder .material-symbols-outlined { font-size: 20px; opacity: 0.55; }
+    .out-run-thumb--unavailable { opacity: 0.6; }
+
     .out-run-info { flex:1; overflow:hidden; }
     .out-run-name { font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:3px; }
     .out-run-meta { display:flex; gap:12px; flex-wrap:wrap; }
