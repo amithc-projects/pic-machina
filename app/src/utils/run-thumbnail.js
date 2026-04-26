@@ -62,6 +62,53 @@ export async function captureRunOutputFiles(run, outputHandle) {
   }
 }
 
+/**
+ * Resolve a run's actual output File objects, in display order. Uses the
+ * `run.outputFiles` manifest where available (modern runs) and falls back
+ * to mtime-window filtering for legacy runs that predate the manifest.
+ *
+ * Includes both images and videos so callers don't have to filter.
+ *
+ * Returns an empty array on any failure (folder missing, permission lost,
+ * etc.). Callers should treat the empty array as "nothing to show".
+ *
+ * @param {object} run
+ * @returns {Promise<File[]>}
+ */
+export async function getRunOutputFiles(run) {
+  if (!run || !run.outputHandleObj) return [];
+  try {
+    const subfolder = run.outputFolder || 'output';
+    const subHandle = await getOrCreateOutputSubfolder(run.outputHandleObj, subfolder);
+
+    if (typeof subHandle.queryPermission === 'function') {
+      const perm = await subHandle.queryPermission({ mode: 'read' });
+      if (perm !== 'granted') return [];
+    }
+
+    if (Array.isArray(run.outputFiles) && run.outputFiles.length) {
+      // Manifest path — open by name. Skip files that have since been
+      // moved/deleted rather than throwing, so the caller still gets a
+      // partial gallery.
+      const files = [];
+      for (const name of run.outputFiles) {
+        try {
+          const fh = await subHandle.getFileHandle(name);
+          files.push(await fh.getFile());
+        } catch { /* file gone — skip */ }
+      }
+      return files;
+    }
+
+    // Legacy fallback for runs that don't have a manifest yet.
+    const all = await listImages(subHandle, { includeVideo: true });
+    return filterFilesForRun(all, run);
+  } catch (err) {
+    console.warn('[run-thumbnail] getRunOutputFiles failed', err);
+    return [];
+  }
+}
+
 const THUMB_WIDTH  = 160;
 const THUMB_HEIGHT = 100;
 const THUMB_QUALITY = 0.78;
