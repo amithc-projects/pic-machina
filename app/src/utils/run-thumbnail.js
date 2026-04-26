@@ -2,17 +2,21 @@
  * PicMachina — run thumbnail helper
  *
  * Lazily generates and caches a small JPEG thumbnail for a completed run,
- * derived from the first available output (image, or one frame from a
+ * derived from one of the run's output files (image, or one frame from a
  * video). The result is persisted on the run record's `thumbnail` field
  * (data URL) so subsequent renders are free.
  *
- * Idempotent: if `run.thumbnail` is already set, the existing value is
- * returned without touching disk.
+ * Run → output correlation: at end-of-batch, `captureRunOutputFiles` is
+ * called from `engine/batch.js` to record the exact filenames this run
+ * produced into `run.outputFiles`. The thumbnail picker then opens those
+ * files by name — it never has to guess by mtime or lexical order, so
+ * runs sharing an output folder can't collide. For legacy runs that
+ * predate the manifest, the picker falls back to mtime filtering against
+ * the run's [startedAt, finishedAt] window.
  *
- * Failure is silent — the helper resolves to `null` and leaves the run
- * record untouched on any error (folder gone, permissions denied,
- * unsupported codec, etc.). Callers should treat a null return as "no
- * thumbnail available right now" and degrade to a placeholder.
+ * Failure is silent — every public helper resolves to a sensible empty
+ * value on error (null thumbnail, empty filenames). Callers should treat
+ * a null thumbnail as "not available right now" and show a placeholder.
  */
 
 import { getRun, updateRun } from '../data/runs.js';
@@ -20,17 +24,57 @@ import { getOrCreateOutputSubfolder, listImages } from '../data/folders.js';
 import { generateBaselineThumbnail } from './thumbnails.js';
 import { extractVideoFrame, isVideoFile } from './video-frame.js';
 
+/**
+ * Capture the list of output filenames produced by a run and stamp them
+ * onto the run record. Called once at end-of-batch (status === 'completed'),
+ * when no other batch is writing to the same folder.
+ *
+ * Why this exists: when several runs share an output folder, we can't
+ * tell at render time which file belongs to which run. By recording the
+ * filenames on the run record itself — keyed by run id — we get an exact
+ * correlation that survives folder churn, clock drift, and re-runs.
+ *
+ * The capture itself is mtime-filtered for safety (in case the folder
+ * already contained files from other tools / previous runs we didn't
+ * track). At end-of-batch, mtime is unambiguous because no other
+ * PicMachina batch is writing concurrently.
+ *
+ * Mutates `run` in place and returns the captured filenames. Safe to
+ * call before `updateRun(run)` — the caller persists.
+ *
+ * @param {object} run                            run record
+ * @param {FileSystemDirectoryHandle} outputHandle parent output folder handle
+ * @returns {Promise<string[]>}
+ */
+export async function captureRunOutputFiles(run, outputHandle) {
+  if (!run || !outputHandle) return [];
+  try {
+    const subfolder = run.outputFolder || 'output';
+    const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
+    const all = await listImages(subHandle, { includeVideo: true });
+    const ours = filterFilesForRun(all, run);
+    const names = ours.map(f => f.name);
+    run.outputFiles = names;
+    return names;
+  } catch (err) {
+    console.warn('[run-thumbnail] capture failed', err);
+    return [];
+  }
+}
+
 const THUMB_WIDTH  = 160;
 const THUMB_HEIGHT = 100;
 const THUMB_QUALITY = 0.78;
 
-// Bump when the selection logic changes so previously-cached (now-incorrect)
-// thumbnails are regenerated on next render.
+// Bump when the selection logic changes so previously-cached (now-stale)
+// thumbnails are transparently regenerated on next render.
 //   v1 = naive listImages()[0] — picked the lexically-first file regardless
 //        of which run produced it.
-//   v2 = filter by file.lastModified within [startedAt, finishedAt] so the
-//        thumbnail is guaranteed to come from this exact run's outputs.
-export const THUMBNAIL_VERSION = 2;
+//   v2 = filter by file.lastModified within [startedAt, finishedAt] —
+//        correct most of the time, but reliant on filesystem clocks.
+//   v3 = use `run.outputFiles` recorded at batch completion (manifest);
+//        fall back to mtime filter only for runs that predate v3.
+export const THUMBNAIL_VERSION = 3;
 
 // Filesystem timestamp resolution + minor clock drift between the JS clock
 // (Date.now used for startedAt/finishedAt) and what the OS stamps on files.
@@ -72,23 +116,34 @@ export async function ensureRunThumbnail(run, { persist = true } = {}) {
       if (perm !== 'granted') return null;
     }
 
-    // List outputs (images and videos), then narrow to ones written within
-    // this run's time window. Multiple runs can share an output folder
-    // (overwrites or different filenames); without the mtime filter we'd
-    // pick whichever file sorted lexically first.
-    const allFiles = await listImages(subHandle, { includeVideo: true });
-    if (!allFiles.length) return null;
-
-    const ours = filterFilesForRun(allFiles, run);
-    if (!ours.length) {
-      // No file in this run's mtime window — could mean the outputs were
-      // moved/deleted, or the user re-ran into the same folder and the
-      // older outputs are gone. Leave thumbnail untouched and bail.
-      return null;
+    // Pick the source file. Two strategies, in priority order:
+    //
+    // 1. Manifest: `run.outputFiles` is recorded at batch completion and
+    //    contains the exact filenames this run produced. This is the
+    //    correct source of truth — it correlates outputs to runs by id,
+    //    not by guessing — and works even when several runs share a
+    //    single output folder.
+    //
+    // 2. Legacy fallback: for runs created before the manifest existed,
+    //    we filter the folder listing by `lastModified` against the run's
+    //    [startedAt, finishedAt] window. Best-effort only.
+    let first = null;
+    if (Array.isArray(run.outputFiles) && run.outputFiles.length) {
+      for (const name of run.outputFiles) {
+        try {
+          const fh = await subHandle.getFileHandle(name);
+          first = await fh.getFile();
+          break;
+        } catch { /* file may have been moved/deleted — try next */ }
+      }
+      if (!first) return null;
+    } else {
+      const allFiles = await listImages(subHandle, { includeVideo: true });
+      if (!allFiles.length) return null;
+      const ours = filterFilesForRun(allFiles, run);
+      if (!ours.length) return null;
+      first = ours[0];
     }
-
-    // Earliest write of this run is the most representative "first output".
-    const first = ours[0];
 
     // Build a source canvas / blob suitable for the thumbnailer.
     let source;

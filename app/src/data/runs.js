@@ -15,6 +15,12 @@
  *   successCount: number,
  *   failCount:    number,
  *   log:          LogEntry[],    // { ts, level, msg }
+ *
+ *   // Optional, populated post-completion:
+ *   outputFiles:        string[]  // filenames this run produced (for run→output correlation)
+ *   thumbnail:          string    // data URL — small JPEG cover of one output
+ *   thumbnailVersion:   number    // see utils/run-thumbnail.js
+ *   thumbnailSourceName:string    // filename the thumbnail was derived from
  * }
  */
 

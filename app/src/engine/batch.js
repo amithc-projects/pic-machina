@@ -11,6 +11,7 @@
 
 import { writeFile, getOrCreateOutputSubfolder } from '../data/folders.js';
 import { createRun, updateRun, appendLog }        from '../data/runs.js';
+import { captureRunOutputFiles }                  from '../utils/run-thumbnail.js';
 import { readSidecar, flattenSidecarVars }        from '../data/sidecar.js';
 import { getAllBlocks }                            from '../data/blocks.js';
 import { ImageProcessor }                         from './processor.js';
@@ -702,6 +703,11 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
   run.status       = 'completed';
   run.successCount = successCount;
   run.failCount    = failCount;
+  // Record the exact filenames this run produced so the History screen
+  // (and any other consumer) can correlate outputs to this run by id,
+  // not by mtime or lexical order. Safe here because no other batch is
+  // writing to the folder concurrently.
+  await captureRunOutputFiles(run, outputHandle);
   await updateRun(run);
   onComplete(run);
 
@@ -814,6 +820,9 @@ export async function startBatch({ recipe, files, inputHandle, outputHandle, sub
       run.status        = 'completed';
       run.successCount  = payload.successCount;
       run.failCount     = payload.failCount;
+      // Record the exact filenames this run produced (see main-thread
+      // path for rationale).
+      await captureRunOutputFiles(run, outputHandle);
       await updateRun(run);
       wrappedComplete(run);
     }
