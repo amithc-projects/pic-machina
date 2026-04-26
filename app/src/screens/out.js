@@ -13,7 +13,8 @@ import { navigate }                            from '../main.js';
 import { formatDateTime, formatBytes, uuid, now } from '../utils/misc.js';
 import { showConfirm }                            from '../utils/dialogs.js';
 import { getSettings }                            from '../utils/settings.js';
-import { backfillRunThumbnails, THUMBNAIL_VERSION } from '../utils/run-thumbnail.js';
+import { backfillRunThumbnails, THUMBNAIL_VERSION, getRunOutputFiles } from '../utils/run-thumbnail.js';
+import { isVideoFile }                              from '../utils/video-frame.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -277,7 +278,7 @@ export async function render(container, hash) {
         const icon   = targetRow.querySelector('.out-run-chevron');
         if (detail) detail.style.display = 'block';
         if (icon)   icon.style.transform = 'rotate(90deg)';
-        // Click "View Files" button
+        // Click "View Output" button
         setTimeout(() => {
           targetRow.querySelector('.out-btn-gallery')?.click();
           targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -307,9 +308,9 @@ export async function render(container, hash) {
             <span class="out-stat-inline"><span class="material-symbols-outlined" style="font-size:13px">schedule</span>${durationStr(run)}</span>
           </div>
           <div class="out-run-actions">
-            ${run.status === 'completed' ? `<button class="btn-secondary out-btn-gallery" data-id="${run.id}" data-subfolder="${run.outputFolder || 'output'}" style="font-size:12px;padding:5px 10px">
+            ${run.status === 'completed' ? `<button class="btn-secondary out-btn-gallery" data-id="${run.id}" data-subfolder="${run.outputFolder || 'output'}" title="Show only this run's outputs" style="font-size:12px;padding:5px 10px">
               <span class="material-symbols-outlined" style="font-size:14px">photo_library</span>
-              View Files
+              View Output
             </button>
             <button class="btn-secondary out-btn-browse" data-run-id="${run.id}" title="Browse in Folder Viewer" style="font-size:12px;padding:5px 10px">
               <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
@@ -405,17 +406,21 @@ export async function render(container, hash) {
             return;
           }
 
-          const outputFiles = await listImages(subHandle);
+          // Resolve only this run's outputs (manifest-first, mtime-fallback
+          // for legacy runs). Includes video files alongside images so
+          // video-producing recipes show their results too.
+          const outputFiles = await getRunOutputFiles(run);
           if (!outputFiles.length) {
-            galleryEl.innerHTML = `<div class="out-gallery-empty">No images found in output folder.</div>`;
+            galleryEl.innerHTML = `<div class="out-gallery-empty">No output files found for this run.</div>`;
             return;
           }
 
-          // Try to find matching input files
+          // Try to find matching input files for the before/after compare
+          // affordance. Inputs are images only — videos are output-only.
           const inputHandle = await getFolder('input');
           let inputFiles = [];
           if (inputHandle) {
-            try { inputFiles = await listImages(inputHandle); } catch {}
+            try { inputFiles = await listImages(inputHandle, { includeVideo: true }); } catch {}
           }
 
           const inputByBaseName = new Map();
@@ -437,15 +442,23 @@ export async function render(container, hash) {
             return { outputFile: outFile, inputFile: inFile };
           });
 
-          // Render gallery
+          // Render gallery — videos use a <video> element with metadata
+          // preload (browser shows the first frame as poster), images use
+          // a plain <img>. A play badge sits in the corner of video tiles
+          // so they're identifiable at a glance.
           const thumbs = pairs.map((pair, i) => {
             const url = URL.createObjectURL(pair.outputFile);
-            return `<div class="out-thumb" data-pair-idx="${i}">
-              <img src="${url}" class="out-thumb-img" draggable="false" loading="lazy">
+            const isVideo = isVideoFile(pair.outputFile);
+            const media = isVideo
+              ? `<video src="${url}" class="out-thumb-img" muted playsinline preload="metadata"></video>
+                 <span class="out-thumb-badge" title="Video"><span class="material-symbols-outlined">play_circle</span></span>`
+              : `<img src="${url}" class="out-thumb-img" draggable="false" loading="lazy">`;
+            return `<div class="out-thumb${isVideo ? ' out-thumb--video' : ''}" data-pair-idx="${i}">
+              ${media}
               <div class="out-thumb-overlay">
                 <span class="out-thumb-name">${escHtml(pair.outputFile.name)}</span>
                 <div class="out-thumb-btns">
-                  ${pair.inputFile ? `<button class="btn-icon out-thumb-compare" data-pair-idx="${i}" title="Compare">
+                  ${pair.inputFile && !isVideo ? `<button class="btn-icon out-thumb-compare" data-pair-idx="${i}" title="Compare">
                     <span class="material-symbols-outlined" style="font-size:14px">compare</span>
                   </button>` : ''}
                   <button class="btn-icon out-thumb-download" data-pair-idx="${i}" title="Download">
@@ -785,6 +798,14 @@ function injectOutStyles() {
     .out-thumb { position:relative; border-radius:8px; overflow:hidden; cursor:pointer; aspect-ratio:1; background:var(--ps-bg-surface); border:1px solid var(--ps-border); }
     .out-thumb:hover .out-thumb-overlay { opacity:1; }
     .out-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
+    .out-thumb-badge {
+      position:absolute; top:6px; right:6px;
+      width:24px; height:24px; border-radius:50%;
+      background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; pointer-events:none;
+    }
+    .out-thumb-badge .material-symbols-outlined { font-size:18px; }
     .out-thumb-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.65); display:flex; flex-direction:column; justify-content:flex-end; padding:6px; opacity:0; transition:opacity 150ms; }
     .out-thumb-name { font-size:9px; color:#fff; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px; }
     .out-thumb-btns { display:flex; gap:3px; }
