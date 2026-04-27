@@ -68,6 +68,7 @@ function getCatInfo(transformId) {
 }
 
 let bldCompareLayout = localStorage.getItem('ic-bld-cmp-mode') || 'slider';
+let _bldCopiedNodeData = null;
 
 function nodeIconAndColor(node) {
   if (node.type === 'branch')      return { icon: 'device_hub',  color: '#0077ff' };
@@ -100,22 +101,11 @@ function buildNodeRow(item, isSelected) {
       </button>
       <span class="bld-node-dot" style="background:${color}"></span>
       <span class="material-symbols-outlined" style="font-size:14px;color:${color};flex-shrink:0">${icon}</span>
-      <span class="bld-node-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>
+      <span class="bld-node-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(label)}">${label}</span>
       ${node.disabled ? '<span class="ic-badge" style="font-size:10px">off</span>' : ''}
-      <a href="#hlp?id=${node.transformId}" class="bld-node-info-icon" style="margin-right:8px; display:inline-flex; text-decoration:none;" title="View Documentation for ${label}">
-        <span class="material-symbols-outlined dropdown-toggle" style="font-size:16px;color:var(--ps-blue)">help</span>
-      </a>
-      <div class="bld-node-actions">
-        <button class="btn-icon bld-btn-toggle" data-id="${node.id}" title="${node.disabled ? 'Enable' : 'Disable'}">
-          <span class="material-symbols-outlined" style="font-size:14px">${node.disabled ? 'visibility_off' : 'visibility'}</span>
-        </button>
-        <button class="btn-icon bld-btn-edit" data-id="${node.id}" title="Edit node">
-          <span class="material-symbols-outlined" style="font-size:14px">edit</span>
-        </button>
-        <button class="btn-icon bld-btn-delete" data-id="${node.id}" title="Delete node">
-          <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-red)">delete</span>
-        </button>
-      </div>
+      <button class="btn-icon bld-btn-menu" style="margin-right:8px; display:inline-flex;" title="Options">
+        <span class="material-symbols-outlined dropdown-toggle" style="font-size:16px;color:var(--ps-text-muted)">more_vert</span>
+      </button>
     </div>`;
 }
 
@@ -123,8 +113,8 @@ function buildParamRow(p, i) {
   const typeLabel = { text:'Text', number:'Number', range:'Range', select:'Select', boolean:'Toggle', color:'Color' }[p.type] || p.type;
   return `
     <div class="bld-param-row" data-idx="${i}">
-      <span class="ic-badge" style="font-size:10px;font-family:var(--font-mono)">${escHtml(p.name)}</span>
-      <span class="text-sm" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.label)}</span>
+      <span class="ic-badge" style="font-size:10px;font-family:var(--font-mono)" title="${escHtml(p.name)}">${escHtml(p.name)}</span>
+      <span class="text-sm" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(p.label)}">${escHtml(p.label)}</span>
       <span class="text-sm text-muted">${typeLabel}</span>
       <button class="btn-icon bld-param-edit" data-idx="${i}" title="Edit">
         <span class="material-symbols-outlined" style="font-size:14px">edit</span>
@@ -1074,39 +1064,67 @@ export async function render(container, hash) {
 
   // ── Node list actions ─────────────────────────────────────
   function bindNodeActions() {
-    // Toggle disable
-    container.querySelectorAll('.bld-btn-toggle').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const id = btn.dataset.id;
-        const info = findNodeAndParent(draft.nodes, id);
-        if (info) {
-          info.node.disabled = !info.node.disabled;
-          refreshNodeList();
-          markDirty();
+    const showContextMenu = async (e, row) => {
+      e.preventDefault();
+      const id = row.dataset.id;
+      const info = findNodeAndParent(draft.nodes, id);
+      if (!info) return;
+
+      document.getElementById('bld-context-menu')?.remove();
+
+      const menu = document.createElement('div');
+      menu.id = 'bld-context-menu';
+      menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY}px; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:6px; box-shadow:0 10px 40px rgba(0,0,0,0.8); padding:4px; z-index:10000; display:flex; flex-direction:column; min-width:160px;`;
+
+      const createItem = (label, icon, onClick, disabled = false, danger = false) => {
+        const btn = document.createElement('button');
+        btn.style.cssText = `display:flex; align-items:center; gap:8px; padding:6px 12px; border:none; background:transparent; color:${danger ? 'var(--ps-red)' : 'var(--ps-text)'}; cursor:${disabled ? 'not-allowed' : 'pointer'}; font-size:13px; border-radius:4px; text-align:left; opacity:${disabled ? '0.5' : '1'}; width:100%;`;
+        btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px">${icon}</span> ${label}`;
+        if (!disabled) {
+          btn.addEventListener('mouseenter', () => btn.style.background = 'var(--ps-bg-hover)');
+          btn.addEventListener('mouseleave', () => btn.style.background = 'transparent');
+          btn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            menu.remove();
+            onClick();
+          });
         }
-      });
-    });
+        return btn;
+      };
 
-    // Edit → open NED for transforms, BKB for block-refs
-    container.querySelectorAll('.bld-btn-edit').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const id = btn.dataset.id;
-        const info = findNodeAndParent(draft.nodes, id);
-        if (info) {
-          if (info.node.type === 'block-ref') navigate(`#bkb?id=${info.node.blockId}`);
-          else navigate(`#ned?recipe=${draft.id}&node=${id}`);
-        }
-      });
-    });
+      menu.appendChild(createItem('Copy', 'content_copy', () => {
+        _bldCopiedNodeData = deepClone(info.node);
+        if (window.AuroraToast) window.AuroraToast.show({ variant: 'success', title: 'Step copied' });
+      }));
 
+      menu.appendChild(createItem('Paste (After)', 'content_paste', () => {
+        const newNode = deepClone(_bldCopiedNodeData);
+        newNode.id = uuid();
+        info.parent.splice(info.index + 1, 0, newNode);
+        refreshNodeList();
+        markDirty();
+      }, !_bldCopiedNodeData));
 
-    // Delete
-    container.querySelectorAll('.bld-btn-delete').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        e.stopPropagation();
-        const id = btn.dataset.id;
+      const div = document.createElement('div');
+      div.style.cssText = 'height:1px; background:var(--ps-border); margin:4px 0;';
+      menu.appendChild(div);
+
+      menu.appendChild(createItem('Edit', 'edit', () => {
+        if (info.node.type === 'block-ref') navigate(`#bkb?id=${info.node.blockId}`);
+        else navigate(`#ned?recipe=${draft.id}&node=${id}`);
+      }));
+
+      menu.appendChild(createItem(info.node.disabled ? 'Enable' : 'Hide', info.node.disabled ? 'visibility' : 'visibility_off', () => {
+        info.node.disabled = !info.node.disabled;
+        refreshNodeList();
+        markDirty();
+      }));
+
+      const div2 = document.createElement('div');
+      div2.style.cssText = 'height:1px; background:var(--ps-border); margin:4px 0;';
+      menu.appendChild(div2);
+
+      menu.appendChild(createItem('Delete', 'delete', async () => {
         const confirmed = await showConfirm({
           title: 'Remove Step?',
           body: 'This will remove the selected transformation or block from the recipe.',
@@ -1115,22 +1133,93 @@ export async function render(container, hash) {
           icon: 'delete_sweep'
         });
         if (!confirmed) return;
+        info.parent.splice(info.index, 1);
+        if (selectedId === id) { selectedId = null; bldPreviewNodeId = null; }
+        refreshNodeList();
+        markDirty();
+      }, false, true));
 
-        const info = findNodeAndParent(draft.nodes, id);
-        if (info) {
-          info.parent.splice(info.index, 1);
-          if (selectedId === id) { selectedId = null; bldPreviewNodeId = null; }
-          refreshNodeList();
-          markDirty();
+      const transformId = info.node.transformId;
+      if (transformId && transformId !== 'undefined') {
+        const div3 = document.createElement('div');
+        div3.style.cssText = 'height:1px; background:var(--ps-border); margin:4px 0;';
+        menu.appendChild(div3);
+
+        menu.appendChild(createItem('Help', 'school', async () => {
+          const modal = document.createElement('div');
+          modal.style.cssText = 'position:absolute; inset:0; z-index:9000; display:flex; flex-direction:column; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); padding:24px; overflow-y:auto;';
+          
+          modal.innerHTML = `
+            <style>
+              .hlp-markdown { line-height:1.6; font-size:14px; color:var(--ps-text); }
+              .hlp-markdown h1, .hlp-markdown h2, .hlp-markdown h3 { margin-top:1.2em; margin-bottom:0.5em; font-weight:600; }
+              .hlp-markdown p { margin-bottom:1em; }
+              .hlp-markdown code { font-family:var(--font-mono); background:var(--ps-surface); padding:2px 4px; border-radius:4px; font-size:0.9em; }
+              .hlp-markdown pre { background:var(--ps-bg-overlay); padding:12px; border-radius:6px; overflow-x:auto; border:1px solid var(--ps-border); margin-bottom:1em; }
+            </style>
+            <div style="background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:12px; width:100%; max-width:800px; margin:auto; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.5); overflow:hidden;">
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--ps-border); background:var(--ps-surface);">
+                <h3 style="margin:0; font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px;">
+                  <span class="material-symbols-outlined" style="color:var(--ps-blue);">school</span>
+                  Node Documentation
+                </h3>
+                <button class="btn-icon" id="bld-node-help-close">
+                  <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+                </button>
+              </div>
+              <div id="bld-node-help-content" style="padding:24px; overflow-y:auto; max-height:70vh;" class="hlp-markdown">
+                <div style="display:flex; justify-content:center; padding:40px;"><span class="material-symbols-outlined" style="font-size:24px;color:var(--ps-text-muted)">pending</span></div>
+              </div>
+            </div>
+          `;
+          
+          const wsContainer = container.querySelector('#bld-workspace-container');
+          wsContainer.style.position = 'relative';
+          wsContainer.appendChild(modal);
+          
+          modal.querySelector('#bld-node-help-close').onclick = () => modal.remove();
+          
+          try {
+            const { getHelpRecord } = await import('../data/help.js');
+            let markedLib = null;
+            try { markedLib = await import('marked'); } catch(err) {}
+            
+            const record = getHelpRecord(transformId);
+            const body = record ? record.body : 'No documentation found for this node.';
+            const htmlBody = markedLib ? markedLib.parse(body) : `<pre style="white-space:pre-wrap;font-family:inherit;">${body}</pre>`;
+            
+            modal.querySelector('#bld-node-help-content').innerHTML = htmlBody;
+          } catch (err) {
+            modal.querySelector('#bld-node-help-content').innerHTML = '<div class="empty-state">Error loading documentation.</div>';
+          }
+        }));
+      }
+
+      document.body.appendChild(menu);
+
+      const closeMenu = (ev) => {
+        if (!menu.contains(ev.target)) {
+          menu.remove();
+          document.removeEventListener('mousedown', closeMenu);
         }
-      });
-    });
+      };
+      setTimeout(() => document.addEventListener('mousedown', closeMenu), 0);
+    };
 
-    // Click row = select
     container.querySelectorAll('.bld-node-row').forEach(row => {
+      row.addEventListener('contextmenu', e => showContextMenu(e, row));
+
+      const menuBtn = row.querySelector('.bld-btn-menu');
+      if (menuBtn) {
+        menuBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          showContextMenu(e, row);
+        });
+      }
+
       row.addEventListener('click', (e) => {
         // Don't select if clicking an action button
-        if (e.target.closest('.bld-node-actions, .btn-icon')) return;
+        if (e.target.closest('.btn-icon')) return;
         const id = row.dataset.id;
         selectedId = (selectedId === id) ? null : id;
         bldPreviewNodeId = selectedId;
