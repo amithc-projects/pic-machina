@@ -337,16 +337,16 @@ export async function render(container, hash) {
     if (autoRunId) {
       const targetRow = container.querySelector(`.out-run-row[data-id="${autoRunId}"]`);
       if (targetRow) {
-        // Expand detail panel
+        // Expand the detail panel and (for completed runs) trigger the
+        // gallery loader directly — same behaviour as a row click.
         const detail = targetRow.querySelector(`#out-detail-${autoRunId}`);
         const icon   = targetRow.querySelector('.out-run-chevron');
         if (detail) detail.style.display = 'block';
         if (icon)   icon.style.transform = 'rotate(90deg)';
-        // Click "View Output" button
-        setTimeout(() => {
-          targetRow.querySelector('.out-btn-gallery')?.click();
-          targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 50);
+        if (targetRow.dataset.status === 'completed') {
+          loadRunGallery(autoRunId, targetRow.dataset.subfolder || 'output');
+        }
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
   }
@@ -354,7 +354,7 @@ export async function render(container, hash) {
   function runRowHTML(run) {
     const thumbHTML = thumbSlotHTML(run);
     return `
-      <div class="out-run-row" data-id="${run.id}">
+      <div class="out-run-row" data-id="${run.id}" data-status="${run.status}" data-subfolder="${escHtml(run.outputFolder || 'output')}">
         <div class="out-run-header" data-expand-id="${run.id}">
           <span class="material-symbols-outlined out-run-chevron" style="font-size:16px;color:var(--ps-text-faint);transition:transform 200ms">chevron_right</span>
           ${thumbHTML}
@@ -372,11 +372,7 @@ export async function render(container, hash) {
             <span class="out-stat-inline"><span class="material-symbols-outlined" style="font-size:13px">schedule</span>${durationStr(run)}</span>
           </div>
           <div class="out-run-actions">
-            ${run.status === 'completed' ? `<button class="btn-secondary out-btn-gallery" data-id="${run.id}" data-subfolder="${run.outputFolder || 'output'}" title="Show only this run's outputs" style="font-size:12px;padding:5px 10px">
-              <span class="material-symbols-outlined" style="font-size:14px">photo_library</span>
-              View Output
-            </button>
-            <button class="btn-secondary out-btn-browse" data-run-id="${run.id}" title="Browse in Folder Viewer" style="font-size:12px;padding:5px 10px">
+            ${run.status === 'completed' ? `<button class="btn-secondary out-btn-browse" data-run-id="${run.id}" title="Browse in Folder Viewer" style="font-size:12px;padding:5px 10px">
               <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
               Browse
             </button>
@@ -416,7 +412,9 @@ export async function render(container, hash) {
   }
 
   function bindRunActions() {
-    // Expand/collapse
+    // Row click → expand/collapse the detail panel. For completed runs,
+    // first-time expansion also lazy-loads the output gallery so the user
+    // sees both the run log AND the actual outputs in one click.
     container.querySelectorAll('[data-expand-id]').forEach(header => {
       header.addEventListener('click', e => {
         if (e.target.closest('button')) return;
@@ -427,57 +425,68 @@ export async function render(container, hash) {
         const open = detail.style.display !== 'none';
         detail.style.display = open ? 'none' : 'block';
         if (icon) icon.style.transform = open ? '' : 'rotate(90deg)';
+
+        // On open: load the gallery once. Status is read from the row's
+        // dataset rather than re-querying because the row has already been
+        // rendered with the full status at this point.
+        if (!open) {
+          const row = header.closest('.out-run-row');
+          const status = row?.dataset.status;
+          if (status === 'completed') {
+            const subfolder = row?.dataset.subfolder || 'output';
+            loadRunGallery(id, subfolder);
+          }
+        }
       });
     });
 
-    // View gallery
-    container.querySelectorAll('.out-btn-gallery').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        e.stopPropagation();
-        const runId     = btn.dataset.id;
-        const subfolder = btn.dataset.subfolder;
-        const galleryEl = container.querySelector(`#out-gallery-${runId}`);
-        const detailEl  = container.querySelector(`#out-detail-${runId}`);
-        if (!galleryEl) return;
+    // Buttons inside the row header (Browse / Edit / Run again / ShowCase /
+    // Delete) — bound here so they live alongside the row's lifecycle.
+    bindRowSecondaryActions();
+  }
 
-        // Open the detail panel if collapsed
-        if (detailEl) detailEl.style.display = 'block';
-        const icon = container.querySelector(`[data-expand-id="${runId}"] .out-run-chevron`);
-        if (icon) icon.style.transform = 'rotate(90deg)';
+  /**
+   * Lazy-load and render the per-run output gallery into its slot inside
+   * the detail panel. Idempotent — once loaded, subsequent calls are a
+   * no-op (the slot is left visible inside the detail panel; the panel
+   * itself controls overall visibility via the row click handler).
+   */
+  async function loadRunGallery(runId, subfolder) {
+    const galleryEl = container.querySelector(`#out-gallery-${runId}`);
+    if (!galleryEl) return;
+    if (galleryEl.dataset.loaded === '1') {
+      galleryEl.style.display = 'block';
+      return;
+    }
 
-        if (galleryEl.dataset.loaded === '1') {
-          galleryEl.style.display = galleryEl.style.display === 'none' ? 'block' : 'none';
-          return;
-        }
+    galleryEl.style.display = 'block';
+    galleryEl.innerHTML = `<div style="padding:12px;display:flex;align-items:center;gap:8px"><div class="spinner"></div><span class="text-sm text-muted">Loading output files…</span></div>`;
 
-        galleryEl.style.display = 'block';
-        galleryEl.innerHTML = `<div style="padding:12px;display:flex;align-items:center;gap:8px"><div class="spinner"></div><span class="text-sm text-muted">Loading output files…</span></div>`;
+    try {
+      const run = await getRun(runId);
+      let outputHandle = run?.outputHandleObj || await getFolder('output');
 
-        try {
-          const run = await getRun(runId);
-          let outputHandle = run?.outputHandleObj || await getFolder('output');
-          
-          if (!outputHandle) {
-            galleryEl.innerHTML = `<div class="out-gallery-empty">Output folder not accessible. <button class="btn-secondary out-btn-repick">Pick Folder</button></div>`;
-            return;
-          }
+      if (!outputHandle) {
+        galleryEl.innerHTML = `<div class="out-gallery-empty">Output folder not accessible. <button class="btn-secondary out-btn-repick">Pick Folder</button></div>`;
+        return;
+      }
 
-          let subHandle;
-          try {
-            subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
-          } catch {
-            galleryEl.innerHTML = `<div class="out-gallery-empty">Subfolder "${subfolder}" not found.</div>`;
-            return;
-          }
+      let subHandle;
+      try {
+        subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
+      } catch {
+        galleryEl.innerHTML = `<div class="out-gallery-empty">Subfolder "${subfolder}" not found.</div>`;
+        return;
+      }
 
-          // Resolve only this run's outputs (manifest-first, mtime-fallback
-          // for legacy runs). Includes video files alongside images so
-          // video-producing recipes show their results too.
-          const outputFiles = await getRunOutputFiles(run);
-          if (!outputFiles.length) {
-            galleryEl.innerHTML = `<div class="out-gallery-empty">No output files found for this run.</div>`;
-            return;
-          }
+      // Resolve only this run's outputs (manifest-first, mtime-fallback
+      // for legacy runs). Includes video files alongside images so
+      // video-producing recipes show their results too.
+      const outputFiles = await getRunOutputFiles(run);
+      if (!outputFiles.length) {
+        galleryEl.innerHTML = `<div class="out-gallery-empty">No output files found for this run.</div>`;
+        return;
+      }
 
           // Try to find matching input files for the before/after compare
           // affordance. Inputs are images only — videos are output-only.
@@ -574,14 +583,16 @@ export async function render(container, hash) {
             });
           });
 
-          // Re-authorize input folder button
+          // Re-authorize input folder button — re-runs the gallery load
+          // after the user grants permission so original-pair matching can
+          // succeed.
           galleryEl.querySelectorAll('.out-btn-reload-gallery').forEach(reloadBtn => {
             reloadBtn.addEventListener('click', async e => {
               e.stopPropagation();
               try {
                 await import('../data/folders.js').then(m => m.pickFolder('input'));
                 galleryEl.dataset.loaded = '0'; // force reload
-                btn.click(); // re-trigger the gallery load
+                loadRunGallery(runId, subfolder);
               } catch {}
             });
           });
@@ -617,12 +628,12 @@ export async function render(container, hash) {
             });
           });
 
-        } catch (err) {
-          galleryEl.innerHTML = `<div class="out-gallery-empty">Error: ${escHtml(err.message)}</div>`;
-        }
-      });
-    });
+    } catch (err) {
+      galleryEl.innerHTML = `<div class="out-gallery-empty">Error: ${escHtml(err.message)}</div>`;
+    }
+  }
 
+  function bindRowSecondaryActions() {
     // Browse folder viewer
     container.querySelectorAll('.out-btn-browse').forEach(btn => {
       btn.addEventListener('click', e => {
