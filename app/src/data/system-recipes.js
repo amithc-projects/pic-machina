@@ -1217,6 +1217,86 @@ export const SYSTEM_RECIPES = [
         ]
       }
     ]
+  },
+
+  // ── Oil Painting Face Swap (style-only, no actual face swap) ───
+  // First-pass test recipe for the "modern photo → looks like an oil
+  // painting" pipeline. Pure style transfer using the standard image
+  // ops — no face swap or Poisson clone yet. The point of shipping
+  // this recipe is to gauge how close the existing toolkit gets us
+  // before spending the time to add a face-swap transform.
+  //
+  // Stack:
+  //   Auto Levels        — normalise tonal distribution
+  //   Standard Tuning    — desaturate + reduce contrast (Renaissance palette)
+  //   Color Grade        — lift blacks, warm shadows, warm highlights (varnish)
+  //   Color Tint         — overall amber wash (aged look)
+  //   Gaussian Blur      — sfumato softening of edges
+  //   Kuwahara           — painterly oil-paint stylisation
+  //   Canvas Texture     — woven-fibre support layer
+  //   Craquelure         — fine paint-crack network on top
+  //   Export             — JPEG, full quality
+  {
+    id:          'sys-oil-painting-face-swap',
+    name:        'Oil Painting Face Swap',
+    description: 'Style a modern portrait to look like an aged oil painting — warming, sfumato softening, painterly Kuwahara strokes, canvas texture and craquelure cracks. No actual face swap yet; this is a first-pass test of the styling pipeline.',
+    isSystem:    true,
+    coverColor:  '#92400e',
+    inputType:   'image',
+    tags:        ['portrait', 'painting', 'oil', 'aged', 'style', 'sfumato', 'craquelure'],
+    createdAt:   0,
+    updatedAt:   0,
+    nodes: [
+      {
+        id: 'op-1', type: 'transform', transformId: 'color-auto-levels',
+        params: {},
+        label: 'Normalise levels'
+      },
+      {
+        id: 'op-2', type: 'transform', transformId: 'color-tuning',
+        params: { contrast: -25, saturation: -40, vibrance: -15, invert: false },
+        label: 'Desaturate + reduce contrast'
+      },
+      {
+        id: 'op-3', type: 'transform', transformId: 'filter-color-grade',
+        params: {
+          lift: 8,
+          shadowColor: '#3a2a18', shadowStrength: 35,
+          highlightColor: '#e8d4a8', highlightStrength: 40,
+        },
+        label: 'Aged-varnish colour grade'
+      },
+      {
+        id: 'op-4', type: 'transform', transformId: 'color-tint',
+        params: { color: '#c89d6c', strength: 25, blendMode: 'soft-light' },
+        label: 'Amber wash'
+      },
+      {
+        id: 'op-5', type: 'transform', transformId: 'filter-blur',
+        params: { radius: 2 },
+        label: 'Sfumato softening'
+      },
+      {
+        id: 'op-6', type: 'transform', transformId: 'filter-kuwahara',
+        params: { radius: 2, passes: 1 },
+        label: 'Painterly strokes'
+      },
+      {
+        id: 'op-7', type: 'transform', transformId: 'overlay-canvas-texture',
+        params: { intensity: 22, scale: 5, blendMode: 'overlay' },
+        label: 'Canvas weave'
+      },
+      {
+        id: 'op-8', type: 'transform', transformId: 'overlay-craquelure',
+        params: { intensity: 35, density: 220, thickness: 2, darkness: 70, seed: 0, blendMode: 'multiply' },
+        label: 'Craquelure cracks'
+      },
+      {
+        id: 'op-9', type: 'transform', transformId: 'flow-export',
+        params: { suffix: '_oil', format: 'image/jpeg', quality: 92 },
+        label: 'Export JPEG'
+      }
+    ]
   }
 ];
 
