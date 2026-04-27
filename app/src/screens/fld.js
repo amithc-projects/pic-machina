@@ -10,7 +10,7 @@
 
 import { getRun }                                   from '../data/runs.js';
 import { getFolder, pickFolder, loadVideoPreviews,
-         writeVideoPreview }                         from '../data/folders.js';
+         writeVideoPreview, hasPicMachinaMarker }    from '../data/folders.js';
 import { extractVideoFrame }                         from '../utils/video-frame.js';
 import { setRecipeThumbnail }                        from '../data/recipes.js';
 import { navigate }                                  from '../main.js';
@@ -21,8 +21,12 @@ import { renderAssetPanel,
 import { showConfirm }                               from '../utils/dialogs.js';
 import { MetadataPanel }                             from '../components/metadata-panel.js';
 
-const IMAGE_EXTS = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
-const VIDEO_EXTS = new Set(['.mp4','.mov','.webm']);
+const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
+const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm']);
+// Archive types we recognise as PicMachina deliverables. Only included
+// in listings when the folder has been confirmed as PicMachina output
+// (via hasPicMachinaMarker), to avoid showing user-placed zips.
+const ARCHIVE_EXTS = new Set(['.zip', '.pptx']);
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -34,17 +38,24 @@ function fileType(name) {
   const ext = extOf(name);
   if (IMAGE_EXTS.has(ext)) return 'image';
   if (VIDEO_EXTS.has(ext)) return 'video';
+  if (ARCHIVE_EXTS.has(ext)) return 'archive';
   return 'other';
 }
 
-/** Read ALL media files (images + video) from a directory handle. Stores handles for deletion. */
-async function listAllMedia(dirHandle) {
+function isAcceptedFile(name, { allowArchives }) {
+  const ext = extOf(name);
+  if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return true;
+  if (allowArchives && ARCHIVE_EXTS.has(ext)) return true;
+  return false;
+}
+
+/** Read ALL media files (images + video, and archives if allowed) from a directory handle. Stores handles for deletion. */
+async function listAllMedia(dirHandle, opts = {}) {
   const entries = [];
   for await (const [name, entry] of dirHandle.entries()) {
     if (entry.kind !== 'file') continue;
     if (name.startsWith('.')) continue; // skip hidden sidecars, .DS_Store, etc.
-    const ext = extOf(name);
-    if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) {
+    if (isAcceptedFile(name, opts)) {
       entries.push({ file: await entry.getFile(), handle: entry });
     }
   }
@@ -52,17 +63,14 @@ async function listAllMedia(dirHandle) {
 }
 
 /** Read media files AND subdirectories from a directory handle. */
-async function listContents(dirHandle) {
+async function listContents(dirHandle, opts = {}) {
   const files = [], folders = [];
   for await (const [name, entry] of dirHandle.entries()) {
     if (name.startsWith('.')) continue;
     if (entry.kind === 'directory') {
       folders.push({ name, handle: entry });
-    } else {
-      const ext = extOf(name);
-      if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) {
-        files.push({ file: await entry.getFile(), handle: entry });
-      }
+    } else if (isAcceptedFile(name, opts)) {
+      files.push({ file: await entry.getFile(), handle: entry });
     }
   }
   files.sort((a, b) => a.file.name.localeCompare(b.file.name));
@@ -198,6 +206,10 @@ export async function render(container, hash) {
             <span class="material-symbols-outlined" style="font-size:12px">movie</span>
             Video
           </button>
+          <button class="fld-chip" data-filter="archive">
+            <span class="material-symbols-outlined" style="font-size:12px">folder_zip</span>
+            Archives
+          </button>
           <button class="fld-chip" data-filter="other">Other</button>
         </div>
         ${runId ? `
@@ -301,6 +313,7 @@ export async function render(container, hash) {
   let activeSubHandle = null; // used by deleteSelected
   let allEntries = [];   // { file: File, handle: FileSystemFileHandle }[]
   let allFolders = [];   // { name: string, handle: FileSystemDirectoryHandle }[]
+  let isPicMachinaFolder = false; // true when the active dir has a `.PicMachina/` marker — controls archive visibility
   let filteredFolders = []; // currently visible folders
   let currentHandle = null; // FileSystemDirectoryHandle being viewed
   let dirStack = [];     // [{ handle, name }] — path from root to parent of currentHandle
@@ -487,7 +500,13 @@ export async function render(container, hash) {
   // ── Folder navigation ───────────────────────────────────────
   async function reloadContents() {
     activeSubHandle = currentHandle;
-    const { files, folders } = await listContents(currentHandle);
+    // Only surface PicMachina-style archives (zip / pptx) when the
+    // folder we're browsing was actually written to by PicMachina (the
+    // engine drops a `.PicMachina/` marker dir in every output folder
+    // it creates). Avoids showing user-placed zips in arbitrary folders.
+    const allowArchives = await hasPicMachinaMarker(currentHandle);
+    const { files, folders } = await listContents(currentHandle, { allowArchives });
+    isPicMachinaFolder = allowArchives;
     allEntries = files;
     allFolders = folders;
     videoPreviews = await loadVideoPreviews(currentHandle);
@@ -784,6 +803,13 @@ export async function render(container, hash) {
 
   // ── File preview modal (double-click from grid or list) ─────────
   function showFilePreviewModal(ent, allEntries, startIdx) {
+    // Archives have no in-app preview — fall back to a direct download
+    // when the user double-clicks one. Other entries continue to use
+    // the image/video lightbox.
+    if (fileType(ent.file.name) === 'archive') {
+      downloadFile(ent.file);
+      return;
+    }
     const existing = document.getElementById('fld-preview-modal');
     if (existing) existing.remove();
 
@@ -921,8 +947,9 @@ export async function render(container, hash) {
         }
       }
 
-      // Refresh data
-      allEntries = await listAllMedia(activeSubHandle);
+      // Refresh data — preserve archive visibility decision so deletions
+      // don't accidentally hide zip/pptx tiles after the refresh.
+      allEntries = await listAllMedia(activeSubHandle, { allowArchives: isPicMachinaFolder });
       selectedSet.clear();
       lastIdx = -1;
       selected = null;
@@ -994,8 +1021,9 @@ export async function render(container, hash) {
       const previewUrl  = previewFile ? URL.createObjectURL(previewFile) : null;
       if (previewUrl) blobUrls.push(previewUrl);
 
+      const archiveExt = ent.file.name.slice(ent.file.name.lastIndexOf('.') + 1).toUpperCase();
       cell.innerHTML = `
-        <div class="fld-thumb ${type === 'video' ? 'fld-thumb--video' : ''}">
+        <div class="fld-thumb ${type === 'video' ? 'fld-thumb--video' : ''} ${type === 'archive' ? 'fld-thumb--archive' : ''}">
           ${type === 'video'
             ? previewUrl
               ? `<img src="${previewUrl}" class="fld-thumb-img" draggable="false">
@@ -1008,7 +1036,12 @@ export async function render(container, hash) {
                  <button class="fld-thumb-chg-preview fld-thumb-chg-preview--noprev" title="Set preview frame" data-name="${escHtml(ent.file.name)}">
                    <span class="material-symbols-outlined">photo_camera</span>
                  </button>`
-            : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
+            : type === 'archive'
+              ? `<div class="fld-archive-tile">
+                   <span class="material-symbols-outlined">${archiveExt === 'PPTX' ? 'slideshow' : 'folder_zip'}</span>
+                   <span class="fld-archive-tile__ext">${archiveExt}</span>
+                 </div>`
+              : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
           }
         </div>
         <div class="fld-cell-name">${escHtml(ent.file.name)}</div>`;
@@ -1080,6 +1113,7 @@ export async function render(container, hash) {
       const fsPreviewUrl  = fsPreviewFile ? URL.createObjectURL(fsPreviewFile) : null;
       if (fsPreviewUrl) blobUrls.push(fsPreviewUrl);
 
+      const fsArchiveExt = ent.file.name.slice(ent.file.name.lastIndexOf('.') + 1).toUpperCase();
       thumb.innerHTML = `
         ${type === 'video'
           ? fsPreviewUrl
@@ -1090,7 +1124,12 @@ export async function render(container, hash) {
                <button class="fld-thumb-chg-preview fld-thumb-chg-preview--noprev" title="Set preview frame" data-name="${escHtml(ent.file.name)}">
                  <span class="material-symbols-outlined">photo_camera</span>
                </button>`
-          : `<img src="${url}" class="fld-fs-thumb-img" loading="lazy" draggable="false">`
+          : type === 'archive'
+            ? `<div class="fld-archive-tile fld-archive-tile--strip">
+                 <span class="material-symbols-outlined">${fsArchiveExt === 'PPTX' ? 'slideshow' : 'folder_zip'}</span>
+                 <span class="fld-archive-tile__ext">${fsArchiveExt}</span>
+               </div>`
+            : `<img src="${url}" class="fld-fs-thumb-img" loading="lazy" draggable="false">`
         }`;
 
       thumb.querySelector('.fld-thumb-chg-preview')?.addEventListener('click', e => {
@@ -1170,18 +1209,25 @@ export async function render(container, hash) {
         ? new Date(ent.file.lastModified).toLocaleDateString(undefined, { day:'2-digit', month:'short', year:'numeric' })
         : '—';
 
+      const archiveIcon = extOf(ent.file.name) === '.pptx' ? 'slideshow' : 'folder_zip';
       tr.innerHTML = `
         <td class="fld-list-td">
           ${type === 'video'
             ? listPreviewUrl
               ? `<img src="${listPreviewUrl}" class="fld-list-thumb" draggable="false">`
               : `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">movie</span></div>`
-            : `<img src="${thumbUrl}" class="fld-list-thumb" loading="lazy" draggable="false">`}
+            : type === 'archive'
+              ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">${archiveIcon}</span></div>`
+              : `<img src="${thumbUrl}" class="fld-list-thumb" loading="lazy" draggable="false">`}
         </td>
         <td class="fld-list-td">
           <span class="fld-list-name">${escHtml(ent.file.name)}</span>
         </td>
-        <td class="fld-list-td">${type === 'video' ? '<span class="ic-badge ic-badge--blue">MP4</span>' : `<span class="ic-badge">${extOf(ent.file.name).slice(1).toUpperCase()}</span>`}</td>
+        <td class="fld-list-td">${
+          type === 'video'   ? '<span class="ic-badge ic-badge--blue">MP4</span>' :
+          type === 'archive' ? `<span class="ic-badge ic-badge--blue">${extOf(ent.file.name).slice(1).toUpperCase()}</span>` :
+                                `<span class="ic-badge">${extOf(ent.file.name).slice(1).toUpperCase()}</span>`
+        }</td>
         <td class="fld-list-td mono text-sm text-muted">${formatBytes(ent.file.size)}</td>
         <td class="fld-list-td fld-list-modified">${modDate}</td>
         <td class="fld-list-td fld-list-dims"><span class="fld-list-dims-val">—</span></td>
@@ -1324,6 +1370,38 @@ export async function render(container, hash) {
           <div class="fld-detail-preview" style="flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative">
             <video src="${fileUrl}" class="fld-detail-video" controls preload="metadata"
               style="max-width:100%;max-height:100%;display:block"></video>
+          </div>
+          ${!fullSize ? `
+          <div class="fld-detail-footer">
+            <button class="btn-secondary fld-detail-dl-btn" style="width:100%">
+              <span class="material-symbols-outlined">download</span> Download
+            </button>
+          </div>` : ''}
+        </div>`;
+      el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
+        if (selectedSet.size > 1) downloadSelected();
+        else downloadFile(file);
+      });
+    } else if (type === 'archive') {
+      // Archives have no in-app preview — show a clean info pane with
+      // file metadata and a prominent Download button. The card style
+      // matches the grid/list archive tile so the user recognises it.
+      const ext = extOf(file.name).slice(1).toUpperCase();
+      const icon = ext === 'PPTX' ? 'slideshow' : 'folder_zip';
+      el.innerHTML = `
+        <div class="fld-detail-inner">
+          ${!fullSize ? `
+          <div class="fld-detail-header">
+            <div class="fld-detail-title">${escHtml(file.name)}</div>
+            <div class="fld-detail-meta">
+              <span class="ic-badge ic-badge--blue">${ext}</span>
+              <span class="text-sm text-muted">${formatBytes(file.size)}</span>
+            </div>
+          </div>` : ''}
+          <div class="fld-detail-preview" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--ps-text-muted);background:linear-gradient(135deg, rgba(96,165,250,0.06), rgba(139,92,246,0.04))">
+            <span class="material-symbols-outlined" style="font-size:96px;color:var(--ps-blue)">${icon}</span>
+            <div style="font-size:13px">PicMachina-produced archive</div>
+            <div class="mono text-sm text-muted">${escHtml(file.name)}</div>
           </div>
           ${!fullSize ? `
           <div class="fld-detail-footer">
@@ -1665,7 +1743,27 @@ function injectFldStyles() {
       position:relative;
     }
     .fld-thumb--video { }
+    .fld-thumb--archive { background:linear-gradient(135deg, rgba(96,165,250,0.08), rgba(139,92,246,0.05)); }
     .fld-thumb-img { width:100%; height:100%; object-fit:cover; display:block; }
+
+    /* Archive tile (zip / pptx) — used by grid + filmstrip views. */
+    .fld-archive-tile {
+      width:100%; height:100%;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px;
+      color:var(--ps-text-muted);
+      pointer-events:none;
+    }
+    .fld-archive-tile .material-symbols-outlined { font-size:46px; color:var(--ps-blue); }
+    .fld-archive-tile__ext {
+      font-size:10px; font-weight:600; letter-spacing:0.08em;
+      font-family:var(--font-mono);
+      color:var(--ps-text-muted);
+      padding:2px 8px; border-radius:999px;
+      border:1px solid var(--ps-border);
+      background:var(--ps-bg-surface);
+    }
+    .fld-archive-tile--strip .material-symbols-outlined { font-size:34px; }
     .fld-thumb-vid { width:100%; height:100%; object-fit:cover; display:block; }
     .fld-thumb-video-badge {
       position:absolute; inset:0; display:flex; align-items:center; justify-content:center;

@@ -30,6 +30,20 @@ function statusBadge(status) {
   return `<span class="ic-badge ${cfg[1]}"><span class="material-symbols-outlined" style="font-size:11px">${cfg[0]}</span> ${cfg[2]}</span>`;
 }
 
+/**
+ * Classify an output file for gallery rendering.
+ *  - 'image'   → rasterise inline via <img>
+ *  - 'video'   → playback via <video>
+ *  - 'archive' → icon-only tile (zip / pptx — no native preview, download only)
+ */
+function outputKind(file) {
+  const name = file?.name || '';
+  if (isVideoFile(file)) return 'video';
+  const ext = name.slice(name.lastIndexOf('.') + 1).toLowerCase();
+  if (ext === 'zip' || ext === 'pptx') return 'archive';
+  return 'image';
+}
+
 function durationStr(run) {
   if (!run.finishedAt || !run.startedAt) return '—';
   const ms = run.finishedAt - run.startedAt;
@@ -515,23 +529,36 @@ export async function render(container, hash) {
             return { outputFile: outFile, inputFile: inFile };
           });
 
-          // Render gallery — videos use a <video> element with metadata
-          // preload (browser shows the first frame as poster), images use
-          // a plain <img>. A play badge sits in the corner of video tiles
-          // so they're identifiable at a glance.
+          // Render gallery — three tile shapes:
+          //  - image     → <img>, supports compare + download
+          //  - video     → <video preload=metadata> (first frame as poster) + play badge
+          //  - archive   → icon + filename only (zip/pptx can't preview natively)
           const thumbs = pairs.map((pair, i) => {
-            const url = URL.createObjectURL(pair.outputFile);
-            const isVideo = isVideoFile(pair.outputFile);
-            const media = isVideo
-              ? `<video src="${url}" class="out-thumb-img" muted playsinline preload="metadata"></video>
-                 <span class="out-thumb-badge" title="Video"><span class="material-symbols-outlined">play_circle</span></span>`
-              : `<img src="${url}" class="out-thumb-img" draggable="false" loading="lazy">`;
-            return `<div class="out-thumb${isVideo ? ' out-thumb--video' : ''}" data-pair-idx="${i}">
+            const kind = outputKind(pair.outputFile); // 'image' | 'video' | 'archive'
+            const url = kind === 'archive' ? null : URL.createObjectURL(pair.outputFile);
+
+            let media;
+            if (kind === 'video') {
+              media = `<video src="${url}" class="out-thumb-img" muted playsinline preload="metadata"></video>
+                       <span class="out-thumb-badge" title="Video"><span class="material-symbols-outlined">play_circle</span></span>`;
+            } else if (kind === 'archive') {
+              const ext = pair.outputFile.name.slice(pair.outputFile.name.lastIndexOf('.') + 1).toUpperCase();
+              const icon = ext === 'PPTX' ? 'slideshow' : 'folder_zip';
+              media = `<div class="out-thumb-archive" title="${escHtml(pair.outputFile.name)}">
+                         <span class="material-symbols-outlined">${icon}</span>
+                         <span class="out-thumb-archive__ext">${ext}</span>
+                       </div>`;
+            } else {
+              media = `<img src="${url}" class="out-thumb-img" draggable="false" loading="lazy">`;
+            }
+
+            const showCompare = pair.inputFile && kind === 'image';
+            return `<div class="out-thumb out-thumb--${kind}" data-pair-idx="${i}" data-kind="${kind}">
               ${media}
               <div class="out-thumb-overlay">
                 <span class="out-thumb-name">${escHtml(pair.outputFile.name)}</span>
                 <div class="out-thumb-btns">
-                  ${pair.inputFile && !isVideo ? `<button class="btn-icon out-thumb-compare" data-pair-idx="${i}" title="Compare">
+                  ${showCompare ? `<button class="btn-icon out-thumb-compare" data-pair-idx="${i}" title="Compare">
                     <span class="material-symbols-outlined" style="font-size:14px">compare</span>
                   </button>` : ''}
                   <button class="btn-icon out-thumb-download" data-pair-idx="${i}" title="Download">
@@ -597,17 +624,30 @@ export async function render(container, hash) {
             });
           });
 
-          // Bind click handlers — route video tiles to the native video
-          // player; everything else goes to the image-comparison workspace.
+          // Bind click handlers — route by tile kind:
+          //   image   → image-comparison workspace
+          //   video   → native video lightbox
+          //   archive → trigger a download (zip/pptx have no in-app preview)
           galleryEl.querySelectorAll('.out-thumb').forEach(thumb => {
             thumb.addEventListener('click', e => {
               if (e.target.closest('button')) return;
               const idx = parseInt(thumb.dataset.pairIdx);
               const pair = pairs[idx];
-              if (pair && isVideoFile(pair.outputFile)) {
+              if (!pair) return;
+              const kind = thumb.dataset.kind;
+              if (kind === 'video') {
                 openVideoLightbox(pair.outputFile);
+              } else if (kind === 'archive') {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(pair.outputFile);
+                a.download = pair.outputFile.name;
+                a.click();
               } else {
-                openLightbox(pairs, idx);
+                // Filter to image pairs only so the workspace's carousel
+                // doesn't try to render an archive when arrowing through.
+                const imagePairs = pairs.filter(p => outputKind(p.outputFile) === 'image');
+                const localIdx   = imagePairs.indexOf(pair);
+                openLightbox(imagePairs, Math.max(0, localIdx));
               }
             });
           });
@@ -907,6 +947,25 @@ function injectOutStyles() {
     .out-thumb-btns { display:flex; gap:3px; }
     .out-thumb-btns .btn-icon { width:24px; height:24px; background:rgba(255,255,255,0.15); border-radius:4px; }
     .out-thumb-btns .btn-icon:hover { background:var(--ps-blue); }
+
+    /* Archive tile (zip / pptx) — icon + extension label, no media. */
+    .out-thumb--archive { background:var(--ps-bg-app); }
+    .out-thumb-archive {
+      width:100%; height:100%;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px;
+      color:var(--ps-text-muted);
+      background:linear-gradient(135deg, rgba(96,165,250,0.06), rgba(139,92,246,0.04));
+    }
+    .out-thumb-archive .material-symbols-outlined { font-size:42px; color:var(--ps-blue); }
+    .out-thumb-archive__ext {
+      font-size:10px; font-weight:600; letter-spacing:0.08em;
+      font-family:var(--font-mono);
+      color:var(--ps-text-muted);
+      padding:2px 8px; border-radius:999px;
+      border:1px solid var(--ps-border);
+      background:var(--ps-bg-surface);
+    }
 
     /* Lightbox */
     .out-lightbox { position:fixed; inset:0; z-index:500; display:flex; align-items:center; justify-content:center; }

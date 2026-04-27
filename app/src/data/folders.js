@@ -134,15 +134,22 @@ export async function loadVideoPreviews(dirHandle) {
   return map;
 }
 
-export async function listImages(dirHandle, { includeVideo = false, onlyVideo = false } = {}) {
-  const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tif', '.tiff', '.heic', '.heif', '.bmp']);
-  const VIDEO_EXTS = new Set(['.mp4', '.mov', '.webm']);
+// Shared extension allow-lists. Exported so other modules can use the
+// same definitions without redeclaring them.
+export const IMAGE_EXTS   = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tif', '.tiff', '.heic', '.heif', '.bmp']);
+export const VIDEO_EXTS   = new Set(['.mp4', '.mov', '.webm']);
+// PicMachina-produced archives (createPPTX / createZIP in compositor.js).
+// Listed separately so callers can opt in — most code paths still want
+// media only, archives only matter inside known PicMachina output folders.
+export const ARCHIVE_EXTS = new Set(['.zip', '.pptx']);
+
+export async function listImages(dirHandle, { includeVideo = false, onlyVideo = false, includeArchives = false } = {}) {
   const files = [];
   for await (const [name, entry] of dirHandle.entries()) {
     if (entry.kind !== 'file') continue;
     if (name.startsWith('.')) continue;  // skip hidden files (preview sidecars, .DS_Store, etc.)
     const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
-    
+
     let match = false;
     if (onlyVideo) {
       if (VIDEO_EXTS.has(ext)) match = true;
@@ -151,13 +158,39 @@ export async function listImages(dirHandle, { includeVideo = false, onlyVideo = 
     } else {
       if (IMAGE_EXTS.has(ext)) match = true;
     }
-    
+    // Archive opt-in is orthogonal to the image/video flags so callers
+    // can ask for "media + archives" or "archives only" via the same call.
+    if (!match && includeArchives && ARCHIVE_EXTS.has(ext)) match = true;
+
     if (match) {
       const file = await entry.getFile();
       files.push(file);
     }
   }
   return files.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Check whether a directory has a `.PicMachina/` subfolder — our marker
+ * for "this folder contains PicMachina-written outputs". The marker is
+ * created by the batch engine for every run that completes
+ * (engine/batch.js → getOrCreateOutputSubfolder(subHandle, '.PicMachina')).
+ *
+ * Used by the Folder Viewer to decide whether to include zip/pptx files
+ * in its listing — we only show those archive types when we know they
+ * came from PicMachina.
+ *
+ * Returns false on permission errors or missing handles rather than
+ * throwing, so callers can use it directly in a conditional.
+ */
+export async function hasPicMachinaMarker(dirHandle) {
+  if (!dirHandle) return false;
+  try {
+    await dirHandle.getDirectoryHandle('.PicMachina', { create: false });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
