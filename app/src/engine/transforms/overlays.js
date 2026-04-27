@@ -1274,15 +1274,143 @@ registry.register({
          </foreignObject>
        </svg>
      `;
-     
+
      const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
-     
+
      await new Promise((resolve) => {
          const img = new Image();
          img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
          img.onerror = () => resolve();
          img.src = dataUri;
      });
+  }
+});
+
+// ─── Craquelure (paint crack network) ─────────────────────
+// Procedural craquelure mask built from a low-resolution Voronoi /
+// distance-to-second-nearest-seed pattern. The thin ridges produced by
+// `|d2 - d1| < ε` give the brittle, organic crack network you see on
+// aged paintings. The mask is upscaled with smoothing and composited
+// over the image with the chosen blend mode (multiply by default) for
+// the right "dark veins on top of pigment" effect.
+//
+// Density controls the average cell size (smaller = finer cracks);
+// thickness widens the ridge band; intensity is the overlay opacity.
+registry.register({
+  id: 'overlay-craquelure', name: 'Craquelure', category: 'Overlays & Typography', categoryKey: 'overlay',
+  icon: 'shatter',
+  description: 'Procedural fine-crack network. Mimics the surface texture of an aged oil painting (cracked varnish / paint layer).',
+  params: [
+    { name: 'intensity',  label: 'Intensity (%)',        type: 'range',   min: 0,  max: 100, defaultValue: 35 },
+    { name: 'density',    label: 'Density',              type: 'range',   min: 30, max: 600, defaultValue: 220 },
+    { name: 'thickness',  label: 'Crack Thickness',      type: 'range',   min: 1,  max: 8,   defaultValue: 2 },
+    { name: 'darkness',   label: 'Crack Darkness (%)',   type: 'range',   min: 0,  max: 100, defaultValue: 70 },
+    { name: 'seed',       label: 'Seed (0 = random)',    type: 'number',  defaultValue: 0 },
+    { name: 'blendMode',  label: 'Blend Mode',           type: 'select',
+      options: [
+        { label: 'Multiply',   value: 'multiply' },
+        { label: 'Overlay',    value: 'overlay' },
+        { label: 'Soft Light', value: 'soft-light' },
+      ], defaultValue: 'multiply' },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const intensity = Math.max(0, Math.min(1, (p.intensity ?? 35) / 100));
+    if (intensity === 0) return;
+
+    const density   = Math.max(10, Math.round(p.density ?? 220));
+    const thickness = Math.max(1, Math.min(12, Math.round(p.thickness ?? 2)));
+    const darkness  = Math.max(0, Math.min(1, (p.darkness ?? 70) / 100));
+    const blendMode = p.blendMode || 'multiply';
+
+    // Deterministic PRNG so a fixed seed reproduces the same crack
+    // pattern across renders.
+    const seedParam = (p.seed | 0) || ((Math.random() * 0x7fffffff) | 0);
+    let s = seedParam >>> 0;
+    const rand = () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 0x100000000;
+    };
+
+    // Render the Voronoi-edge mask at a smaller resolution then upscale —
+    // O(W*H*N) at full size would be brutally slow for ~200 seeds.
+    // 384px is a sweet spot: detail survives, cost stays bounded.
+    const maskMax = 384;
+    const sf      = Math.min(1, maskMax / Math.max(W, H));
+    const mw      = Math.max(64, Math.round(W * sf));
+    const mh      = Math.max(64, Math.round(H * sf));
+
+    // Scatter seeds over a slightly oversized area so cracks reach the
+    // edges. Density is "seeds per million mask pixels".
+    const seedCount = Math.max(20, Math.round(density * (mw * mh) / 1_000_000));
+    const xs = new Float32Array(seedCount);
+    const ys = new Float32Array(seedCount);
+    for (let i = 0; i < seedCount; i++) {
+      xs[i] = rand() * (mw + 40) - 20;
+      ys[i] = rand() * (mh + 40) - 20;
+    }
+
+    // Spatial bucket so each pixel only checks nearby seeds.
+    const bucket = Math.max(8, Math.round(Math.sqrt((mw * mh) / seedCount)));
+    const bw = Math.ceil((mw + 40) / bucket);
+    const bh = Math.ceil((mh + 40) / bucket);
+    const buckets = Array.from({ length: bw * bh }, () => []);
+    for (let i = 0; i < seedCount; i++) {
+      const bx = Math.min(bw - 1, Math.max(0, Math.floor((xs[i] + 20) / bucket)));
+      const by = Math.min(bh - 1, Math.max(0, Math.floor((ys[i] + 20) / bucket)));
+      buckets[by * bw + bx].push(i);
+    }
+
+    // Build the mask: alpha = how strongly this pixel should darken.
+    // The ridge is where the closest two seeds are nearly equidistant
+    // (|d2 - d1| < epsilon), tapering smoothly across `thickness`.
+    const mask = new Uint8ClampedArray(mw * mh * 4);
+    const eps  = thickness;
+    for (let y = 0; y < mh; y++) {
+      const by = Math.min(bh - 1, Math.max(0, Math.floor((y + 20) / bucket)));
+      for (let x = 0; x < mw; x++) {
+        const bx = Math.min(bw - 1, Math.max(0, Math.floor((x + 20) / bucket)));
+
+        let d1 = Infinity, d2 = Infinity;
+        for (let dy = -1; dy <= 1; dy++) {
+          const yy = by + dy; if (yy < 0 || yy >= bh) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            const xx = bx + dx; if (xx < 0 || xx >= bw) continue;
+            const list = buckets[yy * bw + xx];
+            for (let k = 0; k < list.length; k++) {
+              const i = list[k];
+              const ddx = xs[i] - x, ddy = ys[i] - y;
+              const d = ddx * ddx + ddy * ddy;
+              if (d < d1)      { d2 = d1; d1 = d; }
+              else if (d < d2) { d2 = d;          }
+            }
+          }
+        }
+        const ridge = Math.sqrt(d2) - Math.sqrt(d1);
+        // Smoothstep: 1 at ridge=0, 0 at ridge=eps.
+        const t = Math.max(0, 1 - ridge / eps);
+        const a = (t * t * (3 - 2 * t)) * darkness * 255;
+        const o = (y * mw + x) * 4;
+        mask[o]     = 0;
+        mask[o + 1] = 0;
+        mask[o + 2] = 0;
+        mask[o + 3] = a;
+      }
+    }
+
+    // Upscale the mask to the full canvas. Smoothing softens the ridge,
+    // which actually helps the crack feel painterly rather than crisp.
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = mw; maskCanvas.height = mh;
+    maskCanvas.getContext('2d').putImageData(new ImageData(mask, mw, mh), 0, 0);
+
+    ctx.save();
+    ctx.globalCompositeOperation = blendMode;
+    ctx.globalAlpha = intensity;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(maskCanvas, 0, 0, W, H);
+    ctx.restore();
   }
 });
 

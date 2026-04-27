@@ -547,6 +547,33 @@ registry.register({
   }
 });
 
+// ─── Gaussian Blur ────────────────────────────────────────
+// Plain whole-image Gaussian blur. Photon already exposes the kernel —
+// other transforms (Bloom, Tilt-Shift) call it internally — but until
+// now there was no top-level transform that just blurs. Useful for
+// sfumato-style softening, motion-blur stand-ins, and as a base for
+// recipe-level looks.
+registry.register({
+  id: 'filter-blur', name: 'Gaussian Blur', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'blur_on',
+  description: 'Whole-image Gaussian blur with a controllable radius. Subtle radii (1–3px) soften skin and edges (sfumato); larger radii produce dreamy / out-of-focus looks.',
+  params: [
+    { name: 'radius', label: 'Radius (px)', type: 'range', min: 0, max: 60, defaultValue: 4 },
+  ],
+  async apply(ctx, p) {
+    const radius = Math.round(p.radius ?? 4);
+    if (radius <= 0) return;
+    await ensurePhoton();
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const idIn = ctx.getImageData(0, 0, W, H);
+    const pimg = new photon.PhotonImage(new Uint8Array(idIn.data), W, H);
+    photon.gaussian_blur(pimg, radius);
+    const out = pimg.get_raw_pixels();
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(out), W, H), 0, 0);
+    pimg.free();
+  }
+});
+
 // ─── Bloom / Glow ─────────────────────────────────────────
 registry.register({
   id: 'filter-bloom', name: 'Bloom / Glow', category: 'Color & Tone', categoryKey: 'color',
