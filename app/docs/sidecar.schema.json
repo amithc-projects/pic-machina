@@ -975,6 +975,37 @@
       "additionalProperties": true
     },
 
+    "vision": {
+      "description": "AI vision-derived data such as salient subject bounding boxes, centroids, and areas, stored by Pic-Machina during processing to avoid re-running intensive models on subsequent nodes or batch runs.",
+      "type": "object",
+      "properties": {
+        "subjectBBox": {
+          "description": "Normalised bounding box of the most salient subject.",
+          "$ref": "#/$defs/boundingBox"
+        },
+        "subjectCentroid": {
+          "description": "Normalised centroid (x,y) of the salient subject.",
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "subjectArea": {
+          "description": "Area of the salient subject mask as a fraction of total image area (0.0 to 1.0).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "matteAt": {
+          "description": "Timestamp (milliseconds) when the saliency matte was last generated.",
+          "type": "integer"
+        }
+      },
+      "additionalProperties": true
+    },
+
     "processing": {
       "description": "Append-only log of every Pic-Machina batch run that has processed this image.",
       "type": "array",

@@ -229,3 +229,22 @@ Discovery [LIB] ──> Inspect [PVW] ──> Configure [SET] ──> Run [QUE]
 | `sys-graphic-novel` | Graphic Novel | Kuwahara smooth + colour boost + ink-line edge detection (subtle, photo-realistic) |
 | `sys-graphic-novel-bold` | Graphic Novel — Bold | As above with posterisation and heavier ink lines for a comic-book panel look |
 | `sys-vampire-gfx` | Vampire GFX | Chalk-white pallor, cold colour grade, skin bloom glow and AI red glowing eyes (BlazeFace) |
+| `sys-polaroid` | Polaroid | Classic instant camera framing with light leak |
+| `sys-copyrighter` | Copyrighter | Add copyright watermarks |
+| `sys-bw-classic` | Classic Black & White | High-contrast B&W processing |
+| `sys-film-grain` | Film Grain | Simple film grain overlay |
+| `sys-social-ready` | Social Ready | Crop and pad for social media |
+| `sys-video-frame-gif` | Video Frame GIF | Extract frames into an animated GIF |
+| `sys-video-wall` | Video Wall | Combine videos into a grid |
+| `sys-video-tv` | TV Room | Video placed inside a TV mockup |
+| `sys-comic-book` | Comic Book Cell | Comic style treatment |
+| `sys-geo-timeline` | Geotemporal Timeline | Map-based video sequence of photos |
+| `sys-machina-swap` | Machina-Swap | Mesh-based face swapping |
+| `sys-talking-head-pip` | Talking Head PiP | Picture-in-picture layout |
+| `sys-bg-swap` | Background Swap | Subject cut-out composite onto new background |
+| `sys-pm-solutions-id` | PM Solutions ID Card | Corporate ID generator |
+| `sys-organise-by-location` | Organise by Location | Group images by GPS city/country |
+| `sys-organise-by-date` | Organise by Date | Group images by capture date |
+| `sys-cinematic-portrait` | Cinematic Portrait | Film look for portraits |
+| `sys-find-blurry` | Find Blurry Images | Filter out low-sharpness images |
+| `sys-oil-painting-face-swap` | Oil Painting Face Swap | Face swap combined with painterly effect |

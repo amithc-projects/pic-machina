@@ -61,6 +61,7 @@ All transforms are registered by their `transformId` string.
 | Transform ID | Name | Key Params | Notes |
 |---|---|---|---|
 | `filter-advanced` | Advanced Effects | `blurRadius`, `sharpenAmount`, `noiseLevel`, `pixelSize` | Multi-purpose filter node |
+| `filter-blur` | Blur | `radius` (0–100) | Standard Gaussian blur |
 | `filter-bloom` | Bloom / Glow | `threshold`, `blurRadius`, `strength` | Bright-area glow; useful for halation |
 | `filter-chromatic-aberration` | Chromatic Aberration | `offset` (1–30), `direction` | RGB channel fringe; glitch/lo-fi aesthetic |
 | `filter-color-grade` | Colour Grade | `lift`, `shadowColor`, `shadowStrength`, `highlightColor`, `highlightStrength` | Split-tone shadow/highlight grading |
@@ -92,6 +93,8 @@ All transforms are registered by their `transformId` string.
 | `overlay-device-mockup` | Device Mockup | `family`, `model`, `variant` | Wraps the current image inside a physical device chassis using dynamic clipping and glare overlays |
 | `overlay-html-block` | Raw HTML | `htmlContent`, `justifyLayout`, `globalScale` | Renders fully interactive HTML markup into the canvas sequence dynamically. |
 | `overlay-subtitles` | Add Subtitles | `subtitleFile`, `captionColor`, `shadowOpacity` | Stamps perfectly timed text blocks onto the timeline securely parsing SRT files or direct {{autoCaptions}} tags. |
+| `overlay-craquelure` | Craquelure | `opacity`, `scale`, `blendMode` | Cracked oil painting varnish texture overlay |
+| `overlay-timer` | Animated Timer | `duration`, `font`, `size`, `color`, `bgBox` | Generates a DOM-based animated timer/countdown |
 
 ---
 
@@ -182,6 +185,8 @@ These transforms operate on individual video files using the mediabunny conversi
 | `flow-video-strip-audio` | Video: Strip Audio | `suffix` | Remove all audio tracks |
 | `flow-video-extract-audio` | Video: Extract Audio | `format` (mp3/wav/flac/ogg/aac), `suffix` | Export audio track as a standalone audio file |
 | `flow-video-remix-audio` | Video: Remix Audio | `channels` (keep/1/2), `sampleRate` (keep/22050/44100/48000), `suffix` | Adjust audio channel layout and/or sample rate |
+| `flow-audio-tts` | Generate Audio (Kokoro TTS) | `inputVariable`, `voice`, `outputVariable` | Translates text or timed SRT into lifelike speech |
+| `flow-video-replace-audio` | Video: Replace Audio | `audioFile`, `offset`, `suffix` | Replaces the primary audio track with a new audio file |
 
 ---
 
@@ -201,6 +206,17 @@ These transforms apply existing image effects to every frame of a video using th
 | `video-bloom` | `filter-bloom` | `threshold`, `blurRadius`, `strength`, `suffix`, `bitrate` | Cinematic highlight glow on every frame |
 | `video-color-grade` | `filter-color-grade` | `lift`, `shadowColor`, `shadowStrength`, `highlightColor`, `highlightStrength`, `suffix`, `bitrate` | Split-tone shadow/highlight grading on every frame |
 | `video-chromatic-aberration` | `filter-chromatic-aberration` | `offset`, `direction`, `suffix`, `bitrate` | RGB channel fringe on every frame |
+| `video-posterize` | `color-posterize` | `levels`, `suffix`, `bitrate` | Reduce color palette to distinct bands on every frame |
+| `video-auto-levels` | `color-auto-levels` | `strength`, `suffix`, `bitrate` | Auto-level histogram stretching on every frame |
+| `video-channel-swap` | `color-channel-swap` | `mode`, `suffix`, `bitrate` | Swap RGB channels on every frame |
+| `video-halftone` | `filter-halftone` | `dotSpacing`, `dotColor`, `opacity`, `invert`, `suffix`, `bitrate` | Halftone dot simulation on every frame |
+| `video-tilt-shift` | `filter-tilt-shift` | `centerY`, `bandWidth`, `blurAmount`, `feather`, `suffix`, `bitrate` | Miniature scale model blur on every frame |
+| `video-dither` | `filter-dither` | `palette`, `dithering`, `suffix`, `bitrate` | Retro color limiting on every frame |
+| `video-kuwahara` | `filter-kuwahara` | `radius`, `passes`, `suffix`, `bitrate` | Painterly/oil-paint smoothing on every frame |
+| `video-pixel-sort` | `filter-pixel-sort` | `threshold`, `direction`, `stripHeight`, `suffix`, `bitrate` | Glitch pixel sorting on every frame |
+| `video-pose-landmarks` | MediaPipe Pose | `lineWidth`, `color`, `suffix`, `bitrate` | Renders pose landmarks directly on every frame |
+| `video-watermark` | `overlay-watermark` | `text`, `font`, `size`, `color`, `opacity`, `angle`, `suffix`, `bitrate` | Animated diagonal watermark on every frame |
+| `video-caption` | `overlay-rich-text` | `content`, `font`, `size`, `anchor`, `suffix`, `bitrate` | Simple text overlay/caption on every frame |
 
 ---
 
