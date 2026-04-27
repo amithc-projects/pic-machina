@@ -51,7 +51,11 @@ export async function captureRunOutputFiles(run, outputHandle) {
   try {
     const subfolder = run.outputFolder || 'output';
     const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
-    const all = await listImages(subHandle, { includeVideo: true });
+    // Include archives (zip/pptx) so deliverables produced by createZIP /
+    // createPPTX make it into the run's manifest alongside images and
+    // videos. Filter is mtime-bounded, so unrelated archives in the
+    // folder are still excluded.
+    const all = await listImages(subHandle, { includeVideo: true, includeArchives: true });
     const ours = filterFilesForRun(all, run);
     const names = ours.map(f => f.name);
     run.outputFiles = names;
@@ -101,7 +105,7 @@ export async function getRunOutputFiles(run) {
     }
 
     // Legacy fallback for runs that don't have a manifest yet.
-    const all = await listImages(subHandle, { includeVideo: true });
+    const all = await listImages(subHandle, { includeVideo: true, includeArchives: true });
     return filterFilesForRun(all, run);
   } catch (err) {
     console.warn('[run-thumbnail] getRunOutputFiles failed', err);
@@ -174,9 +178,17 @@ export async function ensureRunThumbnail(run, { persist = true } = {}) {
     // 2. Legacy fallback: for runs created before the manifest existed,
     //    we filter the folder listing by `lastModified` against the run's
     //    [startedAt, finishedAt] window. Best-effort only.
+    // Archives (zip / pptx) can't be rasterised, so skip them when
+    // looking for a thumbnail source.
+    const isThumbCandidate = (name) => {
+      const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+      return ext !== '.zip' && ext !== '.pptx';
+    };
+
     let first = null;
     if (Array.isArray(run.outputFiles) && run.outputFiles.length) {
       for (const name of run.outputFiles) {
+        if (!isThumbCandidate(name)) continue;
         try {
           const fh = await subHandle.getFileHandle(name);
           first = await fh.getFile();
@@ -185,6 +197,8 @@ export async function ensureRunThumbnail(run, { persist = true } = {}) {
       }
       if (!first) return null;
     } else {
+      // Legacy fallback. Don't include archives here — the picker can't
+      // thumbnail them and we'd just pick one and fail.
       const allFiles = await listImages(subHandle, { includeVideo: true });
       if (!allFiles.length) return null;
       const ours = filterFilesForRun(allFiles, run);
