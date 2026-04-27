@@ -6,7 +6,7 @@
  * Accessed via #bld?id=<recipeId>
  */
 
-import { getRecipe, saveRecipe, scheduleAutosave, flushAutosave, setRecipeThumbnail, clearRecipeThumbnail, getAllRecipes } from '../data/recipes.js';
+import { getRecipe, saveRecipe, deleteRecipe, scheduleAutosave, flushAutosave, cancelAutosave, setRecipeThumbnail, clearRecipeThumbnail, getAllRecipes } from '../data/recipes.js';
 import { getAllBlocks } from '../data/blocks.js';
 import { navigate } from '../main.js';
 import { showConfirm } from '../utils/dialogs.js';
@@ -725,9 +725,35 @@ export async function render(container, hash) {
 
   // ── Back ──────────────────────────────────────────────────
   container.querySelector('#bld-back')?.addEventListener('click', async () => {
-    await flushAutosave(draft);
+    // If the user clicked "New Recipe" in the library and immediately
+    // backed out without naming anything or adding a step, the empty
+    // recipe is junk — discard it instead of leaving a "Untitled Recipe"
+    // littering their library. We only do this for recipes that were
+    // freshly-blank when this editor session started (isNew) and remain
+    // entirely empty on exit.
+    if (isNew && isDraftEmpty(draft)) {
+      cancelAutosave(); // make sure a pending timer doesn't recreate the row
+      try { await deleteRecipe(draft.id); } catch { /* non-fatal */ }
+    } else {
+      await flushAutosave(draft);
+    }
     navigate('#lib');
   });
+
+  /**
+   * "Empty" means: no meaningful name, no description, no steps.
+   * Treats both "" and the placeholder "Untitled Recipe" as empty so the
+   * library's blank-recipe seed (`name: ''`) and any older legacy seed
+   * are both covered.
+   */
+  function isDraftEmpty(d) {
+    if (!d) return true;
+    const name = (d.name || '').trim();
+    const isPlaceholderName = name === '' || name === 'Untitled Recipe';
+    const hasDescription = !!(d.description || '').trim();
+    const stepCount = countNodes(d.nodes || []);
+    return isPlaceholderName && !hasDescription && stepCount === 0;
+  }
 
   // ── Use / Preview ─────────────────────────────────────────
   container.querySelector('#bld-btn-use')?.addEventListener('click', () => navigate(`#set?recipe=${draft.id}`));
@@ -1357,6 +1383,14 @@ export async function render(container, hash) {
   // ── Cleanup: flush autosave & remove listener ──────────────
   return async () => {
     window.removeEventListener('paste', onPaste);
+    // Same logic as the back button: discard an untouched new recipe
+    // rather than persisting an empty placeholder. Catches navigation
+    // via the sidebar rail, hash change, etc. — not just the back arrow.
+    if (isNew && isDraftEmpty(draft)) {
+      cancelAutosave();
+      try { await deleteRecipe(draft.id); } catch { /* non-fatal */ }
+      return;
+    }
     await flushAutosave(draft);
   };
 }

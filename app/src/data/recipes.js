@@ -90,6 +90,15 @@ export function flushAutosave(recipe) {
   return saveRecipe(recipe);
 }
 
+/**
+ * Cancel a pending autosave without persisting. Used when discarding a
+ * draft (e.g. an untouched new recipe being thrown away on back-press)
+ * to avoid the timer firing a few seconds later and recreating it.
+ */
+export function cancelAutosave() {
+  clearTimeout(_autosaveTimer);
+}
+
 // ─── Thumbnail ────────────────────────────────────────────
 
 /**
