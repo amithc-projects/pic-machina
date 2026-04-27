@@ -64,7 +64,9 @@ function thumbSlotHTML(run) {
 }
 
 export async function render(container, hash) {
-  const autoRunId = new URLSearchParams((hash || '').split('?')[1] || '').get('run');
+  const params       = new URLSearchParams((hash || '').split('?')[1] || '');
+  const autoRunId    = params.get('run');
+  const filterRecipe = params.get('recipe');
   container.innerHTML = `
     <div class="screen out-screen">
       <div class="screen-header">
@@ -313,7 +315,7 @@ export async function render(container, hash) {
       </div>`;
 
     bindRunActions();
-    initFilters(runs, container);
+    initFilters(runs, container, { initialRecipeId: filterRecipe });
 
     // Lazily fill in any missing thumbnails. Each run's first output is
     // read from disk, scaled into a small JPEG, and persisted to its run
@@ -693,37 +695,45 @@ export async function render(container, hash) {
 }
 
 // ── Filter bar ────────────────────────────────────────────────────────────────
-function initFilters(runs, container) {
+function initFilters(runs, container, { initialRecipeId } = {}) {
   const recipeSelect = container.querySelector('#out-filter-recipe');
   const fromInput    = container.querySelector('#out-filter-from');
   const toInput      = container.querySelector('#out-filter-to');
   const clearBtn     = container.querySelector('#out-filter-clear');
   if (!recipeSelect) return;
 
-  // Populate unique recipe names (sorted)
-  const recipeNames = [...new Set(runs.map(r => r.recipeName).filter(Boolean))].sort();
-  recipeNames.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    recipeSelect.appendChild(opt);
-  });
+  // Populate one option per unique recipe id. Value is the id (so the URL
+  // ?recipe=<id> filter works and renames don't break things), label is
+  // the recipe name. Sorted by display name for the user.
+  const seen = new Map(); // recipeId → recipeName
+  for (const r of runs) {
+    if (!r.recipeId) continue;
+    if (!seen.has(r.recipeId)) seen.set(r.recipeId, r.recipeName || '(unnamed recipe)');
+  }
+  [...seen.entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .forEach(([id, name]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = name;
+      recipeSelect.appendChild(opt);
+    });
 
   function isFiltered() {
     return recipeSelect.value || fromInput.value || toInput.value;
   }
 
   function applyFilters() {
-    const recipe  = recipeSelect.value;
-    const fromMs  = fromInput.value  ? new Date(fromInput.value).setHours(0,0,0,0)   : null;
-    const toMs    = toInput.value    ? new Date(toInput.value).setHours(23,59,59,999) : null;
+    const recipeId = recipeSelect.value;
+    const fromMs   = fromInput.value ? new Date(fromInput.value).setHours(0,0,0,0)   : null;
+    const toMs     = toInput.value   ? new Date(toInput.value).setHours(23,59,59,999) : null;
 
     container.querySelectorAll('.out-run-row').forEach(row => {
       const run = runs.find(r => r.id === row.dataset.id);
       if (!run) return;
-      const recipeMatch = !recipe || run.recipeName === recipe;
-      const fromMatch   = !fromMs || (run.startedAt || 0) >= fromMs;
-      const toMatch     = !toMs   || (run.startedAt || 0) <= toMs;
+      const recipeMatch = !recipeId || run.recipeId === recipeId;
+      const fromMatch   = !fromMs   || (run.startedAt || 0) >= fromMs;
+      const toMatch     = !toMs     || (run.startedAt || 0) <= toMs;
       row.style.display = (recipeMatch && fromMatch && toMatch) ? '' : 'none';
     });
 
@@ -740,6 +750,13 @@ function initFilters(runs, container) {
     toInput.value      = '';
     applyFilters();
   });
+
+  // Pre-apply the recipe filter from the URL — drives the "View recent
+  // runs" link in the recipe Batch Setup sidebar.
+  if (initialRecipeId && seen.has(initialRecipeId)) {
+    recipeSelect.value = initialRecipeId;
+    applyFilters();
+  }
 }
 
 // ── Add to ShowCase helper ────────────────────────────────────────────────────

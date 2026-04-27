@@ -9,6 +9,7 @@ import { pickFolder, getFolder, setCurrentFolder, fileFilterForRecipe,
          listImages, loadVideoPreviews, writeVideoPreview } from '../data/folders.js';
 import { isVideoFile, extractVideoFrame }           from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
+import { getRunsForRecipe }                          from '../data/runs.js';
 import { startBatch }                               from '../engine/batch.js';
 import { navigate }                                 from '../main.js';
 import { formatBytes }                              from '../utils/misc.js';
@@ -148,6 +149,16 @@ export async function render(container, hash) {
               <input type="checkbox" id="opt-skip-existing" checked>
               <span>Skip already-processed files</span>
             </label>
+          </section>
+
+          <!-- Recent runs link — populated by updateRecipeDisplay() -->
+          <section class="set-section" id="set-history-section" style="display:none">
+            <div class="set-section-title">History</div>
+            <a href="#" id="set-history-link" class="set-history-link" role="button">
+              <span class="material-symbols-outlined">history</span>
+              <span class="set-history-link__label">View recent runs</span>
+              <span class="material-symbols-outlined set-history-link__arrow">arrow_forward</span>
+            </a>
           </section>
 
           <!-- Slot assignment (shown when recipe uses a named template) -->
@@ -863,6 +874,40 @@ export async function render(container, hash) {
     renderEffectTimeline();
     updateRunButton();
     refreshImageGrid();
+    refreshHistoryLink();
+  }
+
+  /**
+   * Toggle the "Recent runs" link in the sidebar based on the current
+   * recipe. When there are runs for this recipe, the link shows the count
+   * and navigates to the Output History pre-filtered to this recipe id.
+   * When there are no runs yet, the section is hidden so it doesn't add
+   * noise to a brand-new recipe's setup screen.
+   */
+  async function refreshHistoryLink() {
+    const section = container.querySelector('#set-history-section');
+    const link    = container.querySelector('#set-history-link');
+    const label   = container.querySelector('.set-history-link__label');
+    if (!section || !link || !label) return;
+
+    if (!currentRecipe?.id) { section.style.display = 'none'; return; }
+
+    let runs = [];
+    try { runs = await getRunsForRecipe(currentRecipe.id); } catch { runs = []; }
+    if (!runs.length) { section.style.display = 'none'; return; }
+
+    section.style.display = '';
+    label.textContent = runs.length === 1
+      ? 'View 1 recent run'
+      : `View ${runs.length} recent runs`;
+
+    // Re-bind every refresh — the link's recipe id changes when the user
+    // swaps recipes via "Change". Prefer onclick (idempotent) over
+    // addEventListener so we don't accumulate handlers.
+    link.onclick = (e) => {
+      e.preventDefault();
+      navigate(`#out?recipe=${currentRecipe.id}`);
+    };
   }
 
   // ── Phase 6: Read-only effect timeline ───────────────────
@@ -1272,6 +1317,29 @@ function injectStyles() {
     .set-subfolder-row { margin-top:8px; display:flex; align-items:center; gap:8px; }
     .set-subfolder-row .ic-label { white-space:nowrap; margin-bottom:0; }
     .set-checkbox-row { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ps-text); cursor:pointer; }
+
+    /* "View recent runs" link — sidebar entry that jumps to Output History
+       pre-filtered to the current recipe. */
+    .set-history-link {
+      display:flex; align-items:center; gap:8px;
+      padding:8px 12px;
+      border:1px solid var(--ps-border);
+      border-radius:8px;
+      background:var(--ps-bg-raised);
+      color:var(--ps-text-muted);
+      text-decoration:none;
+      font-size:13px;
+      transition:border-color 120ms ease, color 120ms ease, background 120ms ease;
+    }
+    .set-history-link:hover {
+      border-color:var(--ps-blue);
+      color:var(--ps-text);
+      background:var(--ps-bg-surface);
+    }
+    .set-history-link .material-symbols-outlined { font-size:18px; }
+    .set-history-link__label { flex:1; }
+    .set-history-link__arrow { font-size:16px !important; opacity:.6; transition:transform 120ms ease, opacity 120ms ease; }
+    .set-history-link:hover .set-history-link__arrow { transform:translateX(2px); opacity:1; }
 
     .set-grid-area { flex:1; display:flex; flex-direction:column; min-height:0; }
     .set-grid-search-bar {
