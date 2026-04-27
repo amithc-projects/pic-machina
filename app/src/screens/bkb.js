@@ -207,7 +207,7 @@ async function renderEditor(container, blockId) {
           </button>
           <div class="screen-title">
             <span class="material-symbols-outlined">widgets</span>
-            ${draft.name}
+            <span id="bkb-header-name">${escHtml(draft.name) || 'Untitled Block'}</span>
           </div>
           <span id="bkb-save-status" class="text-sm text-muted" style="margin-left:4px"></span>
         </div>
@@ -289,7 +289,15 @@ async function renderEditor(container, blockId) {
 
   container.querySelector('#bkb-back')?.addEventListener('click', async () => { await doSave(); navigate('#bkb'); });
   container.querySelector('#bkb-save-btn')?.addEventListener('click', doSave);
-  container.querySelector('#bkb-name')?.addEventListener('input', markDirty);
+
+  // Mirror the name input back to the header title on every keystroke so
+  // the user can see the rename land before they save.
+  const nameInput  = container.querySelector('#bkb-name');
+  const headerName = container.querySelector('#bkb-header-name');
+  nameInput?.addEventListener('input', () => {
+    markDirty();
+    if (headerName) headerName.textContent = nameInput.value || 'Untitled Block';
+  });
   container.querySelector('#bkb-desc')?.addEventListener('input', markDirty);
   container.querySelector('#bkb-cat')?.addEventListener('input', markDirty);
 
