@@ -12,6 +12,7 @@ import { uuid, now, deepClone, formatDate } from '../utils/misc.js';
 import { showConfirm } from '../utils/dialogs.js';
 import { registry } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
+import { injectBldStyles } from './bld.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -31,15 +32,14 @@ async function renderList(container) {
     <div class="bkb-section-header" style="margin-top:${systemBlocks.length ? '24px' : '0'}">My Blocks</div>
     <div class="bkb-grid">${userBlocks.map(b => blockCardHTML(b)).join('')}</div>` : '';
 
+  // Empty state for the user-blocks section. The "+ New Block" button in
+  // the screen header is the canonical entry point for creating a block —
+  // we don't repeat it here to avoid two parallel CTAs.
   const emptyUser = userBlocks.length === 0 ? `
     <div class="empty-state" style="padding-top:${systemBlocks.length ? '32px' : '60px'}">
       <span class="material-symbols-outlined" style="font-size:${systemBlocks.length ? '32px' : '48px'}">add_box</span>
       <div class="empty-state-title">No custom blocks yet</div>
-      <div class="empty-state-desc">Create a block to build reusable step sequences, or clone a system block to customise it.</div>
-      <button class="btn-primary" id="bkb-empty-new">
-        <span class="material-symbols-outlined">add</span>
-        Create Block
-      </button>
+      <div class="empty-state-desc">Use <strong>+ New Block</strong> above to build a reusable step sequence, or clone a system block to customise it.</div>
     </div>` : '';
 
   container.innerHTML = `
@@ -64,7 +64,7 @@ async function renderList(container) {
 
   injectBkbStyles();
 
-  container.querySelector('#bkb-btn-new, #bkb-empty-new')?.addEventListener('click', () => createNew());
+  container.querySelector('#bkb-btn-new')?.addEventListener('click', () => createNew());
 
   container.querySelectorAll('.bkb-card-edit').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); navigate(`#bkb?id=${btn.dataset.id}`); });
@@ -387,6 +387,12 @@ export async function render(container, hash) {
 
 let _bkbStyles = false;
 function injectBkbStyles() {
+  // The Block Builder reuses the recipe builder's `.bld-*` classes for
+  // its layout (.bld-body, .bld-config, .bld-nodes-panel), node list
+  // (.bld-node-row), and Add Step modal (.bld-modal-overlay, .bld-add-*).
+  // Pull them in so going straight to #bkb without first visiting #bld
+  // still produces a styled screen with a working modal.
+  injectBldStyles();
   if (_bkbStyles) return;
   _bkbStyles = true;
   const s = document.createElement('style');

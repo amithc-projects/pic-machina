@@ -1366,7 +1366,10 @@ function escHtml(s) {
 }
 
 let _bldStyles = false;
-function injectBldStyles() {
+// Exported so screens that reuse the shared `.bld-*` layout / node-row /
+// modal classes (e.g. Block Builder) can pull the same stylesheet without
+// having to navigate through the recipe builder first.
+export function injectBldStyles() {
   if (_bldStyles) return;
   _bldStyles = true;
   const s = document.createElement('style');
