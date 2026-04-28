@@ -45,7 +45,21 @@ async function extractHeadLandmarks(bmp) {
 }
 
 export async function createFaceSwap(sourceBlob, targetBlob, params = {}) {
-  const blendMode = params.blendMode === 'poisson' ? 'poisson' : 'feather';
+  // Three blendModes:
+  //   'feather'        — alpha-feathered overlay (legacy)
+  //   'poisson'        — gradient-domain seamless cloning, source gradients only
+  //   'poisson-mixed'  — Poisson with mixed gradients (Pérez 2003 §5):
+  //                      at each pixel pick whichever of |∇S| or |∇T| is
+  //                      larger as the guidance gradient, so the warped
+  //                      face keeps its strong features (eyes / nose /
+  //                      cheek shading) AND the target keeps its strong
+  //                      features (lip line, jaw shadow). Best for
+  //                      character-on-painting swaps where both faces
+  //                      have meaningful detail at the same locations.
+  const requested = params.blendMode;
+  const blendMode = requested === 'poisson-mixed' ? 'poisson-mixed'
+                  : requested === 'poisson'       ? 'poisson'
+                  :                                  'feather';
 
   const [sourceBmp, targetBmp] = await Promise.all([
     createImageBitmap(sourceBlob),
@@ -106,14 +120,19 @@ export async function createFaceSwap(sourceBlob, targetBlob, params = {}) {
     maskCtx.stroke();
   }
 
-  if (blendMode === 'poisson') {
+  if (blendMode === 'poisson' || blendMode === 'poisson-mixed') {
     // Gradient-domain seamless cloning. The warped face contributes
     // only its Laplacian; boundary pixels anchor to the target image.
+    // In 'poisson-mixed' mode the per-neighbour guidance gradient is
+    // the larger-magnitude of source and target, so strong target
+    // features (lip line, jaw shadow) survive under the warped source.
     const W = targetBmp.width, H = targetBmp.height;
     const targetData = ctx.getImageData(0, 0, W, H);
     const sourceData = faceCtx.getImageData(0, 0, W, H);
     const maskData   = maskCtx.getImageData(0, 0, W, H);
-    const blended    = poissonClone(targetData, sourceData, maskData);
+    const blended    = poissonClone(targetData, sourceData, maskData, {
+      mixed: blendMode === 'poisson-mixed',
+    });
     ctx.putImageData(blended, 0, 0);
   } else {
     // Feather path (current behaviour): blur the mask alpha and
@@ -135,24 +154,37 @@ export async function createFaceSwap(sourceBlob, targetBlob, params = {}) {
 /**
  * Poisson seamless cloning (Pérez, Gangnet, Blake 2003).
  *
- * Solves ∇²f = ∇²S over the mask region, with f = T on the boundary.
- * In words: the inserted face contributes its *gradients* only (so its
- * shape and shading are preserved) but its absolute colour/luminance
- * is dictated by the surrounding target image (so the boundary blends
- * perfectly without a seam).
+ * Solves ∇²f = guide over the mask region, with f = T on the boundary,
+ * where `guide` is either ∇²S (pure source gradients) or the per-edge
+ * mixed gradient (max-magnitude of source vs target, see `opts.mixed`).
  *
- * Solver: Gauss-Seidel with Successive Over-Relaxation. Restricted to
- * the mask's bounding box for speed. Three independent solves per
- * channel.
+ * Pure mode: the inserted face contributes its gradients only — strong
+ * source features (eyes, nose, cheek shading) survive; absolute colour
+ * is dictated by the surrounding target.
+ *
+ * Mixed mode: at each (pixel, neighbour) edge we pick whichever of
+ * (S(p)-S(q)) or (T(p)-T(q)) has the larger magnitude. This preserves
+ * strong features from BOTH images at the same time — the swapped face
+ * keeps its identity-defining gradients, and the target keeps its
+ * structural ones (e.g. Mona Lisa's lip line, jaw shadow). Removes the
+ * faint colour-cast streaks pure Poisson can leave at the mask boundary
+ * where source has weak gradient but target is changing fast.
+ *
+ * Solver: Gauss-Seidel with Successive Over-Relaxation, restricted to
+ * the mask's bounding box. Three independent solves per channel. Values
+ * clamped to [0, 255] inside the loop to prevent SOR overshoot from
+ * propagating through Gauss-Seidel.
  *
  * @param {ImageData} targetData  Target image (full canvas).
  * @param {ImageData} sourceData  Warped source face on full canvas; need
  *                                only have valid pixel data inside the
  *                                mask region.
  * @param {ImageData} maskData    Binary mask — alpha > 128 = inside.
+ * @param {{mixed?: boolean}} [opts]
  * @returns {ImageData}            Blended image, same size as target.
  */
-function poissonClone(targetData, sourceData, maskData) {
+function poissonClone(targetData, sourceData, maskData, opts = {}) {
+  const mixed = !!opts.mixed;
   const W = targetData.width, H = targetData.height;
   const tgt  = targetData.data;
   const src  = sourceData.data;
@@ -193,16 +225,23 @@ function poissonClone(targetData, sourceData, maskData) {
     fB[i] = tgt[o + 2];
   }
 
-  // Pre-compute the source Laplacian at every interior pixel. Stored
-  // by parallel typed arrays indexed by `interior[idx]`.
+  // Pre-compute the guidance "Laplacian" at every interior pixel.
+  // Stored by parallel arrays indexed by `interior[idx]`.
+  //
+  // Pure Poisson:  lap = 4·S(p) − ΣS(q) over neighbours q.
+  //                Equivalent to Σ (S(p) − S(q)) over q.
+  //
+  // Mixed Poisson: per-neighbour we pick whichever of (S(p) − S(q))
+  //                or (T(p) − T(q)) has the larger magnitude. The
+  //                guidance is then Σ of those picked values.
+  //                Effect: at each *edge* (centre-to-neighbour) we
+  //                follow whichever image is changing faster there.
   //
   // Edge-case guard: a neighbour pixel just outside the warped
   // triangles is fully transparent (alpha 0), so reading its RGB
-  // returns 0/0/0 — that would corrupt the Laplacian at the mask
-  // boundary. Fall back to the centre pixel value when a neighbour
-  // is transparent, which makes the gradient zero at those edges
-  // and lets the boundary smoothly relax to the target colour
-  // through the iteration.
+  // returns 0/0/0. Fall back to the centre pixel value at those
+  // edges so the source contribution is 0; in mixed mode this
+  // automatically lets the target gradient win at the boundary.
   const interior = [];
   const lapR = [];
   const lapG = [];
@@ -227,9 +266,36 @@ function poissonClone(targetData, sourceData, maskData) {
       const sRb = src[oR + 3] > 0 ? src[oR + 2] : cB;
       const sUb = src[oU + 3] > 0 ? src[oU + 2] : cB;
       const sDb = src[oD + 3] > 0 ? src[oD + 2] : cB;
-      lapR.push(4 * cR - sLr - sRr - sUr - sDr);
-      lapG.push(4 * cG - sLg - sRg - sUg - sDg);
-      lapB.push(4 * cB - sLb - sRb - sUb - sDb);
+
+      if (!mixed) {
+        // Pure Poisson — source-only guidance.
+        lapR.push(4 * cR - sLr - sRr - sUr - sDr);
+        lapG.push(4 * cG - sLg - sRg - sUg - sDg);
+        lapB.push(4 * cB - sLb - sRb - sUb - sDb);
+      } else {
+        // Mixed Poisson — per-edge max-magnitude of source vs target.
+        // For each neighbour direction we compute both differences
+        // (S(p) − S(q)) and (T(p) − T(q)) per channel and keep the
+        // larger-magnitude one. Sum these picked differences across
+        // the four neighbours to get the guidance value at p.
+        const tR = tgt[o], tG = tgt[o + 1], tB = tgt[o + 2];
+        const tLr = tgt[oL], tRr_ = tgt[oR], tUr = tgt[oU], tDr = tgt[oD];
+        const tLg = tgt[oL + 1], tRg = tgt[oR + 1], tUg = tgt[oU + 1], tDg = tgt[oD + 1];
+        const tLb = tgt[oL + 2], tRb = tgt[oR + 2], tUb = tgt[oU + 2], tDb = tgt[oD + 2];
+
+        const pick = (sd, td) => (Math.abs(sd) >= Math.abs(td) ? sd : td);
+
+        const gR = pick(cR - sLr, tR - tLr) + pick(cR - sRr, tR - tRr_)
+                 + pick(cR - sUr, tR - tUr) + pick(cR - sDr, tR - tDr);
+        const gG = pick(cG - sLg, tG - tLg) + pick(cG - sRg, tG - tRg)
+                 + pick(cG - sUg, tG - tUg) + pick(cG - sDg, tG - tDg);
+        const gB = pick(cB - sLb, tB - tLb) + pick(cB - sRb, tB - tRb)
+                 + pick(cB - sUb, tB - tUb) + pick(cB - sDb, tB - tDb);
+
+        lapR.push(gR);
+        lapG.push(gG);
+        lapB.push(gB);
+      }
     }
   }
 

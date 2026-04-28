@@ -1276,11 +1276,16 @@ export const SYSTEM_RECIPES = [
         elseNodes: []
       },
       // Aggregator: mesh-warp the source face into the target's
-      // landmarks, then blend with Poisson seamless cloning.
+      // landmarks, then blend with mixed-gradient Poisson cloning.
+      // Mixed mode preserves strong features from BOTH images: the
+      // swapped face keeps its eyes / nose / cheek shading, and the
+      // target painting keeps its lip line, jaw shadow, and any
+      // strong edges where source happens to be smooth — fixing the
+      // faint colour-cast streaks pure Poisson left at the boundary.
       {
         id: 'op-swap', type: 'transform', transformId: 'flow-face-swap',
-        params: { suffix: '_oilswap', quality: 95, blendMode: 'poisson' },
-        label: 'Face swap (Poisson cloning)'
+        params: { suffix: '_oilswap', quality: 95, blendMode: 'poisson-mixed' },
+        label: 'Face swap (mixed-gradient Poisson)'
       }
     ]
   }
