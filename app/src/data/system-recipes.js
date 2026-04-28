@@ -1220,89 +1220,67 @@ export const SYSTEM_RECIPES = [
   },
 
   // ── Oil Painting Face Swap ────────────────────────────────
-  // Style-aware face swap: pre-recolours the SOURCE face (image 0)
-  // into the target painting's ochre/sepia palette before the
-  // mesh-based swap runs. The target painting (image 1) passes
-  // through untouched.
+  // Drop two images:
+  //   [0] modern portrait (face donor)
+  //   [1] target painting (e.g. Mona Lisa)
   //
-  // Previous version leaned on desaturation + a soft-light amber tint
-  // — that flattened skin tones to grey rather than shifting them
-  // INTO the Mona Lisa palette, leaving the swapped face looking
-  // washed-out and pale. New approach uses Duotone to force the
-  // tonal range into a defined sepia gradient (Mona-shadow →
-  // Mona-skin), then a multiply tint to deepen the warmth.
+  // Path 1 (Duotone-led pre-styling) didn't deliver — desaturating
+  // the source then bolting on a sepia tint produced a flat, pale
+  // result against the warm painting. Path 2: gradient-domain
+  // seamless cloning ("Poisson") inside the mesh-swap step itself.
   //
-  // Drop two images: [0] modern portrait (face donor),
-  //                  [1] target painting (e.g. Mona Lisa).
+  // Poisson cloning replaces the alpha-feather seam used by the
+  // standard Machina-Swap recipe. Instead of pasting the warped
+  // source onto the target with a soft alpha edge, the warped face
+  // contributes only its *gradients* — boundary pixels are anchored
+  // to the surrounding painting, and interior pixels are
+  // reconstructed to match those boundaries. Effect: the face takes
+  // on the painting's local skin tone, varnish hue, and lighting
+  // automatically. Implemented in engine/face-swap.js via a
+  // Gauss-Seidel / SOR solver over the mask region.
   //
-  // Per-image stack on image 0 ONLY:
-  //   Auto Levels      — normalise the source's tonal distribution
-  //   Standard Tuning  — gentle desat + contrast reduction (keep info)
-  //   Duotone          — force into Mona shadow/highlight palette
-  //   Color Tint       — multiply ochre wash for extra warmth
-  //   Color Grade      — extra warm shadow tint to deepen sepia
-  //   Gaussian Blur    — sfumato softening of edges
-  //   Kuwahara         — painterly oil-paint stylisation
-  // Then aggregator:
-  //   flow-face-swap   — 478-point mesh warp + feathered alpha mask
+  // Because Poisson handles colour and lighting transfer, we DON'T
+  // pre-recolour the source any more — destroying its gradients
+  // would actually fight the algorithm. We do leave a light
+  // painterly pass on the source (Kuwahara + 1px blur) so the
+  // result reads as paint-strokes rather than smooth photographic
+  // skin once the colours land in the painting's range.
   {
     id:          'sys-oil-painting-face-swap',
     name:        'Oil Painting Face Swap',
-    description: 'Swap a modern face onto a classical painting (e.g. Mona Lisa). Drop two images — the modern portrait first, the painting second. The portrait is recoloured into the target painting palette via Duotone before the mesh-based swap, so the warped face arrives already in the right ochre/sepia range without an obvious modern-photo seam.',
+    description: 'Swap a modern face onto a classical painting (e.g. Mona Lisa). Drop two images — the modern portrait first, the painting second. Uses Poisson seamless cloning (gradient-domain blending) so the swapped face automatically adopts the painting\'s skin tone, varnish hue, and lighting — no visible modern-photo seam.',
     isSystem:    true,
     isOrdered:   true,
     coverColor:  '#92400e',
     inputType:   'image',
-    tags:        ['portrait', 'painting', 'oil', 'aged', 'style', 'face-swap', 'sfumato', 'duotone'],
+    tags:        ['portrait', 'painting', 'oil', 'aged', 'face-swap', 'poisson', 'seamless'],
     createdAt:   0,
     updatedAt:   0,
     nodes: [
-      // Pre-style the SOURCE face only. The target painting is left
-      // alone so the swap's mesh detection sees its original
-      // landmarks and the surrounding pixels stay authentic.
+      // Light painterly pass on the SOURCE only — gives the warped
+      // face brush-stroke texture once Poisson lands its colours in
+      // the target's range. Target painting is untouched so its
+      // surface and landmarks stay authentic.
       {
         id: 'op-cond', type: 'conditional',
-        label: 'Pre-recolour source face only (image 0)',
+        label: 'Painterly source pass (image 0)',
         condition: { field: 'fileIndex', operator: 'eq', value: 0 },
         thenNodes: [
-          { id: 'op-1', type: 'transform', transformId: 'color-auto-levels',
-            params: {},
-            label: 'Normalise levels' },
-          { id: 'op-2', type: 'transform', transformId: 'color-tuning',
-            params: { contrast: -15, saturation: -20, vibrance: -5, invert: false },
-            label: 'Gentle desat + soften contrast' },
-          // Duotone is the heavy lifter — it remaps every pixel from
-          // luminance into a gradient between two chosen colours, so
-          // the entire face ends up in the Mona Lisa tonal range
-          // rather than just being slightly warmed.
-          { id: 'op-3', type: 'transform', transformId: 'color-duotone',
-            params: {
-              darkColor:  '#2c1d0f', // deep sepia shadow (Mona Lisa shadows)
-              lightColor: '#d4ac6b', // warm ochre highlight (Mona Lisa skin)
-            },
-            label: 'Force into ochre/sepia palette (Duotone)' },
-          { id: 'op-4', type: 'transform', transformId: 'color-tint',
-            params: { color: '#a8773d', strength: 25, blendMode: 'multiply' },
-            label: 'Multiply ochre wash' },
-          { id: 'op-5', type: 'transform', transformId: 'filter-color-grade',
-            params: { lift: 8,
-              shadowColor: '#3a2410',    shadowStrength: 50,
-              highlightColor: '#e8c789', highlightStrength: 35 },
-            label: 'Deepen sepia grade' },
-          { id: 'op-6', type: 'transform', transformId: 'filter-blur',
+          { id: 'op-blur', type: 'transform', transformId: 'filter-blur',
             params: { radius: 1 },
             label: 'Sfumato softening' },
-          { id: 'op-7', type: 'transform', transformId: 'filter-kuwahara',
+          { id: 'op-kuw', type: 'transform', transformId: 'filter-kuwahara',
             params: { radius: 2, passes: 1 },
             label: 'Painterly strokes' }
         ],
         elseNodes: []
       },
-      // Aggregator: mesh-warp the (now pre-aged) source face onto the target.
+      // Aggregator: mesh-warp the source face into the target's
+      // landmarks, then blend with Poisson seamless cloning.
       {
         id: 'op-swap', type: 'transform', transformId: 'flow-face-swap',
-        params: { suffix: '_oilswap', quality: 95 },
-        label: 'Face swap (mesh warp)'
+        params: { suffix: '_oilswap', quality: 95, blendMode: 'poisson' },
+        label: 'Face swap (Poisson cloning)'
       }
     ]
   }
