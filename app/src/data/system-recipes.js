@@ -1220,68 +1220,79 @@ export const SYSTEM_RECIPES = [
   },
 
   // ── Oil Painting Face Swap ────────────────────────────────
-  // Style-aware face swap: pre-ages the SOURCE face (image 0) to
-  // match the target painting's palette before the mesh-based swap
-  // runs. The target painting (image 1) passes through untouched.
+  // Style-aware face swap: pre-recolours the SOURCE face (image 0)
+  // into the target painting's ochre/sepia palette before the
+  // mesh-based swap runs. The target painting (image 1) passes
+  // through untouched.
   //
-  // Why pre-age the source? `flow-face-swap` does geometric warping
-  // + alpha-feather only — it doesn't harmonise colour or lighting,
-  // so a modern photo pasted onto an aged painting leaves a visible
-  // tonal seam. Aging the source first means the warped face arrives
-  // at the painting already in the right palette, reducing the seam
-  // dramatically without needing a Poisson-clone solver.
+  // Previous version leaned on desaturation + a soft-light amber tint
+  // — that flattened skin tones to grey rather than shifting them
+  // INTO the Mona Lisa palette, leaving the swapped face looking
+  // washed-out and pale. New approach uses Duotone to force the
+  // tonal range into a defined sepia gradient (Mona-shadow →
+  // Mona-skin), then a multiply tint to deepen the warmth.
   //
   // Drop two images: [0] modern portrait (face donor),
   //                  [1] target painting (e.g. Mona Lisa).
-  // The recipe writes one swapped output for each pairing.
   //
   // Per-image stack on image 0 ONLY:
-  //   Auto Levels       — normalise the source's tonal distribution
-  //   Standard Tuning   — desaturate + reduce contrast
-  //   Color Grade       — lift blacks, warm shadows, warm highlights
-  //   Color Tint        — overall amber wash (aged-varnish look)
-  //   Gaussian Blur     — sfumato softening of edges
-  //   Kuwahara          — painterly oil-paint stylisation
+  //   Auto Levels      — normalise the source's tonal distribution
+  //   Standard Tuning  — gentle desat + contrast reduction (keep info)
+  //   Duotone          — force into Mona shadow/highlight palette
+  //   Color Tint       — multiply ochre wash for extra warmth
+  //   Color Grade      — extra warm shadow tint to deepen sepia
+  //   Gaussian Blur    — sfumato softening of edges
+  //   Kuwahara         — painterly oil-paint stylisation
   // Then aggregator:
-  //   flow-face-swap    — 478-point mesh warp + feathered alpha mask
+  //   flow-face-swap   — 478-point mesh warp + feathered alpha mask
   {
     id:          'sys-oil-painting-face-swap',
     name:        'Oil Painting Face Swap',
-    description: 'Swap a modern face onto a classical painting (e.g. Mona Lisa). Drop two images — the modern portrait first, the painting second. The portrait is pre-aged to match the painting palette, then mesh-warped onto it, so the swapped face blends in tonally without an obvious modern-photo seam.',
+    description: 'Swap a modern face onto a classical painting (e.g. Mona Lisa). Drop two images — the modern portrait first, the painting second. The portrait is recoloured into the target painting palette via Duotone before the mesh-based swap, so the warped face arrives already in the right ochre/sepia range without an obvious modern-photo seam.',
     isSystem:    true,
     isOrdered:   true,
     coverColor:  '#92400e',
     inputType:   'image',
-    tags:        ['portrait', 'painting', 'oil', 'aged', 'style', 'face-swap', 'sfumato', 'craquelure'],
+    tags:        ['portrait', 'painting', 'oil', 'aged', 'style', 'face-swap', 'sfumato', 'duotone'],
     createdAt:   0,
     updatedAt:   0,
     nodes: [
-      // Pre-age the SOURCE face only. The target painting is left
+      // Pre-style the SOURCE face only. The target painting is left
       // alone so the swap's mesh detection sees its original
       // landmarks and the surrounding pixels stay authentic.
       {
         id: 'op-cond', type: 'conditional',
-        label: 'Pre-age source face only (image 0)',
+        label: 'Pre-recolour source face only (image 0)',
         condition: { field: 'fileIndex', operator: 'eq', value: 0 },
         thenNodes: [
           { id: 'op-1', type: 'transform', transformId: 'color-auto-levels',
             params: {},
             label: 'Normalise levels' },
           { id: 'op-2', type: 'transform', transformId: 'color-tuning',
-            params: { contrast: -20, saturation: -45, vibrance: -10, invert: false },
-            label: 'Desaturate + reduce contrast' },
-          { id: 'op-3', type: 'transform', transformId: 'filter-color-grade',
-            params: { lift: 6,
-              shadowColor: '#3a2a18',    shadowStrength: 30,
-              highlightColor: '#e8d4a8', highlightStrength: 45 },
-            label: 'Aged-varnish colour grade' },
+            params: { contrast: -15, saturation: -20, vibrance: -5, invert: false },
+            label: 'Gentle desat + soften contrast' },
+          // Duotone is the heavy lifter — it remaps every pixel from
+          // luminance into a gradient between two chosen colours, so
+          // the entire face ends up in the Mona Lisa tonal range
+          // rather than just being slightly warmed.
+          { id: 'op-3', type: 'transform', transformId: 'color-duotone',
+            params: {
+              darkColor:  '#2c1d0f', // deep sepia shadow (Mona Lisa shadows)
+              lightColor: '#d4ac6b', // warm ochre highlight (Mona Lisa skin)
+            },
+            label: 'Force into ochre/sepia palette (Duotone)' },
           { id: 'op-4', type: 'transform', transformId: 'color-tint',
-            params: { color: '#c89d6c', strength: 30, blendMode: 'soft-light' },
-            label: 'Amber wash' },
-          { id: 'op-5', type: 'transform', transformId: 'filter-blur',
+            params: { color: '#a8773d', strength: 25, blendMode: 'multiply' },
+            label: 'Multiply ochre wash' },
+          { id: 'op-5', type: 'transform', transformId: 'filter-color-grade',
+            params: { lift: 8,
+              shadowColor: '#3a2410',    shadowStrength: 50,
+              highlightColor: '#e8c789', highlightStrength: 35 },
+            label: 'Deepen sepia grade' },
+          { id: 'op-6', type: 'transform', transformId: 'filter-blur',
             params: { radius: 1 },
             label: 'Sfumato softening' },
-          { id: 'op-6', type: 'transform', transformId: 'filter-kuwahara',
+          { id: 'op-7', type: 'transform', transformId: 'filter-kuwahara',
             params: { radius: 2, passes: 1 },
             label: 'Painterly strokes' }
         ],
