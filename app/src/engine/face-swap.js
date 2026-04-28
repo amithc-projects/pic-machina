@@ -233,11 +233,23 @@ function poissonClone(targetData, sourceData, maskData) {
     }
   }
 
-  // Iterate. SOR with omega 1.85 converges in a fraction of the
-  // iterations a plain Gauss-Seidel does (especially for elongated
-  // mask shapes like a face oval).
-  const omega     = 1.85;
-  const maxIters  = 250;
+  // Iterate. SOR (omega > 1) accelerates convergence over plain
+  // Gauss-Seidel, but it can overshoot in high-gradient regions
+  // (sharp dark/light edges like teeth-against-lips). Without
+  // clamping, an overshoot drives a channel below 0 or above 255;
+  // those out-of-range values then propagate to neighbours through
+  // the very next iteration of Gauss-Seidel, eventually collapsing
+  // a whole region (e.g. mouth) to a single channel pinned colour.
+  //
+  // Two-part guard:
+  //   1. omega = 1.5 (was 1.85) — still gives a useful speedup
+  //      but with less overshoot energy.
+  //   2. Clamp f to [0, 255] inside the loop — bounds the values
+  //      so no runaway can propagate. The true Poisson solution
+  //      is bounded by the source/target value range anyway, so
+  //      clamping doesn't lose valid solution data.
+  const omega     = 1.5;
+  const maxIters  = 400;
   const tolerance = 0.5; // per-channel max delta
   for (let iter = 0; iter < maxIters; iter++) {
     let maxDelta = 0;
@@ -268,13 +280,19 @@ function poissonClone(targetData, sourceData, maskData) {
       const newB = (lapB[idx] + nLB + nRB + nUB + nDB) * 0.25;
 
       const oldR = fR[p], oldG = fG[p], oldB = fB[p];
-      fR[p] = oldR + omega * (newR - oldR);
-      fG[p] = oldG + omega * (newG - oldG);
-      fB[p] = oldB + omega * (newB - oldB);
+      let updR = oldR + omega * (newR - oldR);
+      let updG = oldG + omega * (newG - oldG);
+      let updB = oldB + omega * (newB - oldB);
+      if (updR < 0) updR = 0; else if (updR > 255) updR = 255;
+      if (updG < 0) updG = 0; else if (updG > 255) updG = 255;
+      if (updB < 0) updB = 0; else if (updB > 255) updB = 255;
+      fR[p] = updR;
+      fG[p] = updG;
+      fB[p] = updB;
 
-      const dR = Math.abs(fR[p] - oldR);
-      const dG = Math.abs(fG[p] - oldG);
-      const dB = Math.abs(fB[p] - oldB);
+      const dR = Math.abs(updR - oldR);
+      const dG = Math.abs(updG - oldG);
+      const dB = Math.abs(updB - oldB);
       const d  = dR > dG ? (dR > dB ? dR : dB) : (dG > dB ? dG : dB);
       if (d > maxDelta) maxDelta = d;
     }
