@@ -587,11 +587,11 @@ export const SYSTEM_RECIPES = [
   // ── Face Morph ───────────────────────────────────────────
   {
     id: 'sys-face-morph', name: 'Face Morph',
-    description: 'Creates a smooth 4-second video morph between two faces using 478-point mesh warping. Requires exactly 2 input images.',
+    description: 'Creates a smooth video morph across two or more faces using 478-point mesh warping. Requires at least 2 input images.',
     isSystem: true, coverColor: '#ec4899',
     tags: ['face', 'morph', 'animation', 'video', 'creative'],
     createdAt: 0, updatedAt: 0,
-    minItems: 2, maxItems: 2,
+    minItems: 2,
     nodes: [
       { id: 'fm-1', type: 'transform', transformId: 'geo-face-align',
         params: { standardizeEyes: true },

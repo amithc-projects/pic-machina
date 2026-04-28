@@ -490,12 +490,12 @@ registry.register({
 registry.register({
   id: 'flow-face-morph', name: 'Face Morph', category: 'Flow Control', categoryKey: 'flow',
   icon: 'animation',
-  description: 'Morphs between two aligned faces using 478-point mesh warping. Place a Face Align step before this. Produces an MP4 video.',
+  description: 'Morphs across two or more aligned faces using 478-point mesh warping. Place a Face Align step before this. Produces an MP4 video.',
   aggregation: true,
   mainThread: true,
   params: [
     { name: 'filename', label: 'Output Filename', type: 'text', defaultValue: 'face-morph.mp4' },
-    { name: 'duration', label: 'Duration (seconds)', type: 'number', defaultValue: 4 },
+    { name: 'duration', label: 'Duration per transition (seconds)', type: 'number', defaultValue: 4 },
     { name: 'fps', label: 'Frames per second', type: 'number', defaultValue: 30 },
   ],
   apply() { /* handled by batch.js as aggregation node */ }

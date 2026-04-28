@@ -508,11 +508,11 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
       } else if (agg.node.transformId === 'flow-face-morph') {
         const { createFaceMorphVideo } = await import('./face-morph.js');
         if (agg.blobs.length < 2) {
-          onLog('warn', 'Face Morph needs exactly 2 images. Skipping.');
+          onLog('warn', 'Face Morph needs at least 2 images. Skipping.');
         } else {
-          onLog('info', 'Generating Face Morph video...');
+          onLog('info', `Generating Face Morph video across ${agg.blobs.length} faces...`);
           try {
-            const blob = await createFaceMorphVideo(agg.blobs[0], agg.blobs[1], {
+            const blob = await createFaceMorphVideo(agg.blobs, {
               duration: p.duration || 4,
               fps: p.fps || 30,
               onProgress: (f, t) => {
