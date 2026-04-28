@@ -66,10 +66,4 @@ A comprehensive list of high-value, outcome-driven use cases to showcase the "ma
 
 ## 14.Picture wall shows the clever aggregation
 
-15 Integrate with describe image endpoint
 
-16 Implement metadata search across thousands of images, by dominiant colour
-
-17. Consider "basket" or "lightbox or "collections" across folders
-
-18. Add ability to see only the images created when viewing the output

@@ -334,7 +334,7 @@
             "blurLabel": {
               "description": "Human-readable blur classification.",
               "type": "string",
-              "enum": ["sharp", "soft", "blurry"]
+              "enum": ["sharp", "soft", "blurry", "unknown"]
             },
             "ocrText": {
               "description": "Full text extracted by OCR.",
@@ -582,7 +582,7 @@
                   "position": {
                     "description": "Position within the frame.",
                     "type": "string",
-                    "enum": ["left", "right", "centre", "background", "foreground", "other"]
+                    "enum": ["left", "right", "centre", "background", "foreground", "other", "left foreground", "center midground", "right midground", "center background", "right foreground"]
                   },
                   "genderPresentation": {
                     "description": "Apparent gender presentation as observed in the image.",

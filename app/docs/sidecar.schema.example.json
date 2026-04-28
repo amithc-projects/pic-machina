@@ -1,0 +1,329 @@
+{
+  "$version": 2,
+  "source": {
+    "filename": "IMG_20260428_113000.jpg",
+    "sizeBytes": 4820193
+  },
+  "asset": {
+    "title": "Selfie of a couple in a modern industrial-chic London café",
+    "assetType": "Digital Photograph",
+    "captureDate": "2026-04-28",
+    "captureTimeApprox": "mid-morning",
+    "format": "JPEG",
+    "resolution": "high resolution (~4000x3000, smartphone)",
+    "widthPx": 4000,
+    "heightPx": 3000,
+    "aspectRatio": "4:3",
+    "orientation": "landscape",
+    "contentRating": "general",
+    "rightsNotes": "Personal photography",
+    "analysisConfidence": "high"
+  },
+  "exif": {
+    "cameraMake": "Google",
+    "cameraModel": "Pixel 8 Pro",
+    "focalLength": "6.9mm",
+    "focalLengthEquiv": "24mm",
+    "aperture": "f/1.68",
+    "iso": 120,
+    "shutterSpeed": "1/100s",
+    "dateTaken": "2026-04-28T10:30:00Z",
+    "gpsLat": 51.5074,
+    "gpsLng": -0.1278,
+    "gpsAltitude": 15.2,
+    "whiteBalance": "Auto",
+    "colorSpace": "sRGB"
+  },
+  "geo": {
+    "city": "London",
+    "region": "England",
+    "country": "United Kingdom",
+    "countryCode": "GB"
+  },
+  "annotation": {
+    "rating": 5,
+    "flag": "pick",
+    "tags": ["london", "coffee", "weekend", "selfie", "couple"],
+    "caption": "A smiling woman and a man taking a selfie inside a modern London café with warm salmon-pink walls, exposed ceilings, and track lighting.",
+    "usageScenarios": ["social media post", "personal album"]
+  },
+  "analysis": {
+    "generatedAt": "2026-04-28T11:35:00Z",
+    "generatedBy": "pic-machina-v2-vision",
+    "computed": {
+      "sharpnessScore": 88,
+      "blurLabel": "sharp",
+      "faceCount": "2",
+      "personCount": "2",
+      "poseLabel": "sitting",
+      "peopleLabel": "two people (sitting)"
+    },
+    "identifiedLocation": {
+      "name": "Generic London Café",
+      "localName": "London Café",
+      "country": "United Kingdom",
+      "region": "England",
+      "municipality": "London",
+      "coordinatesApproximate": {
+        "latitude": 51.5074,
+        "longitude": -0.1278
+      },
+      "historicalSignificance": "Modern commercial interior.",
+      "architecturalPeriod": "Contemporary",
+      "identificationConfidence": "low",
+      "identificationBasis": "Generic modern interior design elements; exact venue unidentified without EXIF GPS context."
+    },
+    "architecture": {
+      "buildingType": "commercial / hospitality interior",
+      "style": "industrial-chic",
+      "constructionMaterial": "metal, concrete, drywall, wood",
+      "condition": "excellent, recently renovated",
+      "components": {
+        "ceiling": {
+          "type": "exposed industrial ceiling",
+          "position": "overhead",
+          "features": [
+            "Exposed metal grating and beams",
+            "Black track lighting fixtures",
+            "White security camera"
+          ]
+        },
+        "walls": {
+          "position": "perimeter",
+          "features": [
+            "Painted warm salmon-pink/terracotta",
+            "Large contemporary yellow artwork on right wall"
+          ]
+        }
+      },
+      "distinctiveFeatures": [
+        "Exposed ceiling grating painted to match walls",
+        "Woven rattan partition screens",
+        "Warm terracotta/salmon interior colour palette"
+      ]
+    },
+    "scene": {
+      "locationType": "café",
+      "indoorOutdoor": "indoor",
+      "timeOfDay": "daytime",
+      "season": "spring",
+      "weather": "unknown (indoor shot)",
+      "visibility": "unknown",
+      "atmosphere": "casual, relaxed, social",
+      "style": "industrial-chic",
+      "settingDetails": [
+        "exposed metal ceiling grating",
+        "black track lighting fixtures",
+        "wooden shelving with glassware",
+        "woven rattan partition screens",
+        "large yellow contemporary artwork",
+        "warm salmon-pink painted walls"
+      ]
+    },
+    "composition": {
+      "shotType": "medium portrait",
+      "framing": "subjects fill foreground, centred",
+      "cameraAngle": "eye-level",
+      "cameraPerspective": "smartphone wide-angle (~24mm equivalent), mild distortion",
+      "viewpoint": "directly in front of subjects",
+      "foreground": "two subjects facing the camera",
+      "midground": "woven partitions and patterned seating",
+      "background": "café interior with shelving, exposed ceiling, and large artwork",
+      "horizonLine": "no visible horizon",
+      "focus": "sharp on subjects, background slightly soft",
+      "depthOfField": "moderate",
+      "captureType": "handheld selfie"
+    },
+    "lighting": {
+      "type": "mixed natural and artificial",
+      "primarySource": "ambient frontal daylight from window",
+      "secondarySource": "ceiling track spotlights",
+      "quality": "soft, even, diffused on subjects",
+      "skyCondition": "unknown",
+      "highlights": "soft specular catchlights in subjects' eyes",
+      "colorTemperatureK": 5500,
+      "shadows": "soft, minimal",
+      "exposureNote": "well-exposed throughout, good skin tone rendition"
+    },
+    "colorPalette": {
+      "dominant": [
+        { "label": "salmon pink", "hex": "#DCA79D" },
+        { "label": "maroon", "hex": "#691C26" }
+      ],
+      "secondary": [
+        { "label": "black", "hex": "#1A1A1A" },
+        { "label": "beige", "hex": "#D3BBA8" }
+      ],
+      "accent": [
+        { "label": "mustard yellow", "hex": "#E3A922" }
+      ]
+    },
+    "subjects": {
+      "count": 2,
+      "arrangement": "seated side-by-side",
+      "interaction": "casual social moment",
+      "emotion": "friendly, happy, neutral",
+      "items": [
+        {
+          "id": "subject_1",
+          "position": "left",
+          "genderPresentation": "female",
+          "approximateAgeRange": "late 30s–mid 40s",
+          "visibility": "full face visible",
+          "skinTone": "medium warm olive",
+          "expression": "wide genuine smile",
+          "hair": {
+            "color": "dark brown",
+            "length": "medium-long",
+            "style": "straight, parted in middle"
+          },
+          "outfit": {
+            "top": "black scoop neck top",
+            "outerwear": "beige sheer lace cardigan"
+          },
+          "accessories": [
+            "silver necklace with round pendant"
+          ],
+          "posture": "upright, facing camera"
+        },
+        {
+          "id": "subject_2",
+          "position": "right",
+          "genderPresentation": "male",
+          "approximateAgeRange": "mid 40s–early 50s",
+          "visibility": "full face visible",
+          "skinTone": "medium warm brown",
+          "expression": "neutral",
+          "hair": {
+            "color": "black",
+            "length": "short",
+            "style": "curly, receding hairline"
+          },
+          "glasses": {
+            "frameStyle": "rectangular",
+            "frameColor": "black",
+            "lens": "clear"
+          },
+          "outfit": {
+            "top": "maroon textured knit sweater"
+          },
+          "posture": "upright, facing camera"
+        }
+      ]
+    },
+    "objects": [
+      {
+        "name": "track lighting",
+        "type": "spotlights",
+        "material": "metal",
+        "color": "black",
+        "position": "ceiling",
+        "count": 4
+      },
+      {
+        "name": "artwork",
+        "type": "painting",
+        "position": "right background",
+        "note": "large yellow painting featuring a face"
+      },
+      {
+        "name": "shelving",
+        "material": "light wood",
+        "position": "left background",
+        "function": "display"
+      }
+    ],
+    "tags": [
+      "portrait",
+      "selfie",
+      "couple",
+      "café",
+      "london",
+      "indoor",
+      "industrial-chic",
+      "casual",
+      "lifestyle"
+    ],
+    "generationPrompts": {
+      "short": "A handheld selfie of a couple in a modern industrial-chic café. The woman on the left has long dark hair, wearing a black top and beige lace cardigan, smiling warmly. The man on the right has short curly dark hair and black rectangular glasses, wearing a maroon knit sweater, with a neutral expression. Warm salmon-pink walls, exposed ceiling with black track lighting, and a large yellow painting in the background.",
+      "detailed": "A medium portrait handheld selfie of two people in a modern café setting. On the left, a middle-aged woman with medium-long dark brown hair, medium warm olive skin, wearing a black scoop neck top under a beige sheer lace cardigan and a silver pendant necklace, showing a wide genuine smile. On the right, a middle-aged man with short curly black hair and a receding hairline, medium warm brown skin, wearing black rectangular glasses and a maroon textured knit sweater, with a neutral expression. The background features an industrial-chic interior with salmon-pink painted walls, an exposed ceiling with metal grating and black track lighting fixtures, wooden display shelving on the left, woven rattan partition screens, and a large contemporary yellow painting with a face on the right. Soft, even mixed lighting from ambient frontal daylight and ceiling spotlights. Moderate depth of field with the background slightly soft.",
+      "negativePrompt": "blurry faces, distorted features, harsh flash, outdoors, dark lighting, empty room",
+      "replicationSettings": {
+        "lensEquivalent": "28–35mm wide angle",
+        "aperture": "f/2.8–f/4",
+        "shutterSpeed": "1/60s–1/100s",
+        "iso": "100–400",
+        "depthOfField": "moderate",
+        "lighting": "frontal soft natural light mixed with ambient tungsten",
+        "whiteBalance": "auto",
+        "technique": "handheld selfie at arm's length"
+      }
+    },
+    "segmentation": {
+      "generatedAt": "2026-04-28T11:35:01Z",
+      "model": "segment-anything-2",
+      "subjects": [
+        {
+          "id": "subject_1",
+          "face": { "x": 0.3, "y": 0.25, "w": 0.15, "h": 0.2, "confidence": 0.98 },
+          "body": { "x": 0.1, "y": 0.2, "w": 0.4, "h": 0.8, "confidence": 0.95 },
+          "hair": { "x": 0.25, "y": 0.2, "w": 0.25, "h": 0.35, "confidence": 0.94 },
+          "silhouette": { "x": 0.1, "y": 0.2, "w": 0.4, "h": 0.8, "confidence": 0.96 }
+        },
+        {
+          "id": "subject_2",
+          "face": { "x": 0.65, "y": 0.15, "w": 0.2, "h": 0.25, "confidence": 0.98 },
+          "body": { "x": 0.45, "y": 0.1, "w": 0.55, "h": 0.9, "confidence": 0.97 },
+          "hair": { "x": 0.6, "y": 0.05, "w": 0.25, "h": 0.15, "confidence": 0.91 },
+          "silhouette": { "x": 0.45, "y": 0.1, "w": 0.55, "h": 0.9, "confidence": 0.96 }
+        }
+      ],
+      "scene": {
+        "sky": { "x": 0.0, "y": 0.0, "w": 0.0, "h": 0.0, "confidence": 0.0 },
+        "background": { "x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0, "confidence": 0.99 },
+        "foreground": { "x": 0.1, "y": 0.1, "w": 0.9, "h": 0.9, "confidence": 0.98 },
+        "building": { "x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0, "confidence": 0.95 }
+      }
+    },
+    "dam": {
+      "contentSensitivity": "identifiable faces — requires model release",
+      "identityNotes": "Two identifiable individuals prominently featured. Model releases required for commercial use.",
+      "propertyReleaseNotes": "Interior of a commercial premises (café). Property release may be required for commercial use if the venue is identifiable or restricts photography.",
+      "brandingFlexibility": "moderate — faces are highly visible and distinctive",
+      "geoVerification": "Location assumed from EXIF GPS coordinates mapping to Central London; venue unspecified.",
+      "limitations": [
+        "Exact venue name could not be determined from visual features alone."
+      ]
+    }
+  },
+  "vision": {
+    "subjectBBox": {
+      "x": 0.1,
+      "y": 0.1,
+      "w": 0.9,
+      "h": 0.9,
+      "confidence": 0.99
+    },
+    "subjectCentroid": {
+      "x": 0.55,
+      "y": 0.55
+    },
+    "subjectArea": 0.75
+  },
+  "processing": [
+    {
+      "runId": "a1b2c3d4-e5f6-7890-1234-56789abcdef0",
+      "recipeName": "AI Metadata Extraction",
+      "recipeId": "ai-meta-v1",
+      "at": 1714304100000
+    },
+    {
+      "runId": "f0e9d8c7-b6a5-4321-0987-654321fedcba",
+      "recipeName": "Subject Mask Generation",
+      "recipeId": "seg-mask-v2",
+      "at": 1714304105000
+    }
+  ]
+}
+
+
