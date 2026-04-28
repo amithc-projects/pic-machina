@@ -449,6 +449,7 @@ registry.register({
   params: [
     { name: 'eyeLevel',   label: 'Horizontalize Eyes', type: 'boolean', defaultValue: true },
     { name: 'centerNose', label: 'Center on Nose',    type: 'boolean', defaultValue: true },
+    { name: 'standardizeEyes', label: 'Standardize Eye Distance (Best for Morph)', type: 'boolean', defaultValue: false },
     { name: 'targetScale',label: 'Face Scale (%)',     type: 'range',   min: 10, max: 200, defaultValue: 100 },
   ],
   async apply(ctx, p) {
@@ -481,6 +482,31 @@ registry.register({
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     
+    if (p.standardizeEyes) {
+      const midX = (le.x + re.x) / 2 * W;
+      const midY = (le.y + re.y) / 2 * H;
+      const eyeDist = Math.hypot((re.x - le.x) * W, (re.y - le.y) * H);
+
+      const targetEyeDist = W * 0.25; // Eyes take up 25% of image width
+      let scale = (targetEyeDist / eyeDist);
+      scale *= (p.targetScale || 100) / 100;
+
+      const targetX = W / 2;
+      const targetY = H * 0.45; // Place eyes 45% down from top
+
+      ctx.translate(targetX, targetY);
+      
+      if (p.eyeLevel) {
+        const angle = Math.atan2((re.y - le.y) * H, (re.x - le.x) * W);
+        ctx.rotate(-angle);
+      }
+
+      ctx.scale(scale, scale);
+      ctx.drawImage(tmp, -midX, -midY);
+      ctx.restore();
+      return;
+    }
+
     let tx = W/2, ty = H/2;
     if (p.centerNose) {
       tx = nose.x * W; ty = nose.y * H;

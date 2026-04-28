@@ -159,7 +159,7 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
   // Aggregation collector (GIF / video / contact sheet / zip)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -503,6 +503,26 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
                 await writeFile(subHandle, `${getName(i)}${suffix}.jpg`, bi);
               } catch(e) { onLog('error', `Swap onto ${getName(i)} failed: ${e.message}`); }
             }
+          }
+        }
+      } else if (agg.node.transformId === 'flow-face-morph') {
+        const { createFaceMorphVideo } = await import('./face-morph.js');
+        if (agg.blobs.length < 2) {
+          onLog('warn', 'Face Morph needs exactly 2 images. Skipping.');
+        } else {
+          onLog('info', 'Generating Face Morph video...');
+          try {
+            const blob = await createFaceMorphVideo(agg.blobs[0], agg.blobs[1], {
+              duration: p.duration || 4,
+              fps: p.fps || 30,
+              onProgress: (f, t) => {
+                const pct = Math.floor((f / t) * 100);
+                if (pct % 10 === 0) onLog('info', `Morphing: ${pct}% complete`);
+              }
+            });
+            await writeFile(subHandle, p.filename || 'face-morph.mp4', blob);
+          } catch(e) {
+            onLog('error', `Face morph failed: ${e.message}`);
           }
         }
       } else if (agg.node.transformId === 'flow-bg-swap') {

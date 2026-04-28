@@ -584,6 +584,24 @@ export const SYSTEM_RECIPES = [
     ]
   },
 
+  // ── Face Morph ───────────────────────────────────────────
+  {
+    id: 'sys-face-morph', name: 'Face Morph',
+    description: 'Creates a smooth 4-second video morph between two faces using 478-point mesh warping. Requires exactly 2 input images.',
+    isSystem: true, coverColor: '#ec4899',
+    tags: ['face', 'morph', 'animation', 'video', 'creative'],
+    createdAt: 0, updatedAt: 0,
+    minItems: 2, maxItems: 2,
+    nodes: [
+      { id: 'fm-1', type: 'transform', transformId: 'geo-face-align',
+        params: { standardizeEyes: true },
+        label: 'Align Faces' },
+      { id: 'fm-2', type: 'transform', transformId: 'flow-face-morph',
+        params: { filename: 'face-morph.mp4', duration: 4, fps: 30 },
+        label: 'Morph Video' }
+    ]
+  },
+
   // ── Aerochrome (Infrared Film) ────────────────────────────
   {
     id: 'sys-aerochrome', name: 'Aerochrome (Infrared)',

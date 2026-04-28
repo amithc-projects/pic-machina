@@ -30,7 +30,7 @@ import { drawAffineTriangle }   from './utils/perspective.js';
 
 let _landmarker = null;
 
-async function extractHeadLandmarks(bmp) {
+export async function extractHeadLandmarks(bmp) {
   if (!_landmarker) {
     const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
     const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
