@@ -328,8 +328,8 @@
           "type": "object",
           "properties": {
             "sharpnessScore": {
-              "description": "Perceptual sharpness 0.0 (blurry) to 1.0 (sharp).",
-              "type": "number", "minimum": 0, "maximum": 1
+              "description": "Perceptual sharpness 0 (blurry) to 100 (sharp).",
+              "type": "number", "minimum": 0, "maximum": 100
             },
             "blurLabel": {
               "description": "Human-readable blur classification.",

@@ -110,6 +110,7 @@ All transforms are registered by their `transformId` string.
 | `ai-chroma-key` | Chroma Key (Green Screen) | `keyColor` (default `#00b140`), `tolerance` (0–90°), `softness` (0–60), `spillSuppression` (0–100%), `aiRefine` (toggle), `bgFill`, `bgColor`, `bgImage` | Canvas-based hue-range pixel keying with edge feathering and green spill removal. Optional AI edge refinement (InSPyReNet — multiplies AI subject matte with chroma matte for cleaner hair/edges). Works on any solid-colour background — change `keyColor` for blue screen etc. |
 | `ai-portrait-bokeh` | Portrait Bokeh | `blurRadius` (0–60), `edgeFeather` (0–30), `falloff` (flat/graduated) | InSPyReNet matte + Photon gaussian_blur. Large-aperture lens simulation. Graduated mode adds a mid-band blur for fake depth falloff. |
 | `ai-drop-shadow` | Subject Drop Shadow | `offsetX`, `offsetY`, `blur`, `opacity`, `color` | InSPyReNet matte. Works on both cut-outs (writes alpha) and photos (darkens visible background). |
+| `ai-subject-glow` | Subject Glow | `spread`, `intensity`, `color` | Adds a soft colour bloom around the detected subject using additive blending. Requires InSPyReNet model. |
 | `ai-sticker-outline` | Sticker Outline | `thickness`, `color`, `doubleOutline`, `secondColor`, `bgMode` (transparent/keep) | InSPyReNet matte dilated via blur-then-threshold. Optional second concentric ring for meme/double-border looks. |
 | `ai-subject-vignette` | Subject Vignette | `strength` (0–100), `softness` (0–100), `color` | InSPyReNet matte feathered by `softness × 0.15 × min(W,H)`. Darkens (or tints) everything outside the matte, leaving the subject untouched. Unlike a geometric vignette, it stays locked to the subject no matter where they sit in frame. |
 | `ai-selective-grade` | Selective Color Grade | `subjectSaturation`/`subjectTemperature`/`subjectExposure`, `backgroundSaturation`/`backgroundTemperature`/`backgroundExposure` (all ±100), `edgeFeather` (0–30) | Two Photon-graded full-image copies composited via the feathered InSPyReNet matte. Temperature is modelled as a paired red/blue channel shift (±60 at the extremes); exposure maps to `adjust_brightness` (±127). Defaults: warm/bright subject, cool/darker background. |
@@ -119,12 +120,14 @@ All transforms are registered by their `transformId` string.
 | `ai-ocr-tag` | OCR Tag Extractor | `minLength` | Extracts tags from OCR text (needs Smart Redact Extract mode) |
 | `ai-analyse-people` | Analyse People | `faceConfidence`, `poseConfidence`, `maxPoses` | MediaPipe pose & face detection to asset store |
 | `ai-clipping-mask` | Clipping Mask | `shape` (Circle/RoundedRect/Diamond), `feathering` | Shape-based mask using AI segmentation |
+| `ai-export-matte` | Export Matte | `mode` (alpha/luma/inverted) | Replaces the canvas with the raw InSPyReNet saliency matte for exporting to compositing tools. Requires InSPyReNet model. |
 | `ai-glow-eyes` | Glowing Eyes | `color`, `intensity` (0–100), `irisScale` (60–200%), `glowSpread` (150–600%), `darkPupil`, `confidence` | FaceLandmarker iris landmarks (468/473) for pixel-accurate iris centre; screen-mode additive glow with hot-white core + outer diffuse skin illumination. Used in Vampire GFX recipe. |
 | `ai-transcribe` | Auto-Transcribe (Whisper) | `outputVariable` | Fast, local offline Audio-to-text recognition generating perfectly timed variables securely. |
+| `flow-ai-diarize` | Speaker Diarize (Pyannote) | `inputVariable`, `outputVariable`, `maxSpeakers` | Identifies speakers in the audio track and prefixes auto-generated SRT captions with speaker labels (e.g. `[Speaker 1]:`). |
 
 ### InSPyReNet-based transforms (requires `#mdl` download)
 
-`ai-remove-bg-hq`, `ai-portrait-bokeh`, `ai-subject-crop`, `ai-drop-shadow`, `ai-sticker-outline`, `ai-subject-vignette`, `ai-selective-grade`, `ai-subject-sharpen`, and the `isolateSubject` option on `flow-photo-stack` / `flow-animate-stack` / `flow-template-aggregator` all share the same ~200 MB InSPyReNet SwinB saliency model, managed on the **Models** screen (`#mdl`). All of them:
+`ai-remove-bg-hq`, `ai-portrait-bokeh`, `ai-subject-crop`, `ai-drop-shadow`, `ai-subject-glow`, `ai-sticker-outline`, `ai-subject-vignette`, `ai-selective-grade`, `ai-subject-sharpen`, `ai-export-matte`, and the `isolateSubject` option on `flow-photo-stack` / `flow-animate-stack` / `flow-template-aggregator` all share the same ~200 MB InSPyReNet SwinB saliency model, managed on the **Models** screen (`#mdl`). All of them:
 
 - **Share one inference per image per recipe** — the saliency matte is cached by canvas signature. Stacking Remove BG HQ + Portrait Bokeh + Drop Shadow + Sticker Outline + Subject Crop + Vignette + Selective Grade + Subject Sharpen in a single recipe runs the model exactly once.
 - **Persist `vision.subjectBBox` / `subjectCentroid` / `subjectArea`** on the asset record, so a second batch run at a different aspect ratio or different shadow offset reads the cached bbox instead of re-running inference.
@@ -227,7 +230,9 @@ These transforms apply existing image effects to every frame of a video using th
 | `meta-strip` | Strip Metadata | `level` (All / GPS Only / EXIF Only) | Removes EXIF from output |
 | `meta-set-exif` | Set EXIF Info | `field` (artist/copyright/comment/description/software), `value` | Writes custom EXIF fields; supports `{{variable}}` |
 | `meta-geocode` | Reverse Geocode | `template` (`{city}, {country}`), `targetField` | Converts GPS coords to text and stores in metadata |
-| `meta-dominant-color` | Extract Dominant Color | - | Quickly analyses the image to extract the top 3 dominant colors and maps them to semantic keywords ({{dominantColors.0}}, {{dominantHex.0}}). |
+| `meta-dominant-color` | Extract Dominant Color | `ignoreNeutral`, `minAlpha` | Quickly analyses the image to extract the top 3 dominant colors and maps them to semantic keywords (`{{dominantColors.0}}`, `{{dominantHex.0}}`). |
+| `meta-blur-detect` | Detect Blur / Sharpness | `sampleSize`, `sharpThreshold`, `blurryThreshold` | Scores image sharpness using Laplacian variance. Exposes `{{sharpnessScore}}` and `{{blurLabel}}`. |
+| `meta-sidecar-write` | Write Sidecar Field | `key`, `value` | Writes a custom value into the sidecar JSON file's `computed` block. |
 
 ---
 
