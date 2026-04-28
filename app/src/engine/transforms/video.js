@@ -479,8 +479,9 @@ registry.register({
   icon: 'closed_caption',
   description: 'Burn styled text onto every frame — supports {{variable}} injection.',
   params: [
-    { name: 'content',   label: 'Text ({{vars}} supported)', type: 'text',   defaultValue: '{{filename}}' },
-    { name: 'font',      label: 'Font Family', type: 'select',
+    { name: 'content',   label: 'Text ({{vars}} supported)', type: 'textarea',   defaultValue: '{{filename}}' },
+    { name: 'textStyle', label: 'Text Style',   type: 'text-style-select', defaultValue: 'none' },
+    { name: 'font',      label: 'Font Family', type: 'select', textStyleOverride: true,
       options: [
         { label: 'Inter',           value: 'Inter' },
         { label: 'Arial',           value: 'Arial' },
@@ -490,11 +491,23 @@ registry.register({
         { label: 'Verdana',         value: 'Verdana' },
         { label: 'Impact',          value: 'Impact' },
       ], defaultValue: 'Inter' },
-    { name: 'size',    label: 'Font Size (px)', type: 'number', defaultValue: 48 },
-    { name: 'color',   label: 'Text Color',     type: 'color',  defaultValue: '#ffffff' },
-    { name: 'weight',  label: 'Font Weight', type: 'select',
+    { name: 'size',    label: 'Font Size (px)', type: 'number', defaultValue: 48, textStyleOverride: true },
+    { name: 'color',   label: 'Text Color',     type: 'color',  defaultValue: '#ffffff', textStyleOverride: true },
+    { name: 'weight',  label: 'Font Weight', type: 'select', textStyleOverride: true,
       options: [{ label: 'Normal', value: '400' }, { label: 'Bold', value: '700' }, { label: 'Light', value: '300' }],
       defaultValue: '400' },
+    { name: 'bgBox',   label: 'Background Box', type: 'select', textStyleOverride: true,
+      options: [
+        { label: 'None',       value: 'none' },
+        { label: 'Wrap text',  value: 'wrap' },
+        { label: 'Full width', value: 'full-width' },
+      ], defaultValue: 'none' },
+    { name: 'bgColor',   label: 'Box Color',       type: 'color',  defaultValue: '#000000', textStyleOverride: true },
+    { name: 'bgOpacity', label: 'Box Opacity (%)', type: 'range',  min: 0, max: 100, defaultValue: 60, textStyleOverride: true },
+    { name: 'bgPadding', label: 'Box Padding (px)', type: 'number', defaultValue: 8, textStyleOverride: true },
+    { name: 'shadow',      label: 'Text Shadow',  type: 'boolean', defaultValue: true, textStyleOverride: true },
+    { name: 'shadowColor', label: 'Shadow Color', type: 'color',   defaultValue: '#000000', textStyleOverride: true },
+
     { name: 'anchor',  label: 'Position', type: 'select',
       options: [
         { label: 'Bottom Centre', value: 'bottom-center' },
@@ -507,21 +520,37 @@ registry.register({
       ], defaultValue: 'bottom-center' },
     { name: 'offsetX', label: 'Offset X (px)', type: 'number', defaultValue: 20 },
     { name: 'offsetY', label: 'Offset Y (px)', type: 'number', defaultValue: 20 },
-    { name: 'bgBox',   label: 'Background Box', type: 'select',
-      options: [
-        { label: 'None',       value: 'none' },
-        { label: 'Wrap text',  value: 'wrap' },
-        { label: 'Full width', value: 'full-width' },
-      ], defaultValue: 'none' },
-    { name: 'bgColor',   label: 'Box Color',       type: 'color',  defaultValue: '#000000' },
-    { name: 'bgOpacity', label: 'Box Opacity (%)', type: 'range',  min: 0, max: 100, defaultValue: 60 },
-    { name: 'bgPadding', label: 'Box Padding (px)', type: 'number', defaultValue: 8 },
-    { name: 'shadow',      label: 'Text Shadow',  type: 'boolean', defaultValue: true },
-    { name: 'shadowColor', label: 'Shadow Color', type: 'color',   defaultValue: '#000000' },
     ...COMMON_PARAMS,
   ],
   // Direct per-frame rendering — avoids any indirect overlay-rich-text delegation issues.
-  applyPerFrame(ctx, p, context) {
+  applyPerFrame(ctx, rawP, context) {
+    let p = { ...rawP };
+    if (p.textStyle && p.textStyle !== 'none') {
+        try {
+            const settingsStr = localStorage.getItem('ic-global-settings');
+            if (settingsStr) {
+                const settings = JSON.parse(settingsStr);
+                const ts = (settings.textStyles || []).find(s => s.id === p.textStyle);
+                if (ts) {
+                    p = {
+                        font: ts.fontFamily,
+                        sizeMode: ts.sizeMode,
+                        size: ts.size,
+                        color: ts.color,
+                        weight: ts.weight,
+                        bgBox: ts.bgBox,
+                        bgColor: ts.bgColor,
+                        bgOpacity: ts.bgOpacity,
+                        bgPadding: ts.bgPadding,
+                        shadow: ts.shadow,
+                        shadowColor: ts.shadowColor,
+                        ...rawP
+                    };
+                }
+            }
+        } catch(e) {}
+    }
+
     const text = interpolate(p.content || '{{filename}}', context);
     if (!text) return;
 

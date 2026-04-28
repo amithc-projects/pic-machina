@@ -13,8 +13,9 @@ registry.register({
   icon: 'text_fields',
   description: 'Render styled text over the image. Supports {{variable}} injection.',
   params: [
-    { name: 'content',     label: 'Text ({{vars}} supported)', type: 'text',    defaultValue: '{{filename}}' },
-    { name: 'font',        label: 'Font Family',  type: 'select',
+    { name: 'content',     label: 'Text ({{vars}} supported)', type: 'textarea',    defaultValue: '{{filename}}' },
+    { name: 'textStyle',   label: 'Text Style',   type: 'text-style-select', defaultValue: 'none' },
+    { name: 'font',        label: 'Font Family',  type: 'select', textStyleOverride: true,
       options: [
         { label: 'Inter', value: 'Inter' },
         { label: 'Arial', value: 'Arial' },
@@ -27,15 +28,30 @@ registry.register({
         { label: 'Comic Sans MS', value: '"Comic Sans MS"' },
         { label: 'Dancing Script', value: '"Dancing Script"' },
       ], defaultValue: 'Inter' },
-    { name: 'sizeMode',    label: 'Size Mode',    type: 'select',
+    { name: 'sizeMode',    label: 'Size Mode',    type: 'select', textStyleOverride: true,
       options: [
         { label: 'Fixed (px)',       value: 'px' },
         { label: '% of image width', value: 'pct-width' },
         { label: '% of image height',value: 'pct-height' },
       ], defaultValue: 'px' },
-    { name: 'size',        label: 'Font Size',    type: 'number', defaultValue: 32 },
-    { name: 'color',       label: 'Text Color',   type: 'color',  defaultValue: '#ffffff' },
-    { name: 'opacity',     label: 'Opacity (%)',  type: 'range',  min: 0, max: 100, defaultValue: 100 },
+    { name: 'size',        label: 'Font Size',    type: 'number', defaultValue: 32, textStyleOverride: true },
+    { name: 'color',       label: 'Text Color',   type: 'color',  defaultValue: '#ffffff', textStyleOverride: true },
+    { name: 'weight',      label: 'Font Weight',  type: 'select', textStyleOverride: true,
+      options: [{ label: 'Normal', value: '400' }, { label: 'Bold', value: '700' }, { label: 'Light', value: '300' }],
+      defaultValue: '400' },
+    { name: 'shadow',      label: 'Text Shadow',  type: 'boolean', defaultValue: true, textStyleOverride: true },
+    { name: 'shadowColor', label: 'Shadow Color', type: 'color',   defaultValue: '#000000', textStyleOverride: true },
+    { name: 'bgBox',       label: 'Background Box', type: 'select', textStyleOverride: true,
+      options: [
+        { label: 'None',       value: 'none' },
+        { label: 'Wrap text',  value: 'wrap' },
+        { label: 'Full width', value: 'full-width' },
+      ], defaultValue: 'none' },
+    { name: 'bgColor',     label: 'Box Color',      type: 'color',   defaultValue: '#000000', textStyleOverride: true },
+    { name: 'bgOpacity',   label: 'Box Opacity (%)',type: 'range',   min: 0, max: 100, defaultValue: 60, textStyleOverride: true },
+    { name: 'bgPadding',   label: 'Box Padding (px)',type: 'number', defaultValue: 8, textStyleOverride: true },
+    
+    { name: 'opacity',     label: 'Overlay Opacity (%)',  type: 'range',  min: 0, max: 100, defaultValue: 100 },
     { name: 'anchor',      label: 'Anchor',       type: 'select',
       options: [
         { label: 'Top Left',      value: 'top-left' },
@@ -50,22 +66,6 @@ registry.register({
       ], defaultValue: 'bottom-right' },
     { name: 'offsetX',     label: 'Offset X (px)',  type: 'number',  defaultValue: 20 },
     { name: 'offsetY',     label: 'Offset Y (px)',  type: 'number',  defaultValue: 20 },
-    // ── Background box ────────────────────────────────────
-    { name: 'bgBox',       label: 'Background Box', type: 'select',
-      options: [
-        { label: 'None',       value: 'none' },
-        { label: 'Wrap text',  value: 'wrap' },
-        { label: 'Full width', value: 'full-width' },
-      ], defaultValue: 'none' },
-    { name: 'bgColor',     label: 'Box Color',      type: 'color',   defaultValue: '#000000' },
-    { name: 'bgOpacity',   label: 'Box Opacity (%)',type: 'range',   min: 0, max: 100, defaultValue: 60 },
-    { name: 'bgPadding',   label: 'Box Padding (px)',type: 'number', defaultValue: 8 },
-    // ── Text style ────────────────────────────────────────
-    { name: 'shadow',      label: 'Text Shadow',    type: 'boolean', defaultValue: true },
-    { name: 'shadowColor', label: 'Shadow Color',   type: 'color',   defaultValue: '#000000' },
-    { name: 'weight',      label: 'Font Weight',    type: 'select',
-      options: [{ label: 'Normal', value: '400' }, { label: 'Bold', value: '700' }, { label: 'Light', value: '300' }],
-      defaultValue: '400' },
     { name: 'blendMode',   label: 'Blend Mode / Mask', type: 'select',
       options: [
         { label: 'Normal', value: 'source-over' },
@@ -78,7 +78,34 @@ registry.register({
       ],
       defaultValue: 'source-over' },
   ],
-  apply(ctx, p, context) {
+  apply(ctx, rawP, context) {
+    let p = { ...rawP };
+    if (p.textStyle && p.textStyle !== 'none') {
+        try {
+            const settingsStr = localStorage.getItem('ic-global-settings');
+            if (settingsStr) {
+                const settings = JSON.parse(settingsStr);
+                const ts = (settings.textStyles || []).find(s => s.id === p.textStyle);
+                if (ts) {
+                    p = {
+                        font: ts.fontFamily,
+                        sizeMode: ts.sizeMode,
+                        size: ts.size,
+                        color: ts.color,
+                        weight: ts.weight,
+                        bgBox: ts.bgBox,
+                        bgColor: ts.bgColor,
+                        bgOpacity: ts.bgOpacity,
+                        bgPadding: ts.bgPadding,
+                        shadow: ts.shadow,
+                        shadowColor: ts.shadowColor,
+                        ...rawP
+                    };
+                }
+            }
+        } catch(e) {}
+    }
+
     const text = interpolate(p.content || '{{filename}}', context);
     const W = ctx.canvas.width, H = ctx.canvas.height;
 

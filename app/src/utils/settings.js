@@ -32,6 +32,53 @@ const DEFAULT_SETTINGS = {
     { label: 'White',  color: '#ffffff' },
     { label: 'Pink',   color: '#f472b6' },
     { label: 'Blue',   color: '#3b82f6' }
+  ],
+  textStyles: [
+    {
+      id: 'style-subtitles',
+      name: 'Subtitles',
+      fontFamily: 'Inter',
+      sizeMode: 'px',
+      size: 42,
+      color: '#ffffff',
+      weight: '700',
+      bgBox: 'wrap',
+      bgColor: '#000000',
+      bgOpacity: 60,
+      bgPadding: 8,
+      shadow: true,
+      shadowColor: 'rgba(0,0,0,0.8)'
+    },
+    {
+      id: 'style-main-heading',
+      name: 'Main Heading',
+      fontFamily: 'Outfit',
+      sizeMode: 'pct-width',
+      size: 8,
+      color: '#ffffff',
+      weight: '700',
+      bgBox: 'none',
+      bgColor: '#000000',
+      bgOpacity: 60,
+      bgPadding: 8,
+      shadow: true,
+      shadowColor: 'rgba(0,0,0,0.8)'
+    },
+    {
+      id: 'style-footnote',
+      name: 'Footnote',
+      fontFamily: 'Inter',
+      sizeMode: 'px',
+      size: 24,
+      color: '#aaaaaa',
+      weight: '400',
+      bgBox: 'none',
+      bgColor: '#000000',
+      bgOpacity: 60,
+      bgPadding: 8,
+      shadow: false,
+      shadowColor: 'rgba(0,0,0,0.8)'
+    }
   ]
 };
 

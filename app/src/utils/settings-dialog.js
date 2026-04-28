@@ -121,6 +121,20 @@ export async function showSettingsModal() {
           </div>
         </section>
 
+        <!-- Text Styles -->
+        <section style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Global Text Styles</h4>
+                <button class="btn-ghost" id="btn-add-text-style" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Style</button>
+            </div>
+            <span style="font-size:11px; color:var(--ps-text-muted);">Define reusable typography configurations for your recipes.</span>
+          </div>
+          
+          <div id="text-style-list" style="display:flex; flex-direction:column; gap:10px;">
+          </div>
+        </section>
+
         <!-- Custom Color Swatches -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <div style="display:flex; flex-direction:column;">
@@ -147,6 +161,103 @@ export async function showSettingsModal() {
   document.body.appendChild(modal);
 
   const swatchList = modal.querySelector('#swatch-list');
+  const textStyleList = modal.querySelector('#text-style-list');
+  const textStyles = current.textStyles || [];
+
+  const renderTextStyles = () => {
+    textStyleList.innerHTML = textStyles.map((ts, idx) => `
+      <div class="ts-row" data-idx="${idx}" style="display:flex; flex-direction:column; gap:8px; padding:12px; border:1px solid var(--ps-border); border-radius:8px; background:var(--ps-bg-app);">
+         <div style="display:flex; align-items:center; gap:8px;">
+            <input type="text" class="ic-input ts-name" value="${ts.name || ''}" placeholder="Style Name" style="font-weight:600; flex:1; font-size:13px;" />
+            <button class="btn-icon btn-remove-ts" title="Remove Style" style="color:var(--ps-red); width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">delete</span></button>
+         </div>
+         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <input type="text" class="ic-input ts-font" value="${ts.fontFamily || 'Inter'}" placeholder="Font Family" title="Font Family"/>
+            <div style="display:flex; gap:4px;">
+               <input type="number" class="ic-input ts-size" value="${ts.size || 32}" placeholder="Size" style="flex:1; width:0;" />
+               <select class="ic-input ts-size-mode" style="flex:1; width:0;">
+                   <option value="px" ${ts.sizeMode==='px'?'selected':''}>px</option>
+                   <option value="pct-width" ${ts.sizeMode==='pct-width'?'selected':''}>% W</option>
+                   <option value="pct-height" ${ts.sizeMode==='pct-height'?'selected':''}>% H</option>
+               </select>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+               <input type="color" class="ts-color" value="${ts.color || '#ffffff'}" style="width:28px; height:28px; padding:0; border:1px solid var(--ps-border); border-radius:4px; cursor:pointer;" title="Text Color" />
+               <select class="ic-input ts-weight" style="flex:1; width:0;">
+                   <option value="300" ${ts.weight==='300'?'selected':''}>Light</option>
+                   <option value="400" ${ts.weight==='400'?'selected':''}>Normal</option>
+                   <option value="700" ${ts.weight==='700'?'selected':''}>Bold</option>
+               </select>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px; padding-left:4px;">
+                <label style="display:flex; align-items:center; gap:4px; font-size:11px; color:var(--ps-text-muted); cursor:pointer;">
+                  <input type="checkbox" class="ts-shadow" ${ts.shadow?'checked':''} style="margin:0;" /> Shadow
+                </label>
+                <input type="text" class="ic-input ts-shadow-color" value="${ts.shadowColor || 'rgba(0,0,0,0.8)'}" style="flex:1; width:0; font-family:monospace; font-size:11px;" title="Shadow Color (can be rgba)"/>
+            </div>
+            <select class="ic-input ts-bg-box">
+                <option value="none" ${ts.bgBox==='none'?'selected':''}>No Background</option>
+                <option value="wrap" ${ts.bgBox==='wrap'?'selected':''}>Wrap Text</option>
+                <option value="full-width" ${ts.bgBox==='full-width'?'selected':''}>Full Width</option>
+            </select>
+            <div style="display:flex; align-items:center; gap:4px;">
+                <input type="color" class="ts-bg-color" value="${ts.bgColor || '#000000'}" style="width:28px; height:28px; padding:0; border:1px solid var(--ps-border); border-radius:4px; cursor:pointer;" title="Background Color"/>
+                <input type="number" class="ic-input ts-bg-opacity" value="${ts.bgOpacity ?? 60}" min="0" max="100" placeholder="Op %" title="Opacity %" style="flex:1; width:0;" />
+                <input type="number" class="ic-input ts-bg-padding" value="${ts.bgPadding ?? 8}" placeholder="Pad" title="Padding px" style="flex:1; width:0;" />
+            </div>
+         </div>
+      </div>
+    `).join('');
+    
+    if (textStyles.length === 0) {
+        textStyleList.innerHTML = '<span style="font-size:11px; color:var(--ps-text-faint);">No text styles configured. Click Add Style to create one.</span>';
+    }
+
+    // Attach deletion and real-time update events
+    textStyleList.querySelectorAll('.btn-remove-ts').forEach(btn => {
+      btn.onclick = (e) => {
+          const idx = parseInt(e.currentTarget.closest('.ts-row').dataset.idx);
+          textStyles.splice(idx, 1);
+          renderTextStyles();
+      };
+    });
+
+    const bindUpdate = (selector, key, isCheckbox = false, isNumeric = false) => {
+        textStyleList.querySelectorAll(selector).forEach(el => {
+            el.onchange = (e) => {
+                const idx = parseInt(e.currentTarget.closest('.ts-row').dataset.idx);
+                let val = isCheckbox ? e.target.checked : e.target.value;
+                if (isNumeric) val = parseFloat(val);
+                textStyles[idx][key] = val;
+            };
+        });
+    };
+
+    bindUpdate('.ts-name', 'name');
+    bindUpdate('.ts-font', 'fontFamily');
+    bindUpdate('.ts-size', 'size', false, true);
+    bindUpdate('.ts-size-mode', 'sizeMode');
+    bindUpdate('.ts-color', 'color');
+    bindUpdate('.ts-weight', 'weight');
+    bindUpdate('.ts-shadow', 'shadow', true);
+    bindUpdate('.ts-shadow-color', 'shadowColor');
+    bindUpdate('.ts-bg-box', 'bgBox');
+    bindUpdate('.ts-bg-color', 'bgColor');
+    bindUpdate('.ts-bg-opacity', 'bgOpacity', false, true);
+    bindUpdate('.ts-bg-padding', 'bgPadding', false, true);
+  };
+  
+  renderTextStyles();
+
+  modal.querySelector('#btn-add-text-style').onclick = () => {
+      textStyles.push({
+          id: 'style-' + Math.random().toString(36).substr(2, 9),
+          name: 'New Style', fontFamily: 'Inter', sizeMode: 'px', size: 32,
+          color: '#ffffff', weight: '400', shadow: true, shadowColor: 'rgba(0,0,0,0.8)',
+          bgBox: 'none', bgColor: '#000000', bgOpacity: 60, bgPadding: 8
+      });
+      renderTextStyles();
+  };
 
   const renderSwatches = () => {
     swatchList.innerHTML = palette.map((swatch, idx) => `
@@ -315,7 +426,8 @@ export async function showSettingsModal() {
       ai: {
         describerEndpoint: modal.querySelector('#cfg-ai-endpoint').value.trim()
       },
-      palette: nextPalette
+      palette: nextPalette,
+      textStyles: textStyles
     });
 
     showToast({ variant: 'success', title: 'Settings Saved', description: 'Preferences applied globally.' });

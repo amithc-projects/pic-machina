@@ -17,13 +17,17 @@ function escHtml(s) {
  *
  * Recognised label hints: "{{vars}}", "{{var}}", "{{variables}}".
  */
-function renderLabelHtml(label, id) {
+function renderLabelHtml(label, id, param = null) {
   const safe = escHtml(label || '');
-  return safe.replace(/\{\{(vars?|variables)\}\}/gi, (match) => {
+  let html = safe.replace(/\{\{(vars?|variables)\}\}/gi, (match) => {
     return `<button type="button" class="ned-vars-link" data-vars-link="${id}"
       title="Click to browse and insert variables"
       style="background:none;border:none;padding:0 2px;margin:0;font:inherit;font-family:var(--font-mono,monospace);color:var(--ps-blue,#3b82f6);cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px">${match}</button>`;
   });
+  if (param && param.textStyleOverride) {
+    html = `<input type="checkbox" class="ic-text-override-toggle" data-target="${param.name}" title="Override Style Property" style="margin-right:4px;" /> ` + html;
+  }
+  return html;
 }
 
 /** Returns true if val is a {{...}} variable reference */
@@ -66,6 +70,7 @@ function varInput(id, name, val) {
 export function renderParamField(param, value, prefix = 'rp', { showVarBind = true } = {}) {
   const id  = `${prefix}-param-${param.name}`;
   const val = value ?? param.defaultValue ?? '';
+  const overrideClass = param.textStyleOverride ? ' ic-text-override-field' : '';
 
   // For text / textarea types, variable refs work natively — no toggle needed
   const supportsVarBind = showVarBind && !['text', 'textarea'].includes(param.type);
@@ -74,8 +79,8 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
   switch (param.type) {
     case 'boolean':
       return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<label class="ned-toggle">
@@ -84,6 +89,25 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
               </label>`
           }
         </div>`;
+
+    case 'text-style-select': {
+      let savedStylesHtml = '<option value="">None (Custom Settings)</option>';
+      try {
+        const saved = JSON.parse(localStorage.getItem('ic-global-settings'))?.textStyles || [];
+        savedStylesHtml += saved.map(s => `<option value="${escHtml(s.id)}" ${s.id === val ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('');
+      } catch(e) {}
+      
+      return `
+        <div class="ned-field">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          ${varActive
+            ? varInput(id, param.name, val)
+            : `<select id="${id}" name="${param.name}" class="ic-input ic-text-style-select" data-value="${escHtml(String(val))}">
+                ${savedStylesHtml}
+              </select>`
+          }
+        </div>`;
+    }
 
     case 'device-family-select':
     case 'device-model-select':
@@ -97,8 +121,8 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
       else if (param.type.startsWith('device-')) selClass += ` ic-${param.type}`;
       
       return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<select id="${id}" name="${param.name}" class="${selClass}" data-value="${escHtml(String(val))}">
@@ -112,8 +136,8 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
 
     case 'range':
       return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}
             ${!varActive ? `<span id="${id}-val" class="mono text-sm" style="margin-left:auto;color:var(--ps-blue)">${val}</span>` : ''}
             ${supportsVarBind ? varBindBtn(id, varActive) : ''}
           </label>
@@ -130,7 +154,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
         import('./settings.js').then(m => {
           // Handled externally if needed via async.
         }).catch(()=>{});
-        const saved = JSON.parse(localStorage.getItem('ic-settings'))?.palette || [
+        const saved = JSON.parse(localStorage.getItem('ic-global-settings'))?.palette || [
             { label: 'Black',  color: '#000000' },
             { label: 'White',  color: '#ffffff' },
             { label: 'Pink',   color: '#f472b6' },
@@ -142,8 +166,8 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
       } catch (e) {}
 
       return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<div class="ned-color-row" style="margin-bottom:4px;">
@@ -163,8 +187,8 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
 
     case 'number':
       return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
           ${varActive
             ? varInput(id, param.name, val)
             : `<input type="number" id="${id}" name="${param.name}" class="ic-input"
@@ -175,16 +199,16 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
 
     case 'textarea':
       return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}</label>
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}</label>
           <textarea id="${id}" name="${param.name}" class="ic-input" rows="4">${escHtml(String(val))}</textarea>
         </div>`;
         
     case 'file-text':
       return `
-        <div class="ned-field">
+        <div class="ned-field${overrideClass}">
           <label class="ned-field-label" for="${id}" style="display:flex; justify-content:space-between; align-items:center;">
-             <span>${renderLabelHtml(param.label, id)}</span>
+             <span>${renderLabelHtml(param.label, id, param)}</span>
              <input type="file" id="${id}-file" accept="${param.accept || '.srt,.vtt,.txt'}" style="font-size:10px; max-width:160px;">
           </label>
           <textarea id="${id}" name="${param.name}" class="ic-input" rows="6" placeholder="Paste contents here, or use the file upload button above...">${escHtml(String(val))}</textarea>
@@ -195,7 +219,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
       // so collectParams() reads it like any other text field.
       const hasVal = !!(val && String(val).length > 0);
       return `
-        <div class="ned-field">
+        <div class="ned-field${overrideClass}">
           <label class="ned-field-label">${escHtml(param.label || 'Image')}</label>
           <input type="hidden" id="${id}" name="${param.name}" value="${escHtml(String(val))}">
           <div class="ned-file-wrap" id="${id}-wrap">
@@ -221,8 +245,8 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
 
     default: // 'text'
       return `
-        <div class="ned-field">
-          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id)}</label>
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}</label>
           <input type="text" id="${id}" name="${param.name}" class="ic-input" value="${escHtml(String(val))}">
         </div>`;
   }
@@ -236,10 +260,26 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
  */
 export function collectParams(container, paramDefs, prefix = 'rp') {
   const result = {};
+
+  const textStyleParam = paramDefs.find(p => p.type === 'text-style-select');
+  let hasTextStyle = false;
+  if (textStyleParam) {
+     const tsEl = container.querySelector(`#${prefix}-param-${textStyleParam.name}`);
+     if (tsEl && tsEl.value && tsEl.value !== 'none') {
+         hasTextStyle = true;
+     }
+  }
+
   for (const p of paramDefs) {
     const id = `${prefix}-param-${p.name}`;
     const el = container.querySelector(`#${id}`);
     if (!el) continue;
+
+    if (p.textStyleOverride && hasTextStyle) {
+       const toggle = container.querySelector(`.ic-text-override-toggle[data-target="${p.name}"]`);
+       if (toggle && !toggle.checked) continue;
+    }
+
     if (p.type === 'boolean' && el.type === 'checkbox') {
       result[p.name] = el.checked;
     } else if ((p.type === 'range' || p.type === 'number') && !isVarRef(el.value)) {
@@ -576,6 +616,76 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
         }
       });
     }).catch(e => console.warn('[device-frames] Failed to load index.json', e));
+  }
+
+  // ── Wrap text-style overrides in a <details> block ──
+  const tsSelect = container.querySelector('.ic-text-style-select');
+  if (tsSelect) {
+    const overrideFields = Array.from(container.querySelectorAll('.ic-text-override-field'));
+    if (overrideFields.length > 0) {
+      const wrapper = document.createElement('details');
+      wrapper.className = 'ic-text-overrides-details';
+      wrapper.style.cssText = 'background:var(--ps-bg-overlay); border:1px solid var(--ps-border); border-radius:8px; margin-top:8px; margin-bottom:8px;';
+      wrapper.innerHTML = `
+        <summary style="cursor:pointer; padding:8px 12px; font-size:12px; font-weight:600; color:var(--ps-text); display:flex; align-items:center; gap:6px;">
+           <span class="material-symbols-outlined" style="font-size:16px;">tune</span> Style Overrides
+        </summary>
+        <div class="details-content" style="padding:12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--ps-border);"></div>
+      `;
+      const content = wrapper.querySelector('.details-content');
+      overrideFields[0].parentNode.insertBefore(wrapper, overrideFields[0]);
+      overrideFields.forEach(f => content.appendChild(f));
+
+      // Handle visibility/state of overrides based on textStyle selection
+      const updateOverrides = () => {
+         const hasStyle = tsSelect.value && tsSelect.value !== 'none';
+         if (hasStyle) {
+            // Style selected: overrides are optional, hide them behind the accordion
+            wrapper.style.display = 'block';
+            // Enable checkboxes
+            wrapper.querySelectorAll('.ic-text-override-toggle').forEach(chk => {
+                chk.style.display = 'inline-block';
+            });
+         } else {
+            // No style selected: all fields are mandatory, remove accordion wrap visually
+            wrapper.style.display = 'block';
+            wrapper.open = true; // force open
+            // Hide checkboxes and force them checked so collectParams reads the value
+            wrapper.querySelectorAll('.ic-text-override-toggle').forEach(chk => {
+                chk.style.display = 'none';
+                chk.checked = true;
+                // Dispatch change so styles update
+                chk.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+         }
+      };
+
+      tsSelect.addEventListener('change', updateOverrides);
+
+      // Handle checkbox toggles to dim/disable inputs
+      wrapper.querySelectorAll('.ic-text-override-toggle').forEach(chk => {
+          const targetName = chk.dataset.target;
+          const targetField = wrapper.querySelector(`[name="${targetName}"]`);
+          const targetEl = targetField ? targetField.closest('.ned-field') : null;
+          
+          const updateFieldState = () => {
+              if (targetEl) {
+                  const label = targetEl.querySelector('.ned-field-label');
+                  // we don't want to dim the checkbox itself, so we dim the elements after the label, or just the input
+                  const inputs = Array.from(targetEl.children).filter(c => c !== label);
+                  inputs.forEach(input => {
+                      input.style.opacity = chk.checked ? '1' : '0.5';
+                      input.style.pointerEvents = chk.checked ? 'auto' : 'none';
+                  });
+              }
+          };
+          chk.addEventListener('change', updateFieldState);
+          updateFieldState();
+      });
+
+      // Call initial update
+      updateOverrides();
+    }
   }
 }
 
