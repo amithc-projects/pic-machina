@@ -1,6 +1,7 @@
 import { createEmptyTimeline, saveTimeline, getTimeline, getAllTimelines } from '../data/timeline-store.js';
 import { registry } from '../engine/index.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
+import { WebGLCompositor, TRANSITIONS } from '../engine/stitcher.js';
 
 let currentTimeline = null;
 let mediaPoolSelection = new Set();
@@ -402,8 +403,9 @@ export async function render(container) {
 
   function renderPropertiesPanel() {
     propsContainer.innerHTML = '';
-    if (!selectedItemId || selectedItemType !== 'fx') {
-      propsContainer.innerHTML = '<div class="text-sm text-muted" style="padding: 12px;">Select an effect block to view properties.</div>';
+    
+    if (!selectedItemId || (selectedItemType !== 'fx' && selectedItemType !== 'video')) {
+      propsContainer.innerHTML = '<div class="text-sm text-muted" style="padding: 12px;">Select an effect or video block to view properties.</div>';
       if (isEffectsCollapsed) {
         isEffectsCollapsed = false;
         updateEffectsCollapseState();
@@ -416,6 +418,81 @@ export async function render(container) {
       updateEffectsCollapseState();
     }
 
+    function getTransitionHtml(block) {
+      const tIn = block.transitionIn || { style: 'none', duration: 0.0 };
+      const tOut = block.transitionOut || { style: 'none', duration: 0.0 };
+      const styles = ['none', ...Object.keys(TRANSITIONS)];
+      
+      return `
+        <div class="panel-header" style="flex-shrink: 0; border-top: 1px solid var(--ps-border); border-bottom: 1px solid var(--ps-border); background: var(--ps-bg-surface);">
+          <span class="panel-header-title text-xs">Transitions</span>
+        </div>
+        <div class="ned-fields" style="padding: 12px; background: rgba(0,0,0,0.1);">
+          <div class="ned-field">
+            <span class="ned-field-label">Transition In</span>
+            <div style="display:flex; gap: 8px;">
+              <select id="tme-t-in-style" class="ic-input" style="flex: 1; font-size: 11px;">
+                ${styles.map(s => `<option value="${s}" ${tIn.style === s ? 'selected' : ''}>${s}</option>`).join('')}
+              </select>
+              <input type="number" id="tme-t-in-dur" class="ic-input" style="width: 60px; font-size: 11px;" value="${tIn.duration}" step="0.1" min="0">
+              <span class="text-xs text-muted" style="line-height:24px;">s</span>
+            </div>
+          </div>
+          <div class="ned-field">
+            <span class="ned-field-label">Transition Out</span>
+            <div style="display:flex; gap: 8px;">
+              <select id="tme-t-out-style" class="ic-input" style="flex: 1; font-size: 11px;">
+                ${styles.map(s => `<option value="${s}" ${tOut.style === s ? 'selected' : ''}>${s}</option>`).join('')}
+              </select>
+              <input type="number" id="tme-t-out-dur" class="ic-input" style="width: 60px; font-size: 11px;" value="${tOut.duration}" step="0.1" min="0">
+              <span class="text-xs text-muted" style="line-height:24px;">s</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function bindTransitionEvents(block) {
+      const tInStyle = propsContainer.querySelector('#tme-t-in-style');
+      const tInDur = propsContainer.querySelector('#tme-t-in-dur');
+      const tOutStyle = propsContainer.querySelector('#tme-t-out-style');
+      const tOutDur = propsContainer.querySelector('#tme-t-out-dur');
+      
+      const updateTransitions = async () => {
+        block.transitionIn = { style: tInStyle.value, duration: parseFloat(tInDur.value) || 0 };
+        block.transitionOut = { style: tOutStyle.value, duration: parseFloat(tOutDur.value) || 0 };
+        await saveTimeline(currentTimeline);
+        renderTimelineTracks();
+        renderFrame();
+      };
+      
+      if (tInStyle) {
+        tInStyle.addEventListener('change', updateTransitions);
+        tInDur.addEventListener('change', updateTransitions);
+        tOutStyle.addEventListener('change', updateTransitions);
+        tOutDur.addEventListener('change', updateTransitions);
+      }
+    }
+
+    // --- VIDEO CLIP PROPERTIES ---
+    if (selectedItemType === 'video') {
+      const vBlock = currentTimeline.videoTrack.find(c => c.id === selectedItemId);
+      if (!vBlock) return;
+      
+      const poolItem = currentTimeline.mediaPool.find(m => m.id === vBlock.poolId);
+      const name = poolItem ? poolItem.name : vBlock.poolId;
+
+      propsContainer.innerHTML = `
+        <div style="padding: 12px; font-size: 12px; color: var(--ps-text-muted);">
+          <strong>Video Clip:</strong> ${name}
+        </div>
+        ${getTransitionHtml(vBlock)}
+      `;
+      bindTransitionEvents(vBlock);
+      return;
+    }
+
+    // --- EFFECT PROPERTIES ---
     let fxBlock = null;
     currentTimeline.effectTracks.forEach(t => {
       const b = t.blocks.find(blk => blk.id === selectedItemId);
@@ -425,108 +502,113 @@ export async function render(container) {
     if (!fxBlock) return;
 
     const def = registry.get(fxBlock.transformId);
-    if (!def || !def.params || def.params.length === 0) {
-      propsContainer.innerHTML = '<div class="text-sm text-muted" style="padding: 12px;">No configurable properties for this effect.</div>';
-      return;
-    }
-
-    let activeKeyframeIdx = -1;
+    let paramsHtml = '';
     let activeParams = fxBlock.params || {};
-    
-    if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
-      const offset = playheadTime - fxBlock.startTime;
-      for (let i = fxBlock.keyframes.length - 1; i >= 0; i--) {
-        if (fxBlock.keyframes[i].offset <= offset + 0.05) {
-          activeKeyframeIdx = i;
-          break;
-        }
-      }
-      if (activeKeyframeIdx === -1) {
-        activeKeyframeIdx = 0;
-      }
-      activeParams = fxBlock.keyframes[activeKeyframeIdx].params;
-    }
+    let activeKeyframeIdx = -1;
 
-    let kfHeaderHtml = '';
-    if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
-      kfHeaderHtml = `
-        <div style="display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--ps-border); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
-          <div style="display:flex; align-items:center; gap: 4px;">
-            <button class="btn-icon" id="tme-kf-prev" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === 0 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span></button>
-            <span class="text-xs">Keyframe ${activeKeyframeIdx + 1} of ${fxBlock.keyframes.length}</span>
-            <button class="btn-icon" id="tme-kf-next" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === fxBlock.keyframes.length - 1 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
+    if (!def || !def.params || def.params.length === 0) {
+      paramsHtml = '<div class="text-sm text-muted" style="padding: 12px;">No configurable properties for this effect.</div>';
+    } else {
+      if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
+        const offset = playheadTime - fxBlock.startTime;
+        for (let i = fxBlock.keyframes.length - 1; i >= 0; i--) {
+          if (fxBlock.keyframes[i].offset <= offset + 0.05) {
+            activeKeyframeIdx = i;
+            break;
+          }
+        }
+        if (activeKeyframeIdx === -1) activeKeyframeIdx = 0;
+        activeParams = fxBlock.keyframes[activeKeyframeIdx].params;
+      }
+
+      let kfHeaderHtml = '';
+      if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
+        kfHeaderHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--ps-border); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
+            <div style="display:flex; align-items:center; gap: 4px;">
+              <button class="btn-icon" id="tme-kf-prev" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === 0 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span></button>
+              <span class="text-xs">Keyframe ${activeKeyframeIdx + 1} of ${fxBlock.keyframes.length}</span>
+              <button class="btn-icon" id="tme-kf-next" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === fxBlock.keyframes.length - 1 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
+            </div>
+            <button class="btn-icon" id="tme-kf-delete" style="width:20px;height:20px;padding:0; color:var(--ps-danger);" title="Delete Keyframe"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>
           </div>
-          <button class="btn-icon" id="tme-kf-delete" style="width:20px;height:20px;padding:0; color:var(--ps-danger);" title="Delete Keyframe"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>
+        `;
+      }
+
+      paramsHtml = `
+        ${kfHeaderHtml}
+        <div class="ned-fields" style="padding: 12px;">
+          ${def.params.map(p => renderParamField(p, activeParams[p.name], 'tme')).join('')}
         </div>
       `;
     }
 
     propsContainer.innerHTML = `
-      ${kfHeaderHtml}
-      <div class="ned-fields" style="padding: 12px;">
-        ${def.params.map(p => renderParamField(p, activeParams[p.name], 'tme')).join('')}
-      </div>
+      ${paramsHtml}
+      ${getTransitionHtml(fxBlock)}
     `;
+    
+    bindTransitionEvents(fxBlock);
 
-    const btnKfPrev = propsContainer.querySelector('#tme-kf-prev');
-    if (btnKfPrev) btnKfPrev.addEventListener('click', () => {
-       playheadTime = fxBlock.startTime + fxBlock.keyframes[activeKeyframeIdx - 1].offset;
-       updatePlayheadUI();
-       renderPropertiesPanel();
-       renderFrame();
-    });
-    
-    const btnKfNext = propsContainer.querySelector('#tme-kf-next');
-    if (btnKfNext) btnKfNext.addEventListener('click', () => {
-       playheadTime = fxBlock.startTime + fxBlock.keyframes[activeKeyframeIdx + 1].offset;
-       updatePlayheadUI();
-       renderPropertiesPanel();
-       renderFrame();
-    });
-    
-    const btnKfDelete = propsContainer.querySelector('#tme-kf-delete');
-    if (btnKfDelete) btnKfDelete.addEventListener('click', async () => {
-       fxBlock.keyframes.splice(activeKeyframeIdx, 1);
-       if (fxBlock.keyframes.length === 0) {
-         delete fxBlock.keyframes;
-       }
-       await saveTimeline(currentTimeline);
-       renderTimelineTracks();
-       renderPropertiesPanel();
-       renderFrame();
-    });
+    if (def && def.params && def.params.length > 0) {
+      const btnKfPrev = propsContainer.querySelector('#tme-kf-prev');
+      if (btnKfPrev) btnKfPrev.addEventListener('click', () => {
+         playheadTime = fxBlock.startTime + fxBlock.keyframes[activeKeyframeIdx - 1].offset;
+         updatePlayheadUI();
+         renderPropertiesPanel();
+         renderFrame();
+      });
+      
+      const btnKfNext = propsContainer.querySelector('#tme-kf-next');
+      if (btnKfNext) btnKfNext.addEventListener('click', () => {
+         playheadTime = fxBlock.startTime + fxBlock.keyframes[activeKeyframeIdx + 1].offset;
+         updatePlayheadUI();
+         renderPropertiesPanel();
+         renderFrame();
+      });
 
-    // Initialize UI events and previews
-    bindParamFieldEvents(propsContainer, def.params, 'tme');
-    
-    // Wire range sliders and color pickers for real-time scrub previews
-    const onChange = async () => {
-      const newParams = collectParams(propsContainer, def.params, 'tme');
-      if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
-         if (activeKeyframeIdx !== -1) {
-           fxBlock.keyframes[activeKeyframeIdx].params = newParams;
+      const btnKfDelete = propsContainer.querySelector('#tme-kf-delete');
+      if (btnKfDelete) btnKfDelete.addEventListener('click', async () => {
+         fxBlock.keyframes.splice(activeKeyframeIdx, 1);
+         if (fxBlock.keyframes.length === 0) {
+           delete fxBlock.keyframes;
          }
-      } else {
-         fxBlock.params = newParams;
-      }
-      await saveTimeline(currentTimeline);
-      renderFrame();
-    };
+         await saveTimeline(currentTimeline);
+         renderTimelineTracks();
+         renderPropertiesPanel();
+         renderFrame();
+      });
 
-    propsContainer.querySelectorAll('input, select').forEach(el => {
-      if (el.type === 'range' || el.type === 'color') {
-        el.addEventListener('input', () => {
-          // Sync numeric label for ranges
-          if (el.type === 'range') {
-            const valEl = propsContainer.querySelector(`#${el.id}-val`);
-            if (valEl) valEl.textContent = el.value;
-          }
-          onChange();
-        });
-      } else {
-        el.addEventListener('change', onChange);
-      }
-    });
+      // Initialize UI events and previews
+      bindParamFieldEvents(propsContainer, def.params, 'tme');
+      
+      const onChange = async () => {
+        const newParams = collectParams(propsContainer, def.params, 'tme');
+        if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
+           if (activeKeyframeIdx !== -1) {
+             fxBlock.keyframes[activeKeyframeIdx].params = newParams;
+           }
+        } else {
+           fxBlock.params = newParams;
+        }
+        await saveTimeline(currentTimeline);
+        renderFrame();
+      };
+
+      propsContainer.querySelectorAll('input, select').forEach(el => {
+        if (el.type === 'range' || el.type === 'color') {
+          el.addEventListener('input', () => {
+            if (el.type === 'range') {
+              const valEl = propsContainer.querySelector(`#${el.id}-val`);
+              if (valEl) valEl.textContent = el.value;
+            }
+            onChange();
+          });
+        } else {
+          el.addEventListener('change', onChange);
+        }
+      });
+    }
   }
 
   // ─── Timeline Rendering & Logic ─────────────────────────
@@ -872,6 +954,22 @@ export async function render(container) {
         block.style.cursor = 'grab';
         block.dataset.id = clip.id;
 
+        const tIn = clip.transitionIn;
+        if (tIn && tIn.style !== 'none' && tIn.duration > 0) {
+          const w = tIn.duration * PIXELS_PER_SECOND;
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute; left:0; top:0; bottom:0; width:${w}px; background:linear-gradient(to right, rgba(0,0,0,0.7), transparent); pointer-events:none; z-index:4; border-left: 2px solid #aaa;`;
+          block.appendChild(el);
+        }
+
+        const tOut = clip.transitionOut;
+        if (tOut && tOut.style !== 'none' && tOut.duration > 0) {
+          const w = tOut.duration * PIXELS_PER_SECOND;
+          const el = document.createElement('div');
+          el.style.cssText = `position:absolute; right:0; top:0; bottom:0; width:${w}px; background:linear-gradient(to left, rgba(0,0,0,0.7), transparent); pointer-events:none; z-index:4; border-right: 2px solid #aaa;`;
+          block.appendChild(el);
+        }
+
         setupDrag(block, clip, 'video');
         
         // Add Trim Handles
@@ -976,6 +1074,22 @@ export async function render(container) {
           block.style.whiteSpace = 'nowrap';
           block.style.overflow = 'hidden';
           block.dataset.id = fx.id;
+
+          const tIn = fx.transitionIn;
+          if (tIn && tIn.style !== 'none' && tIn.duration > 0) {
+            const w = tIn.duration * PIXELS_PER_SECOND;
+            const el = document.createElement('div');
+            el.style.cssText = `position:absolute; left:0; top:0; bottom:0; width:${w}px; background:linear-gradient(to right, rgba(0,0,0,0.5), transparent); pointer-events:none; z-index:3; border-left: 2px solid var(--ps-blue);`;
+            block.appendChild(el);
+          }
+
+          const tOut = fx.transitionOut;
+          if (tOut && tOut.style !== 'none' && tOut.duration > 0) {
+            const w = tOut.duration * PIXELS_PER_SECOND;
+            const el = document.createElement('div');
+            el.style.cssText = `position:absolute; right:0; top:0; bottom:0; width:${w}px; background:linear-gradient(to left, rgba(0,0,0,0.5), transparent); pointer-events:none; z-index:3; border-right: 2px solid var(--ps-blue);`;
+            block.appendChild(el);
+          }
 
           setupDrag(block, fx, 'fx');
           
@@ -1758,7 +1872,7 @@ export async function render(container) {
     });
   }
 
-  async function loadFrame(activeClip) {
+  async function loadFrame(activeClip, timeOverride = null) {
     const item = currentTimeline.mediaPool.find(p => p.id === activeClip.poolId);
     if (!item) return null;
     
@@ -1778,7 +1892,8 @@ export async function render(container) {
         img.src = file ? URL.createObjectURL(file) : item.thumbnail; 
       });
     } else if (item.type === 'video') {
-      const clipTime = playheadTime - activeClip.startTime + (activeClip.sourceStart || 0);
+      const pTime = timeOverride !== null ? timeOverride : playheadTime;
+      const clipTime = Math.max(0, pTime - activeClip.startTime + (activeClip.sourceStart || 0));
       return loadVideoFrameAtTime(item, clipTime);
     }
     return null;
@@ -1855,30 +1970,102 @@ export async function render(container) {
     return interpolated;
   }
 
+  let compositor = null;
+
   async function renderFrame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Find active clip
-    const activeClip = currentTimeline.videoTrack.find(c => 
+    if (!compositor && canvas.width > 0 && canvas.height > 0) {
+      compositor = new WebGLCompositor(canvas.width, canvas.height);
+    }
+
+    function drawSourceToCtx(frameSource, targetCtx) {
+      const sourceW = frameSource.videoWidth || frameSource.width;
+      const sourceH = frameSource.videoHeight || frameSource.height;
+      const scale = Math.max(canvas.width / sourceW, canvas.height / sourceH);
+      const x = (canvas.width / 2) - (sourceW / 2) * scale;
+      const y = (canvas.height / 2) - (sourceH / 2) * scale;
+      targetCtx.drawImage(frameSource, x, y, sourceW * scale, sourceH * scale);
+    }
+
+    // --- 1. VIDEO RENDERING ---
+    const activeClipIdx = currentTimeline.videoTrack.findIndex(c => 
       playheadTime >= c.startTime && playheadTime < c.startTime + c.duration
     );
 
-    if (activeClip) {
-      const frameSource = await loadFrame(activeClip);
-      if (frameSource) {
-        // Draw image/video covering the canvas (object-fit: cover logic)
-        const sourceW = frameSource.videoWidth || frameSource.width;
-        const sourceH = frameSource.videoHeight || frameSource.height;
-        const scale = Math.max(canvas.width / sourceW, canvas.height / sourceH);
-        const x = (canvas.width / 2) - (sourceW / 2) * scale;
-        const y = (canvas.height / 2) - (sourceH / 2) * scale;
-        ctx.drawImage(frameSource, x, y, sourceW * scale, sourceH * scale);
+    if (activeClipIdx !== -1) {
+      const activeClip = currentTimeline.videoTrack[activeClipIdx];
+      const tIn = activeClip.transitionIn || { style: 'none', duration: 0 };
+      const tOut = activeClip.transitionOut || { style: 'none', duration: 0 };
+      
+      const isTransIn = tIn.style !== 'none' && tIn.duration > 0 && playheadTime < activeClip.startTime + tIn.duration;
+      const isTransOut = tOut.style !== 'none' && tOut.duration > 0 && playheadTime >= (activeClip.startTime + activeClip.duration) - tOut.duration;
+
+      if (compositor && (isTransIn || isTransOut)) {
+        let progress = 0;
+        let style = 'none';
+        let fromClip = null;
+        let toClip = null;
+
+        if (isTransIn) {
+          progress = (playheadTime - activeClip.startTime) / tIn.duration;
+          style = tIn.style;
+          toClip = activeClip;
+          fromClip = activeClipIdx > 0 ? currentTimeline.videoTrack[activeClipIdx - 1] : null;
+        } else {
+          progress = (playheadTime - ((activeClip.startTime + activeClip.duration) - tOut.duration)) / tOut.duration;
+          style = tOut.style;
+          fromClip = activeClip;
+          toClip = activeClipIdx < currentTimeline.videoTrack.length - 1 ? currentTimeline.videoTrack[activeClipIdx + 1] : null;
+        }
+
+        const toFrameSrc = toClip ? await loadFrame(toClip, isTransOut ? toClip.startTime : playheadTime) : null;
+        const fromFrameSrc = fromClip ? await loadFrame(fromClip, isTransIn ? fromClip.startTime + fromClip.duration : playheadTime) : null;
+        
+        let toBmp = null, fromBmp = null;
+        let toTex = null, fromTex = null;
+
+        if (toFrameSrc) {
+           const tempC = new OffscreenCanvas(canvas.width, canvas.height);
+           const tempCtx = tempC.getContext('2d');
+           drawSourceToCtx(toFrameSrc, tempCtx);
+           toBmp = await createImageBitmap(tempC);
+           toTex = compositor.createTexture(toBmp);
+        }
+        if (fromFrameSrc) {
+           const tempC = new OffscreenCanvas(canvas.width, canvas.height);
+           const tempCtx = tempC.getContext('2d');
+           drawSourceToCtx(fromFrameSrc, tempCtx);
+           fromBmp = await createImageBitmap(tempC);
+           fromTex = compositor.createTexture(fromBmp);
+        }
+
+        compositor.renderFrame({
+          programName: style,
+          fromTex,
+          toTex,
+          progress,
+          fromMotion: null,
+          toMotion: null
+        });
+
+        ctx.drawImage(compositor.canvas, 0, 0, canvas.width, canvas.height);
+
+        if (toTex) compositor.gl.deleteTexture(toTex);
+        if (fromTex) compositor.gl.deleteTexture(fromTex);
+        if (toBmp) toBmp.close();
+        if (fromBmp) fromBmp.close();
+      } else {
+        const frameSource = await loadFrame(activeClip);
+        if (frameSource) {
+          drawSourceToCtx(frameSource, ctx);
+        }
       }
     }
 
-    // Apply active effects
+    // --- 2. EFFECT RENDERING ---
     const activeFx = currentTimeline.effectTracks.flatMap(t => t.blocks).filter(fx => 
       playheadTime >= fx.startTime && playheadTime < fx.startTime + fx.duration
     );
@@ -1889,10 +2076,58 @@ export async function render(container) {
         try {
           const context = { timestampSec: playheadTime };
           const interpParams = getInterpolatedParams(fx, playheadTime);
-          if (def.applyPerFrame) {
-            await def.applyPerFrame(ctx, interpParams, context);
-          } else if (def.apply) {
-            await def.apply(ctx, interpParams, context);
+
+          const tIn = fx.transitionIn || { style: 'none', duration: 0 };
+          const tOut = fx.transitionOut || { style: 'none', duration: 0 };
+          const isTransIn = tIn.style !== 'none' && tIn.duration > 0 && playheadTime < fx.startTime + tIn.duration;
+          const isTransOut = tOut.style !== 'none' && tOut.duration > 0 && playheadTime >= (fx.startTime + fx.duration) - tOut.duration;
+
+          if (compositor && (isTransIn || isTransOut)) {
+            // Render effect to isolated canvas
+            const fxCanvas = new OffscreenCanvas(canvas.width, canvas.height);
+            const fxCtx = fxCanvas.getContext('2d');
+            
+            if (def.applyPerFrame) await def.applyPerFrame(fxCtx, interpParams, context);
+            else if (def.apply) await def.apply(fxCtx, interpParams, context);
+
+            const style = isTransIn ? tIn.style : tOut.style;
+            const progress = isTransIn 
+              ? (playheadTime - fx.startTime) / tIn.duration 
+              : (playheadTime - ((fx.startTime + fx.duration) - tOut.duration)) / tOut.duration;
+
+            const fxBmp = await createImageBitmap(fxCanvas);
+            const fxTex = compositor.createTexture(fxBmp);
+            
+            // Empty transparent texture
+            const emptyCanvas = new OffscreenCanvas(canvas.width, canvas.height);
+            const emptyBmp = await createImageBitmap(emptyCanvas);
+            const emptyTex = compositor.createTexture(emptyBmp);
+
+            const fromTex = isTransIn ? emptyTex : fxTex;
+            const toTex = isTransIn ? fxTex : emptyTex;
+            
+            compositor.renderFrame({
+              programName: style,
+              fromTex,
+              toTex,
+              progress,
+              fromMotion: null,
+              toMotion: null
+            });
+
+            ctx.drawImage(compositor.canvas, 0, 0);
+
+            compositor.gl.deleteTexture(fxTex);
+            compositor.gl.deleteTexture(emptyTex);
+            fxBmp.close();
+            emptyBmp.close();
+          } else {
+            // Normal direct render
+            if (def.applyPerFrame) {
+              await def.applyPerFrame(ctx, interpParams, context);
+            } else if (def.apply) {
+              await def.apply(ctx, interpParams, context);
+            }
           }
         } catch (err) {
           console.warn(`Effect ${fx.transformId} failed during preview:`, err);

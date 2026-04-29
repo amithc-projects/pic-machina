@@ -56,7 +56,7 @@ void main() {
 `;
 
 // --- Standard GL-Transitions ---
-const TRANSITIONS = {
+export const TRANSITIONS = {
   crossfade: `
     vec4 transition(vec2 uv) {
       return mix(getFromColor(uv), getToColor(uv), progress);
@@ -344,7 +344,7 @@ export class WebGLCompositor {
     gl.useProgram(pInfo.program);
 
     gl.viewport(0, 0, this.width, this.height);
-    gl.clearColor(0,0,0,1);
+    gl.clearColor(0,0,0,0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     // Set uniforms
