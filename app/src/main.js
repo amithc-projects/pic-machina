@@ -22,6 +22,7 @@ const SCREENS = {
   que: () => import('./screens/que.js'),
   out: () => import('./screens/out.js'),
   cmp: () => import('./screens/cmp.js'),
+  tme: () => import('./screens/tme.js'),
   fld: () => import('./screens/fld.js'),
   shc: () => import('./screens/shc.js'),
   mdl: () => import('./screens/mdl.js'),

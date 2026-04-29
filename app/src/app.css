@@ -63,6 +63,15 @@
   gap: 2px;
 }
 
+.app-nav__subheader {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ps-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 10px 4px;
+}
+
 .app-nav__item {
   display: flex;
   align-items: center;

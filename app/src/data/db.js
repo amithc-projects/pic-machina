@@ -12,7 +12,7 @@
  */
 
 const DB_NAME = 'PicMachina';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 let _db = null;
 
@@ -81,6 +81,12 @@ export function initDB() {
       // models (v5) — ONNX model blobs for local inference (InSPyReNet, etc.)
       if (!db.objectStoreNames.contains('models')) {
         db.createObjectStore('models', { keyPath: 'id' });
+      }
+
+      // timelines (v6) — Standalone video editor projects
+      if (!db.objectStoreNames.contains('timelines')) {
+        const tmeStore = db.createObjectStore('timelines', { keyPath: 'id' });
+        tmeStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
     };
 

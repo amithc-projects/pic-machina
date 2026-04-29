@@ -123,15 +123,20 @@ const CANVAS_CATEGORY_KEYS = new Set(['geo', 'color', 'overlay']);
 const VIDEO_INPUT_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
 
 function recipeNeedsMainThread(recipe, files = []) {
-  if (flattenNodes(recipe.nodes || []).some(n => MAIN_THREAD_TRANSFORMS.has(n.transformId))) return true;
+  if (flattenNodes(recipe.nodes || []).some(n => {
+    const def = registry.get(n.transformId);
+    return MAIN_THREAD_TRANSFORMS.has(n.transformId) || (def && def.mainThread);
+  })) return true;
+
   // video-effect transforms (per-frame mediabunny effects) always need main thread
   if (flattenNodes(recipe.nodes || []).some(n => registry.get(n.transformId)?.categoryKey === 'video-effect')) return true;
+
   // Canvas transforms applied to video files need main thread (mediabunny + WebCodecs)
   const hasVideoFiles = files.some(f => VIDEO_INPUT_EXTS.has(f.name.slice(f.name.lastIndexOf('.') + 1).toLowerCase()));
   if (hasVideoFiles || recipe.inputType === 'video') {
     if (flattenNodes(recipe.nodes || []).some(n => {
       const def = registry.get(n.transformId);
-      return def && CANVAS_CATEGORY_KEYS.has(def.categoryKey);
+      return def && (CANVAS_CATEGORY_KEYS.has(def.categoryKey) || def.categoryKey === 'flow');
     })) return true;
   }
   return false;
