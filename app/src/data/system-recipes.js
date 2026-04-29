@@ -1239,12 +1239,25 @@ export const SYSTEM_RECIPES = [
   // automatically. Implemented in engine/face-swap.js via a
   // Gauss-Seidel / SOR solver over the mask region.
   //
-  // Because Poisson handles colour and lighting transfer, we DON'T
-  // pre-recolour the source any more — destroying its gradients
-  // would actually fight the algorithm. We do leave a light
-  // painterly pass on the source (Kuwahara + 1px blur) so the
-  // result reads as paint-strokes rather than smooth photographic
-  // skin once the colours land in the painting's range.
+  // Pure Poisson is what the original Pérez paper recommends for
+  // face-swap. We tried mixed-gradient Poisson briefly — at every
+  // edge it picks max(|∇S|, |∇T|), which sounds great but on this
+  // exact input class (modern photo onto sharp oil-painting) the
+  // target's painted edges (defined eyes/lips/brows, varnish
+  // cracks) almost always have larger gradient magnitude than the
+  // source's photographic edges. Result: target wins everywhere
+  // and the swap is barely visible. Mixed gradients are the right
+  // choice for "preserve target detail through a hole" jobs, not
+  // for full-face transfer. Pure Poisson it is.
+  //
+  // No source pre-styling either. We ran the source through a 1 px
+  // Gaussian Blur + Kuwahara before warping for "painterly
+  // strokes" — but that reduces source gradient strength and made
+  // the swap fainter under any Poisson variant. Pure Poisson handles
+  // colour/lighting transfer on its own; brush-stroke texture (if
+  // wanted) belongs as a post-process pass on the FINAL output, not
+  // on the source before warping. We can layer Kuwahara into a
+  // separate "Aged Oil Finish" recipe later.
   {
     id:          'sys-oil-painting-face-swap',
     name:        'Oil Painting Face Swap',
@@ -1257,35 +1270,15 @@ export const SYSTEM_RECIPES = [
     createdAt:   0,
     updatedAt:   0,
     nodes: [
-      // Light painterly pass on the SOURCE only — gives the warped
-      // face brush-stroke texture once Poisson lands its colours in
-      // the target's range. Target painting is untouched so its
-      // surface and landmarks stay authentic.
-      {
-        id: 'op-cond', type: 'conditional',
-        label: 'Painterly source pass (image 0)',
-        condition: { field: 'fileIndex', operator: 'eq', value: 0 },
-        thenNodes: [
-          { id: 'op-blur', type: 'transform', transformId: 'filter-blur',
-            params: { radius: 1 },
-            label: 'Sfumato softening' },
-          { id: 'op-kuw', type: 'transform', transformId: 'filter-kuwahara',
-            params: { radius: 2, passes: 1 },
-            label: 'Painterly strokes' }
-        ],
-        elseNodes: []
-      },
-      // Aggregator: mesh-warp the source face into the target's
-      // landmarks, then blend with mixed-gradient Poisson cloning.
-      // Mixed mode preserves strong features from BOTH images: the
-      // swapped face keeps its eyes / nose / cheek shading, and the
-      // target painting keeps its lip line, jaw shadow, and any
-      // strong edges where source happens to be smooth — fixing the
-      // faint colour-cast streaks pure Poisson left at the boundary.
+      // Single step: mesh-warp the source face into the target's
+      // landmarks, then blend with pure Poisson seamless cloning.
+      // The warped face contributes only its gradients; absolute
+      // colour/luminance is dictated by the surrounding painting,
+      // so the boundary blends without a modern-photo seam.
       {
         id: 'op-swap', type: 'transform', transformId: 'flow-face-swap',
-        params: { suffix: '_oilswap', quality: 95, blendMode: 'poisson-mixed' },
-        label: 'Face swap (mixed-gradient Poisson)'
+        params: { suffix: '_oilswap', quality: 95, blendMode: 'poisson' },
+        label: 'Face swap (Poisson cloning)'
       }
     ]
   }
