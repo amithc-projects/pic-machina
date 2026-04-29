@@ -85,6 +85,9 @@ export async function render(container) {
           <div class="panel-left" style="width: 320px; border-right: 1px solid var(--ps-border);">
             <div class="panel-header">
               <span class="panel-header-title">Media Pool</span>
+              <button class="btn-ghost" id="tme-btn-remove-media" title="Remove Selected Media" style="display:none; color: var(--ps-danger);">
+                <span class="material-symbols-outlined">remove</span>
+              </button>
               <button class="btn-ghost" id="tme-btn-add-media" title="Import Media">
                 <span class="material-symbols-outlined">add</span>
               </button>
@@ -107,10 +110,14 @@ export async function render(container) {
 
           <!-- Effects Browser & Properties Panel -->
           <div class="panel-right" style="width: 260px; border-left: 1px solid var(--ps-border); display: flex; flex-direction: column;">
-            <div class="panel-header" style="flex-shrink: 0;">
-              <span class="panel-header-title">Effects</span>
+            <div class="panel-header" id="tme-effects-header" style="flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; cursor: pointer;">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span class="panel-header-title">Effects</span>
+                <span class="material-symbols-outlined" id="tme-effects-chevron" style="font-size: 16px;">expand_more</span>
+              </div>
+              <input type="text" id="tme-effects-search" placeholder="Search effects..." class="ic-input" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.2);">
             </div>
-            <div class="panel-body" id="tme-effects-pool" style="flex: 1; overflow-y: auto; padding-bottom: 8px;">
+            <div class="panel-body" id="tme-effects-pool" style="flex: 1; overflow-y: auto; padding-bottom: 8px; padding-top: 8px;">
               <!-- Render list of available effects here -->
             </div>
 
@@ -138,6 +145,10 @@ export async function render(container) {
             </button>
             <button class="btn-ghost" title="Delete Selected" id="tme-btn-delete-selected">
               <span class="material-symbols-outlined">delete</span>
+            </button>
+            <div style="width: 1px; height: 16px; background: var(--ps-border); margin: 0 4px;"></div>
+            <button class="btn-ghost" title="Add Keyframe" id="tme-btn-add-keyframe" disabled style="opacity: 0.5;">
+              <span class="material-symbols-outlined">add_location_alt</span>
             </button>
             
             <div style="flex: 1;"></div>
@@ -201,10 +212,17 @@ export async function render(container) {
 
     // Determine which pool items are used in the timeline
     const usedPoolIds = new Set(currentTimeline.videoTrack.map(clip => clip.poolId));
+    if (currentTimeline.audioTracks) {
+      currentTimeline.audioTracks.forEach(t => t.blocks.forEach(b => usedPoolIds.add(b.poolId)));
+    }
+
+    const btnRemoveMedia = container.querySelector('#tme-btn-remove-media');
+    let anySelectedIsUsed = false;
 
     currentTimeline.mediaPool.forEach(item => {
       const isSelected = mediaPoolSelection.has(item.id);
       const isUsed = usedPoolIds.has(item.id);
+      if (isSelected && isUsed) anySelectedIsUsed = true;
       
       const el = document.createElement('div');
       el.className = 'tme-pool-item';
@@ -266,15 +284,76 @@ export async function render(container) {
 
       poolContainer.appendChild(el);
     });
+
+    if (btnRemoveMedia) {
+      if (mediaPoolSelection.size > 0 && !anySelectedIsUsed) {
+        btnRemoveMedia.style.display = 'block';
+      } else {
+        btnRemoveMedia.style.display = 'none';
+      }
+    }
+  }
+
+  const btnRemoveMedia = container.querySelector('#tme-btn-remove-media');
+  if (btnRemoveMedia) {
+    btnRemoveMedia.addEventListener('click', async () => {
+      const idsToRemove = Array.from(mediaPoolSelection);
+      currentTimeline.mediaPool = currentTimeline.mediaPool.filter(p => !idsToRemove.includes(p.id));
+      mediaPoolSelection.clear();
+      await saveTimeline(currentTimeline);
+      renderMediaPool();
+    });
   }
 
   const fxPoolContainer = container.querySelector('#tme-effects-pool');
+  const fxSearchInput = container.querySelector('#tme-effects-search');
+  
+  if (fxSearchInput) {
+    fxSearchInput.addEventListener('input', () => {
+      renderEffectsPool(fxSearchInput.value.toLowerCase());
+    });
+  }
+
+  const fxHeader = container.querySelector('#tme-effects-header');
+  let isEffectsCollapsed = false;
+
+  function updateEffectsCollapseState() {
+    const pool = container.querySelector('#tme-effects-pool');
+    const chevron = container.querySelector('#tme-effects-chevron');
+    const propsPanel = container.querySelector('#tme-properties-panel');
+    
+    if (isEffectsCollapsed) {
+      pool.style.display = 'none';
+      if (fxSearchInput) fxSearchInput.style.display = 'none';
+      if (chevron) chevron.textContent = 'chevron_right';
+      if (propsPanel) propsPanel.style.flex = '1';
+    } else {
+      pool.style.display = 'block';
+      if (fxSearchInput) fxSearchInput.style.display = 'block';
+      if (chevron) chevron.textContent = 'expand_more';
+      if (propsPanel) {
+        propsPanel.style.flex = 'none';
+        propsPanel.style.height = '45%';
+      }
+    }
+  }
+
+  if (fxHeader) {
+    fxHeader.addEventListener('click', (e) => {
+      if (e.target.tagName.toLowerCase() === 'input') return;
+      isEffectsCollapsed = !isEffectsCollapsed;
+      updateEffectsCollapseState();
+    });
+  }
 
   // ─── Render Effects Pool ────────────────────────────────
-  function renderEffectsPool() {
+  function renderEffectsPool(filterText = '') {
     fxPoolContainer.innerHTML = '';
     const allDefs = registry.getAll();
-    const fxDefs = allDefs.filter(d => !['sys', 'meta', 'flow'].includes(d.category));
+    const fxDefs = allDefs.filter(d => 
+       !['sys', 'meta', 'flow'].includes(d.category) && 
+       (d.name.toLowerCase().includes(filterText) || d.category.toLowerCase().includes(filterText))
+    );
     
     fxDefs.forEach(def => {
       const el = document.createElement('div');
@@ -307,7 +386,7 @@ export async function render(container) {
             startTime: playheadTime,
             duration: 4.0,
             params: {},
-            keyframes: {}
+            keyframes: []
           });
           await saveTimeline(currentTimeline);
           renderTimelineTracks();
@@ -325,7 +404,16 @@ export async function render(container) {
     propsContainer.innerHTML = '';
     if (!selectedItemId || selectedItemType !== 'fx') {
       propsContainer.innerHTML = '<div class="text-sm text-muted" style="padding: 12px;">Select an effect block to view properties.</div>';
+      if (isEffectsCollapsed) {
+        isEffectsCollapsed = false;
+        updateEffectsCollapseState();
+      }
       return;
+    }
+
+    if (!isEffectsCollapsed) {
+      isEffectsCollapsed = true;
+      updateEffectsCollapseState();
     }
 
     let fxBlock = null;
@@ -342,18 +430,85 @@ export async function render(container) {
       return;
     }
 
+    let activeKeyframeIdx = -1;
+    let activeParams = fxBlock.params || {};
+    
+    if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
+      const offset = playheadTime - fxBlock.startTime;
+      for (let i = fxBlock.keyframes.length - 1; i >= 0; i--) {
+        if (fxBlock.keyframes[i].offset <= offset + 0.05) {
+          activeKeyframeIdx = i;
+          break;
+        }
+      }
+      if (activeKeyframeIdx === -1) {
+        activeKeyframeIdx = 0;
+      }
+      activeParams = fxBlock.keyframes[activeKeyframeIdx].params;
+    }
+
+    let kfHeaderHtml = '';
+    if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
+      kfHeaderHtml = `
+        <div style="display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--ps-border); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
+          <div style="display:flex; align-items:center; gap: 4px;">
+            <button class="btn-icon" id="tme-kf-prev" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === 0 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span></button>
+            <span class="text-xs">Keyframe ${activeKeyframeIdx + 1} of ${fxBlock.keyframes.length}</span>
+            <button class="btn-icon" id="tme-kf-next" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === fxBlock.keyframes.length - 1 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
+          </div>
+          <button class="btn-icon" id="tme-kf-delete" style="width:20px;height:20px;padding:0; color:var(--ps-danger);" title="Delete Keyframe"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>
+        </div>
+      `;
+    }
+
     propsContainer.innerHTML = `
+      ${kfHeaderHtml}
       <div class="ned-fields" style="padding: 12px;">
-        ${def.params.map(p => renderParamField(p, fxBlock.params?.[p.name], 'tme')).join('')}
+        ${def.params.map(p => renderParamField(p, activeParams[p.name], 'tme')).join('')}
       </div>
     `;
+
+    const btnKfPrev = propsContainer.querySelector('#tme-kf-prev');
+    if (btnKfPrev) btnKfPrev.addEventListener('click', () => {
+       playheadTime = fxBlock.startTime + fxBlock.keyframes[activeKeyframeIdx - 1].offset;
+       updatePlayheadUI();
+       renderPropertiesPanel();
+       renderFrame();
+    });
+    
+    const btnKfNext = propsContainer.querySelector('#tme-kf-next');
+    if (btnKfNext) btnKfNext.addEventListener('click', () => {
+       playheadTime = fxBlock.startTime + fxBlock.keyframes[activeKeyframeIdx + 1].offset;
+       updatePlayheadUI();
+       renderPropertiesPanel();
+       renderFrame();
+    });
+    
+    const btnKfDelete = propsContainer.querySelector('#tme-kf-delete');
+    if (btnKfDelete) btnKfDelete.addEventListener('click', async () => {
+       fxBlock.keyframes.splice(activeKeyframeIdx, 1);
+       if (fxBlock.keyframes.length === 0) {
+         delete fxBlock.keyframes;
+       }
+       await saveTimeline(currentTimeline);
+       renderTimelineTracks();
+       renderPropertiesPanel();
+       renderFrame();
+    });
 
     // Initialize UI events and previews
     bindParamFieldEvents(propsContainer, def.params, 'tme');
     
     // Wire range sliders and color pickers for real-time scrub previews
     const onChange = async () => {
-      fxBlock.params = collectParams(propsContainer, def.params, 'tme');
+      const newParams = collectParams(propsContainer, def.params, 'tme');
+      if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
+         if (activeKeyframeIdx !== -1) {
+           fxBlock.keyframes[activeKeyframeIdx].params = newParams;
+         }
+      } else {
+         fxBlock.params = newParams;
+      }
       await saveTimeline(currentTimeline);
       renderFrame();
     };
@@ -380,6 +535,63 @@ export async function render(container) {
   const trackHeadersEl = container.querySelector('#tme-track-headers');
   const rulerCanvas = container.querySelector('#tme-ruler-canvas');
   const scrollContainer = container.querySelector('#tme-timeline-scroll');
+
+  if (tracksBodyEl) {
+    tracksBodyEl.addEventListener('contextmenu', async (e) => {
+      if (e.target.closest('.tme-clip') || e.target.closest('.tme-fx-block')) return;
+      
+      e.preventDefault();
+      
+      const rect = tracksBodyEl.getBoundingClientRect();
+      const clickX = e.clientX - rect.left + scrollContainer.scrollLeft;
+      const clickTime = Math.max(0, clickX / PIXELS_PER_SECOND);
+      
+      const gapStr = window.prompt(`Insert gap at ${clickTime.toFixed(2)}s.\nEnter number of seconds to shift everything forward:`, '1.0');
+      if (!gapStr) return;
+      const gap = parseFloat(gapStr);
+      if (isNaN(gap) || gap <= 0) return;
+      
+      let changed = false;
+      const tThreshold = clickTime - 0.01;
+      
+      if (currentTimeline.videoTrack) {
+        currentTimeline.videoTrack.forEach(clip => {
+          if (clip.startTime >= tThreshold) {
+            clip.startTime += gap;
+            changed = true;
+          }
+        });
+      }
+      
+      if (currentTimeline.effectTracks) {
+        currentTimeline.effectTracks.forEach(track => {
+          track.blocks.forEach(fx => {
+            if (fx.startTime >= tThreshold) {
+              fx.startTime += gap;
+              changed = true;
+            }
+          });
+        });
+      }
+      
+      if (currentTimeline.audioTracks) {
+        currentTimeline.audioTracks.forEach(track => {
+          track.blocks.forEach(clip => {
+            if (clip.startTime >= tThreshold) {
+              clip.startTime += gap;
+              changed = true;
+            }
+          });
+        });
+      }
+      
+      if (changed) {
+        await saveTimeline(currentTimeline);
+        renderTimelineTracks();
+        renderFrame();
+      }
+    });
+  }
 
   function renderRuler() {
     if (!rulerCanvas) return;
@@ -735,7 +947,7 @@ export async function render(container) {
                 startTime: dropTime,
                 duration: 4.0,
                 params: {},
-                keyframes: {}
+                keyframes: []
               });
               await saveTimeline(currentTimeline);
               renderTimelineTracks();
@@ -783,6 +995,62 @@ export async function render(container) {
           label.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px; margin-right:4px;">${def?.icon || 'auto_awesome'}</span> ${def?.name || fx.transformId}`;
           block.appendChild(label);
           
+          if (Array.isArray(fx.keyframes)) {
+            fx.keyframes.forEach(kf => {
+              const tick = document.createElement('div');
+              tick.style.cssText = 'position:absolute; width:4px; height:10px; background:var(--ps-blue); top:15px; border-radius:2px; cursor:pointer; z-index:2;';
+              tick.style.left = `${kf.offset * PIXELS_PER_SECOND}px`;
+              tick.title = `Keyframe at ${kf.offset.toFixed(2)}s`;
+              tick.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                let isDragging = false;
+                let startX = e.clientX;
+                let originalOffset = kf.offset;
+                
+                const onMouseMove = (moveEvent) => {
+                  isDragging = true;
+                  const deltaX = moveEvent.clientX - startX;
+                  let newOffset = originalOffset + (deltaX / PIXELS_PER_SECOND);
+                  
+                  if (newOffset < 0) newOffset = 0;
+                  if (newOffset > fx.duration) newOffset = fx.duration;
+                  
+                  kf.offset = newOffset;
+                  tick.style.left = `${kf.offset * PIXELS_PER_SECOND}px`;
+                  
+                  playheadTime = fx.startTime + kf.offset;
+                  updatePlayheadUI();
+                  renderPropertiesPanel();
+                  renderFrame();
+                };
+                
+                const onMouseUp = async (upEvent) => {
+                  document.removeEventListener('mousemove', onMouseMove);
+                  document.removeEventListener('mouseup', onMouseUp);
+                  
+                  if (!isDragging) {
+                     playheadTime = fx.startTime + kf.offset;
+                     selectedItemId = fx.id;
+                     selectedItemType = 'fx';
+                     updatePlayheadUI();
+                     renderPropertiesPanel();
+                     renderFrame();
+                  } else {
+                     fx.keyframes.sort((a, b) => a.offset - b.offset);
+                     await saveTimeline(currentTimeline);
+                     renderTimelineTracks();
+                     renderPropertiesPanel();
+                     renderFrame();
+                  }
+                };
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+              });
+              block.appendChild(tick);
+            });
+          }
+
           fxEl.appendChild(block);
         });
       });
@@ -926,6 +1194,38 @@ export async function render(container) {
   const btnDelete = container.querySelector('#tme-btn-delete-selected');
   const zoomSlider = container.querySelector('#tme-zoom-slider');
   const btnExport = container.querySelector('#tme-btn-export');
+  const btnAddKeyframe = container.querySelector('#tme-btn-add-keyframe');
+
+  if (btnAddKeyframe) {
+    btnAddKeyframe.addEventListener('click', async () => {
+      if (!selectedItemId || selectedItemType !== 'fx') return;
+      let fxBlock = null;
+      currentTimeline.effectTracks.forEach(t => {
+        const b = t.blocks.find(blk => blk.id === selectedItemId);
+        if (b) fxBlock = b;
+      });
+      if (!fxBlock) return;
+      
+      const offset = playheadTime - fxBlock.startTime;
+      if (offset < 0 || offset > fxBlock.duration) return;
+
+      if (!Array.isArray(fxBlock.keyframes) || fxBlock.keyframes.length === 0) {
+        fxBlock.keyframes = [
+          { offset: 0, params: JSON.parse(JSON.stringify(fxBlock.params || {})) }
+        ];
+      }
+      
+      const existingIdx = fxBlock.keyframes.findIndex(k => Math.abs(k.offset - offset) < 0.05);
+      if (existingIdx === -1) {
+        const currentParams = getInterpolatedParams(fxBlock, playheadTime);
+        fxBlock.keyframes.push({ offset: offset, params: currentParams });
+        fxBlock.keyframes.sort((a, b) => a.offset - b.offset);
+        await saveTimeline(currentTimeline);
+        renderTimelineTracks();
+        renderPropertiesPanel();
+      }
+    });
+  }
 
   if (btnMagnet) {
     btnMagnet.addEventListener('click', () => {
@@ -1395,6 +1695,26 @@ export async function render(container) {
     playheadLine.style.left = `${playheadTime * PIXELS_PER_SECOND}px`;
     timecodeEl.textContent = formatTimecode(playheadTime);
     syncAudioPlayback();
+
+    const btnAddKeyframe = container.querySelector('#tme-btn-add-keyframe');
+    if (btnAddKeyframe) {
+      let isInsideActiveFx = false;
+      if (selectedItemId && selectedItemType === 'fx') {
+        let fxBlock = null;
+        currentTimeline.effectTracks.forEach(t => {
+          const b = t.blocks.find(blk => blk.id === selectedItemId);
+          if (b) fxBlock = b;
+        });
+        if (fxBlock) {
+          const offset = playheadTime - fxBlock.startTime;
+          if (offset >= -0.01 && offset <= fxBlock.duration + 0.01) {
+            isInsideActiveFx = true;
+          }
+        }
+      }
+      btnAddKeyframe.disabled = !isInsideActiveFx;
+      btnAddKeyframe.style.opacity = isInsideActiveFx ? '1' : '0.5';
+    }
   }
 
   const imageCache = new Map();
@@ -1464,6 +1784,77 @@ export async function render(container) {
     return null;
   }
 
+  function hexToRgb(hex) {
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+      r = parseInt(hex[1] + hex[1], 16);
+      g = parseInt(hex[2] + hex[2], 16);
+      b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+      r = parseInt(hex.substring(1, 3), 16);
+      g = parseInt(hex.substring(3, 5), 16);
+      b = parseInt(hex.substring(5, 7), 16);
+    }
+    return [r, g, b];
+  }
+
+  function rgbToHex(r, g, b) {
+    return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
+  }
+
+  function interpolateValue(val1, val2, t) {
+    if (typeof val1 === 'number' && typeof val2 === 'number') {
+      return val1 + (val2 - val1) * t;
+    }
+    if (typeof val1 === 'string' && typeof val2 === 'string' && val1.startsWith('#') && val2.startsWith('#')) {
+      const [r1, g1, b1] = hexToRgb(val1);
+      const [r2, g2, b2] = hexToRgb(val2);
+      const r = Math.round(r1 + (r2 - r1) * t);
+      const g = Math.round(g1 + (g2 - g1) * t);
+      const b = Math.round(b1 + (b2 - b1) * t);
+      return rgbToHex(r, g, b);
+    }
+    return t < 0.5 ? val1 : val2;
+  }
+
+  function getInterpolatedParams(fxBlock, playheadTime) {
+    if (!Array.isArray(fxBlock.keyframes) || fxBlock.keyframes.length === 0) {
+      return fxBlock.params || {};
+    }
+    const offset = playheadTime - fxBlock.startTime;
+    
+    let kfBefore = null;
+    let kfAfter = null;
+    
+    for (const kf of fxBlock.keyframes) {
+      if (kf.offset <= offset) {
+        if (!kfBefore || kf.offset > kfBefore.offset) kfBefore = kf;
+      }
+      if (kf.offset >= offset) {
+        if (!kfAfter || kf.offset < kfAfter.offset) kfAfter = kf;
+      }
+    }
+    
+    if (!kfBefore && !kfAfter) return fxBlock.params || {};
+    if (!kfBefore) return kfAfter.params;
+    if (!kfAfter) return kfBefore.params;
+    if (kfBefore.offset === kfAfter.offset) return kfBefore.params;
+    
+    const t = (offset - kfBefore.offset) / (kfAfter.offset - kfBefore.offset);
+    
+    const interpolated = {};
+    const allKeys = new Set([...Object.keys(kfBefore.params), ...Object.keys(kfAfter.params)]);
+    
+    for (const key of allKeys) {
+      const v1 = kfBefore.params[key];
+      const v2 = kfAfter.params[key];
+      if (v1 === undefined) interpolated[key] = v2;
+      else if (v2 === undefined) interpolated[key] = v1;
+      else interpolated[key] = interpolateValue(v1, v2, t);
+    }
+    return interpolated;
+  }
+
   async function renderFrame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#000';
@@ -1497,10 +1888,11 @@ export async function render(container) {
       if (def) {
         try {
           const context = { timestampSec: playheadTime };
+          const interpParams = getInterpolatedParams(fx, playheadTime);
           if (def.applyPerFrame) {
-            await def.applyPerFrame(ctx, fx.params || {}, context);
+            await def.applyPerFrame(ctx, interpParams, context);
           } else if (def.apply) {
-            await def.apply(ctx, fx.params || {}, context);
+            await def.apply(ctx, interpParams, context);
           }
         } catch (err) {
           console.warn(`Effect ${fx.transformId} failed during preview:`, err);
