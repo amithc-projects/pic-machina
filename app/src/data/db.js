@@ -12,7 +12,7 @@
  */
 
 const DB_NAME = 'PicMachina';
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 let _db = null;
 
@@ -87,6 +87,11 @@ export function initDB() {
       if (!db.objectStoreNames.contains('timelines')) {
         const tmeStore = db.createObjectStore('timelines', { keyPath: 'id' });
         tmeStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+
+      // voices (v7) — Custom voice samples for VoiceCraft
+      if (!db.objectStoreNames.contains('voices')) {
+        db.createObjectStore('voices', { keyPath: 'id' });
       }
     };
 

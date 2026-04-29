@@ -29,6 +29,7 @@ const SCREENS = {
   gsd: () => import('./screens/gsd.js'),
   pow: () => import('./screens/pow.js'),
   hlp: () => import('./screens/hlp.js'),
+  aud: () => import('./screens/aud.js'),
 };
 
 const DEFAULT_SCREEN = 'gsd';

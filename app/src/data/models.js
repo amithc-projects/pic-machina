@@ -46,6 +46,14 @@ export const MODEL_REGISTRY = [
     url: 'onnx-community/pyannote-segmentation-3.0',
     sizeBytes: 15_000_000,
     backend: 'transformers',
+  },
+  {
+    id: 'chatterbox-tts',
+    name: 'VoiceCraft (Chatterbox)',
+    description: 'Advanced zero-shot voice cloning. Upload custom voice samples to synthesize text using dynamic characters and emotions.',
+    url: 'onnx-community/chatterbox-ONNX',
+    sizeBytes: 1_500_000_000,
+    backend: 'transformers',
   }
 ];
 
@@ -126,7 +134,7 @@ export async function downloadModel(id, onProgress, signal) {
       if (meta.id === 'whisper-tiny-en') {
           hf = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
       } else if (meta.id === 'pyannote-segmentation') {
-          hf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.3');
+          hf = await import('@huggingface/transformers');
           // Pyannote uses AutoModel, not a standard pipeline, but we can cache it by calling from_pretrained
           hf.env.allowLocalModels = false;
           hf.env.useBrowserCache = true;
@@ -142,6 +150,40 @@ export async function downloadModel(id, onProgress, signal) {
             downloadedAt: Date.now(),
             sizeBytes: meta.sizeBytes,
             bytes: new ArrayBuffer(1) // Placeholder to satisfy IDB UI checker
+          };
+          await dbPut('models', record);
+          return record;
+      } else if (meta.id === 'chatterbox-tts') {
+          hf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.0.0-next.2');
+          hf.env.allowLocalModels = false;
+          hf.env.useBrowserCache = true;
+          
+          if (hf.env.backends?.onnx?.wasm) {
+              hf.env.backends.onnx.wasm.numThreads = 1;
+          }
+          
+          const useDevice = navigator.gpu ? 'webgpu' : 'wasm';
+          
+          if (onProgress) onProgress({ loaded: totalSize * 0.5, total: totalSize });
+          // Note: Full download handles internally by transformers.js during pipeline load.
+          await hf.AutoProcessor.from_pretrained(meta.url);
+          await hf.ChatterboxModel.from_pretrained(meta.url, {
+              device: useDevice,
+              dtype: {
+                embed_tokens: 'fp32',
+                speech_encoder: 'fp32',
+                language_model: useDevice === 'webgpu' ? 'q4f16' : 'q4',
+                conditional_decoder: 'fp32',
+              }
+          });
+          if (onProgress) onProgress({ loaded: totalSize, total: totalSize });
+          
+          const record = {
+            id,
+            name: meta.name,
+            downloadedAt: Date.now(),
+            sizeBytes: meta.sizeBytes,
+            bytes: new ArrayBuffer(1)
           };
           await dbPut('models', record);
           return record;

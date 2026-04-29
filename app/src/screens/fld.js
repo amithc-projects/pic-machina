@@ -22,7 +22,9 @@ import { showConfirm }                               from '../utils/dialogs.js';
 import { MetadataPanel }                             from '../components/metadata-panel.js';
 
 const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
-const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm']);
+const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm','.avi','.mkv']);
+const AUDIO_EXTS   = new Set(['.mp3','.wav','.flac','.ogg','.m4a','.aac']);
+const DOC_EXTS     = new Set(['.pdf','.docx','.doc','.txt','.csv','.json','.html','.md']);
 // Archive types we recognise as PicMachina deliverables. Only included
 // in listings when the folder has been confirmed as PicMachina output
 // (via hasPicMachinaMarker), to avoid showing user-placed zips.
@@ -38,14 +40,18 @@ function fileType(name) {
   const ext = extOf(name);
   if (IMAGE_EXTS.has(ext)) return 'image';
   if (VIDEO_EXTS.has(ext)) return 'video';
+  if (AUDIO_EXTS.has(ext)) return 'audio';
+  if (DOC_EXTS.has(ext)) return 'document';
   if (ARCHIVE_EXTS.has(ext)) return 'archive';
   return 'other';
 }
 
 function isAcceptedFile(name, { allowArchives }) {
   const ext = extOf(name);
-  if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return true;
+  if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext) || AUDIO_EXTS.has(ext) || DOC_EXTS.has(ext)) return true;
   if (allowArchives && ARCHIVE_EXTS.has(ext)) return true;
+  // If we're browsing an input folder (where allowArchives might be false), we might want to see docx/pptx as input
+  if (!allowArchives && ARCHIVE_EXTS.has(ext)) return true; // Let user browse pptx as input too
   return false;
 }
 
@@ -205,6 +211,14 @@ export async function render(container, hash) {
           <button class="fld-chip" data-filter="video">
             <span class="material-symbols-outlined" style="font-size:12px">movie</span>
             Video
+          </button>
+          <button class="fld-chip" data-filter="audio">
+            <span class="material-symbols-outlined" style="font-size:12px">audio_file</span>
+            Audio
+          </button>
+          <button class="fld-chip" data-filter="document">
+            <span class="material-symbols-outlined" style="font-size:12px">description</span>
+            Documents
           </button>
           <button class="fld-chip" data-filter="archive">
             <span class="material-symbols-outlined" style="font-size:12px">folder_zip</span>
@@ -515,7 +529,7 @@ export async function render(container, hash) {
     lastIdx = -1;
 
     // Update chip counts
-    const counts = { image: 0, video: 0, other: 0 };
+    const counts = { image: 0, video: 0, audio: 0, document: 0, archive: 0, other: 0 };
     allEntries.forEach(ent => { const t = fileType(ent.file.name); counts[t] = (counts[t] || 0) + 1; });
     container.querySelectorAll('[data-filter]').forEach(chip => {
       const t = chip.dataset.filter;

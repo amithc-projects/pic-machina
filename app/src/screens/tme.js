@@ -492,6 +492,46 @@ export async function render(container) {
       return;
     }
 
+    // --- AUDIO CLIP PROPERTIES ---
+    if (selectedItemType === 'audio') {
+      let aBlock = null;
+      currentTimeline.audioTracks.forEach(t => {
+        const b = t.blocks.find(blk => blk.id === selectedItemId);
+        if (b) aBlock = b;
+      });
+      if (!aBlock) return;
+      
+      const poolItem = currentTimeline.mediaPool.find(m => m.id === aBlock.poolId);
+      const name = poolItem ? poolItem.name || poolItem.fileHandle?.name : 'Audio Clip';
+
+      propsContainer.innerHTML = `
+        <div style="padding: 12px; font-size: 12px; color: var(--ps-text-muted); border-bottom: 1px solid var(--ps-border);">
+          <strong>Audio Clip:</strong> ${name}
+        </div>
+        <div style="padding: 16px;">
+          <div class="ned-field">
+            <div class="ned-field-label">Volume</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="range" id="tme-audio-volume" min="0" max="1" step="0.05" value="${aBlock.volume !== undefined ? aBlock.volume : 1}" style="flex:1;">
+              <span id="tme-audio-volume-val" style="font-size:11px; width:30px;">${Math.round((aBlock.volume !== undefined ? aBlock.volume : 1) * 100)}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      const volInput = propsContainer.querySelector('#tme-audio-volume');
+      const volVal = propsContainer.querySelector('#tme-audio-volume-val');
+      volInput.addEventListener('input', async (e) => {
+        const val = parseFloat(e.target.value);
+        volVal.textContent = Math.round(val * 100) + '%';
+        aBlock.volume = val;
+        await saveTimeline(currentTimeline);
+        syncAudioPlayback(); // immediate update of volume
+      });
+      
+      return;
+    }
+
     // --- EFFECT PROPERTIES ---
     let fxBlock = null;
     currentTimeline.effectTracks.forEach(t => {
@@ -618,6 +658,25 @@ export async function render(container) {
   const rulerCanvas = container.querySelector('#tme-ruler-canvas');
   const scrollContainer = container.querySelector('#tme-timeline-scroll');
 
+  if (trackHeadersEl) {
+    trackHeadersEl.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.tme-btn-toggle-track');
+      if (btn) {
+         const type = btn.dataset.trackType;
+         const idx = parseInt(btn.dataset.trackIdx);
+         if (type === 'video') {
+           currentTimeline.videoTrackDisabled = !currentTimeline.videoTrackDisabled;
+         } else if (type === 'fx') {
+           currentTimeline.effectTracks[idx].disabled = !currentTimeline.effectTracks[idx].disabled;
+         } else if (type === 'audio') {
+           currentTimeline.audioTracks[idx].disabled = !currentTimeline.audioTracks[idx].disabled;
+         }
+         await saveTimeline(currentTimeline);
+         renderTimelineTracks();
+         renderFrame();
+      }
+    });
+  }
   if (tracksBodyEl) {
     tracksBodyEl.addEventListener('contextmenu', async (e) => {
       if (e.target.closest('.tme-clip') || e.target.closest('.tme-fx-block')) return;
@@ -748,7 +807,9 @@ export async function render(container) {
       trackHeadersEl.insertAdjacentHTML('beforeend', `
         <div class="tme-track-header" style="height: 60px; border-bottom: 1px solid var(--ps-border); padding: 8px; display: flex; align-items: center; justify-content: space-between;">
           <span class="text-xs font-mono text-muted">V1 (Main)</span>
-          <span class="material-symbols-outlined text-muted text-sm">movie</span>
+          <button class="btn-ghost tme-btn-toggle-track" data-track-type="video" data-track-idx="0" style="padding: 0; min-width: auto;">
+            <span class="material-symbols-outlined text-muted text-sm" style="font-size:16px;">${currentTimeline.videoTrackDisabled ? 'visibility_off' : 'visibility'}</span>
+          </button>
         </div>
       `);
 
@@ -758,6 +819,7 @@ export async function render(container) {
       v1Track.style.height = '60px';
       v1Track.style.borderBottom = '1px solid var(--ps-border)';
       v1Track.style.position = 'relative';
+      if (currentTimeline.videoTrackDisabled) v1Track.style.opacity = '0.3';
       tracksBodyEl.appendChild(v1Track);
 
       // Bind V1 Drop Listeners
@@ -1012,7 +1074,12 @@ export async function render(container) {
         trackHeadersEl.insertAdjacentHTML('beforeend', `
           <div class="tme-track-header" style="height: 40px; border-bottom: 1px solid var(--ps-border); padding: 8px; display: flex; align-items: center; justify-content: space-between;">
             <span class="text-xs font-mono text-muted">${fxTrack.name || 'FX ' + (idx + 1)}</span>
-            <span class="node-category-tag node-category-tag--overlay">FX</span>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="node-category-tag node-category-tag--overlay">FX</span>
+              <button class="btn-ghost tme-btn-toggle-track" data-track-type="fx" data-track-idx="${idx}" style="padding: 0; min-width: auto;">
+                <span class="material-symbols-outlined text-muted text-sm" style="font-size:16px;">${fxTrack.disabled ? 'visibility_off' : 'visibility'}</span>
+              </button>
+            </div>
           </div>
         `);
 
@@ -1023,6 +1090,7 @@ export async function render(container) {
         fxEl.style.height = '40px';
         fxEl.style.borderBottom = '1px solid var(--ps-border)';
         fxEl.style.position = 'relative';
+        if (fxTrack.disabled) fxEl.style.opacity = '0.3';
         tracksBodyEl.appendChild(fxEl);
 
         // Bind Drop Listeners
@@ -1178,7 +1246,12 @@ export async function render(container) {
               <span class="text-xs font-mono text-muted">${aTrack.name || 'A' + (idx + 1)}</span>
               ${idx === currentTimeline.audioTracks.length - 1 ? `<button class="btn-ghost tme-btn-add-audio" style="width:20px;height:20px;padding:0;" title="Add Audio Track"><span class="material-symbols-outlined" style="font-size:14px;">add</span></button>` : ''}
             </div>
-            <span class="text-muted text-sm font-bold" style="font-size: 10px;">AUDIO</span>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="text-muted text-sm font-bold" style="font-size: 10px;">AUDIO</span>
+              <button class="btn-ghost tme-btn-toggle-track" data-track-type="audio" data-track-idx="${idx}" style="padding: 0; min-width: auto;">
+                <span class="material-symbols-outlined text-muted text-sm" style="font-size:16px;">${aTrack.disabled ? 'volume_off' : 'volume_up'}</span>
+              </button>
+            </div>
           </div>
         `);
 
@@ -1188,6 +1261,7 @@ export async function render(container) {
         audioEl.style.height = '60px';
         audioEl.style.borderBottom = '1px solid var(--ps-border)';
         audioEl.style.position = 'relative';
+        if (aTrack.disabled) audioEl.style.opacity = '0.3';
         tracksBodyEl.appendChild(audioEl);
         
         // Audio Track Drop
@@ -1412,6 +1486,28 @@ export async function render(container) {
                 duration: newDuration2
               };
               t.blocks.splice(fxIndex + 1, 0, newFx);
+              splitHappened = true;
+            }
+          }
+        });
+      } else if (selectedItemType === 'audio') {
+        currentTimeline.audioTracks.forEach(t => {
+          const aIndex = t.blocks.findIndex(b => b.id === selectedItemId);
+          if (aIndex !== -1) {
+            const clip = t.blocks[aIndex];
+            if (playheadTime > clip.startTime && playheadTime < clip.startTime + clip.duration) {
+              const splitOffset = playheadTime - clip.startTime;
+              const newDuration2 = clip.duration - splitOffset;
+              clip.duration = splitOffset;
+              
+              const newClip = {
+                ...clip,
+                id: generateId(),
+                startTime: playheadTime,
+                duration: newDuration2,
+                sourceStart: (clip.sourceStart || 0) + splitOffset
+              };
+              t.blocks.splice(aIndex + 1, 0, newClip);
               splitHappened = true;
             }
           }
@@ -1766,8 +1862,8 @@ export async function render(container) {
   function syncAudioPlayback() {
     const activeIds = new Set();
     const activeClips = [
-      ...(currentTimeline.audioTracks?.flatMap(t => t.blocks) || []),
-      ...currentTimeline.videoTrack
+      ...(currentTimeline.audioTracks?.filter(t => !t.disabled).flatMap(t => t.blocks) || []),
+      ...(currentTimeline.videoTrackDisabled ? [] : currentTimeline.videoTrack)
     ].filter(c => playheadTime >= c.startTime && playheadTime < c.startTime + c.duration);
 
     if (isPlaying) {
@@ -1785,6 +1881,9 @@ export async function render(container) {
                audio.currentTime = targetTime;
            }
            if (audio.paused) audio.play().catch(e => {});
+           
+           const targetVol = clip.volume !== undefined ? clip.volume : 1;
+           if (audio.volume !== targetVol) audio.volume = targetVol;
         }
       });
     }
@@ -1801,6 +1900,7 @@ export async function render(container) {
   function playAudio(clip, file) {
       const audio = new Audio(URL.createObjectURL(file));
       audio.currentTime = playheadTime - clip.startTime + (clip.sourceStart || 0);
+      audio.volume = clip.volume !== undefined ? clip.volume : 1;
       audio.play().catch(e => {});
       activeAudioPlayers.set(clip.id, audio);
   }
@@ -1991,84 +2091,87 @@ export async function render(container) {
     }
 
     // --- 1. VIDEO RENDERING ---
-    const activeClipIdx = currentTimeline.videoTrack.findIndex(c => 
-      playheadTime >= c.startTime && playheadTime < c.startTime + c.duration
-    );
+    if (!currentTimeline.videoTrackDisabled) {
+      const activeClipIdx = currentTimeline.videoTrack.findIndex(c => 
+        playheadTime >= c.startTime && playheadTime < c.startTime + c.duration
+      );
 
-    if (activeClipIdx !== -1) {
-      const activeClip = currentTimeline.videoTrack[activeClipIdx];
-      const tIn = activeClip.transitionIn || { style: 'none', duration: 0 };
-      const tOut = activeClip.transitionOut || { style: 'none', duration: 0 };
-      
-      const isTransIn = tIn.style !== 'none' && tIn.duration > 0 && playheadTime < activeClip.startTime + tIn.duration;
-      const isTransOut = tOut.style !== 'none' && tOut.duration > 0 && playheadTime >= (activeClip.startTime + activeClip.duration) - tOut.duration;
-
-      if (compositor && (isTransIn || isTransOut)) {
-        let progress = 0;
-        let style = 'none';
-        let fromClip = null;
-        let toClip = null;
-
-        if (isTransIn) {
-          progress = (playheadTime - activeClip.startTime) / tIn.duration;
-          style = tIn.style;
-          toClip = activeClip;
-          fromClip = activeClipIdx > 0 ? currentTimeline.videoTrack[activeClipIdx - 1] : null;
-        } else {
-          progress = (playheadTime - ((activeClip.startTime + activeClip.duration) - tOut.duration)) / tOut.duration;
-          style = tOut.style;
-          fromClip = activeClip;
-          toClip = activeClipIdx < currentTimeline.videoTrack.length - 1 ? currentTimeline.videoTrack[activeClipIdx + 1] : null;
-        }
-
-        const toFrameSrc = toClip ? await loadFrame(toClip, isTransOut ? toClip.startTime : playheadTime) : null;
-        const fromFrameSrc = fromClip ? await loadFrame(fromClip, isTransIn ? fromClip.startTime + fromClip.duration : playheadTime) : null;
+      if (activeClipIdx !== -1) {
+        const activeClip = currentTimeline.videoTrack[activeClipIdx];
+        const tIn = activeClip.transitionIn || { style: 'none', duration: 0 };
+        const tOut = activeClip.transitionOut || { style: 'none', duration: 0 };
         
-        let toBmp = null, fromBmp = null;
-        let toTex = null, fromTex = null;
+        const isTransIn = tIn.style !== 'none' && tIn.duration > 0 && playheadTime < activeClip.startTime + tIn.duration;
+        const isTransOut = tOut.style !== 'none' && tOut.duration > 0 && playheadTime >= (activeClip.startTime + activeClip.duration) - tOut.duration;
 
-        if (toFrameSrc) {
-           const tempC = new OffscreenCanvas(canvas.width, canvas.height);
-           const tempCtx = tempC.getContext('2d');
-           drawSourceToCtx(toFrameSrc, tempCtx);
-           toBmp = await createImageBitmap(tempC);
-           toTex = compositor.createTexture(toBmp);
-        }
-        if (fromFrameSrc) {
-           const tempC = new OffscreenCanvas(canvas.width, canvas.height);
-           const tempCtx = tempC.getContext('2d');
-           drawSourceToCtx(fromFrameSrc, tempCtx);
-           fromBmp = await createImageBitmap(tempC);
-           fromTex = compositor.createTexture(fromBmp);
-        }
+        if (compositor && (isTransIn || isTransOut)) {
+          let progress = 0;
+          let style = 'none';
+          let fromClip = null;
+          let toClip = null;
 
-        compositor.renderFrame({
-          programName: style,
-          fromTex,
-          toTex,
-          progress,
-          fromMotion: null,
-          toMotion: null
-        });
+          if (isTransIn) {
+            progress = (playheadTime - activeClip.startTime) / tIn.duration;
+            style = tIn.style;
+            toClip = activeClip;
+            fromClip = activeClipIdx > 0 ? currentTimeline.videoTrack[activeClipIdx - 1] : null;
+          } else {
+            progress = (playheadTime - ((activeClip.startTime + activeClip.duration) - tOut.duration)) / tOut.duration;
+            style = tOut.style;
+            fromClip = activeClip;
+            toClip = activeClipIdx < currentTimeline.videoTrack.length - 1 ? currentTimeline.videoTrack[activeClipIdx + 1] : null;
+          }
 
-        ctx.drawImage(compositor.canvas, 0, 0, canvas.width, canvas.height);
+          const toFrameSrc = toClip ? await loadFrame(toClip, isTransOut ? toClip.startTime : playheadTime) : null;
+          const fromFrameSrc = fromClip ? await loadFrame(fromClip, isTransIn ? fromClip.startTime + fromClip.duration : playheadTime) : null;
+          
+          let toBmp = null, fromBmp = null;
+          let toTex = null, fromTex = null;
 
-        if (toTex) compositor.gl.deleteTexture(toTex);
-        if (fromTex) compositor.gl.deleteTexture(fromTex);
-        if (toBmp) toBmp.close();
-        if (fromBmp) fromBmp.close();
-      } else {
-        const frameSource = await loadFrame(activeClip);
-        if (frameSource) {
-          drawSourceToCtx(frameSource, ctx);
+          if (toFrameSrc) {
+             const tempC = new OffscreenCanvas(canvas.width, canvas.height);
+             const tempCtx = tempC.getContext('2d');
+             drawSourceToCtx(toFrameSrc, tempCtx);
+             try { toBmp = await createImageBitmap(tempC); } catch(e) {}
+             toTex = compositor.createTexture(toBmp || null);
+          }
+          if (fromFrameSrc) {
+             const tempC = new OffscreenCanvas(canvas.width, canvas.height);
+             const tempCtx = tempC.getContext('2d');
+             drawSourceToCtx(fromFrameSrc, tempCtx);
+             try { fromBmp = await createImageBitmap(tempC); } catch(e) {}
+             fromTex = compositor.createTexture(fromBmp || null);
+          }
+
+          compositor.renderFrame({
+            programName: style,
+            fromTex,
+            toTex,
+            progress,
+            fromMotion: null,
+            toMotion: null
+          });
+
+          ctx.drawImage(compositor.canvas, 0, 0, canvas.width, canvas.height);
+
+          if (toTex) compositor.gl.deleteTexture(toTex);
+          if (fromTex) compositor.gl.deleteTexture(fromTex);
+          if (toBmp) toBmp.close();
+          if (fromBmp) fromBmp.close();
+        } else {
+          const frameSource = await loadFrame(activeClip);
+          if (frameSource) {
+            drawSourceToCtx(frameSource, ctx);
+          }
         }
       }
     }
 
     // --- 2. EFFECT RENDERING ---
-    const activeFx = currentTimeline.effectTracks.flatMap(t => t.blocks).filter(fx => 
-      playheadTime >= fx.startTime && playheadTime < fx.startTime + fx.duration
-    );
+    const activeFx = currentTimeline.effectTracks
+      .filter(t => !t.disabled)
+      .flatMap(t => t.blocks)
+      .filter(fx => playheadTime >= fx.startTime && playheadTime < fx.startTime + fx.duration);
 
     for (const fx of activeFx) {
       const def = registry.get(fx.transformId);
@@ -2095,13 +2198,16 @@ export async function render(container) {
               ? (playheadTime - fx.startTime) / tIn.duration 
               : (playheadTime - ((fx.startTime + fx.duration) - tOut.duration)) / tOut.duration;
 
-            const fxBmp = await createImageBitmap(fxCanvas);
-            const fxTex = compositor.createTexture(fxBmp);
+            let fxBmp = null;
+            try {
+              fxBmp = await createImageBitmap(fxCanvas);
+            } catch (e) {
+              // Ignore untouched/empty canvas errors
+            }
+            const fxTex = compositor.createTexture(fxBmp || null);
             
             // Empty transparent texture
-            const emptyCanvas = new OffscreenCanvas(canvas.width, canvas.height);
-            const emptyBmp = await createImageBitmap(emptyCanvas);
-            const emptyTex = compositor.createTexture(emptyBmp);
+            const emptyTex = compositor.createTexture(null);
 
             const fromTex = isTransIn ? emptyTex : fxTex;
             const toTex = isTransIn ? fxTex : emptyTex;
@@ -2119,8 +2225,7 @@ export async function render(container) {
 
             compositor.gl.deleteTexture(fxTex);
             compositor.gl.deleteTexture(emptyTex);
-            fxBmp.close();
-            emptyBmp.close();
+            if (fxBmp) fxBmp.close();
           } else {
             // Normal direct render
             if (def.applyPerFrame) {
@@ -2145,8 +2250,19 @@ export async function render(container) {
 
     playheadTime += dt;
     
-    // Auto stop if we pass the end of the last clip
-    const maxTime = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.startTime + c.duration), 0);
+    // Auto stop if we pass the end of the last clip or effect
+    let maxTime = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.startTime + c.duration), 0);
+    if (currentTimeline.effectTracks) {
+      currentTimeline.effectTracks.forEach(t => {
+        maxTime = t.blocks.reduce((max, fx) => Math.max(max, fx.startTime + fx.duration), maxTime);
+      });
+    }
+    if (currentTimeline.audioTracks) {
+      currentTimeline.audioTracks.forEach(t => {
+        maxTime = t.blocks.reduce((max, au) => Math.max(max, au.startTime + au.duration), maxTime);
+      });
+    }
+
     if (playheadTime > maxTime && maxTime > 0) {
       playheadTime = 0; // loop back to start
     }

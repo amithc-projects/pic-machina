@@ -498,9 +498,26 @@ export async function changeFPS(file, { fps = 30 } = {}) {
 /**
  * Map an audio format name to a mediabunny Output format class + extension.
  */
+let mp3EncoderRegistered = false;
+
 async function resolveAudioOutputFormat(format) {
   const { Mp3OutputFormat, FlacOutputFormat, WavOutputFormat, OggOutputFormat, Mp4OutputFormat } = await import('mediabunny');
-  switch ((format || 'mp3').toLowerCase()) {
+  
+  const f = (format || 'mp3').toLowerCase();
+  if (!mp3EncoderRegistered && f === 'mp3') {
+    try {
+      const { canEncodeAudio } = await import('mediabunny');
+      if (!(await canEncodeAudio('mp3'))) {
+        const { registerMp3Encoder } = await import('@mediabunny/mp3-encoder');
+        registerMp3Encoder();
+      }
+      mp3EncoderRegistered = true;
+    } catch (e) {
+      console.warn('Failed to register MP3 encoder:', e);
+    }
+  }
+
+  switch (f) {
     case 'flac': return { OutputFormat: FlacOutputFormat, ext: 'flac', mime: 'audio/flac'  };
     case 'wav':  return { OutputFormat: WavOutputFormat,  ext: 'wav',  mime: 'audio/wav'   };
     case 'ogg':  return { OutputFormat: OggOutputFormat,  ext: 'ogg',  mime: 'audio/ogg'   };
