@@ -1189,6 +1189,184 @@ registry.register({
   }
 });
 
+// ─── Native Hyperframe Template ─────────────────────────────
+registry.register({
+  id: 'overlay-hyperframe', name: 'Hyperframe Template', category: 'Overlays & Typography', categoryKey: 'video-effect',
+  icon: 'animation',
+  description: 'Native HTML+GSAP animation template. Evaluates Javascript timelines and draws deterministically.',
+  requires: [{ type: 'html-in-canvas', id: 'wicg-drawhtml', label: 'HTML-in-Canvas Feature', actionHref: '#hlp?id=html-in-canvas' }],
+  params: [
+    { name: 'templateId', label: 'Hyperframe Template', type: 'template-select', defaultValue: '' },
+  ],
+  async applyPerFrame(ctx, p, context) {
+     if (context._resolvedHtml === undefined) {
+         context._resolvedHtml = '';
+         if (p.templateId) {
+             const { getTemplate } = await import('../../data/templates.js');
+             const tpl = await getTemplate(p.templateId);
+             if (tpl && tpl.type === 'hyperframe') {
+                 context._resolvedHtml = tpl.htmlContent || '';
+             }
+         }
+         if (!context._resolvedHtml) {
+             context._resolvedHtml = String(p.htmlContent || '');
+         }
+     }
+     
+     const W = ctx.canvas.width;
+     const H = ctx.canvas.height;
+     const ts = context.timestampSec || 0;
+     
+     console.log('[Hyperframe] Frame render tick (v7):', { ts, container: !!context._hfContainer });
+     
+     // Dynamically ensure GSAP is loaded BEFORE injecting scripts that rely on it
+     if (!window.gsap && !context._gsapLoaded) {
+         await new Promise((resolve, reject) => {
+             const s = document.createElement('script');
+             s.src = 'https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js';
+             s.onload = resolve;
+             s.onerror = reject;
+             document.head.appendChild(s);
+         });
+         context._gsapLoaded = true;
+     }
+     
+     if (!ctx.canvas.parentNode) {
+         ctx.canvas.style.position = 'absolute';
+         ctx.canvas.style.left = '-9999px';
+         ctx.canvas.style.top = '-9999px';
+         ctx.canvas.style.pointerEvents = 'none';
+         document.body.appendChild(ctx.canvas);
+     }
+     
+     if (!context._hfContainer) {
+         const container = document.createElement('div');
+         container.style.width = W + 'px';
+         container.style.height = H + 'px';
+         container.style.overflow = 'hidden';
+         
+         container.innerHTML = context._resolvedHtml || '';
+         context._hfContainer = container;
+
+         // Ensure container is an immediate child of the canvas (WICG requirement)
+         ctx.canvas.appendChild(context._hfContainer);
+         
+         window.__timelines = {}; // Clear previous timelines globally once per hyperframe instantiation
+         
+         const scripts = container.querySelectorAll('script');
+         for (const s of scripts) {
+             if (s.src && !s.src.includes('gsap.min.js')) {
+                await new Promise((res) => {
+                    const extScript = document.createElement('script');
+                    extScript.src = s.src;
+                    extScript.onload = res;
+                    extScript.onerror = res;
+                    document.body.appendChild(extScript);
+                });
+             } else if (!s.src) {
+                try {
+                    const func = new Function(s.textContent);
+                    func.call(window);
+                } catch (e) {
+                    console.warn('[Hyperframe Overlay] Inline script error:', e);
+                }
+             }
+         }
+         
+         // Force a paint cycle so WICG drawElement has a valid layout tree
+         await new Promise(r => requestAnimationFrame(r));
+     }
+     
+     // Ensure the container is an IMMEDIATE child of the CURRENT context's canvas
+     if (context._hfContainer.parentNode !== ctx.canvas) {
+         ctx.canvas.appendChild(context._hfContainer);
+     }
+     
+     // Force layout and paint tick so GSAP style updates are captured by WICG drawElement
+     await new Promise(r => requestAnimationFrame(r));
+     
+     // Synchronously force layout tree calculation
+     ctx.canvas.offsetHeight;
+     
+     // Seek the GSAP timeline (now running in the main window context)
+     if (window.__timelines) {
+         const tlKey = Object.keys(window.__timelines)[0];
+         const tl = window.__timelines[tlKey];
+         if (tl) {
+             tl.pause();
+             tl.seek(ts);
+             
+             if (ts >= tl.duration()) {
+                 return;
+             }
+         }
+     }
+     
+     // Force layout and paint tick so GSAP style updates are captured by WICG drawElement
+     await new Promise(r => requestAnimationFrame(r));
+     
+     const element = context._hfContainer;
+     
+     // Attempt to use WICG HTML-in-Canvas API natively, but fallback if headless/no layout
+     let drawnNatively = false;
+     try {
+         if (ctx.drawElement) {
+             ctx.drawElement(element, 0, 0);
+             drawnNatively = true;
+         } else if (ctx.drawHTML) {
+             ctx.drawHTML(element, 0, 0);
+             drawnNatively = true;
+         } else if (ctx.drawElementImage) {
+             ctx.drawElementImage(element, 0, 0);
+             drawnNatively = true;
+         }
+     } catch (err) {
+         if (!context._loggedNativeError) {
+             console.warn('[Hyperframe] Native drawElement failed, falling back to SVG:', err.message);
+             context._loggedNativeError = true;
+         }
+         drawnNatively = false;
+     }
+     
+     if (!drawnNatively) {
+         // SVG foreignObject Fallback
+         const serializer = new XMLSerializer();
+         let safeHtml = serializer.serializeToString(element);
+         
+         if (!safeHtml.includes('xmlns=')) {
+             safeHtml = safeHtml.replace(/^<div/, '<div xmlns="http://www.w3.org/1999/xhtml"');
+         }
+         const svg = `
+           <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+             <foreignObject width="100%" height="100%">
+               ${safeHtml}
+             </foreignObject>
+           </svg>
+         `;
+         const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
+         await new Promise((resolve) => {
+             const img = new Image();
+             img.onload = () => { 
+                 if (!context._loggedSvgSuccess) {
+                     console.log('[Hyperframe] SVG Loaded Successfully. Dimensions:', img.width, 'x', img.height, 'HTML Length:', safeHtml.length);
+                     context._loggedSvgSuccess = true;
+                 }
+                 ctx.drawImage(img, 0, 0); 
+                 resolve(); 
+             };
+             img.onerror = (e) => {
+                 if (!context._loggedSvgError) {
+                     console.error('[Hyperframe] SVG Fallback Image failed to load:', e);
+                     context._loggedSvgError = true;
+                 }
+                 resolve(); 
+             };
+             img.src = dataUri;
+         });
+     }
+  }
+});
+
 // ─── Native Subtitles (SRT/VTT to SVG) ───────────────────────
 registry.register({
   id: 'overlay-subtitles', name: 'Add Subtitles (.SRT)', category: 'Overlays & Typography', categoryKey: 'video-effect',

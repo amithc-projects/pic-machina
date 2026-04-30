@@ -35,10 +35,16 @@ async function renderList(container) {
           <span class="material-symbols-outlined">wallpaper</span>
           Template Editor
         </div>
-        <button class="btn-primary" id="tpl-btn-new">
-          <span class="material-symbols-outlined">add</span>
-          New Template
-        </button>
+        <div class="flex gap-2">
+          <button class="btn-secondary" id="tpl-btn-new-hf">
+            <span class="material-symbols-outlined">animation</span>
+            New Hyperframe
+          </button>
+          <button class="btn-primary" id="tpl-btn-new">
+            <span class="material-symbols-outlined">add</span>
+            New Perspective
+          </button>
+        </div>
       </div>
 
       <div class="tpl-list-body">
@@ -51,8 +57,9 @@ async function renderList(container) {
 
   injectStyles();
 
-  container.querySelector('#tpl-btn-new')?.addEventListener('click', () => createNew());
-  container.querySelector('#tpl-empty-new')?.addEventListener('click', () => createNew());
+  container.querySelector('#tpl-btn-new')?.addEventListener('click', () => createNew('perspective'));
+  container.querySelector('#tpl-btn-new-hf')?.addEventListener('click', () => createNew('hyperframe'));
+  container.querySelector('#tpl-empty-new')?.addEventListener('click', () => createNew('perspective'));
 
   container.querySelectorAll('.tpl-card-edit').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); navigate(`#tpl?id=${btn.dataset.id}`); });
@@ -82,24 +89,28 @@ async function renderList(container) {
     });
   });
 
-  async function createNew() {
-    const tpl = createEmptyTemplate();
+  async function createNew(type = 'perspective') {
+    const tpl = createEmptyTemplate(type);
     await saveTemplate(tpl);
     navigate(`#tpl?id=${tpl.id}`);
   }
 }
 
 function cardHTML(tpl) {
+  const isHF = tpl.type === 'hyperframe';
   const updated = tpl.updatedAt ? formatDate(tpl.updatedAt) : '—';
-  const holdImg = "linear-gradient(135deg, #111318 0%, #1e293b 100%)";
+  const holdImg = isHF ? "linear-gradient(135deg, #181124 0%, #2e1e4a 100%)" : "linear-gradient(135deg, #111318 0%, #1e293b 100%)";
+  const iconName = isHF ? 'animation' : 'wallpaper';
+  const iconColor = isHF ? '#a855f7' : '#0ea5e9';
+  const descText = isHF ? 'HTML/GSAP Animation' : `${tpl.placeholders?.length || 0} Placeholder(s)`;
   return `
     <article class="tpl-card" data-id="${tpl.id}" tabindex="0">
       <div class="tpl-card-icon" style="background: ${holdImg};">
-        <span class="material-symbols-outlined" style="font-size:28px;color:#0ea5e9">wallpaper</span>
+        <span class="material-symbols-outlined" style="font-size:28px;color:${iconColor}">${iconName}</span>
       </div>
       <div class="tpl-card-body">
         <div class="tpl-card-name">${escHtml(tpl.name)}</div>
-        <div class="tpl-card-desc">${tpl.width} × ${tpl.height} • ${tpl.placeholders?.length || 0} Placeholder(s)</div>
+        <div class="tpl-card-desc">${tpl.width} × ${tpl.height} • ${descText}</div>
         <div class="tpl-card-meta">
           <span class="text-sm text-muted" style="margin-left:auto">${updated}</span>
         </div>
@@ -119,6 +130,10 @@ function cardHTML(tpl) {
 async function renderEditor(container, tplId) {
   const tpl = await getTemplate(tplId);
   if (!tpl) { navigate('#tpl'); return; }
+
+  if (tpl.type === 'hyperframe') {
+    return renderHyperframeEditor(container, tpl);
+  }
 
   container.innerHTML = `
     <div class="screen tpl-screen" style="flex-direction:row">
@@ -639,6 +654,134 @@ async function renderEditor(container, tplId) {
   // Ready
   renderList();
   drawCanvas();
+}
+
+function renderHyperframeEditor(container, tpl) {
+  let _isDirty = false;
+  function markDirty() { _isDirty = true; const st = container.querySelector('#tpl-save-status'); if(st) st.textContent = 'Unsaved…'; }
+
+  container.innerHTML = `
+    <div class="screen tpl-screen" style="flex-direction:row">
+      <div class="tpl-sidebar" style="width:400px; border-right:1px solid var(--ps-border); display:flex; flex-direction:column; background:var(--ps-bg-surface);">
+        <div class="screen-header" style="flex-shrink:0;">
+          <div class="flex items-center gap-2">
+            <button class="btn-icon" id="tpl-back"><span class="material-symbols-outlined">arrow_back</span></button>
+            <div class="screen-title" style="font-size:16px;">Hyperframe Template</div>
+          </div>
+        </div>
+
+        <div style="padding:16px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:16px;">
+          <div class="bld-config-form">
+            <label class="ic-label">Name</label>
+            <input type="text" id="tpl-name" class="ic-input" value="${escHtml(tpl.name)}">
+
+            <label class="ic-label" style="margin-top:12px;">Dimensions</label>
+            <div class="flex gap-2">
+               <input type="number" id="tpl-w" class="ic-input" value="${tpl.width}" style="flex:1" placeholder="Width">
+               <span style="align-self:center; color:var(--ps-text-faint)">×</span>
+               <input type="number" id="tpl-h" class="ic-input" value="${tpl.height}" style="flex:1" placeholder="Height">
+            </div>
+
+            <label class="ic-label" style="margin-top:16px;">HTML / GSAP Code</label>
+            <textarea id="tpl-html" class="ic-input" style="height:350px; font-family:monospace; font-size:12px; white-space:pre; resize:vertical; padding:12px;" placeholder="<!doctype html>...">${escHtml(tpl.htmlContent || '')}</textarea>
+            <button class="btn-secondary" id="tpl-btn-preview" style="margin-top:8px; width:100%; justify-content:center;">
+              <span class="material-symbols-outlined">play_arrow</span> Preview Animation
+            </button>
+          </div>
+        </div>
+
+        <div style="padding:16px; border-top:1px solid var(--ps-border); display:flex; justify-content:space-between; align-items:center;">
+           <span id="tpl-save-status" class="text-sm text-muted"></span>
+           <button class="btn-primary" id="tpl-save-btn">
+             <span class="material-symbols-outlined">save</span>
+             Save
+           </button>
+        </div>
+      </div>
+
+      <div class="tpl-canvas-area" style="flex:1; background:#000; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; background-image:radial-gradient(circle at center, #1a1a2e 0%, #000 100%);">
+        <iframe id="tpl-preview-frame" style="width:${tpl.width}px; height:${tpl.height}px; border:none; box-shadow:0 10px 40px rgba(0,0,0,0.5); transform-origin:center; background:#000;"></iframe>
+      </div>
+    </div>`;
+
+  injectStyles();
+
+  const iframe = container.querySelector('#tpl-preview-frame');
+  
+  function updateIframeScale() {
+     const area = container.querySelector('.tpl-canvas-area');
+     if (!area) return;
+     const padding = 40;
+     const aw = area.clientWidth - (padding * 2);
+     const ah = area.clientHeight - (padding * 2);
+     const scale = Math.min(1, aw / tpl.width, ah / tpl.height);
+     iframe.style.transform = `scale(${scale})`;
+  }
+  
+  window.addEventListener('resize', updateIframeScale);
+  setTimeout(updateIframeScale, 10);
+
+  function runPreview() {
+     const html = container.querySelector('#tpl-html').value;
+     iframe.srcdoc = html;
+  }
+
+  if (tpl.htmlContent) runPreview();
+
+  container.querySelector('#tpl-btn-preview').addEventListener('click', runPreview);
+
+  container.querySelector('#tpl-w').addEventListener('change', e => { tpl.width = parseInt(e.target.value)||1920; iframe.style.width = tpl.width+'px'; updateIframeScale(); markDirty(); });
+  container.querySelector('#tpl-h').addEventListener('change', e => { tpl.height = parseInt(e.target.value)||1080; iframe.style.height = tpl.height+'px'; updateIframeScale(); markDirty(); });
+  container.querySelector('#tpl-name').addEventListener('input', markDirty);
+  container.querySelector('#tpl-html').addEventListener('input', markDirty);
+
+  async function doSave() {
+    tpl.name = container.querySelector('#tpl-name').value || 'Untitled Hyperframe';
+    tpl.htmlContent = container.querySelector('#tpl-html').value || '';
+    await saveTemplate(tpl);
+    _isDirty = false;
+    const st = container.querySelector('#tpl-save-status');
+    if(st) st.textContent = 'Saved';
+    showToast?.({ variant: 'success', title: 'Hyperframe saved' });
+  }
+
+  async function confirmLeave() {
+    if (!_isDirty) return true;
+    return showConfirm({
+      title: 'Unsaved Changes',
+      body: 'You have unsaved changes in this template. They will be lost if you leave now.',
+      confirmText: 'Leave without saving',
+      cancelText: 'Stay',
+      variant: 'warning',
+      icon: 'warning',
+    });
+  }
+
+  const navGuard = async (e) => {
+    if (!_isDirty) return;
+    const link = e.target.closest('#app-nav a, #app-nav button[data-screen]');
+    if (!link) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const leave = await confirmLeave();
+    if (leave) {
+      _isDirty = false;
+      document.removeEventListener('click', navGuard, true);
+      const href = link.getAttribute('href');
+      if (href) navigate(href);
+    }
+  };
+  document.addEventListener('click', navGuard, true);
+
+  container.querySelector('#tpl-save-btn').addEventListener('click', doSave);
+  container.querySelector('#tpl-back').addEventListener('click', async () => {
+    const leave = await confirmLeave();
+    if (!leave) return;
+    _isDirty = false;
+    document.removeEventListener('click', navGuard, true);
+    window.removeEventListener('resize', updateIframeScale);
+    navigate('#tpl');
+  });
 }
 
 // ── Entry point ────────────────────────────────────────────

@@ -24,9 +24,23 @@ export async function deleteTemplate(id) {
   shadowWrite('templates'); // fire-and-forget
 }
 
-export function createEmptyTemplate() {
+export function createEmptyTemplate(type = 'perspective') {
+  if (type === 'hyperframe') {
+    return {
+      id: uuid(),
+      type: 'hyperframe',
+      name: 'Untitled Hyperframe',
+      width: 1920,
+      height: 1080,
+      htmlContent: '',
+      createdAt: now(),
+      updatedAt: now()
+    };
+  }
+  
   return {
     id: uuid(),
+    type: 'perspective',
     name: 'Untitled Template',
     width: 1920,
     height: 1080,

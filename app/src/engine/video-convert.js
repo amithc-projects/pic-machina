@@ -229,7 +229,8 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
               ctx.globalAlpha = strength; // Native fade fallback
             }
             const p = scaleParams(step.params || {}, strengthParamStr, strength);
-            await step.fn(ctx, p, { ...fileContext, timestampSec });
+            fileContext.timestampSec = timestampSec;
+            await step.fn(ctx, p, fileContext);
             ctx.restore();
           }
         }
@@ -299,6 +300,7 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
   video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
   document.body.appendChild(video);
 
+  let canvas = null;
   try {
     await new Promise((res, rej) => {
       video.onloadedmetadata = res;
@@ -323,7 +325,7 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
     });
     encoder.configure({ codec: avcCodec(encW, encH), width: encW, height: encH, bitrate: parseInt(bitrate) || 8_000_000 });
 
-    const canvas = document.createElement('canvas');
+    canvas = document.createElement('canvas');
     canvas.width  = encW;
     canvas.height = encH;
     const ctx = canvas.getContext('2d');
@@ -345,6 +347,18 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
     };
 
     const encodeWork = async () => {
+      let lastLoggedPct = -1;
+      const totalFreezeFrames = Math.ceil(start * fps) + Math.round(insertDuration * fps) + Math.ceil((info.duration - start) * fps);
+
+      // Helper to log overall progress safely
+      const logProgress = (fIdx, label) => {
+         const pct = Math.floor((fIdx / totalFreezeFrames) * 10) * 10;
+         if (pct > lastLoggedPct && pct < 100 && pct > 0) {
+            lastLoggedPct = pct;
+            log(`  ${pct}% — ${label}`);
+         }
+      };
+
       // ── Phase A: frames before the freeze point ──
       const framesBeforeFreeze = Math.ceil(start * fps);
       log(`Freeze encode — pre-segment: ${framesBeforeFreeze} frames (0 – ${start.toFixed(2)}s)`);
@@ -354,6 +368,7 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
         await seekTo(t);
         ctx.drawImage(video, 0, 0, encW, encH);
         await encodeCanvas(f === 0);
+        logProgress(frameIndex, 'Pre-segment');
       }
 
       // ── Phase B: frozen frames with strength envelope ──
@@ -383,11 +398,13 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
               ctx.globalAlpha = strength; // Native fade fallback
             }
             const p = scaleParams(step.params || {}, effectiveStrengthParam, strength);
-            await step.fn(ctx, p, { ...fileContext, timestampSec: start + t });
+            fileContext.timestampSec = start + t;
+            await step.fn(ctx, p, fileContext);
             ctx.restore();
           }
         }
         await encodeCanvas(f === 0);
+        logProgress(frameIndex, 'Frozen segment');
       }
 
       // ── Phase C: frames after the freeze point ──
@@ -400,6 +417,7 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
         await seekTo(t);
         ctx.drawImage(video, 0, 0, encW, encH);
         await encodeCanvas(f === 0);
+        logProgress(frameIndex, 'Post-segment');
       }
 
       await encoder.flush();
@@ -411,6 +429,7 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
     log(`Freeze encode done — ${frameIndex} frames (source ${info.duration.toFixed(1)}s + ${insertDuration}s inserted)`);
     return new Blob([target.buffer], { type: mime });
   } finally {
+    if (canvas && canvas.parentNode) canvas.parentNode.removeChild(canvas);
     document.body.removeChild(video);
     URL.revokeObjectURL(url);
   }

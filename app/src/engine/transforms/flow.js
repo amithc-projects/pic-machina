@@ -175,6 +175,24 @@ registry.register({
   apply() { /* logic handled natively in processor.js eval loop */ }
 });
 
+// ─── Render Standalone Hyperframe ─────────────────────────
+registry.register({
+  id: 'flow-render-hyperframe', name: 'Render Hyperframe', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'animation',
+  description: 'Generates a standalone MP4 video purely from a Hyperframe HTML template. No input video required.',
+  aggregation: true,
+  mainThread: true,
+  params: [
+    { name: 'filename',    label: 'Output Filename', type: 'text',     defaultValue: 'hyperframe.mp4' },
+    { name: 'templateId',  label: 'Hyperframe Template', type: 'template-select', defaultValue: '' },
+    { name: 'fps',         label: 'FPS',             type: 'number',   defaultValue: 30 },
+    { name: 'width',       label: 'Output Width (px)', type: 'number', defaultValue: 1920 },
+    { name: 'height',      label: 'Output Height (px)',type: 'number', defaultValue: 1080 },
+    { name: 'duration',    label: 'Fallback Duration (sec — only used if timeline duration cannot be determined)', type: 'number', defaultValue: 5 },
+  ],
+  apply() { /* handled by batch.js as aggregation node */ }
+});
+
 // ─── Contact Sheet ────────────────────────────────────────
 registry.register({
   id: 'flow-contact-sheet', name: 'Contact Sheet', category: 'Flow Control', categoryKey: 'flow',
