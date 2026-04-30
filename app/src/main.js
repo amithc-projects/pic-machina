@@ -30,6 +30,8 @@ const SCREENS = {
   pow: () => import('./screens/pow.js'),
   hlp: () => import('./screens/hlp.js'),
   aud: () => import('./screens/aud.js'),
+  sys: () => import('./screens/sys.js'),
+  bup: () => import('./screens/bup.js'),
 };
 
 const DEFAULT_SCREEN = 'gsd';
@@ -130,26 +132,7 @@ async function boot() {
 
   initDrawers();
 
-  // Setup Backup UI Module
-  document.getElementById('nav-db-backup')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const { showBackupModal } = await import('./utils/backup.js');
-    showBackupModal();
-  });
-
-  // Setup Help UI Module
-  document.getElementById('nav-help')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const { showHelpModal } = await import('./utils/help.js');
-    showHelpModal();
-  });
-
-  // Setup Settings UI Module
-  document.getElementById('nav-settings')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const { showSettingsModal } = await import('./utils/settings-dialog.js');
-    showSettingsModal();
-  });
+  // Nav links now route natively to screens in index.html.
 
   // Navigate to initial screen
   const initialHash = location.hash || `#${DEFAULT_SCREEN}`;

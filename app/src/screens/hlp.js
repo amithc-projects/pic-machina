@@ -36,6 +36,19 @@ function renderIndex(container) {
       </div>
       
       <div style="padding:24px;max-width:900px;margin:0 auto;width:100%;">
+        
+        <div style="margin-bottom: 32px;">
+          <p class="text-sm text-muted" style="margin:0 0 16px 0; line-height:1.5;">Watch this quick breakdown to master the interface, build powerful chained macro recipes, and unleash localized AI across hundreds of your images in seconds.</p>
+          <div style="background:#000; border-radius:8px; overflow:hidden; border:1px solid var(--ps-border); aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; position:relative;">
+            <video src="/assets/tutorial.mp4" controls preload="none" style="width:100%; height:100%; outline:none;" poster="/assets/tutorial-poster.jpg"></video>
+            <!-- Absolute centered placeholder fallback in case video fails to load or isn't built yet -->
+            <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; color:rgba(255,255,255,0.4);" class="video-placeholder">
+              <span class="material-symbols-outlined" style="font-size:48px; margin-bottom:12px;">movie</span>
+              <span style="font-size:14px; font-weight:500;">Tutorial Video Pending...</span>
+            </div>
+          </div>
+        </div>
+
         <div style="display:flex;gap:12px;margin-bottom:24px;">
            <input type="text" id="hlp-search" class="ic-input" placeholder="Search documentation..." style="flex:1;padding:12px 16px;font-size:15px">
            <select id="hlp-tag-filter" class="ic-input" style="width:160px;cursor:pointer">
@@ -52,6 +65,12 @@ function renderIndex(container) {
   const searchInput = container.querySelector('#hlp-search');
   const tagFilter   = container.querySelector('#hlp-tag-filter');
   const resultsDiv  = container.querySelector('#hlp-results');
+
+  const videoEl = container.querySelector('video');
+  const placeholderEl = container.querySelector('.video-placeholder');
+  if (videoEl && placeholderEl) {
+    videoEl.addEventListener('play', () => { placeholderEl.style.display = 'none'; });
+  }
 
   const updateResults = () => {
     const term = searchInput.value.toLowerCase();

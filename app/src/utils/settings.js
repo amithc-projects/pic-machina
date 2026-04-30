@@ -27,6 +27,21 @@ const DEFAULT_SETTINGS = {
     // (with top-level keys: scene, subjects, composition, lighting, etc.).
     describerEndpoint: ''
   },
+  masterFonts: [
+    { id: 'font-inter', label: 'Inter', value: 'Inter' },
+    { id: 'font-outfit', label: 'Outfit', value: 'Outfit' },
+    { id: 'font-mono', label: 'Monospace', value: 'monospace' },
+    { id: 'font-serif', label: 'Serif', value: 'serif' },
+    { id: 'font-arial', label: 'Arial', value: 'Arial' },
+    { id: 'font-times', label: 'Times New Roman', value: '"Times New Roman"' },
+    { id: 'font-courier', label: 'Courier New', value: '"Courier New"' },
+    { id: 'font-georgia', label: 'Georgia', value: 'Georgia' },
+    { id: 'font-verdana', label: 'Verdana', value: 'Verdana' },
+    { id: 'font-trebuchet', label: 'Trebuchet MS', value: '"Trebuchet MS"' },
+    { id: 'font-impact', label: 'Impact', value: 'Impact' },
+    { id: 'font-comic', label: 'Comic Sans MS', value: '"Comic Sans MS"' },
+    { id: 'font-dancing', label: 'Dancing Script', value: '"Dancing Script"' }
+  ],
   palette: [
     { label: 'Black',  color: '#000000' },
     { label: 'White',  color: '#ffffff' },

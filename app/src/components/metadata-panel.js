@@ -795,8 +795,8 @@ export class MetadataPanel {
       ctaHost.className = 'mp-ai-endpoint-note';
       ctaHost.innerHTML = `<a id="mp-ai-settings-link">Configure AI endpoint</a> in Settings to enable AI image analysis`;
       ctaHost.querySelector('#mp-ai-settings-link')?.addEventListener('click', async () => {
-        const { showSettingsModal } = await import('../utils/settings-dialog.js');
-        showSettingsModal();
+        const { navigate } = await import('../main.js');
+        navigate('#sys');
       });
     }
 

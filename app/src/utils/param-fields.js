@@ -6,6 +6,8 @@
  * Used by: ned.js (node editor), set.js (run-params dialog), bld.js (recipe params editor).
  */
 
+import { getSettings } from './settings.js';
+
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -93,7 +95,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
     case 'text-style-select': {
       let savedStylesHtml = '<option value="">None (Custom Settings)</option>';
       try {
-        const saved = JSON.parse(localStorage.getItem('ic-global-settings'))?.textStyles || [];
+        const saved = getSettings().textStyles || [];
         savedStylesHtml += saved.map(s => `<option value="${escHtml(s.id)}" ${s.id === val ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('');
       } catch(e) {}
       
@@ -104,6 +106,31 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
             ? varInput(id, param.name, val)
             : `<select id="${id}" name="${param.name}" class="ic-input ic-text-style-select" data-value="${escHtml(String(val))}">
                 ${savedStylesHtml}
+              </select>`
+          }
+        </div>`;
+    }
+
+    case 'font-select': {
+      let fontOptionsHtml = '';
+      try {
+        const saved = getSettings().masterFonts || [];
+        if (saved.length > 0) {
+           fontOptionsHtml = saved.map(f => `<option value="${escHtml(f.value)}" ${f.value === val ? 'selected' : ''}>${escHtml(f.label)}</option>`).join('');
+        } else {
+           fontOptionsHtml = `<option value="Inter" ${val==='Inter'?'selected':''}>Inter</option>
+                              <option value="monospace" ${val==='monospace'?'selected':''}>Monospace</option>
+                              <option value="serif" ${val==='serif'?'selected':''}>Serif</option>`;
+        }
+      } catch(e) {}
+      
+      return `
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label" for="${id}">${renderLabelHtml(param.label, id, param)}${supportsVarBind ? varBindBtn(id, varActive) : ''}</label>
+          ${varActive
+            ? varInput(id, param.name, val)
+            : `<select id="${id}" name="${param.name}" class="ic-input ic-font-select" data-value="${escHtml(String(val))}">
+                ${fontOptionsHtml}
               </select>`
           }
         </div>`;
@@ -151,10 +178,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
     case 'color': {
       let savedColorsHtml = '';
       try {
-        import('./settings.js').then(m => {
-          // Handled externally if needed via async.
-        }).catch(()=>{});
-        const saved = JSON.parse(localStorage.getItem('ic-global-settings'))?.palette || [
+        const saved = getSettings().palette || [
             { label: 'Black',  color: '#000000' },
             { label: 'White',  color: '#ffffff' },
             { label: 'Pink',   color: '#f472b6' },

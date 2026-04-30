@@ -1,8 +1,8 @@
-import { getSettings, saveSettings } from './settings.js';
-import { showToast } from '../aurora/toast.js';
+import { getSettings, saveSettings } from '../utils/settings.js';
+import { showToast } from '../main.js';
 import { dbGet, dbPut } from '../data/db.js';
 
-export async function showSettingsModal() {
+export async function render(container, hash) {
   const current = getSettings();
   const palette = current.palette || [];
   
@@ -14,28 +14,25 @@ export async function showSettingsModal() {
   } catch (err) {
     console.warn('Failed to fetch project root handle', err);
   }
-  
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px);';
-  
-  modal.innerHTML = `
-    <div style="background:var(--ps-bg-surface); border:1px solid var(--ps-border); border-radius:12px; width:480px; max-width:95vw; box-shadow:0 10px 50px rgba(0,0,0,0.6); overflow:hidden; display:flex; flex-direction:column; animation:screenEnter 180ms ease-out forwards;">
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-bottom:1px solid var(--ps-border); background:rgba(0,0,0,0.2);">
-        <h3 style="margin:0; font-size:16px; font-weight:600; display:flex; align-items:center; gap:8px;">
-          <span class="material-symbols-outlined" style="color:var(--ps-blue);">settings</span>
-          Global Preferences
-        </h3>
-        <button class="btn-icon" id="settings-close" style="width:28px; height:28px;">
-          <span class="material-symbols-outlined" style="font-size:18px;">close</span>
-        </button>
+
+  container.innerHTML = `
+    <div class="screen sys-screen" style="display:flex;flex-direction:column;height:100%;background:var(--ps-surface)">
+      <div class="screen-header" style="flex-shrink:0;">
+        <div class="flex items-center gap-2">
+           <span class="material-symbols-outlined" style="color:var(--ps-blue)">settings</span>
+           <div class="screen-title">Global Settings</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="btn-primary" id="settings-save">Save Configurations</button>
+        </div>
       </div>
       
-      <div style="padding: 24px; display:flex; flex-direction:column; gap:24px; background:var(--ps-bg-app); max-height: 70vh; overflow-y: auto;">
+      <div style="padding: 24px; max-width:900px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:24px; overflow-y: auto;">
         
         <!-- Project Root Link -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Project Storage</h4>
-          <div style="background:var(--ps-bg-overlay); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
+          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; align-items:center; justify-content:space-between;">
               <div style="display:flex; flex-direction:column;">
                 <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Project Root Directory</span>
@@ -57,7 +54,7 @@ export async function showSettingsModal() {
         <!-- Smart Thumbnails -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Content-Aware Thumbnails</h4>
-          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-overlay); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
             <input type="checkbox" id="cfg-smart-thumbs" ${current.thumbnails?.smart ? 'checked' : ''} style="margin-top:2px;" />
             <div style="display:flex; flex-direction:column;">
               <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Crop recipe &amp; showcase covers around the subject</span>
@@ -66,7 +63,7 @@ export async function showSettingsModal() {
               </span>
             </div>
           </label>
-          <div style="background:var(--ps-bg-overlay); padding:12px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
+          <div style="background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
               <div style="display:flex; flex-direction:column;">
                 <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Rebuild existing thumbnails</span>
@@ -83,7 +80,7 @@ export async function showSettingsModal() {
         <!-- Batch Core -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Batch Engine</h4>
-          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-overlay); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
             <input type="checkbox" id="cfg-batch-sync" ${current.batch?.useInputForOutput ? 'checked' : ''} style="margin-top:2px;" />
             <div style="display:flex; flex-direction:column;">
               <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Default Output Folder to Input Source</span>
@@ -95,7 +92,7 @@ export async function showSettingsModal() {
         <!-- AI Integration -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">AI Integration</h4>
-          <div style="background:var(--ps-bg-overlay); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
             <div style="display:flex; flex-direction:column; gap:4px;">
               <label for="cfg-ai-endpoint" style="font-size:13px; font-weight:500; color:var(--ps-text);">AI Image Describer Endpoint</label>
               <input type="url" id="cfg-ai-endpoint" class="ic-input"
@@ -121,6 +118,20 @@ export async function showSettingsModal() {
           </div>
         </section>
 
+        <!-- Master Fonts -->
+        <section style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Master Fonts</h4>
+                <button class="btn-ghost" id="btn-add-font" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Font</button>
+            </div>
+            <span style="font-size:11px; color:var(--ps-text-muted);">Manage fonts available for text styles and overlays.</span>
+          </div>
+          
+          <div id="font-list" style="display:flex; flex-direction:column; gap:10px; background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border);">
+          </div>
+        </section>
+
         <!-- Text Styles -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <div style="display:flex; flex-direction:column;">
@@ -136,7 +147,7 @@ export async function showSettingsModal() {
         </section>
 
         <!-- Custom Color Swatches -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
+        <section style="display:flex; flex-direction:column; gap:12px; margin-bottom: 32px;">
           <div style="display:flex; flex-direction:column;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                 <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Application Color Swatches</h4>
@@ -145,24 +156,68 @@ export async function showSettingsModal() {
             <span style="font-size:11px; color:var(--ps-text-muted);">Manage standard colors available in the parameter configurator panels.</span>
           </div>
           
-          <div id="swatch-list" style="display:flex; flex-direction:column; gap:10px; background:var(--ps-bg-overlay); padding:16px; border-radius:8px; border:1px solid var(--ps-border); max-height:220px; overflow-y:auto;">
+          <div id="swatch-list" style="display:flex; flex-direction:column; gap:10px; background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border);">
           </div>
 
         </section>
         
       </div>
-      
-      <div style="padding:16px 24px; border-top:1px solid var(--ps-border); background:var(--ps-bg-surface); display:flex; justify-content:flex-end;">
-        <button class="btn-primary" id="settings-save">Save Configurations</button>
-      </div>
     </div>
   `;
-  
-  document.body.appendChild(modal);
 
-  const swatchList = modal.querySelector('#swatch-list');
-  const textStyleList = modal.querySelector('#text-style-list');
+  const swatchList = container.querySelector('#swatch-list');
+  const textStyleList = container.querySelector('#text-style-list');
+  const fontList = container.querySelector('#font-list');
   const textStyles = current.textStyles || [];
+  const masterFonts = current.masterFonts || [];
+
+  const renderMasterFonts = () => {
+    fontList.innerHTML = masterFonts.map((mf, idx) => `
+      <div class="mf-row" data-idx="${idx}" style="display:flex; align-items:center; gap:8px;">
+        <input type="text" class="ic-input mf-label" value="${mf.label}" placeholder="Display Name (e.g. Primary)" style="flex:1;" />
+        <input type="text" class="ic-input mf-value" value="${(mf.value || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" placeholder="Font Family (e.g. Inter)" style="flex:1;" />
+        <button class="btn-icon btn-remove-mf" title="Remove Font" style="color:var(--ps-red); width:28px; height:28px;">
+            <span class="material-symbols-outlined" style="font-size:16px;">delete</span>
+        </button>
+      </div>
+    `).join('');
+    
+    if (masterFonts.length === 0) {
+        fontList.innerHTML = '<span style="font-size:11px; color:var(--ps-text-faint);">No fonts configured. Click Add Font to create one.</span>';
+    }
+
+    container.querySelectorAll('.btn-remove-mf').forEach(btn => {
+      btn.onclick = (e) => {
+          const idx = parseInt(e.currentTarget.closest('.mf-row').dataset.idx);
+          masterFonts.splice(idx, 1);
+          renderMasterFonts();
+          renderTextStyles();
+      };
+    });
+    
+    container.querySelectorAll('.mf-label').forEach(input => {
+       input.onchange = (e) => {
+           const idx = parseInt(e.currentTarget.closest('.mf-row').dataset.idx);
+           masterFonts[idx].label = e.target.value;
+           renderTextStyles();
+       };
+    });
+
+    container.querySelectorAll('.mf-value').forEach(input => {
+       input.onchange = (e) => {
+           const idx = parseInt(e.currentTarget.closest('.mf-row').dataset.idx);
+           masterFonts[idx].value = e.target.value;
+       };
+    });
+  };
+
+  renderMasterFonts();
+
+  container.querySelector('#btn-add-font').onclick = () => {
+      masterFonts.push({ id: 'font-' + Math.random().toString(36).substr(2, 9), label: 'New Font', value: 'sans-serif' });
+      renderMasterFonts();
+      renderTextStyles();
+  };
 
   const renderTextStyles = () => {
     textStyleList.innerHTML = textStyles.map((ts, idx) => `
@@ -172,7 +227,10 @@ export async function showSettingsModal() {
             <button class="btn-icon btn-remove-ts" title="Remove Style" style="color:var(--ps-red); width:28px; height:28px;"><span class="material-symbols-outlined" style="font-size:16px;">delete</span></button>
          </div>
          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <input type="text" class="ic-input ts-font" value="${ts.fontFamily || 'Inter'}" placeholder="Font Family" title="Font Family"/>
+            <select class="ic-input ts-font" title="Font Family" style="width:100%; min-width:0;">
+                ${masterFonts.map(mf => `<option value="${(mf.value || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" ${ts.fontFamily === mf.value ? 'selected' : ''}>${mf.label}</option>`).join('')}
+                ${!masterFonts.find(mf => mf.value === ts.fontFamily) && ts.fontFamily ? `<option value="${(ts.fontFamily || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" selected>${ts.fontFamily} (Custom)</option>` : ''}
+            </select>
             <div style="display:flex; gap:4px;">
                <input type="number" class="ic-input ts-size" value="${ts.size || 32}" placeholder="Size" style="flex:1; width:0;" />
                <select class="ic-input ts-size-mode" style="flex:1; width:0;">
@@ -213,8 +271,7 @@ export async function showSettingsModal() {
         textStyleList.innerHTML = '<span style="font-size:11px; color:var(--ps-text-faint);">No text styles configured. Click Add Style to create one.</span>';
     }
 
-    // Attach deletion and real-time update events
-    textStyleList.querySelectorAll('.btn-remove-ts').forEach(btn => {
+    container.querySelectorAll('.btn-remove-ts').forEach(btn => {
       btn.onclick = (e) => {
           const idx = parseInt(e.currentTarget.closest('.ts-row').dataset.idx);
           textStyles.splice(idx, 1);
@@ -223,7 +280,7 @@ export async function showSettingsModal() {
     });
 
     const bindUpdate = (selector, key, isCheckbox = false, isNumeric = false) => {
-        textStyleList.querySelectorAll(selector).forEach(el => {
+        container.querySelectorAll(selector).forEach(el => {
             el.onchange = (e) => {
                 const idx = parseInt(e.currentTarget.closest('.ts-row').dataset.idx);
                 let val = isCheckbox ? e.target.checked : e.target.value;
@@ -249,7 +306,7 @@ export async function showSettingsModal() {
   
   renderTextStyles();
 
-  modal.querySelector('#btn-add-text-style').onclick = () => {
+  container.querySelector('#btn-add-text-style').onclick = () => {
       textStyles.push({
           id: 'style-' + Math.random().toString(36).substr(2, 9),
           name: 'New Style', fontFamily: 'Inter', sizeMode: 'px', size: 32,
@@ -274,7 +331,7 @@ export async function showSettingsModal() {
         swatchList.innerHTML = '<span style="font-size:11px; color:var(--ps-text-faint);">No swatches configured. Click Add Swatch to create one.</span>';
     }
 
-    swatchList.querySelectorAll('.btn-remove-swatch').forEach(btn => {
+    container.querySelectorAll('.btn-remove-swatch').forEach(btn => {
       btn.onclick = (e) => {
           const idx = parseInt(e.currentTarget.closest('.swatch-row').dataset.idx);
           palette.splice(idx, 1);
@@ -282,14 +339,14 @@ export async function showSettingsModal() {
       };
     });
     
-    swatchList.querySelectorAll('.swatch-color').forEach(input => {
+    container.querySelectorAll('.swatch-color').forEach(input => {
        input.onchange = (e) => {
            const idx = parseInt(e.currentTarget.closest('.swatch-row').dataset.idx);
            palette[idx].color = e.target.value;
        };
     });
 
-    swatchList.querySelectorAll('.swatch-label').forEach(input => {
+    container.querySelectorAll('.swatch-label').forEach(input => {
        input.onchange = (e) => {
            const idx = parseInt(e.currentTarget.closest('.swatch-row').dataset.idx);
            palette[idx].label = e.target.value;
@@ -299,30 +356,30 @@ export async function showSettingsModal() {
 
   renderSwatches();
 
-  modal.querySelector('#btn-link-project').onclick = async (e) => {
+  container.querySelector('#btn-link-project').onclick = async (e) => {
     try {
       const handle = await window.showDirectoryPicker();
       if (handle) {
         await dbPut('folders', { key: 'project_root', handle });
         projectRootHandle = handle;
-        modal.querySelector('#project-root-status').innerHTML = `<span style="color:var(--ps-green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> Linked to: ${handle.name}</span>`;
+        container.querySelector('#project-root-status').innerHTML = `<span style="color:var(--ps-green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> Linked to: ${handle.name}</span>`;
         e.target.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">folder_shared</span> Change Link';
         showToast({ variant: 'success', title: 'Project Linked', description: `Thumbnails will now be saved to ${handle.name}/samples.` });
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        showToast({ variant: 'danger', title: 'Linking failed', description: err.message });
+        showToast({ variant: 'error', title: 'Linking failed', description: err.message });
       }
     }
   };
 
-  modal.querySelector('#btn-rebuild-thumbs').onclick = async (e) => {
+  container.querySelector('#btn-rebuild-thumbs').onclick = async (e) => {
     const btn    = e.currentTarget;
-    const status = modal.querySelector('#rebuild-thumbs-status');
+    const status = container.querySelector('#rebuild-thumbs-status');
     btn.disabled = true;
     btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">hourglass_top</span> Working…';
     try {
-      const { generateSmartThumbnail, dataUrlToBlob } = await import('./thumbnails.js');
+      const { generateSmartThumbnail, dataUrlToBlob } = await import('../utils/thumbnails.js');
       const { isModelReady } = await import('../engine/ai/inspyrenet.js');
       if (!(await isModelReady())) {
         status.textContent = 'InSPyReNet model not downloaded — open #mdl to fetch it, then retry.';
@@ -369,7 +426,7 @@ export async function showSettingsModal() {
     } catch (err) {
       console.error(err);
       status.textContent = `Failed: ${err.message || err}`;
-      showToast({ variant: 'danger', title: 'Rebuild failed', description: err.message || String(err) });
+      showToast({ variant: 'error', title: 'Rebuild failed', description: err.message || String(err) });
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">refresh</span> Rebuild';
@@ -377,10 +434,10 @@ export async function showSettingsModal() {
   };
 
   // AI endpoint test
-  modal.querySelector('#btn-test-ai-endpoint').onclick = async (e) => {
+  container.querySelector('#btn-test-ai-endpoint').onclick = async (e) => {
     const btn    = e.currentTarget;
-    const result = modal.querySelector('#ai-endpoint-test-result');
-    const url    = modal.querySelector('#cfg-ai-endpoint').value.trim();
+    const result = container.querySelector('#ai-endpoint-test-result');
+    const url    = container.querySelector('#cfg-ai-endpoint').value.trim();
     if (!url) { result.textContent = 'No URL entered.'; result.style.color = 'var(--ps-text-faint)'; return; }
     btn.disabled = true;
     btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">hourglass_empty</span>Testing…';
@@ -398,16 +455,12 @@ export async function showSettingsModal() {
     }
   };
 
-  modal.querySelector('#btn-add-swatch').onclick = () => {
+  container.querySelector('#btn-add-swatch').onclick = () => {
       palette.push({ label: 'New Color', color: '#ff0000' });
       renderSwatches();
   };
 
-  const destroy = () => modal.remove();
-
-  modal.querySelector('#settings-close').onclick = destroy;
-  
-  modal.querySelector('#settings-save').onclick = () => {
+  container.querySelector('#settings-save').onclick = () => {
     const nextPalette = [];
     swatchList.querySelectorAll('.swatch-row').forEach(row => {
        nextPalette.push({
@@ -418,19 +471,19 @@ export async function showSettingsModal() {
 
     saveSettings({
       batch: {
-        useInputForOutput: modal.querySelector('#cfg-batch-sync').checked
+        useInputForOutput: container.querySelector('#cfg-batch-sync').checked
       },
       thumbnails: {
-        smart: modal.querySelector('#cfg-smart-thumbs').checked
+        smart: container.querySelector('#cfg-smart-thumbs').checked
       },
       ai: {
-        describerEndpoint: modal.querySelector('#cfg-ai-endpoint').value.trim()
+        describerEndpoint: container.querySelector('#cfg-ai-endpoint').value.trim()
       },
       palette: nextPalette,
-      textStyles: textStyles
+      textStyles: textStyles,
+      masterFonts: masterFonts
     });
 
     showToast({ variant: 'success', title: 'Settings Saved', description: 'Preferences applied globally.' });
-    destroy();
   };
 }

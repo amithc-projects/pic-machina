@@ -168,7 +168,7 @@ registry.register({
     { name: 'titleTemplate',label: 'Title Text',    type: 'text', defaultValue: '{{sidecar.city}}' },
     { name: 'bgColor',      label: 'Background Color',type: 'color',defaultValue: '#111111' },
     { name: 'bgImage',      label: 'Background File (Optional)', type: 'file', defaultValue: '' },
-    { name: 'fontFamily',   label: 'Font Family',   type: 'text', defaultValue: 'Inter' },
+    { name: 'fontFamily',   label: 'Font Family',   type: 'font-select', defaultValue: 'Inter' },
     { name: 'fontSize',     label: 'Font Size (px)',type: 'number', defaultValue: 120 },
     { name: 'textColor',    label: 'Text Color',    type: 'color',defaultValue: '#ffffff' },
   ],

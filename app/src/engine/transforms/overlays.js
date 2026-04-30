@@ -15,19 +15,7 @@ registry.register({
   params: [
     { name: 'content',     label: 'Text ({{vars}} supported)', type: 'textarea',    defaultValue: '{{filename}}' },
     { name: 'textStyle',   label: 'Text Style',   type: 'text-style-select', defaultValue: 'none' },
-    { name: 'font',        label: 'Font Family',  type: 'select', textStyleOverride: true,
-      options: [
-        { label: 'Inter', value: 'Inter' },
-        { label: 'Arial', value: 'Arial' },
-        { label: 'Times New Roman', value: '"Times New Roman"' },
-        { label: 'Courier New', value: '"Courier New"' },
-        { label: 'Georgia', value: 'Georgia' },
-        { label: 'Verdana', value: 'Verdana' },
-        { label: 'Trebuchet MS', value: '"Trebuchet MS"' },
-        { label: 'Impact', value: 'Impact' },
-        { label: 'Comic Sans MS', value: '"Comic Sans MS"' },
-        { label: 'Dancing Script', value: '"Dancing Script"' },
-      ], defaultValue: 'Inter' },
+    { name: 'font',        label: 'Font Family',  type: 'font-select', textStyleOverride: true, defaultValue: 'Inter' },
     { name: 'sizeMode',    label: 'Size Mode',    type: 'select', textStyleOverride: true,
       options: [
         { label: 'Fixed (px)',       value: 'px' },
@@ -270,7 +258,7 @@ registry.register({
     { name: 'imageUrl',label: 'Image File',  type: 'file',   defaultValue: '' },
     { name: 'repeat',  label: 'Repeat Pattern', type: 'boolean', defaultValue: true },
     { name: 'text',    label: 'Text',        type: 'text',   defaultValue: '© {{filename}}' },
-    { name: 'font',    label: 'Font',        type: 'text',   defaultValue: 'Inter' },
+    { name: 'font',    label: 'Font',        type: 'font-select',   defaultValue: 'Inter' },
     { name: 'size',    label: 'Size (px)',   type: 'number', defaultValue: 28 },
     { name: 'color',   label: 'Color',       type: 'color',  defaultValue: '#ffffff' },
     { name: 'opacity', label: 'Opacity (%)', type: 'range',  min: 0, max: 100, defaultValue: 25 },
@@ -1166,7 +1154,7 @@ registry.register({
   description: 'Inject direct HTML strings with inline CSS styling directly onto the visual canvas. Supports multiple paragraphs, layout tags, and absolute positioning constraints. Natively leverages timeRange to act as an insertable title card when Freeze logic is enabled.',
   params: [
      { name: 'htmlContent',    label: 'HTML Content',     type: 'textarea', defaultValue: '<div style="color: white; font-size: 64px; text-align: center; margin-top: 100px;">\\n  Hello <b>World</b>\\n</div>' },
-     { name: 'fontFamily',     label: 'Base Font Family', type: 'select', options: [ { label: 'Inter', value: 'Inter' }, { label: 'Monospace', value: 'monospace' }, { label: 'Serif', value: 'serif' } ], defaultValue: 'Inter' },
+     { name: 'fontFamily',     label: 'Base Font Family', type: 'font-select', defaultValue: 'Inter' },
      { name: 'globalScale',    label: 'Global Font Scale',type: 'range', min: 0.5, max: 4, step: 0.1, defaultValue: 1 },
      { name: 'justifyLayout',  label: 'Box Justification',type: 'select', options: [ { label: 'Top Left', value: 'flex-start,flex-start' }, { label: 'Center', value: 'center,center' }, { label: 'Stretch', value: 'stretch,stretch' } ], defaultValue: 'flex-start,flex-start' },
   ],
@@ -1207,7 +1195,7 @@ registry.register({
   description: 'Dynamically parses external SRT or WEBVTT subtitle tracks and stamps active captions over the video at their specified timestamps.',
   params: [
      { name: 'subtitleFile',   label: 'Subtitle Track (.srt / .vtt)', type: 'file-text', accept: '.srt,.vtt,.txt' },
-     { name: 'fontFamily',     label: 'Font Family',      type: 'select', options: [ { label: 'Inter', value: 'Inter' }, { label: 'Monospace', value: 'monospace' }, { label: 'Outfit', value: 'Outfit' } ], defaultValue: 'Inter' },
+     { name: 'fontFamily',     label: 'Font Family',      type: 'font-select', defaultValue: 'Inter' },
      { name: 'fontSize',       label: 'Base Font Size',   type: 'range', min: 16, max: 200, step: 2, defaultValue: 48 },
      { name: 'textColor',      label: 'Default Text Color',type: 'color', defaultValue: '#ffffff' },
      { name: 'speaker1Color',  label: '[Speaker 1] Color',type: 'color', defaultValue: '#3b82f6' },
