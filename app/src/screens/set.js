@@ -840,6 +840,23 @@ export async function render(container, hash) {
       warningText.textContent = warning;
       warningText.style.display = warning ? '' : 'none';
     }
+
+    // Async lock for capabilities (prevents even trying to run if blocked by premium)
+    if (isReady && currentRecipe) {
+      checkRecipeAvailability(currentRecipe).then(({ available, unmet }) => {
+        if (!available) {
+          const hasPremiumLock = unmet.some(r => r.type === 'premium');
+          if (hasPremiumLock) {
+            btn.disabled = true;
+            if (warningText) {
+              const lockType = unmet.find(r => r.type === 'premium')?.id === 'enterprise' ? 'Enterprise' : 'Pro';
+              warningText.textContent = `Requires Pic-Machina ${lockType}`;
+              warningText.style.display = '';
+            }
+          }
+        }
+      });
+    }
   }
 
   function recipeSlug(name) {
@@ -1245,9 +1262,15 @@ function showCapabilityDialog(unmet) {
        </li>`
     ).join('');
 
+    const hasPremiumLock = unmet.some(r => r.type === 'premium');
+
     dlg.innerHTML = `
+      <style>
+        dialog.ic-modal { margin: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        dialog.ic-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+      </style>
       <div style="padding:20px 20px 8px;border-bottom:1px solid var(--ps-border)">
-        <div style="font-size:15px;font-weight:600;color:var(--ps-text);margin-bottom:4px">Setup required</div>
+        <div style="font-size:15px;font-weight:600;color:var(--ps-text);margin-bottom:4px">${hasPremiumLock ? 'License Required' : 'Setup required'}</div>
         <div style="font-size:12px;color:var(--ps-text-muted)">This recipe uses steps that need additional setup:</div>
       </div>
       <ul style="list-style:none;padding:12px 20px;margin:0">
@@ -1255,20 +1278,22 @@ function showCapabilityDialog(unmet) {
       </ul>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--ps-border)">
         <button class="btn-secondary" id="cap-dlg-fix">
-          <span class="material-symbols-outlined">open_in_new</span>Fix now
+          <span class="material-symbols-outlined">open_in_new</span>${hasPremiumLock ? 'Upgrade' : 'Fix now'}
         </button>
-        <button class="btn-primary" id="cap-dlg-run">Run anyway</button>
+        ${hasPremiumLock ? '' : '<button class="btn-primary" id="cap-dlg-run">Run anyway</button>'}
       </div>`;
 
     document.body.appendChild(dlg);
     dlg.showModal();
 
-    dlg.querySelector('#cap-dlg-run').addEventListener('click', () => {
-      dlg.close(); dlg.remove(); resolve(true);
-    });
+    if (!hasPremiumLock) {
+      dlg.querySelector('#cap-dlg-run').addEventListener('click', () => {
+        dlg.close(); dlg.remove(); resolve(true);
+      });
+    }
     dlg.querySelector('#cap-dlg-fix').addEventListener('click', () => {
       dlg.close(); dlg.remove();
-      const href = unmet[0]?.actionHref || '#mdl';
+      const href = hasPremiumLock ? '#sys' : (unmet[0]?.actionHref || '#mdl');
       location.hash = href;
       resolve(false);
     });

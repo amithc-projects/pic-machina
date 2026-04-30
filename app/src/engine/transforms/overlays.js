@@ -1057,6 +1057,7 @@ registry.register({
   id: 'overlay-timer', name: 'Animated Timer (HTML)', category: 'Overlays & Typography', categoryKey: 'overlay',
   icon: 'timer',
   description: 'Render a buttery-smooth live countdown or countup timer using DOM-to-Canvas via SVG foreignObject.',
+  requires: [{ type: 'html-in-canvas', id: 'wicg-drawhtml', label: 'HTML-in-Canvas Feature', actionHref: '#hlp?id=html-in-canvas' }],
   params: [
      { name: 'mode',          label: 'Mode',     type: 'select', options: [ { label: 'Countdown', value: 'countdown' }, { label: 'Count Up', value: 'countup' } ], defaultValue: 'countdown' },
      { name: 'duration',      label: 'Duration (sec)',  type: 'number', defaultValue: 30 },

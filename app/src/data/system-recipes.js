@@ -853,6 +853,7 @@ export const SYSTEM_RECIPES = [
   {
     id: 'sys-machina-swap', name: 'Machina-Swap',
     description: 'Natively swap faces across multiple portraits using 478-point mesh warping. Drop 2 photos to cross-swap both ways, or drop 3+ photos to paste the first face onto everyone else!',
+    requires: [{ type: 'premium', id: 'enterprise', label: 'Pic-Machina Enterprise' }],
     isSystem: true, isOrdered: true, coverColor: '#ec4899',
     inputType: 'image',
     tags: ['ai', 'creative', 'fun', 'swap', 'faces'],
@@ -946,6 +947,7 @@ export const SYSTEM_RECIPES = [
   {
     id: 'sys-graphic-novel-bold', name: 'Graphic Novel — Bold',
     description: 'A bolder graphic-novel variant with stronger posterisation, heavier ink lines and more vivid colour — closer to a hand-inked comic-book panel.',
+    requires: [{ type: 'premium', id: 'pro', label: 'Pic-Machina Pro' }],
     isSystem: true, coverColor: '#312e81',
     inputType: 'image',
     tags: ['creative', 'comic', 'illustration', 'artistic', 'effect', 'bold'],

@@ -44,8 +44,20 @@ const RESOLVERS = {
    *  always returns false until the user confirms manually. */
   'flag': async (_req) => false,
 
-  /** PicMachina Pro licence — always false until a licence module exists. */
-  'premium': async (_req) => false,
+  /** WICG experimental html-in-canvas capability */
+  'html-in-canvas': async (_req) => {
+    return typeof CanvasRenderingContext2D !== 'undefined' && 
+      ('drawElement' in CanvasRenderingContext2D.prototype || 'drawHTML' in CanvasRenderingContext2D.prototype);
+  },
+
+  /** PicMachina Pro licence (mocked via settings for now) */
+  'premium': async (req) => {
+    const { getSettings } = await import('../utils/settings.js');
+    const s = getSettings();
+    if (req.id === 'enterprise') return s.license === 'Enterprise';
+    // 'pro' level gives access to Pro and Enterprise features
+    return s.license === 'Pro' || s.license === 'Enterprise';
+  },
 };
 
 // ─── Core check ──────────────────────────────────────────
@@ -80,17 +92,18 @@ export async function checkTransformAvailability(transformId) {
 }
 
 /**
- * Check all requirements across every transform in a recipe's node tree.
+ * Check all requirements across every transform in a recipe's node tree,
+ * plus any explicit recipe-level requirements.
  * Walks branches, conditionals, thenNodes, and elseNodes recursively via
  * flattenNodes(). Deduplicates unmet requirements by "type:id".
- * @param {{ nodes: object[] }} recipe
+ * @param {{ nodes: object[], requires?: object[] }} recipe
  * @returns {Promise<{ available: boolean, unmet: object[] }>}
  */
 export async function checkRecipeAvailability(recipe) {
-  if (!recipe?.nodes?.length) return { available: true, unmet: [] };
+  if (!recipe) return { available: true, unmet: [] };
 
   // Collect unique transformIds from the full node tree
-  const flatItems  = flattenNodes(recipe.nodes);
+  const flatItems  = recipe.nodes ? flattenNodes(recipe.nodes) : [];
   const seen       = new Set();
   const transformIds = [];
   for (const { node } of flatItems) {
@@ -107,6 +120,14 @@ export async function checkRecipeAvailability(recipe) {
   for (const { unmet } of checks) {
     for (const req of unmet) {
       unmetMap.set(`${req.type}:${req.id}`, req);
+    }
+  }
+
+  // Also check top-level recipe requirements
+  if (recipe.requires && Array.isArray(recipe.requires)) {
+    const recipeResults = await Promise.all(recipe.requires.map(checkRequirement));
+    for (const res of recipeResults) {
+      if (!res.met) unmetMap.set(`${res.req.type}:${res.req.id}`, res.req);
     }
   }
   const unmet = [...unmetMap.values()];

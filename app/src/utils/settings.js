@@ -8,6 +8,7 @@
 const STORAGE_KEY = 'ic-global-settings';
 
 const DEFAULT_SETTINGS = {
+  license: 'Free',
   batch: {
     useInputForOutput: true // Output directly inside Input directory
   },

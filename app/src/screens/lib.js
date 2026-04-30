@@ -256,10 +256,23 @@ export async function render(container) {
         if (!card) continue;
         const badges = card.querySelector('.lib-card__badges');
         if (!badges) continue;
-        const tip = unmet.map(r => r.label).join(', ');
-        badges.insertAdjacentHTML('beforeend',
-          `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Needs setup: ${tip}">` +
-          `<span class="material-symbols-outlined" style="font-size:11px">warning</span> Needs setup</span>`);
+        const isEnterprise = unmet.some(r => r.type === 'premium' && r.id === 'enterprise');
+        const isPro = unmet.some(r => r.type === 'premium' && r.id === 'pro');
+        
+        if (isEnterprise) {
+          badges.insertAdjacentHTML('beforeend',
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Pic-Machina Enterprise">` +
+            `<span class="material-symbols-outlined" style="font-size:11px">business_center</span> ENTERPRISE</span>`);
+        } else if (isPro) {
+          badges.insertAdjacentHTML('beforeend',
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Pic-Machina Pro">` +
+            `<span class="material-symbols-outlined" style="font-size:11px">workspace_premium</span> PRO</span>`);
+        } else {
+          const tip = unmet.map(r => r.label).join(', ');
+          badges.insertAdjacentHTML('beforeend',
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Needs setup: ${tip}">` +
+            `<span class="material-symbols-outlined" style="font-size:11px">warning</span> Needs setup</span>`);
+        }
       }
     })();
   }

@@ -702,10 +702,22 @@ export async function render(container, hash) {
           if (available) continue;
           const row = listEl.querySelector(`.bld-node-row[data-id="${item.node.id}"]`);
           if (!row || row.querySelector('.bld-req-warn')) continue;
+          const isEnterprise = unmet.some(r => r.type === 'premium' && r.id === 'enterprise');
+          const isPro = unmet.some(r => r.type === 'premium' && r.id === 'pro');
           const tip = unmet.map(r => r.label).join(', ');
-          row.insertAdjacentHTML('beforeend',
-            `<span class="material-symbols-outlined bld-req-warn" title="Needs setup: ${tip}"` +
-            ` style="font-size:14px;color:var(--ps-warning,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">warning</span>`);
+          if (isEnterprise) {
+            row.insertAdjacentHTML('beforeend',
+              `<span class="material-symbols-outlined bld-req-warn" title="Requires Pic-Machina Enterprise"` +
+              ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">business_center</span>`);
+          } else if (isPro) {
+            row.insertAdjacentHTML('beforeend',
+              `<span class="material-symbols-outlined bld-req-warn" title="Requires Pic-Machina Pro"` +
+              ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">workspace_premium</span>`);
+          } else {
+            row.insertAdjacentHTML('beforeend',
+              `<span class="material-symbols-outlined bld-req-warn" title="Needs setup: ${tip}"` +
+              ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">build</span>`);
+          }
         }
       })();
     }
@@ -871,10 +883,25 @@ export async function render(container, hash) {
           if (available) continue;
           const tip = unmet.map(r => r.label).join(', ');
           tile.classList.add('bld-add-item--needs-setup');
-          tile.title = `Needs setup: ${tip}`;
-          tile.insertAdjacentHTML('beforeend',
-            `<span class="material-symbols-outlined bld-add-warn" title="Needs setup: ${tip}"` +
-            ` style="position:absolute;top:3px;right:3px;font-size:12px;color:var(--ps-warning,#f59e0b)">warning</span>`);
+          tile.disabled = true;
+          tile.style.opacity = '0.5';
+          tile.style.cursor = 'not-allowed';
+          tile.title = `Unavailable: ${tip}`;
+          const isEnterprise = unmet.some(r => r.type === 'premium' && r.id === 'enterprise');
+          const isPro = unmet.some(r => r.type === 'premium' && r.id === 'pro');
+          if (isEnterprise) {
+            tile.insertAdjacentHTML('beforeend',
+              `<span class="ic-badge ic-badge--amber" title="Requires Pic-Machina Enterprise"` +
+              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">business_center</span>ENTERPRISE</span>`);
+          } else if (isPro) {
+            tile.insertAdjacentHTML('beforeend',
+              `<span class="ic-badge ic-badge--amber" title="Requires Pic-Machina Pro"` +
+              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">workspace_premium</span>PRO</span>`);
+          } else {
+            tile.insertAdjacentHTML('beforeend',
+              `<span class="ic-badge ic-badge--amber" title="Unavailable: ${tip}"` +
+              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3)">SETUP</span>`);
+          }
         }
       })();
     }
@@ -905,6 +932,7 @@ export async function render(container, hash) {
   // Add transform node
   container.querySelectorAll('.bld-add-item:not(.bld-add-block-item)').forEach(btn => {
     btn.addEventListener('click', e => {
+      if (btn.disabled) return;
       if (e.target.closest('.bld-inline-help-btn')) return; // Ignore help clicks
       const tid = btn.dataset.transformId;
       const def = registry.get(tid);

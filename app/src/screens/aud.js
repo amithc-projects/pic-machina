@@ -737,9 +737,8 @@ export async function render(container, hash) {
   loadCustomVoices();
 
   return () => {
-     if (playerEl.src) URL.revokeObjectURL(playerEl.src);
-     if (downloadWavBtn.href) URL.revokeObjectURL(downloadWavBtn.href);
-     if (downloadMp3Btn.href) URL.revokeObjectURL(downloadMp3Btn.href);
+     container.querySelectorAll('#aud-history-list audio[src]').forEach(el => URL.revokeObjectURL(el.src));
+     container.querySelectorAll('#aud-history-list a[href]').forEach(el => URL.revokeObjectURL(el.href));
      
      window.removeEventListener('beforeunload', handleBeforeUnload);
      navItems.forEach(item => item.removeEventListener('click', handleNavClick, true));

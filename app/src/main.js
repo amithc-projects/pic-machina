@@ -32,6 +32,7 @@ const SCREENS = {
   aud: () => import('./screens/aud.js'),
   sys: () => import('./screens/sys.js'),
   bup: () => import('./screens/bup.js'),
+  lic: () => import('./screens/lic.js'),
 };
 
 const DEFAULT_SCREEN = 'gsd';
@@ -53,6 +54,26 @@ async function navigate(hash) {
   }
 
   const screenId = (hash.replace('#', '') || DEFAULT_SCREEN).split('/')[0].split('?')[0];
+  
+  // Guard premium screens
+  const { getSettings } = await import('./utils/settings.js');
+  const s = getSettings();
+  const isPro = s.license === 'Pro' || s.license === 'Enterprise';
+
+  // Update navigation badges visibility based on license
+  document.querySelectorAll('.nav-premium-badge').forEach(el => {
+    el.style.display = isPro ? 'none' : 'inline-block';
+  });
+
+  if (screenId === 'pow' || screenId === 'bup') {
+    if (!isPro) {
+      window.AuroraToast?.show({ variant: 'error', title: 'Pro Required', description: 'This section requires a Pic-Machina Pro license.' });
+      if (currentScreen) location.hash = `#${currentScreen}`;
+      else location.hash = `#${DEFAULT_SCREEN}`;
+      return;
+    }
+  }
+
   const loader = SCREENS[screenId] || SCREENS[DEFAULT_SCREEN];
 
   // Update nav active state

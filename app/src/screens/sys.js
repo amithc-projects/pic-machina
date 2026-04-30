@@ -51,6 +51,21 @@ export async function render(container, hash) {
           </div>
         </section>
 
+        <!-- License Tier -->
+        <section style="display:flex; flex-direction:column; gap:12px;">
+          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">License Tier</h4>
+          <div style="background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <select id="cfg-license" class="ic-input" style="max-width:200px;">
+                <option value="Free" ${current.license === 'Free' || !current.license ? 'selected' : ''}>Free</option>
+                <option value="Pro" ${current.license === 'Pro' ? 'selected' : ''}>Pro</option>
+                <option value="Enterprise" ${current.license === 'Enterprise' ? 'selected' : ''}>Enterprise</option>
+              </select>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">Select your mock license tier to test UX variations for Premium dependencies.</span>
+            </div>
+          </div>
+        </section>
+
         <!-- Smart Thumbnails -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Content-Aware Thumbnails</h4>
@@ -460,6 +475,11 @@ export async function render(container, hash) {
       renderSwatches();
   };
 
+  container.querySelector('#cfg-license').addEventListener('change', (e) => {
+    saveSettings({ license: e.target.value });
+    window.location.reload();
+  });
+
   container.querySelector('#settings-save').onclick = () => {
     const nextPalette = [];
     swatchList.querySelectorAll('.swatch-row').forEach(row => {
@@ -470,6 +490,7 @@ export async function render(container, hash) {
     });
 
     saveSettings({
+      license: container.querySelector('#cfg-license').value,
       batch: {
         useInputForOutput: container.querySelector('#cfg-batch-sync').checked
       },
