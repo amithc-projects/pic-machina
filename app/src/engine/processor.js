@@ -160,7 +160,7 @@ export class ImageProcessor {
           const { processVideoEffect } = await import('./video-convert.js');
           const queue = context._videoTransformQueue;
           context._videoTransformQueue = [];
-          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log, fileContext: context });
           results.push({ blob, filename: context.filename.replace(/\.[^.]+$/, '.mp4'), subfolder: context.outputSubfolder });
         } catch (err) {
           context.log?.('error', `Auto-export video failed: ${err.message}`);
@@ -179,7 +179,7 @@ export class ImageProcessor {
         const { processVideoEffect } = await import('./video-convert.js');
         const queue = context._videoTransformQueue;
         context._videoTransformQueue = [];
-        const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+        const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log, fileContext: context });
         results.push({ blob, filename: context.filename.replace(/\.[^.]+$/, '.mp4'), subfolder: context.outputSubfolder });
         context.log?.('ok', `Flushed video transform queue → ${context.filename.replace(/\.[^.]+$/, '.mp4')}`);
       } catch (err) {
@@ -226,7 +226,7 @@ export class ImageProcessor {
           const { processVideoEffect } = await import('./video-convert.js');
           const queue = context._videoTransformQueue;
           context._videoTransformQueue = [];
-          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log, fileContext: context });
           const suffix = interpolate(node.params?.suffix || '', context);
           const base   = context.filename.replace(/\.[^.]+$/, '');
           results.push({ blob, filename: `${base}${suffix}.mp4`, subfolder: context.outputSubfolder });
@@ -525,7 +525,7 @@ export class ImageProcessor {
           const { processVideoEffect } = await import('./video-convert.js');
           const queue = context._videoTransformQueue;
           context._videoTransformQueue = [];
-          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log });
+          const blob = await processVideoEffect(context.originalFile, queue, {}, { bitrate: 8_000_000, onLog: context.log, fileContext: context });
           captureFile = new File([blob], context.filename.replace(/\.[^.]+$/, '.mp4'), { type: 'video/mp4' });
         } catch (err) {
           context.log?.('error', `Pre-processing for video wall failed: ${err.message}`);

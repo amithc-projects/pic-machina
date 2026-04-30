@@ -1,0 +1,184 @@
+{
+  "type": "PicMachinaRecipeBundle",
+  "version": 1,
+  "recipe": {
+    "id": "d04a601e-c5dc-4c86-8a03-9e472648e42b",
+    "name": "Auto-Translate & Export Video Subtitles",
+    "description": "Auto-transcribes a video, translates the subtitles to French and Spanish using Chrome AI, and exports 3 separate cleanly subtitled videos (.mp4) with their respective .srt files.",
+    "isSystem": false,
+    "coverColor": "#10b981",
+    "tags": ["video", "ai", "subtitles", "translation"],
+    "nodes": [
+      {
+        "id": "n-save-state",
+        "type": "transform",
+        "transformId": "flow-save",
+        "label": "Save State",
+        "params": {
+          "label": "original-video"
+        }
+      },
+      {
+        "id": "n-transcribe",
+        "type": "transform",
+        "transformId": "ai-transcribe",
+        "label": "Auto-Transcribe (Whisper)",
+        "params": {
+          "outputVariable": "autoCaptions"
+        }
+      },
+      {
+        "id": "n-export-var-en",
+        "type": "transform",
+        "transformId": "flow-export-variable",
+        "label": "Export Variable",
+        "params": {
+          "variableName": "autoCaptions",
+          "suffix": "-en.srt",
+          "subfolder": "translated_video"
+        }
+      },
+      {
+        "id": "n-overlay-en",
+        "type": "transform",
+        "transformId": "overlay-subtitles",
+        "label": "Add Subtitles (.SRT)",
+        "params": {
+          "subtitleFile": "{{autoCaptions}}",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "textColor": "#ffffff",
+          "speaker1Color": "#3b82f6",
+          "speaker2Color": "#f472b6",
+          "speaker3Color": "#22c55e",
+          "outlineColor": "#000000",
+          "boxBgColor": "#000000",
+          "outlineWidth": 4,
+          "positionY": 0.85
+        }
+      },
+      {
+        "id": "n-export-video-en",
+        "type": "transform",
+        "transformId": "flow-export",
+        "label": "Export File",
+        "params": {
+          "suffix": "-english",
+          "subfolder": "translated_video",
+          "format": "video/mp4",
+          "quality": 90
+        }
+      },
+      {
+        "id": "n-translate-fr",
+        "type": "transform",
+        "transformId": "ai-translate-text",
+        "label": "Translate Variable",
+        "params": {
+          "inputVar": "autoCaptions",
+          "outputVar": "frCaptions",
+          "sourceLanguage": "en",
+          "targetLanguage": "fr",
+          "chunkSeparator": "\\n"
+        }
+      },
+      {
+        "id": "n-export-var-fr",
+        "type": "transform",
+        "transformId": "flow-export-variable",
+        "label": "Export Variable",
+        "params": {
+          "variableName": "frCaptions",
+          "suffix": "-fr.srt",
+          "subfolder": "translated_video"
+        }
+      },
+      {
+        "id": "n-overlay-fr",
+        "type": "transform",
+        "transformId": "overlay-subtitles",
+        "label": "Add Subtitles (.SRT)",
+        "params": {
+          "subtitleFile": "{{frCaptions}}",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "textColor": "#ffffff",
+          "speaker1Color": "#3b82f6",
+          "speaker2Color": "#f472b6",
+          "speaker3Color": "#22c55e",
+          "outlineColor": "#000000",
+          "boxBgColor": "#000000",
+          "outlineWidth": 4,
+          "positionY": 0.85
+        }
+      },
+      {
+        "id": "n-export-video-fr",
+        "type": "transform",
+        "transformId": "flow-export",
+        "label": "Export File",
+        "params": {
+          "suffix": "-french",
+          "subfolder": "translated_video",
+          "format": "video/mp4",
+          "quality": 90
+        }
+      },
+      {
+        "id": "n-translate-es",
+        "type": "transform",
+        "transformId": "ai-translate-text",
+        "label": "Translate Variable",
+        "params": {
+          "inputVar": "autoCaptions",
+          "outputVar": "esCaptions",
+          "sourceLanguage": "en",
+          "targetLanguage": "es",
+          "chunkSeparator": "\\n"
+        }
+      },
+      {
+        "id": "n-export-var-es",
+        "type": "transform",
+        "transformId": "flow-export-variable",
+        "label": "Export Variable",
+        "params": {
+          "variableName": "esCaptions",
+          "suffix": "-es.srt",
+          "subfolder": "translated_video"
+        }
+      },
+      {
+        "id": "n-overlay-es",
+        "type": "transform",
+        "transformId": "overlay-subtitles",
+        "label": "Add Subtitles (.SRT)",
+        "params": {
+          "subtitleFile": "{{esCaptions}}",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "textColor": "#ffffff",
+          "speaker1Color": "#3b82f6",
+          "speaker2Color": "#f472b6",
+          "speaker3Color": "#22c55e",
+          "outlineColor": "#000000",
+          "boxBgColor": "#000000",
+          "outlineWidth": 4,
+          "positionY": 0.85
+        }
+      },
+      {
+        "id": "n-export-video-es",
+        "type": "transform",
+        "transformId": "flow-export",
+        "label": "Export File",
+        "params": {
+          "suffix": "-spanish",
+          "subfolder": "translated_video",
+          "format": "video/mp4",
+          "quality": 90
+        }
+      }
+    ]
+  }
+}

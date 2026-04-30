@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test SVG Rendering</title></head>
+<body>
+  <canvas id="c" width="1080" height="1920" style="width: 540px; height: 960px; background: black;"></canvas>
+  <script>
+    async function runTest() {
+      const W = 1080;
+      const H = 1920;
+      const ctx = document.getElementById('c').getContext('2d');
+      
+      const escapedText = "The Labour Party can't get rid, won't get rid of Keir Starmer, the Tories can't,";
+      
+      const shadowCSS = `
+        2px 2px 0 #000, -1px -1px 0 #000,
+        1px -1px 0 #000, -1px 1px 0 #000,
+        1px 1px 0 #000, 0 2px 0 #000,
+        2px 0 0 #000, 0 -1px 0 #000,
+        -1px 0 0 #000, 0 3px 6px rgba(0,0,0,0.5)
+      `.trim();
+      
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+          <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; box-sizing: border-box; padding-bottom: 60px;">
+              <div style="font-family: Inter, sans-serif; font-size: 48px; font-weight: 700; color: #ffffff; text-shadow: ${shadowCSS}; text-align: center; max-width: 80%; line-height: 1.3;">
+                ${escapedText}
+              </div>
+            </div>
+          </foreignObject>
+        </svg>
+      `;
+
+      const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
+
+      await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => { 
+            ctx.drawImage(img, 0, 0); 
+            console.log("Drawn successfully!");
+            resolve(); 
+          };
+          img.onerror = (e) => {
+            console.error("Image failed to load!", e);
+            resolve();
+          };
+          img.src = dataUri;
+      });
+      
+      // Let's add a green square to confirm the script finished
+      ctx.fillStyle = 'green';
+      ctx.fillRect(0, 0, 100, 100);
+    }
+    
+    runTest();
+  </script>
+</body>
+</html>

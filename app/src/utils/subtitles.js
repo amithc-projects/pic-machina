@@ -19,7 +19,7 @@ function parseTime(timeStr) {
 }
 
 export function parseSubtitles(rawText) {
-  const blocks = rawText.trim().replace(/\r\n/g, '\n').split('\n\n');
+  const blocks = rawText.trim().replace(/\r\n/g, '\n').split(/\n\s*\n+/);
   const subs = [];
 
   for (const block of blocks) {

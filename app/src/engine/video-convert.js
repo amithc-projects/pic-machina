@@ -203,7 +203,7 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
       process: async (sample) => {
         if (frameCount === 0) {
           startTime = Date.now();
-          if (sample.duration > 0) estimatedTotal = Math.round(totalDuration / sample.duration);
+          if (sample.duration > 0) estimatedTotal = Math.round(totalDuration / (sample.duration / 1_000_000));
           const dimStr = outW !== rawW || outH !== rawH
             ? `${rawW}×${rawH}→${outW}×${outH}`
             : `${rawW}×${rawH}`;
@@ -215,10 +215,12 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
         canvas.height = rawH;
         sample.draw(ctx, 0, 0, rawW, rawH);
 
+        const timestampSec = sample.timestamp;
+
         // Phase 6: compute strength and evaluate for EACH queued effect independently!
         for (const step of steps) {
           const stepTimeRange = step.timeRange ?? timeRange;
-          const strength = computeStrength(sample.timestamp, stepTimeRange);
+          const strength = computeStrength(timestampSec, stepTimeRange);
           
           if (strength > 0) {
             ctx.save();
@@ -227,7 +229,7 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
               ctx.globalAlpha = strength; // Native fade fallback
             }
             const p = scaleParams(step.params || {}, strengthParamStr, strength);
-            await step.fn(ctx, p, { ...fileContext, timestampSec: sample.timestamp });
+            await step.fn(ctx, p, { ...fileContext, timestampSec });
             ctx.restore();
           }
         }

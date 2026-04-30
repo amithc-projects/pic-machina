@@ -1252,7 +1252,7 @@ registry.register({
      const H = ctx.canvas.height;
      
      // Build stacked string if multiple overlaps exist in SRT
-     let escapedText = activeSubs.map(s => s.text.replace(/\\n/g, '<br/>').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br/>');
+     let escapedText = activeSubs.map(s => s.text.replace(/&/g, '&amp;').replace(/\\n/g, '<br/>').replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br/>');
      
      // Detect Speaker Tags and adjust color
      let textCol = p.textColor || '#ffffff';
@@ -1302,14 +1302,24 @@ registry.register({
        </svg>
      `;
 
-     const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
-
-     await new Promise((resolve) => {
-         const img = new Image();
-         img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
-         img.onerror = () => resolve();
-         img.src = dataUri;
-     });
+     const cacheKey = btoa(unescape(encodeURIComponent(escapedText + W + H + textCol + fSize + (p.bottomOffset ?? 60))));
+     if (!context._subtitleImageCache) context._subtitleImageCache = new Map();
+     
+     let img = context._subtitleImageCache.get(cacheKey);
+     if (!img) {
+         const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
+         img = new Image();
+         await new Promise((resolve) => {
+             img.onload = resolve;
+             img.onerror = resolve;
+             img.src = dataUri;
+         });
+         context._subtitleImageCache.set(cacheKey, img);
+     }
+     
+     if (img.width > 0) {
+         ctx.drawImage(img, 0, 0);
+     }
   }
 });
 

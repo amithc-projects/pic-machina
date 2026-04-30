@@ -853,6 +853,14 @@ export async function render(container, hash) {
           <div class="fld-preview-media">
             ${type === 'video'
               ? `<video class="fld-preview-video" src="${blobUrl}" controls autoplay></video>`
+              : type === 'audio'
+              ? `<div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%"><audio class="fld-preview-audio" src="${blobUrl}" controls autoplay style="width:80%;max-width:500px"></audio></div>`
+              : type === 'document'
+              ? `<div style="text-align:center;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%">
+                   <span class="material-symbols-outlined" style="font-size:64px;margin-bottom:16px">description</span>
+                   <div style="font-size:18px;margin-bottom:8px">No preview available</div>
+                   <div style="font-size:13px;color:rgba(255,255,255,0.7)">${escHtml(cur.file.name)}</div>
+                 </div>`
               : `<img class="fld-preview-img" src="${blobUrl}" alt="${escHtml(cur.file.name)}">`}
             ${currentIdx > 0
               ? `<button class="fld-preview-nav fld-preview-nav--prev" title="Previous"><span class="material-symbols-outlined">chevron_left</span></button>`
@@ -1037,7 +1045,7 @@ export async function render(container, hash) {
 
       const archiveExt = ent.file.name.slice(ent.file.name.lastIndexOf('.') + 1).toUpperCase();
       cell.innerHTML = `
-        <div class="fld-thumb ${type === 'video' ? 'fld-thumb--video' : ''} ${type === 'archive' ? 'fld-thumb--archive' : ''}">
+        <div class="fld-thumb ${type === 'video' ? 'fld-thumb--video' : ''} ${(type === 'archive' || type === 'audio' || type === 'document') ? 'fld-thumb--archive' : ''}">
           ${type === 'video'
             ? previewUrl
               ? `<img src="${previewUrl}" class="fld-thumb-img" draggable="false">
@@ -1053,6 +1061,16 @@ export async function render(container, hash) {
             : type === 'archive'
               ? `<div class="fld-archive-tile">
                    <span class="material-symbols-outlined">${archiveExt === 'PPTX' ? 'slideshow' : 'folder_zip'}</span>
+                   <span class="fld-archive-tile__ext">${archiveExt}</span>
+                 </div>`
+            : type === 'audio'
+              ? `<div class="fld-archive-tile" style="color:var(--ps-blue)">
+                   <span class="material-symbols-outlined">audio_file</span>
+                   <span class="fld-archive-tile__ext">${archiveExt}</span>
+                 </div>`
+            : type === 'document'
+              ? `<div class="fld-archive-tile" style="color:var(--ps-blue)">
+                   <span class="material-symbols-outlined">description</span>
                    <span class="fld-archive-tile__ext">${archiveExt}</span>
                  </div>`
               : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
@@ -1141,6 +1159,16 @@ export async function render(container, hash) {
           : type === 'archive'
             ? `<div class="fld-archive-tile fld-archive-tile--strip">
                  <span class="material-symbols-outlined">${fsArchiveExt === 'PPTX' ? 'slideshow' : 'folder_zip'}</span>
+                 <span class="fld-archive-tile__ext">${fsArchiveExt}</span>
+               </div>`
+          : type === 'audio'
+            ? `<div class="fld-archive-tile fld-archive-tile--strip" style="color:var(--ps-blue)">
+                 <span class="material-symbols-outlined">audio_file</span>
+                 <span class="fld-archive-tile__ext">${fsArchiveExt}</span>
+               </div>`
+          : type === 'document'
+            ? `<div class="fld-archive-tile fld-archive-tile--strip" style="color:var(--ps-blue)">
+                 <span class="material-symbols-outlined">description</span>
                  <span class="fld-archive-tile__ext">${fsArchiveExt}</span>
                </div>`
             : `<img src="${url}" class="fld-fs-thumb-img" loading="lazy" draggable="false">`
@@ -1232,6 +1260,10 @@ export async function render(container, hash) {
               : `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">movie</span></div>`
             : type === 'archive'
               ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">${archiveIcon}</span></div>`
+            : type === 'audio'
+              ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">audio_file</span></div>`
+            : type === 'document'
+              ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">description</span></div>`
               : `<img src="${thumbUrl}" class="fld-list-thumb" loading="lazy" draggable="false">`}
         </td>
         <td class="fld-list-td">
@@ -1396,12 +1428,20 @@ export async function render(container, hash) {
         if (selectedSet.size > 1) downloadSelected();
         else downloadFile(file);
       });
-    } else if (type === 'archive') {
-      // Archives have no in-app preview — show a clean info pane with
+    } else if (type === 'archive' || type === 'audio' || type === 'document') {
+      // Audio, docs, and archives use a clean info pane with
       // file metadata and a prominent Download button. The card style
-      // matches the grid/list archive tile so the user recognises it.
+      // matches the grid/list tile so the user recognises it.
       const ext = extOf(file.name).slice(1).toUpperCase();
-      const icon = ext === 'PPTX' ? 'slideshow' : 'folder_zip';
+      let icon = 'description';
+      let desc = 'Document file';
+      if (type === 'archive') {
+         icon = ext === 'PPTX' ? 'slideshow' : 'folder_zip';
+         desc = 'PicMachina-produced archive';
+      } else if (type === 'audio') {
+         icon = 'audio_file';
+         desc = 'Audio file';
+      }
       el.innerHTML = `
         <div class="fld-detail-inner">
           ${!fullSize ? `
@@ -1414,8 +1454,9 @@ export async function render(container, hash) {
           </div>` : ''}
           <div class="fld-detail-preview" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--ps-text-muted);background:linear-gradient(135deg, rgba(96,165,250,0.06), rgba(139,92,246,0.04))">
             <span class="material-symbols-outlined" style="font-size:96px;color:var(--ps-blue)">${icon}</span>
-            <div style="font-size:13px">PicMachina-produced archive</div>
+            <div style="font-size:13px">${desc}</div>
             <div class="mono text-sm text-muted">${escHtml(file.name)}</div>
+            ${type === 'audio' ? `<audio src="${fileUrl}" controls style="margin-top:20px;max-width:80%"></audio>` : ''}
           </div>
           ${!fullSize ? `
           <div class="fld-detail-footer">

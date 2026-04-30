@@ -27,6 +27,7 @@ import './transforms/geometry.js';
 import './transforms/color.js';
 import './transforms/overlays.js';
 import './transforms/ai.js';
+import './transforms/ai/translate.js';
 import './transforms/metadata.js';
 import './transforms/flow.js';
 import './transforms/video.js';
