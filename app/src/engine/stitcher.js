@@ -591,10 +591,7 @@ export async function createWebGLStitcher(blobs, {
 export async function createFastStitcher(blobs, { onLog, onProgress } = {}) {
   const { Input, BlobSource, Output, Mp4OutputFormat, BufferTarget, EncodedVideoPacketSource, EncodedAudioPacketSource, EncodedPacket, EncodedPacketSink, ALL_FORMATS } = await import('mediabunny');
 
-  const target = new BufferTarget();
-  const format = new Mp4OutputFormat({ fastStart: 'in-memory' });
-  const output = new Output({ format, target });
-
+  // Input processing
   const inputs = [];
   for (const blob of blobs) {
     const input = new Input({
@@ -603,6 +600,33 @@ export async function createFastStitcher(blobs, { onLog, onProgress } = {}) {
     });
     inputs.push(input);
   }
+
+  if (inputs.length === 0) return new Blob([], { type: 'video/mp4' });
+
+  // Validate uniformity for fast-stitching
+  let referenceConfig = null;
+  let referenceName = '';
+  for (let i = 0; i < inputs.length; i++) {
+    const vTrack = await inputs[i].getPrimaryVideoTrack();
+    if (!vTrack) continue;
+    const config = await vTrack.getDecoderConfig();
+    if (!referenceConfig) {
+      referenceConfig = config;
+      referenceName = `Video 1`;
+    } else {
+      if (
+        config.codec !== referenceConfig.codec ||
+        config.codedWidth !== referenceConfig.codedWidth ||
+        config.codedHeight !== referenceConfig.codedHeight
+      ) {
+         throw new Error(`Fast Stitching requires uniform video files. ${referenceName} is ${referenceConfig.codedWidth}x${referenceConfig.codedHeight} (${referenceConfig.codec}) but Video ${i + 1} is ${config.codedWidth}x${config.codedHeight} (${config.codec}). Use the standard "Video Concat" instead.`);
+      }
+    }
+  }
+
+  const target = new BufferTarget();
+  const format = new Mp4OutputFormat({ fastStart: 'in-memory' });
+  const output = new Output({ format, target });
 
   // Find the primary video and audio tracks from the first input
   let outputVideoSource = null;
@@ -657,8 +681,9 @@ export async function createFastStitcher(blobs, { onLog, onProgress } = {}) {
             packet.sideData
         );
         
-        // We must pass the decoder config on the very first packet of the whole output
-        if (i === 0 && isFirstVideoPacket) {
+        // Pass the decoder config on the first packet of each new input video
+        // This helps if the videos have slightly different SPS/PPS headers (though resolution/codec must still match).
+        if (isFirstVideoPacket) {
           const config = await vTrack.getDecoderConfig();
           await outputVideoSource.add(offsetPacket, { decoderConfig: config });
         } else {
@@ -684,7 +709,7 @@ export async function createFastStitcher(blobs, { onLog, onProgress } = {}) {
             packet.sideData
         );
         
-        if (i === 0 && isFirstAudioPacket) {
+        if (isFirstAudioPacket) {
           const config = await aTrack.getDecoderConfig();
           await outputAudioSource.add(offsetPacket, { decoderConfig: config });
         } else {

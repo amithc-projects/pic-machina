@@ -7,7 +7,7 @@
 
 import { pickFolder, getFolder, setCurrentFolder, fileFilterForRecipe,
          listImages, loadVideoPreviews, writeVideoPreview } from '../data/folders.js';
-import { isVideoFile, extractVideoFrame }           from '../utils/video-frame.js';
+import { isVideoFile, extractVideoFrame, getVideoDuration } from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { getRunsForRecipe }                          from '../data/runs.js';
 import { startBatch }                               from '../engine/batch.js';
@@ -33,6 +33,7 @@ export async function render(container, hash) {
   let outputHandle   = null;
   let selectedFiles  = [];       // File[] from input folder
   let setVideoPreviews = new Map(); // videoName → preview File
+  let setVideoMetadata = new Map(); // videoName → { width, height, duration }
   let selectedIds    = new Map();// Map<filename, sequenceInt>
   let currentRecipe  = null;
   let allRecipes     = [];
@@ -467,6 +468,9 @@ export async function render(container, hash) {
       if (_setPreviewGenHandle !== runId) return; // cancelled by new folder load
       await new Promise(r => setTimeout(r, 50)); // yield to UI
       try {
+        const meta = await getVideoDuration(file);
+        setVideoMetadata.set(file.name, meta);
+        
         const canvas = await extractVideoFrame(file);
         const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
         await writeVideoPreview(dirHandle, file.name, blob);
@@ -475,6 +479,8 @@ export async function render(container, hash) {
         // Update the thumbnail in the grid if still visible
         const thumb = container.querySelector(`[data-file-name="${CSS.escape(file.name)}"]`);
         if (thumb) {
+          const cell = thumb.closest('.set-img-cell');
+          if (cell) cell.title = `Video: ${meta.width}x${meta.height} • ${meta.duration.toFixed(1)}s\nFile: ${file.name}`;
           const url = URL.createObjectURL(previewFile);
           thumb.style.backgroundImage    = `url(${url})`;
           thumb.style.backgroundSize     = 'cover';
@@ -551,8 +557,14 @@ export async function render(container, hash) {
       </div>`;
       return;
     }
-    grid.innerHTML = visibleFiles.map(f => `
-      <label class="set-img-cell ${selectedIds.has(f.name) ? 'is-selected' : ''}" data-name="${f.name}">
+    grid.innerHTML = visibleFiles.map(f => {
+      let title = f.name;
+      if (isVideoFile(f) && setVideoMetadata.has(f.name)) {
+        const meta = setVideoMetadata.get(f.name);
+        title = `Video: ${meta.width}x${meta.height} • ${meta.duration.toFixed(1)}s\nFile: ${f.name}`;
+      }
+      return `
+      <label class="set-img-cell ${selectedIds.has(f.name) ? 'is-selected' : ''}" data-name="${f.name}" title="${title}">
         ${currentRecipe?.isOrdered 
           ? `<div class="set-img-seq" style="display: ${selectedIds.has(f.name) ? 'flex' : 'none'}">${selectedIds.has(f.name) ? selectedIds.get(f.name) : ''}</div>`
           : `<div class="set-img-check-icon" style="display: ${selectedIds.has(f.name) ? 'block' : 'none'}"><span class="material-symbols-outlined">check_circle</span></div>`
@@ -562,7 +574,8 @@ export async function render(container, hash) {
         </div>
         <div class="set-img-name">${f.name}</div>
         <div class="set-img-size">${formatBytes(f.size)}</div>
-      </label>`).join('');
+      </label>`;
+    }).join('');
 
     // Lazy-load thumbnails (use preview JPEG for video files)
     grid.querySelectorAll('[data-file-name]').forEach(thumb => {
