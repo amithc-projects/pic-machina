@@ -582,3 +582,129 @@ export async function createWebGLStitcher(blobs, {
   muxer.finalize();
   return new Blob([target.buffer], { type: 'video/mp4' });
 }
+
+/**
+ * Fast Video Stitcher using Mediabunny (Transmuxing)
+ * Combines multiple video blobs into one MP4 without re-encoding, preserving audio and video exactly.
+ * NOTE: All input videos should ideally share the same codec parameters (dimensions, framerate, etc.).
+ */
+export async function createFastStitcher(blobs, { onLog, onProgress } = {}) {
+  const { Input, BlobSource, Output, Mp4OutputFormat, BufferTarget, EncodedVideoPacketSource, EncodedAudioPacketSource, EncodedPacket, EncodedPacketSink, ALL_FORMATS } = await import('mediabunny');
+
+  const target = new BufferTarget();
+  const format = new Mp4OutputFormat({ fastStart: 'in-memory' });
+  const output = new Output({ format, target });
+
+  const inputs = [];
+  for (const blob of blobs) {
+    const input = new Input({
+      source: new BlobSource(blob),
+      formats: ALL_FORMATS
+    });
+    inputs.push(input);
+  }
+
+  // Find the primary video and audio tracks from the first input
+  let outputVideoSource = null;
+  let outputAudioSource = null;
+
+  for (const input of inputs) {
+    const vTrack = await input.getPrimaryVideoTrack();
+    if (vTrack && !outputVideoSource) {
+      outputVideoSource = new EncodedVideoPacketSource(vTrack.codec);
+      output.addVideoTrack(outputVideoSource, {
+        width: vTrack.codedWidth,
+        height: vTrack.codedHeight,
+      });
+    }
+    const aTrack = await input.getPrimaryAudioTrack();
+    if (aTrack && !outputAudioSource) {
+      outputAudioSource = new EncodedAudioPacketSource(aTrack.codec);
+      output.addAudioTrack(outputAudioSource, {
+        numberOfChannels: aTrack.numberOfChannels,
+        sampleRate: aTrack.sampleRate
+      });
+    }
+  }
+
+  await output.start();
+
+  let globalOffset = 0;
+
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i];
+    onLog?.(`Fast stitching video ${i + 1} of ${inputs.length}...`);
+    onProgress?.(i, inputs.length);
+
+    const firstTs = await input.getFirstTimestamp();
+    const inputShift = firstTs < 0 ? -firstTs : 0;
+
+    let maxVideoDuration = 0;
+    let maxAudioDuration = 0;
+
+    const vTrack = await input.getPrimaryVideoTrack();
+    if (vTrack && outputVideoSource) {
+      let isFirstVideoPacket = true;
+      const vSink = new EncodedPacketSink(vTrack);
+      for await (const packet of vSink.packets()) {
+        const offsetPacket = new EncodedPacket(
+            packet.data,
+            packet.type,
+            Math.max(0, packet.timestamp + inputShift + globalOffset),
+            packet.duration,
+            packet.sequenceNumber,
+            packet.byteLength,
+            packet.sideData
+        );
+        
+        // We must pass the decoder config on the very first packet of the whole output
+        if (i === 0 && isFirstVideoPacket) {
+          const config = await vTrack.getDecoderConfig();
+          await outputVideoSource.add(offsetPacket, { decoderConfig: config });
+        } else {
+          await outputVideoSource.add(offsetPacket);
+        }
+        isFirstVideoPacket = false;
+        maxVideoDuration = Math.max(maxVideoDuration, packet.timestamp + inputShift + packet.duration);
+      }
+    }
+
+    const aTrack = await input.getPrimaryAudioTrack();
+    if (aTrack && outputAudioSource) {
+      let isFirstAudioPacket = true;
+      const aSink = new EncodedPacketSink(aTrack);
+      for await (const packet of aSink.packets()) {
+        const offsetPacket = new EncodedPacket(
+            packet.data,
+            packet.type,
+            Math.max(0, packet.timestamp + inputShift + globalOffset),
+            packet.duration,
+            packet.sequenceNumber,
+            packet.byteLength,
+            packet.sideData
+        );
+        
+        if (i === 0 && isFirstAudioPacket) {
+          const config = await aTrack.getDecoderConfig();
+          await outputAudioSource.add(offsetPacket, { decoderConfig: config });
+        } else {
+          await outputAudioSource.add(offsetPacket);
+        }
+        isFirstAudioPacket = false;
+        maxAudioDuration = Math.max(maxAudioDuration, packet.timestamp + inputShift + packet.duration);
+      }
+    }
+
+    globalOffset += Math.max(maxVideoDuration, maxAudioDuration);
+    
+    // Explicitly dispose of the input to free file handles (if any) and memory
+    input.dispose();
+  }
+
+  if (outputVideoSource) outputVideoSource.close();
+  if (outputAudioSource) outputAudioSource.close();
+
+  onLog?.(`Finalizing fast stitch output MP4...`);
+  await output.finalize();
+  return new Blob([target.buffer], { type: 'video/mp4' });
+}

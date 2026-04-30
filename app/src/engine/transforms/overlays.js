@@ -1217,8 +1217,6 @@ registry.register({
      const H = ctx.canvas.height;
      const ts = context.timestampSec || 0;
      
-     console.log('[Hyperframe] Frame render tick (v7):', { ts, container: !!context._hfContainer });
-     
      // Dynamically ensure GSAP is loaded BEFORE injecting scripts that rely on it
      if (!window.gsap && !context._gsapLoaded) {
          await new Promise((resolve, reject) => {
@@ -1347,10 +1345,6 @@ registry.register({
          await new Promise((resolve) => {
              const img = new Image();
              img.onload = () => { 
-                 if (!context._loggedSvgSuccess) {
-                     console.log('[Hyperframe] SVG Loaded Successfully. Dimensions:', img.width, 'x', img.height, 'HTML Length:', safeHtml.length);
-                     context._loggedSvgSuccess = true;
-                 }
                  ctx.drawImage(img, 0, 0); 
                  resolve(); 
              };

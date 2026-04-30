@@ -165,7 +165,7 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
   // Aggregation collector (GIF / video / contact sheet / zip)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph', 'flow-render-hyperframe'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-video-fast-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph', 'flow-render-hyperframe'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall') {
@@ -414,6 +414,22 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
           }
         });
         await writeFile(subHandle, p.filename || 'stitched.mp4', blob);
+      } else if (agg.node.transformId === 'flow-video-fast-stitcher') {
+        const { createFastStitcher } = await import('./stitcher.js');
+        const baseAggPct = (total + aggCount) / totalSteps;
+        const aggRange = 1 / totalSteps;
+
+        const blob = await createFastStitcher(agg.blobs, {
+          onLog: (msg) => onLog('info', msg),
+          onProgress: (f, t) => {
+            const subPct = t > 0 ? (f / t) : 0;
+            const overallPct = Math.round((baseAggPct + (aggRange * subPct)) * 100);
+            onProgress(total, total, `Fast Stitching Video ${f + 1}/${t}...`, overallPct);
+          }
+        });
+        let fname = p.filename || 'fast_stitched.mp4';
+        if (!fname.toLowerCase().endsWith('.mp4')) fname += '.mp4';
+        await writeFile(subHandle, fname, blob);
       } else if (agg.node.transformId === 'flow-geo-timeline') {
         const { createGeoTimeline } = await import('./geo-timeline.js');
         let _lastPct = -1;

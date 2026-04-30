@@ -501,17 +501,21 @@ export class ImageProcessor {
     }
 
     // ── Video concat aggregation capture ──
-    if (id === 'flow-video-concat') {
+    if (id === 'flow-video-concat' || id === 'flow-video-fast-stitcher') {
       if (context._previewMode) return;
       const file = context.originalFile;
-      if (!file) { context.log?.('warn', 'flow-video-concat: no source file — skipping'); return; }
+      if (!file) { context.log?.('warn', `${id}: no source file — skipping`); return; }
       const ext = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
       if (!VIDEO_EXTS.has(ext)) {
-        context.log?.('warn', `flow-video-concat: skipping non-video file "${file.name}"`);
+        context.log?.('warn', `${id}: skipping non-video file "${file.name}"`);
         return;
       }
-      context.log?.('info', `flow-video-concat: queued "${file.name}"`);
-      results.push({ file, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder });
+      context.log?.('info', `${id}: queued "${file.name}"`);
+      if (id === 'flow-video-fast-stitcher') {
+        results.push({ blob: file, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder });
+      } else {
+        results.push({ file, filename: `_videocapture_${node.id}`, aggregationId: node.id, subfolder: context.outputSubfolder });
+      }
       return;
     }
 

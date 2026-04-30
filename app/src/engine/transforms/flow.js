@@ -142,7 +142,17 @@ registry.register({
   apply() { /* handled by Processor as aggregation node */ }
 });
 
-// ─── Geotemporal Timeline ─────────────────────────────────
+// ─── Fast Video Stitcher ─────────────────────────────────
+registry.register({
+  id: 'flow-video-fast-stitcher', name: 'Fast Video Stitcher', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'animation',
+  description: 'Fast concatenation (transmuxing) of video blobs without re-encoding. Inputs must share identical codecs/dimensions.',
+  params: [
+    { name: 'filename', label: 'Output Filename', type: 'text', defaultValue: 'fast_stitched.mp4' }
+  ],
+  apply() { /* handled by Processor as aggregation node */ }
+});
+
 registry.register({
   id: 'flow-geo-timeline', name: 'Geotemporal Timeline', category: 'Flow Control', categoryKey: 'flow',
   icon: 'map',
