@@ -66,8 +66,8 @@ export async function clearFolder(role) {
 export function fileFilterForRecipe(recipe) {
   const t = recipe?.inputType;
   if (t === 'video') return { includeVideo: true, onlyVideo: true };
-  if (t === 'any')   return { includeVideo: true, onlyVideo: false };
-  return { includeVideo: false, onlyVideo: false }; // default: images only
+  if (t === 'image') return { includeVideo: false, onlyVideo: false };
+  return { includeVideo: true, onlyVideo: false }; // default: images & videos
 }
 
 /**

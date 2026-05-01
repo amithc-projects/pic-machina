@@ -226,10 +226,12 @@ export class ImageWorkspace {
 
     this.container.querySelector('.iw-folder-btn')?.addEventListener('click', async () => {
       try {
-        const { pickFolder, listImages } = await import('../data/folders.js');
+        const { pickFolder, listImages, loadVideoPreviews } = await import('../data/folders.js');
         const { dbSaveFolderHistory } = await import('../data/db.js');
         const handle = await pickFolder('input');
         await dbSaveFolderHistory('input', handle);
+        this.currentDirHandle = handle;
+        this.videoPreviews = await loadVideoPreviews(handle).catch(() => new Map());
         const files = await listImages(handle, this.options.fileFilter || {});
         this.loadFiles(files);
         this._loadFolderMRU();
@@ -244,7 +246,7 @@ export class ImageWorkspace {
       e.target.value = '';
       try {
         const { dbGetFolderHistory, dbSaveFolderHistory } = await import('../data/db.js');
-        const { setCurrentFolder, listImages } = await import('../data/folders.js');
+        const { setCurrentFolder, listImages, loadVideoPreviews } = await import('../data/folders.js');
         const history = await dbGetFolderHistory('input');
         const handle = history[idx];
         if (!handle) return;
@@ -253,6 +255,8 @@ export class ImageWorkspace {
         }
         await setCurrentFolder(handle);
         await dbSaveFolderHistory('input', handle);
+        this.currentDirHandle = handle;
+        this.videoPreviews = await loadVideoPreviews(handle).catch(() => new Map());
         const files = await listImages(handle, this.options.fileFilter || {});
         this.loadFiles(files);
         this._loadFolderMRU();
@@ -273,9 +277,11 @@ export class ImageWorkspace {
 
   async loadCurrentFolder(fileFilter = {}) {
     try {
-      const { getFolder, listImages } = await import('../data/folders.js');
+      const { getFolder, listImages, loadVideoPreviews } = await import('../data/folders.js');
       const handle = await getFolder('input');
       if (!handle) return;
+      this.currentDirHandle = handle;
+      this.videoPreviews = await loadVideoPreviews(handle).catch(() => new Map());
       const files = await listImages(handle, fileFilter);
       this.loadFiles(files);
     } catch { /* ignore — no folder set or permission denied */ }
@@ -343,6 +349,16 @@ export class ImageWorkspace {
     if (!this.activeFile) return;
     this.stage.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%"><div class="spinner"></div></div>`;
     
+    // Cleanup previous object URLs to prevent memory leaks
+    if (this.lastRenderResult) {
+      if (this.lastRenderResult.beforeUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(this.lastRenderResult.beforeUrl);
+      }
+      if (this.lastRenderResult.afterUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(this.lastRenderResult.afterUrl);
+      }
+    }
+
     try {
       this.lastRenderResult = await this.options.onRender(this.activeFile);
 
@@ -485,10 +501,27 @@ export class ImageWorkspace {
       thumb.className = `iw-thumb ${file === this.activeFile ? 'is-active' : ''}`;
       
       if (isVideoFile(file)) {
-        // Extract a frame so the <img> thumbnail doesn't break on video files
-        extractVideoFrame(file).then(canvas => {
-          canvas.toBlob(b => { if (b) thumb.src = URL.createObjectURL(b); }, 'image/jpeg', 0.8);
-        }).catch(() => { thumb.src = ''; });
+        if (this.videoPreviews && this.videoPreviews.has(file.name)) {
+          const url = URL.createObjectURL(this.videoPreviews.get(file.name));
+          thumb.src = url;
+          thumb.onload = () => URL.revokeObjectURL(url);
+        } else {
+          extractVideoFrame(file).then(canvas => {
+            canvas.toBlob(b => { 
+              if (b) {
+                const url = URL.createObjectURL(b);
+                thumb.src = url;
+                thumb.onload = () => URL.revokeObjectURL(url);
+                if (this.currentDirHandle && this.videoPreviews) {
+                  this.videoPreviews.set(file.name, b);
+                  import('../data/folders.js').then(({ writeVideoPreview }) => {
+                    writeVideoPreview(this.currentDirHandle, file.name, b).catch(() => {});
+                  });
+                }
+              }
+            }, 'image/jpeg', 0.8);
+          }).catch(() => { thumb.src = ''; });
+        }
       } else {
         const url = URL.createObjectURL(file);
         thumb.src = url;
