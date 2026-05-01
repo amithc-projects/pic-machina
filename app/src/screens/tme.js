@@ -2,6 +2,7 @@ import { createEmptyTimeline, saveTimeline, getTimeline, getAllTimelines } from 
 import { registry } from '../engine/index.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 import { WebGLCompositor, TRANSITIONS } from '../engine/stitcher.js';
+import { formatBytes } from '../utils/misc.js';
 
 let currentTimeline = null;
 let mediaPoolSelection = new Set();
@@ -66,6 +67,9 @@ export async function render(container) {
           <span contenteditable="true" id="tme-project-name" style="font-weight: 400; color: var(--ps-text-muted); margin-left: 4px; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--ps-border)'" onblur="this.style.borderColor='transparent'">${currentTimeline.name}</span>
         </div>
         <div class="flex gap-2">
+          <button class="btn-secondary" id="tme-btn-new">
+            <span class="material-symbols-outlined">add_box</span> New
+          </button>
           <button class="btn-secondary" id="tme-btn-open">
             <span class="material-symbols-outlined">folder_open</span> Open
           </button>
@@ -238,7 +242,20 @@ export async function render(container) {
       el.style.border = isSelected ? '2px solid var(--ps-blue)' : (isUsed ? '2px solid var(--ps-success)' : '1px solid var(--ps-border)');
       el.style.cursor = 'pointer';
       el.style.position = 'relative';
-      el.title = item.fileHandle?.name || 'Media';
+      
+      let tooltip = item.name || item.fileHandle?.name || 'Media';
+      if (item.meta) {
+         const dateStr = item.meta.lastModified ? new Date(item.meta.lastModified).toLocaleString() : '';
+         const sizeStr = item.meta.size ? formatBytes(item.meta.size) : '';
+         let typeStr = '';
+         if (item.type === 'video') {
+           typeStr = `Video: ${item.meta.width || '?'}x${item.meta.height || '?'} • ${item.meta.duration ? item.meta.duration.toFixed(1) + 's' : '?s'}`;
+         } else if (item.type === 'image') {
+           typeStr = `Image: ${item.meta.width || '?'}x${item.meta.height || '?'}`;
+         }
+         tooltip = `${tooltip}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
+      }
+      el.title = tooltip;
       
       if (item.type === 'video') {
         el.innerHTML = '<span class="material-symbols-outlined" style="position:absolute; bottom:2px; right:2px; font-size:14px; background:rgba(0,0,0,0.6); border-radius:4px; padding:2px; color:#fff;">movie</span>';
@@ -1540,6 +1557,31 @@ export async function render(container) {
       );
       if (maxTime === 0) return alert("Timeline is empty!");
 
+      // Find the first video clip's resolution if available
+      let defaultW = currentTimeline.width || 1920;
+      let defaultH = currentTimeline.height || 1080;
+      if (currentTimeline.videoTrack && currentTimeline.videoTrack.length > 0) {
+        const firstClip = [...currentTimeline.videoTrack].sort((a,b) => a.startTime - b.startTime)[0];
+        const poolItem = currentTimeline.mediaPool.find(m => m.id === firstClip.poolId);
+        if (poolItem && poolItem.meta && poolItem.meta.width) {
+          defaultW = poolItem.meta.width;
+          defaultH = poolItem.meta.height;
+        }
+      }
+
+      const resStr = window.prompt("Export Resolution (Width x Height):", `${defaultW}x${defaultH}`);
+      if (!resStr) return; // cancelled
+      const [parsedW, parsedH] = resStr.toLowerCase().split('x').map(s => parseInt(s.trim(), 10));
+      if (!parsedW || !parsedH) return alert("Invalid resolution format. Please use WxH (e.g. 1920x1080).");
+      
+      // Update canvas and timeline with new dimensions
+      canvas.width = parsedW;
+      canvas.height = parsedH;
+      currentTimeline.width = parsedW;
+      currentTimeline.height = parsedH;
+      await saveTimeline(currentTimeline);
+      renderFrame();
+
       // Pause playback if it's currently running
       if (isPlaying) btnPlay.click();
 
@@ -1750,6 +1792,8 @@ export async function render(container) {
         if (file.type.startsWith('audio')) type = 'audio';
         
         let thumbnail = '';
+        let meta = await extractMediaMeta(file, type);
+        
         if (type === 'image') {
           thumbnail = URL.createObjectURL(file);
         } else if (type === 'video') {
@@ -1761,7 +1805,8 @@ export async function render(container) {
           type,
           name: handle.name,
           fileHandle: handle,
-          thumbnail
+          thumbnail,
+          meta
         });
       }
 
@@ -1812,6 +1857,7 @@ export async function render(container) {
         if (file.type.startsWith('video')) type = 'video';
         if (file.type.startsWith('audio')) type = 'audio';
         let thumbnail = '';
+        let meta = await extractMediaMeta(file, type);
 
         if (type === 'image') {
           thumbnail = URL.createObjectURL(file);
@@ -1824,7 +1870,8 @@ export async function render(container) {
           fileHandle: handle,
           type,
           name: file.name,
-          thumbnail
+          thumbnail,
+          meta
         });
       }
     }
@@ -2306,7 +2353,36 @@ export async function render(container) {
 
   const btnSave = container.querySelector('#tme-btn-save');
   const btnOpen = container.querySelector('#tme-btn-open');
+  const btnNew = container.querySelector('#tme-btn-new');
   const projectNameEl = container.querySelector('#tme-project-name');
+
+  if (btnNew) {
+    btnNew.addEventListener('click', async () => {
+      if (confirm('Create a new project? Any unsaved changes will be lost.')) {
+        if (isPlaying) {
+          isPlaying = false;
+          btnPlay.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
+          if (animFrameId) cancelAnimationFrame(animFrameId);
+          if (typeof syncAudioPlayback === 'function') syncAudioPlayback();
+        }
+        
+        currentTimeline = createEmptyTimeline();
+        await saveTimeline(currentTimeline);
+        playheadTime = 0;
+        mediaPoolSelection.clear();
+        selectedItemId = null;
+        selectedItemType = null;
+        
+        if (projectNameEl) projectNameEl.textContent = currentTimeline.name;
+        
+        renderMediaPool();
+        renderTimelineTracks();
+        renderPropertiesPanel();
+        updatePlayheadUI();
+        renderFrame();
+      }
+    });
+  }
 
   if (projectNameEl) {
     projectNameEl.addEventListener('blur', async () => {
@@ -2392,6 +2468,32 @@ export async function render(container) {
     isPlaying = false;
     if (animFrameId) cancelAnimationFrame(animFrameId);
   };
+}
+
+async function extractMediaMeta(file, type) {
+  let meta = { size: file.size, lastModified: file.lastModified };
+  if (type === 'image') {
+    try {
+      const bmp = await createImageBitmap(file);
+      meta.width = bmp.width;
+      meta.height = bmp.height;
+      bmp.close();
+    } catch(e) {}
+  } else if (type === 'video') {
+    await new Promise(res => {
+      const v = document.createElement('video');
+      v.src = URL.createObjectURL(file);
+      v.onloadedmetadata = () => {
+         meta.width = v.videoWidth;
+         meta.height = v.videoHeight;
+         meta.duration = v.duration;
+         URL.revokeObjectURL(v.src);
+         res();
+      };
+      v.onerror = () => { URL.revokeObjectURL(v.src); res(); };
+    });
+  }
+  return meta;
 }
 
 async function extractVideoThumbnail(file) {

@@ -33,7 +33,7 @@ export async function render(container, hash) {
   let outputHandle   = null;
   let selectedFiles  = [];       // File[] from input folder
   let setVideoPreviews = new Map(); // videoName → preview File
-  let setVideoMetadata = new Map(); // videoName → { width, height, duration }
+  let setFileMetadata = new Map(); // videoName → { width, height, duration }
   let selectedIds    = new Map();// Map<filename, sequenceInt>
   let currentRecipe  = null;
   let allRecipes     = [];
@@ -459,6 +459,43 @@ export async function render(container, hash) {
 
   async function scheduleSetPreviewGeneration(dirHandle) {
     const runId = ++_setPreviewGenHandle;
+
+    // 1. Fetch missing metadata for all files
+    const filesWithoutMeta = selectedFiles.filter(f => !setFileMetadata.has(f.name));
+    for (const file of filesWithoutMeta) {
+      if (_setPreviewGenHandle !== runId) return;
+      await new Promise(r => setTimeout(r, 10)); // tiny yield to avoid blocking UI
+      try {
+        if (isVideoFile(file)) {
+          const meta = await getVideoDuration(file);
+          setFileMetadata.set(file.name, meta);
+        } else {
+          // Fast dimension read for images
+          const bmp = await createImageBitmap(file);
+          setFileMetadata.set(file.name, { width: bmp.width, height: bmp.height });
+          bmp.close();
+        }
+        
+        // Live update the tooltip if it's currently rendered
+        const thumb = container.querySelector(`[data-file-name="${CSS.escape(file.name)}"]`);
+        if (thumb) {
+          const cell = thumb.closest('.set-img-cell');
+          if (cell) {
+            const meta = setFileMetadata.get(file.name);
+            const dateStr = new Date(file.lastModified).toLocaleString();
+            const sizeStr = formatBytes(file.size);
+            const typeStr = isVideoFile(file) 
+              ? `Video: ${meta.width}x${meta.height} • ${meta.duration ? meta.duration.toFixed(1) + 's' : '?s'}` 
+              : `Image: ${meta.width}x${meta.height}`;
+            cell.title = `${file.name}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
+          }
+        }
+      } catch(e) {
+        setFileMetadata.set(file.name, { width: '?', height: '?' });
+      }
+    }
+
+    // 2. Generate missing video thumbnails
     const videosWithoutPreview = selectedFiles.filter(
       f => isVideoFile(f) && !setVideoPreviews.has(f.name)
     );
@@ -468,9 +505,6 @@ export async function render(container, hash) {
       if (_setPreviewGenHandle !== runId) return; // cancelled by new folder load
       await new Promise(r => setTimeout(r, 50)); // yield to UI
       try {
-        const meta = await getVideoDuration(file);
-        setVideoMetadata.set(file.name, meta);
-        
         const canvas = await extractVideoFrame(file);
         const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.85));
         await writeVideoPreview(dirHandle, file.name, blob);
@@ -479,8 +513,6 @@ export async function render(container, hash) {
         // Update the thumbnail in the grid if still visible
         const thumb = container.querySelector(`[data-file-name="${CSS.escape(file.name)}"]`);
         if (thumb) {
-          const cell = thumb.closest('.set-img-cell');
-          if (cell) cell.title = `Video: ${meta.width}x${meta.height} • ${meta.duration.toFixed(1)}s\nFile: ${file.name}`;
           const url = URL.createObjectURL(previewFile);
           thumb.style.backgroundImage    = `url(${url})`;
           thumb.style.backgroundSize     = 'cover';
@@ -558,10 +590,16 @@ export async function render(container, hash) {
       return;
     }
     grid.innerHTML = visibleFiles.map(f => {
-      let title = f.name;
-      if (isVideoFile(f) && setVideoMetadata.has(f.name)) {
-        const meta = setVideoMetadata.get(f.name);
-        title = `Video: ${meta.width}x${meta.height} • ${meta.duration.toFixed(1)}s\nFile: ${f.name}`;
+      const dateStr = new Date(f.lastModified).toLocaleString();
+      const sizeStr = formatBytes(f.size);
+      let title = `${f.name}\nModified: ${dateStr}\nSize: ${sizeStr}`;
+      
+      if (setFileMetadata.has(f.name)) {
+        const meta = setFileMetadata.get(f.name);
+        const typeStr = isVideoFile(f) 
+          ? `Video: ${meta.width}x${meta.height} • ${meta.duration ? meta.duration.toFixed(1) + 's' : '?s'}` 
+          : `Image: ${meta.width}x${meta.height}`;
+        title = `${f.name}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
       }
       return `
       <label class="set-img-cell ${selectedIds.has(f.name) ? 'is-selected' : ''}" data-name="${f.name}" title="${title}">

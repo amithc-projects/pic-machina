@@ -1117,101 +1117,67 @@ export async function replaceAudio(videoFile, audioFile, {
   const sampleRate = audioBuffer.sampleRate;
   log(`Audio decoded: ${numChannels} channels, ${sampleRate}Hz, duration: ${audioBuffer.duration.toFixed(2)}s`);
 
-  // 2. Setup video extraction
-  const info = await getVideoInfo(videoFile);
-  const fps = 30; // Standardize to 30 for simplicity or use info
-  const rawW = info.width;
-  const rawH = info.height;
+  // 2. Demux original video to get compressed video chunks without decoding
+  const { demuxVideoFile } = await import('./video-wall.js');
+  const { encodedChunks, codecString, description, durationUs, width: rawW, height: rawH } = await demuxVideoFile(videoFile);
+  
   const encW = rawW % 2 === 0 ? rawW : rawW + 1;
   const encH = rawH % 2 === 0 ? rawH : rawH + 1;
 
-  const url = URL.createObjectURL(videoFile);
-  const video = document.createElement('video');
-  video.muted = true;
-  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
-  document.body.appendChild(video);
+  const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+  const target = new ArrayBufferTarget();
+  const muxer = new Muxer({
+    target,
+    video: { codec: 'avc', width: encW, height: encH },
+    audio: { codec: 'aac', numberOfChannels: numChannels, sampleRate: sampleRate },
+    fastStart: 'in-memory',
+    firstTimestampBehavior: 'offset',
+  });
 
-  try {
-    await new Promise((res, rej) => {
-      video.onloadedmetadata = res;
-      video.onerror = () => rej(new Error(`Failed to load video: ${videoFile.name}`));
-      video.src = url;
-      video.load();
-    });
+  let encoderReject;
+  const encoderError = new Promise((_, rej) => { encoderReject = rej; });
 
-    const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
-    const target = new ArrayBufferTarget();
-    const muxer = new Muxer({
-      target,
-      video: { codec: 'avc', width: encW, height: encH },
-      audio: { codec: 'aac', numberOfChannels: numChannels, sampleRate: sampleRate },
-      fastStart: 'in-memory',
-    });
+  // Audio Encoder
+  const audioEncoder = new AudioEncoder({
+    output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+    error: (e) => encoderReject(new Error(`AudioEncoder error: ${e.message ?? e}`)),
+  });
+  audioEncoder.configure({
+    codec: 'mp4a.40.2', // AAC-LC
+    sampleRate,
+    numberOfChannels: numChannels,
+    bitrate: audioBitrate
+  });
 
-    let encoderReject;
-    const encoderError = new Promise((_, rej) => { encoderReject = rej; });
-
-    // Video Encoder
-    const videoEncoder = new VideoEncoder({
-      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-      error: (e) => encoderReject(new Error(`VideoEncoder error: ${e.message ?? e}`)),
-    });
-    videoEncoder.configure({
-      codec: avcCodec(encW, encH),
-      width: encW,
-      height: encH,
-      bitrate: parseInt(bitrate) || 8_000_000
-    });
-
-    // Audio Encoder
-    const audioEncoder = new AudioEncoder({
-      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-      error: (e) => encoderReject(new Error(`AudioEncoder error: ${e.message ?? e}`)),
-    });
-    audioEncoder.configure({
-      codec: 'mp4a.40.2', // AAC-LC
-      sampleRate,
-      numberOfChannels: numChannels,
-      bitrate: audioBitrate
-    });
-
-    // Setup canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = encW;
-    canvas.height = encH;
-    const ctx = canvas.getContext('2d');
-    
-    const seekTo = (t) => new Promise((res, rej) => {
-      video.onseeked = res;
-      video.onerror = () => rej(new Error('Seek failed'));
-      video.currentTime = Math.max(0, Math.min(t, info.duration - 0.001));
-    });
-
-    const startTime = performance.now();
-    const encodeVideoFrames = async () => {
-      const totalFrames = Math.ceil(info.duration * fps);
-      for (let f = 0; f < totalFrames; f++) {
-        const t = f / fps;
-        if (t >= info.duration) break;
-        await seekTo(t);
-        ctx.drawImage(video, 0, 0, encW, encH);
-
-        while (videoEncoder.encodeQueueSize > 10) await new Promise(r => setTimeout(r, 0));
-        const ts = f * (1_000_000 / fps);
-        const vf = new VideoFrame(canvas, { timestamp: ts });
-        videoEncoder.encode(vf, { keyFrame: f % Math.round(fps * 2) === 0 });
-        vf.close();
-
-        if (f % Math.max(1, Math.round(fps * 2)) === 0) {
-          const pct = Math.round((f / totalFrames) * 100);
-          const elapsed = (performance.now() - startTime) / 1000;
-          const eta = Math.round((elapsed / Math.max(1, f)) * (totalFrames - f));
-          log(`${pct}% — ETA ${eta}s`);
-        }
+  const encodeVideoFrames = async () => {
+    log(`Copying ${encodedChunks.length} video chunks (direct stream copy)...`);
+    for (let i = 0; i < encodedChunks.length; i++) {
+      const c = encodedChunks[i];
+      let meta = undefined;
+      // Provide decoder config on the first keyframe to ensure mp4-muxer writes the correct avcC box
+      if (i === 0 && description) {
+        meta = {
+          decoderConfig: {
+            codec: codecString,
+            description: description,
+            codedWidth: encW,
+            codedHeight: encH
+          }
+        };
       }
-      await videoEncoder.flush();
-      videoEncoder.close();
-    };
+      muxer.addVideoChunkRaw(
+        c.data,
+        c.is_sync ? 'key' : 'delta',
+        c.cts,
+        c.duration,
+        meta,
+        c.cts - c.dts
+      );
+      // Yield slightly so we don't freeze the main thread on huge files
+      if (i % 500 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+    log(`Video copy complete.`);
+  };
 
     const encodeAudioData = async () => {
       // Create planar audio data
@@ -1249,17 +1215,12 @@ export async function replaceAudio(videoFile, audioFile, {
       audioEncoder.close();
     };
 
-    await Promise.race([
-      Promise.all([encodeVideoFrames(), encodeAudioData()]),
-      encoderError
-    ]);
+  await Promise.race([
+    Promise.all([encodeVideoFrames(), encodeAudioData()]),
+    encoderError
+  ]);
 
-    muxer.finalize();
-    log(`replaceAudio complete: video ${info.duration.toFixed(1)}s, audio ${audioBuffer.duration.toFixed(1)}s`);
-    return new Blob([target.buffer], { type: 'video/mp4' });
-    
-  } finally {
-    document.body.removeChild(video);
-    URL.revokeObjectURL(url);
-  }
+  muxer.finalize();
+  log(`replaceAudio complete: video ${(durationUs / 1_000_000).toFixed(1)}s, audio ${audioBuffer.duration.toFixed(1)}s`);
+  return new Blob([target.buffer], { type: 'video/mp4' });
 }

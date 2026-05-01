@@ -141,7 +141,7 @@ export class ImageProcessor {
         'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph',
         'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip',
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
-        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-scroll',
+        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-scroll', 'flow-video-replace-audio'
     ]);
     const nodeTreeHasExport = (ns) => ns.some(n => {
       if (n.type === 'transform') {
@@ -395,7 +395,7 @@ export class ImageProcessor {
     const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
     if (['flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps',
          'flow-video-speed',
-         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio'].includes(id)) {
+         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-replace-audio'].includes(id)) {
       if (context._previewMode) return; // full conversion not run during preview
       const file = context.originalFile;
       if (!file) { context.log?.('warn', `${id}: no source file available — skipping`); return; }
@@ -407,7 +407,7 @@ export class ImageProcessor {
       try {
         const { convertVideo, trimVideo, compressVideo, changeFPS,
                 changeVideoSpeed,
-                stripAudio, extractAudio, remixAudio } = await import('./video-convert.js');
+                stripAudio, extractAudio, remixAudio, replaceAudio } = await import('./video-convert.js');
         const p = node.params || {};
         let blob;
         if      (id === 'flow-video-convert')       blob = await convertVideo(file, p);
@@ -418,6 +418,30 @@ export class ImageProcessor {
         else if (id === 'flow-video-strip-audio')   blob = await stripAudio(file, p);
         else if (id === 'flow-video-extract-audio') blob = await extractAudio(file, p);
         else if (id === 'flow-video-remix-audio')   blob = await remixAudio(file, p);
+        else if (id === 'flow-video-replace-audio') {
+          let audioFile = null;
+          if (p.audioSource instanceof File || p.audioSource instanceof Blob) {
+            audioFile = p.audioSource;
+          } else {
+            const sourceStr = (p.audioSource || '').trim();
+            if (sourceStr.startsWith('data:')) {
+              const [header, base64] = sourceStr.split(',');
+              const mime = header.split(':')[1].split(';')[0];
+              const binary = atob(base64);
+              const array = new Uint8Array(binary.length);
+              for(let i=0; i<binary.length; i++) array[i] = binary.charCodeAt(i);
+              audioFile = new Blob([array], { type: mime });
+              audioFile.name = 'uploaded_audio.' + mime.split('/')[1];
+            } else if (sourceStr.startsWith('{{') && sourceStr.endsWith('}}')) {
+              const varName = sourceStr.slice(2, -2).trim();
+              audioFile = context.variables.get(varName);
+            }
+          }
+          if (!audioFile) {
+            throw new Error(`Audio source not found for: ${p.audioSource}`);
+          }
+          blob = await replaceAudio(file, audioFile, { ...p, onLog: context.log });
+        }
 
         const suffix  = interpolate(p.suffix || '', context);
         const base    = context.filename.replace(/\.[^.]+$/, '');

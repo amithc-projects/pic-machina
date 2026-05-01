@@ -623,47 +623,9 @@ registry.register({
   description: 'Replaces the entire audio track of a video with a custom audio file or generated audio from a variable (e.g. {{ttsAudio}}).',
   icon: 'queue_music',
   params: [
-    { name: 'audioSource', label: 'Audio Source (Variable or File)', type: 'text', defaultValue: '{{ttsAudio}}' },
+    { name: 'audioSource', label: 'Audio Source (Variable or File)', type: 'file', accept: 'audio/*', defaultValue: '{{ttsAudio}}' },
     { name: 'bitrate', label: 'Video Bitrate (bps)', type: 'number', defaultValue: 8000000 },
     { name: 'audioBitrate', label: 'Audio Bitrate (bps)', type: 'number', defaultValue: 128000 }
   ],
-  async apply(ctx, p, context) {
-    const { originalFile, variables, log } = context;
-    if (!originalFile) return;
-
-    let audioFile = null;
-
-    if (p.audioSource instanceof File || p.audioSource instanceof Blob) {
-      audioFile = p.audioSource;
-    } else {
-      const sourceStr = (p.audioSource || '').trim();
-      // If it's a variable reference e.g. {{ttsAudio}} (fallback if variable wasn't resolved automatically)
-      if (sourceStr.startsWith('{{') && sourceStr.endsWith('}}')) {
-        const varName = sourceStr.slice(2, -2).trim();
-        audioFile = variables.get(varName);
-      }
-    }
-
-    if (!audioFile) {
-      log?.('warn', `[flow-video-replace-audio] Audio source not found for: ${p.audioSource}`);
-      return;
-    }
-
-    log?.('info', `[flow-video-replace-audio] Replacing audio track with ${audioFile.name || 'custom audio'}...`);
-    const { replaceAudio } = await import('../video-convert.js');
-    
-    try {
-      const newBlob = await replaceAudio(originalFile, audioFile, {
-        bitrate: p.bitrate,
-        audioBitrate: p.audioBitrate,
-        onLog: log
-      });
-      // Replace the working file context with the new video blob
-      const name = originalFile.name;
-      context.originalFile = new File([newBlob], name, { type: newBlob.type });
-      log?.('ok', '[flow-video-replace-audio] Successfully remuxed video with new audio track.');
-    } catch (err) {
-      log?.('error', `[flow-video-replace-audio] Failed: ${err.message}`);
-    }
-  }
+  apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
 });

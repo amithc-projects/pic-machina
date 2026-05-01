@@ -239,27 +239,37 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
         </div>`;
 
     case 'file': {
-      // Image file browse + preview. The hidden input carries the data-URL value
+      // Image/audio file browse + preview. The hidden input carries the data-URL value
       // so collectParams() reads it like any other text field.
       const hasVal = !!(val && String(val).length > 0);
+      const isAudio = param.accept && param.accept.includes('audio');
+      
+      let previewHtml = '';
+      if (hasVal && !isVarRef(val)) {
+        if (isAudio) previewHtml = `<audio controls src="${escHtml(String(val))}" style="width: 100%; padding: 4px;"></audio>`;
+        else previewHtml = `<img class="ned-file-thumb" id="${id}-thumb" src="${escHtml(String(val))}" alt="Preview">`;
+      } else {
+        const icon = isAudio ? 'audio_file' : 'image';
+        const text = isAudio ? 'No file selected' : 'No image selected';
+        previewHtml = `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">${icon}</span><span>${text}</span></div>`;
+      }
+      
       return `
         <div class="ned-field${overrideClass}">
-          <label class="ned-field-label">${escHtml(param.label || 'Image')}</label>
+          <label class="ned-field-label">${escHtml(param.label || 'File')}</label>
           <input type="hidden" id="${id}" name="${param.name}" value="${escHtml(String(val))}">
           <div class="ned-file-wrap" id="${id}-wrap">
             <div class="ned-file-preview-area" id="${id}-preview-area">
-              ${hasVal
-                ? `<img class="ned-file-thumb" id="${id}-thumb" src="${escHtml(String(val))}" alt="Preview">`
-                : `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">image</span><span>No image selected</span></div>`}
+              ${previewHtml}
             </div>
             <div class="ned-file-actions">
-              <label class="btn-secondary btn-sm ned-file-browse-label" title="Browse for image file">
+              <label class="btn-secondary btn-sm ned-file-browse-label" title="Browse for file">
                 <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
                 Browse…
                 <input type="file" id="${id}-file" accept="${param.accept || 'image/*'}" style="display:none">
               </label>
               <button class="btn-secondary btn-sm ned-file-clear-btn" id="${id}-clear"
-                      title="Clear image" style="display:${hasVal ? 'flex' : 'none'}">
+                      title="Clear file" style="display:${hasVal ? 'flex' : 'none'}">
                 <span class="material-symbols-outlined" style="font-size:14px">close</span>
               </button>
             </div>
@@ -460,11 +470,18 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
 
       const setPreview = (dataUrl) => {
         if (!previewArea) return;
-        if (dataUrl) {
-          previewArea.innerHTML = `<img class="ned-file-thumb" id="${id}-thumb" src="${dataUrl}" alt="Preview">`;
+        const isAudio = p.accept && p.accept.includes('audio');
+        if (dataUrl && !isVarRef(dataUrl)) {
+          if (isAudio) {
+             previewArea.innerHTML = `<audio controls src="${dataUrl}" style="width: 100%; padding: 4px;"></audio>`;
+          } else {
+             previewArea.innerHTML = `<img class="ned-file-thumb" id="${id}-thumb" src="${dataUrl}" alt="Preview">`;
+          }
           if (clearBtn) clearBtn.style.display = 'flex';
         } else {
-          previewArea.innerHTML = `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">image</span><span>No image selected</span></div>`;
+          const icon = isAudio ? 'audio_file' : 'image';
+          const text = isAudio ? 'No file selected' : 'No image selected';
+          previewArea.innerHTML = `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">${icon}</span><span>${text}</span></div>`;
           if (clearBtn) clearBtn.style.display = 'none';
         }
       };

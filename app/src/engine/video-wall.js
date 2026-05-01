@@ -52,7 +52,7 @@ class VideoStream {
     dec.configure(config);
     // Skip any leading non-keyframes (decoder requires a keyframe first)
     while (this._chunkIdx < this.encodedChunks.length &&
-           this.encodedChunks[this._chunkIdx].type !== 'key') {
+           this.encodedChunks[this._chunkIdx].chunk.type !== 'key') {
       this._chunkIdx++;
     }
     return dec;
@@ -82,7 +82,7 @@ class VideoStream {
        this._buffer[this._buffer.length - 1].timestamp < targetTs)
     ) {
       if (this._decoder.state === 'closed') break; // stop feeding if decoder errored
-      this._decoder.decode(this.encodedChunks[this._chunkIdx++]);
+      this._decoder.decode(this.encodedChunks[this._chunkIdx++].chunk);
     }
     if (this._decoder.state !== 'closed') {
       await this._decoder.flush();
@@ -92,7 +92,7 @@ class VideoStream {
   /** Find the index of the keyframe at or before startIdx. Returns -1 if none found. */
   _findPriorKeyframe(startIdx) {
     for (let i = Math.min(startIdx, this.encodedChunks.length - 1); i >= 0; i--) {
-      if (this.encodedChunks[i].type === 'key') return i;
+      if (this.encodedChunks[i].chunk.type === 'key') return i;
     }
     return -1;
   }
@@ -482,9 +482,9 @@ function drawCellCaption(ctx, text, cell, fontName) {
  * Demux a video File using mp4box.js.
  * Returns encoded chunks + codec metadata — does NOT decode frames.
  *
- * @returns {Promise<{ encodedChunks, codecString, description, durationUs }>}
+ * @returns {Promise<{ encodedChunks, codecString, description, durationUs, width, height }>}
  */
-async function demuxVideoFile(file) {
+export async function demuxVideoFile(file) {
   const MP4Box = (await import('mp4box')).default;
 
   return new Promise((resolve, reject) => {
@@ -496,10 +496,12 @@ async function demuxVideoFile(file) {
     let allDataFed      = false;
     let description     = null;
     const encodedChunks = [];
+    let width           = 0;
+    let height          = 0;
 
     function checkDone() {
       if (allDataFed && totalSamples > 0 && receivedSamples >= totalSamples) {
-        resolve({ encodedChunks, codecString, durationUs, description });
+        resolve({ encodedChunks, codecString, durationUs, description, width, height });
       }
     }
 
@@ -509,6 +511,8 @@ async function demuxVideoFile(file) {
       codecString  = track.codec;
       durationUs   = (track.duration / track.timescale) * 1_000_000;
       totalSamples = track.nb_samples;
+      width        = track.track_width;
+      height       = track.track_height;
 
       // Extract AVCDecoderConfigurationRecord (avcC) needed by VideoDecoder for H.264
       try {
@@ -530,12 +534,22 @@ async function demuxVideoFile(file) {
 
     mp4.onSamples = (_id, _user, samples) => {
       for (const s of samples) {
-        encodedChunks.push(new EncodedVideoChunk({
-          type:      s.is_sync ? 'key' : 'delta',
-          timestamp: (s.cts      / s.timescale) * 1_000_000,
-          duration:  (s.duration / s.timescale) * 1_000_000,
-          data:      s.data.buffer,
-        }));
+        const dts = (s.dts / s.timescale) * 1_000_000;
+        const cts = (s.cts / s.timescale) * 1_000_000;
+        const duration = (s.duration / s.timescale) * 1_000_000;
+        encodedChunks.push({
+          chunk: new EncodedVideoChunk({
+            type:      s.is_sync ? 'key' : 'delta',
+            timestamp: cts,
+            duration:  duration,
+            data:      s.data.buffer,
+          }),
+          dts,
+          cts,
+          duration,
+          is_sync: s.is_sync,
+          data: s.data
+        });
         receivedSamples++;
       }
       checkDone();
