@@ -141,7 +141,7 @@ export class ImageProcessor {
         'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph',
         'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip',
         'flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps', 'flow-video-concat',
-        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-scroll', 'flow-video-replace-audio'
+        'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-scroll', 'flow-video-replace-audio', 'flow-video-to-gif'
     ]);
     const nodeTreeHasExport = (ns) => ns.some(n => {
       if (n.type === 'transform') {
@@ -395,7 +395,7 @@ export class ImageProcessor {
     const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
     if (['flow-video-convert', 'flow-video-trim', 'flow-video-compress', 'flow-video-change-fps',
          'flow-video-speed',
-         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-replace-audio'].includes(id)) {
+         'flow-video-strip-audio', 'flow-video-extract-audio', 'flow-video-remix-audio', 'flow-video-replace-audio', 'flow-video-to-gif'].includes(id)) {
       if (context._previewMode) return; // full conversion not run during preview
       const file = context.originalFile;
       if (!file) { context.log?.('warn', `${id}: no source file available — skipping`); return; }
@@ -407,7 +407,7 @@ export class ImageProcessor {
       try {
         const { convertVideo, trimVideo, compressVideo, changeFPS,
                 changeVideoSpeed,
-                stripAudio, extractAudio, remixAudio, replaceAudio } = await import('./video-convert.js');
+                stripAudio, extractAudio, remixAudio, replaceAudio, convertVideoToGif } = await import('./video-convert.js');
         const p = node.params || {};
         let blob;
         if      (id === 'flow-video-convert')       blob = await convertVideo(file, p);
@@ -442,12 +442,16 @@ export class ImageProcessor {
           }
           blob = await replaceAudio(file, audioFile, { ...p, onLog: context.log });
         }
+        else if (id === 'flow-video-to-gif') {
+          blob = await convertVideoToGif(file, { ...p, onLog: context.log });
+        }
 
         const suffix  = interpolate(p.suffix || '', context);
         const base    = context.filename.replace(/\.[^.]+$/, '');
         // For audio extracts, use the chosen format extension; otherwise derive from MIME
         const outExt  = id === 'flow-video-extract-audio'
                       ? ({ mp3: 'mp3', wav: 'wav', flac: 'flac', ogg: 'ogg', aac: 'm4a' }[p.format] || 'mp3')
+                      : blob.type.includes('gif')  ? 'gif'
                       : blob.type.includes('webm') ? 'webm'
                       : blob.type.includes('ogg')  ? 'ogg'
                       : blob.type.includes('matroska') ? 'mkv'

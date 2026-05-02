@@ -105,8 +105,8 @@ async function coverCropToJpeg(src, dstW, dstH, centroid, quality) {
  * @returns {Promise<{dataUrl: string, blob: Blob}>}
  */
 export async function generateBaselineThumbnail(source, opts = {}) {
-  const width   = opts.width   || 480;
-  const height  = opts.height  || 300;
+  const width   = opts.width   || 600;
+  const height  = opts.height  || 284;
   const quality = opts.quality ?? 0.82;
 
   const src = await rasterise(source);
@@ -131,8 +131,8 @@ export async function generateBaselineThumbnail(source, opts = {}) {
  * @returns {Promise<{dataUrl: string, blob: Blob, bbox: {x:number,y:number,w:number,h:number,centroid:{x:number,y:number},area:number}} | null>}
  */
 export async function generateSmartThumbnail(source, opts = {}) {
-  const width     = opts.width     || 480;
-  const height    = opts.height    || 300;
+  const width     = opts.width     || 600;
+  const height    = opts.height    || 284;
   const quality   = opts.quality   ?? 0.85;
   const threshold = opts.threshold ?? 0.5;
   const padding   = opts.padding   ?? 0.15;

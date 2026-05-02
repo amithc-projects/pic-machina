@@ -629,3 +629,17 @@ registry.register({
   ],
   apply() { /* handled by Processor — runs mediabunny Conversion per file */ }
 });
+
+// ─── Video to GIF ─────────────────────────────────────────
+registry.register({
+  id: 'flow-video-to-gif', name: 'Video: Convert to GIF', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'gif',
+  description: 'Convert a full video into an animated GIF. Automatically resizes and samples frames to keep file sizes manageable.',
+  params: [
+    { name: 'fps',    label: 'Frame Rate (FPS)',  type: 'number', defaultValue: 12 },
+    { name: 'width',  label: 'Max Width (px)',    type: 'number', defaultValue: 480 },
+    { name: 'loop',   label: 'Loop',              type: 'boolean', defaultValue: true },
+    { name: 'suffix', label: 'Filename Suffix',   type: 'text',   defaultValue: '' }
+  ],
+  apply() { /* handled by Processor — per file */ }
+});

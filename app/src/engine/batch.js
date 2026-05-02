@@ -88,6 +88,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-video-extract-audio',
   'flow-video-remix-audio',
   'flow-video-replace-audio',
+  'flow-video-to-gif',
   // HTML-in-Canvas experimental overlay uses real DOM
   'overlay-timer',
 ]);

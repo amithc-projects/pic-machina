@@ -598,10 +598,12 @@ export async function remixAudio(file, { channels, sampleRate } = {}) {
 /**
  * Get duration and dimensions of a video file via HTMLVideoElement.
  */
-async function getVideoInfo(file) {
+export async function getVideoInfo(file) {
   const url = URL.createObjectURL(file);
   const video = document.createElement('video');
   video.muted = true;
+  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  document.body.appendChild(video);
   try {
     await new Promise((resolve, reject) => {
       video.onloadedmetadata = resolve;
@@ -611,8 +613,83 @@ async function getVideoInfo(file) {
     });
     return { duration: video.duration, width: video.videoWidth, height: video.videoHeight };
   } finally {
+    document.body.removeChild(video);
     URL.revokeObjectURL(url);
   }
+}
+
+/**
+ * Convert a full video file into an animated GIF.
+ */
+export async function convertVideoToGif(file, { fps = 12, width = 480, loop = true, onLog } = {}) {
+  const log = (msg) => onLog?.('info', msg);
+  const { createGIF } = await import('./compositor.js');
+  
+  log(`Analyzing video for GIF conversion...`);
+  const info = await getVideoInfo(file);
+  if (!info.width || !info.height || !info.duration) {
+    throw new Error(`Failed to read video dimensions/duration for ${file.name}`);
+  }
+
+  const outW = Math.min(parseInt(width) || 480, info.width);
+  const outH = Math.round(info.height * (outW / info.width));
+  const outFPS = parseFloat(fps) || 12;
+  const delay = Math.round(1000 / outFPS);
+  
+  const totalFrames = Math.max(1, Math.ceil(info.duration * outFPS));
+  log(`Extracting ${totalFrames} frames at ${outW}x${outH} (${outFPS} FPS)...`);
+
+  const url = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  document.body.appendChild(video);
+
+  await new Promise((resolve, reject) => {
+    video.onloadedmetadata = resolve;
+    video.onerror = () => reject(new Error(`Failed to load video: ${file.name}`));
+    video.src = url;
+    video.load();
+  });
+
+  const seek = (time) => new Promise((resolve, reject) => {
+    video.onseeked = resolve;
+    video.onerror = () => reject(new Error('Seek failed'));
+    video.currentTime = time;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+
+  const frames = [];
+  
+  // Seek frame by frame and capture
+  for (let i = 0; i < totalFrames; i++) {
+    const time = i / outFPS;
+    if (time > info.duration) break;
+    
+    await seek(time);
+    ctx.drawImage(video, 0, 0, outW, outH);
+    
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+    frames.push(blob);
+    
+    if (i % 5 === 0) {
+      log(`Extracted frame ${i + 1} of ${totalFrames}...`);
+      await new Promise(r => setTimeout(r, 0)); // Yield to main thread
+    }
+  }
+
+  document.body.removeChild(video);
+  URL.revokeObjectURL(url);
+
+  log(`Rendering GIF with ${frames.length} frames... This may take a moment.`);
+  const gifBlob = await createGIF(frames, { delay, loop });
+  log(`GIF rendered successfully!`);
+  
+  return gifBlob;
 }
 
 /**

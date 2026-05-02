@@ -128,7 +128,7 @@ export async function setRecipeThumbnail(recipeId, file, opts = {}) {
     try { opts.onBaseline?.(dataUrl); } catch { /* non-fatal */ }
   } else {
     // 1. Baseline cover-crop thumbnail (fast, no inference).
-    ({ dataUrl, blob } = await generateBaselineThumbnail(file, { width: 480, height: 300 }));
+    ({ dataUrl, blob } = await generateBaselineThumbnail(file, { width: 600, height: 284 }));
 
     // Progressive-render hook: caller can update the DOM with this baseline
     // data URL immediately, then swap to the smart version when the smart
@@ -138,7 +138,7 @@ export async function setRecipeThumbnail(recipeId, file, opts = {}) {
     // 2. Optionally replace with a content-aware crop. Silently falls back if
     //    the model isn't downloaded or no subject is found.
     if (getSettings()?.thumbnails?.smart) {
-      const smartResult = await generateSmartThumbnail(file, { width: 480, height: 300 });
+      const smartResult = await generateSmartThumbnail(file, { width: 600, height: 284 });
       if (smartResult) {
         dataUrl = smartResult.dataUrl;
         blob    = smartResult.blob;
