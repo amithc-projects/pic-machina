@@ -20,6 +20,9 @@ import { renderAssetPanel,
          injectAssetPanelStyles }                    from '../utils/asset-panel.js';
 import { showConfirm }                               from '../utils/dialogs.js';
 import { MetadataPanel }                             from '../components/metadata-panel.js';
+import { MediaBrowser }                              from '../components/media-browser.js';
+import { globalLightbox }                            from '../components/lightbox.js';
+import { readSidecar }                               from '../data/sidecar.js';
 
 const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm','.avi','.mkv']);
@@ -36,7 +39,7 @@ function escHtml(s) {
 
 function extOf(name) { return name.slice(name.lastIndexOf('.')).toLowerCase(); }
 
-function fileType(name) {
+export function fileType(name) {
   const ext = extOf(name);
   if (IMAGE_EXTS.has(ext)) return 'image';
   if (VIDEO_EXTS.has(ext)) return 'video';
@@ -85,6 +88,7 @@ async function listContents(dirHandle, opts = {}) {
 }
 
 export async function render(container, hash) {
+  let mediaBrowser = null;
   const params    = new URLSearchParams((hash || '').split('?')[1] || '');
   const runId     = params.get('run');
   // 'que' → 'out': going back to a completed/stale queue screen is a dead end
@@ -140,100 +144,24 @@ export async function render(container, hash) {
 
   container.innerHTML = `
     <div class="screen fld-screen">
-      <div class="fld-toolbar">
+      <div class="fld-toolbar" style="padding: 8px 16px; display: flex; gap: 8px; align-items: center; background: var(--ps-bg); border-bottom: 1px solid var(--ps-border);">
         <button class="btn-icon" id="fld-back" title="Back">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
-        <button class="btn-icon" id="fld-up" title="Up one folder" style="display:none">
-          <span class="material-symbols-outlined">arrow_upward</span>
-        </button>
-        <div class="fld-breadcrumb" id="fld-breadcrumb"></div>
-
         <div style="flex:1"></div>
-
-        ${browseMode ? `<button class="btn-secondary btn-sm" id="fld-change-folder" style="margin-right:8px">
-          <span class="material-symbols-outlined" style="font-size:16px">folder_open</span> Change Folder
-        </button>` : ''}
         ${runId ? `<button class="btn-secondary btn-sm" id="fld-btn-showcase" style="margin-right:8px">
           <span class="material-symbols-outlined" style="font-size:16px">star</span> Add to ShowCase
         </button>` : ''}
-
-        <div id="fld-selection-actions" class="flex items-center gap-1" style="margin-right:8px">
-          <button class="btn-secondary btn-sm" id="fld-btn-select-all" title="Select all visible items">
-            <span class="material-symbols-outlined" style="font-size:16px">done_all</span>
-            Select All
-          </button>
-          <button class="btn-secondary btn-sm" id="fld-btn-deselect-all" title="Deselect all">
-            Deselect
-          </button>
-          <button class="btn-secondary btn-sm" id="fld-btn-download-sel" title="Download selected items">
-            <span class="material-symbols-outlined" style="font-size:18px">download</span>
-          </button>
-          <button class="btn-secondary btn-sm" id="fld-btn-delete-sel" title="Delete selected items from disk">
-            <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-red)">delete</span>
-          </button>
-          <div style="width:1px;height:20px;background:var(--ps-border);margin:0 4px"></div>
-        </div>
-
-        <button class="btn-icon" id="fld-btn-compare" title="Compare with input image" style="margin-right:4px">
-          <span class="material-symbols-outlined">compare_arrows</span>
-        </button>
-
-        <div class="fld-view-toggle" role="group">
-          <button class="fld-view-btn is-active" data-fld-view="grid" title="Grid view">
-            <span class="material-symbols-outlined">grid_view</span>
-          </button>
-          <button class="fld-view-btn" data-fld-view="filmstrip" title="Filmstrip view">
-            <span class="material-symbols-outlined">view_carousel</span>
-          </button>
-          <button class="fld-view-btn" data-fld-view="list" title="List view">
-            <span class="material-symbols-outlined">view_list</span>
-          </button>
-        </div>
-
         <button class="btn-secondary btn-sm" id="fld-btn-slideshow" title="Play Slideshow" style="margin-left:8px">
           <span class="material-symbols-outlined" style="font-size:18px">play_circle</span>
           Slideshow
         </button>
-        <div class="fld-sort-row">
-          <select id="fld-sort" class="ic-input" style="font-size:12px;padding:5px 8px;height:32px">
-            <option value="name">Name</option>
-            <option value="type">Type</option>
-            <option value="size">Size</option>
-          </select>
-        </div>
-        <div class="fld-filter-chips" id="fld-filter-chips">
-          <button class="fld-chip is-active" data-filter="all">All</button>
-          <button class="fld-chip" data-filter="image">
-            <span class="material-symbols-outlined" style="font-size:12px">image</span>
-            Images
-          </button>
-          <button class="fld-chip" data-filter="video">
-            <span class="material-symbols-outlined" style="font-size:12px">movie</span>
-            Video
-          </button>
-          <button class="fld-chip" data-filter="audio">
-            <span class="material-symbols-outlined" style="font-size:12px">audio_file</span>
-            Audio
-          </button>
-          <button class="fld-chip" data-filter="document">
-            <span class="material-symbols-outlined" style="font-size:12px">description</span>
-            Documents
-          </button>
-          <button class="fld-chip" data-filter="archive">
-            <span class="material-symbols-outlined" style="font-size:12px">folder_zip</span>
-            Archives
-          </button>
-          <button class="fld-chip" data-filter="other">Other</button>
-        </div>
+        </button>
         ${runId ? `
-        <div class="fld-run-filter-wrap" id="fld-run-filter-wrap">
-          <div style="width:1px;height:18px;background:var(--ps-border);margin:0 2px"></div>
-          <button class="fld-chip fld-chip--run is-active" id="fld-run-filter-btn" title="Toggle between run results and all files in folder">
-            <span class="material-symbols-outlined" style="font-size:12px">filter_alt</span>
-            Run results
-          </button>
-        </div>` : ''}
+        <button class="fld-chip fld-chip--run is-active" id="fld-run-filter-btn" title="Toggle run results">
+          <span class="material-symbols-outlined" style="font-size:12px">filter_alt</span>
+          Run results
+        </button>` : ''}
       </div>
 
       <div class="fld-body" id="fld-body">
@@ -390,11 +318,7 @@ export async function render(container, hash) {
     });
   });
 
-  // ── Sort ───────────────────────────────────────────────────
-  container.querySelector('#fld-sort')?.addEventListener('change', e => {
-    sortKey = e.target.value;
-    applyFilter();
-  });
+  // (Sort removed, now handled inside media-browser)
 
   // ── Run filter toggle ───────────────────────────────────────
   container.querySelector('#fld-run-filter-btn')?.addEventListener('click', () => {
@@ -408,15 +332,7 @@ export async function render(container, hash) {
   });
 
   // ── Selection actions ──────────────────────────────────────
-  container.querySelector('#fld-btn-select-all')?.addEventListener('click', () => {
-    filtered.forEach(ent => selectedSet.add(ent.file.name));
-    updateSelectionUI();
-  });
-
-  container.querySelector('#fld-btn-deselect-all')?.addEventListener('click', () => {
-    selectedSet.clear();
-    updateSelectionUI();
-  });
+  // Now handled by MediaBrowser
 
   container.querySelector('#fld-btn-download-sel')?.addEventListener('click', downloadSelected);
   container.querySelector('#fld-btn-delete-sel')?.addEventListener('click', deleteSelected);
@@ -430,41 +346,7 @@ export async function render(container, hash) {
     startSlideshow(images);
   });
 
-  // ── Compare button ─────────────────────────────────────────
-  container.querySelector('#fld-btn-compare')?.addEventListener('click', async () => {
-    if (!selected) {
-      window.AuroraToast?.show({ variant: 'info', title: 'Select a file first to compare' });
-      return;
-    }
-    const ws = await ensureWorkspace();
-    ws.setFiles([selected.file]);
 
-    const modal = document.createElement('div');
-    modal.className = 'fld-modal-overlay';
-    modal.innerHTML = `
-      <div class="fld-modal" style="max-width:90vw;width:900px;height:80vh;display:flex;flex-direction:column">
-        <div class="fld-modal-header">
-          <strong>Compare</strong>
-          <span style="color:var(--ps-text-muted);font-size:13px;margin-left:8px">${escHtml(selected.file.name)}</span>
-          <button class="btn-icon" id="fld-cmp-close" style="margin-left:auto">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div id="fld-cmp-mount" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden"></div>
-      </div>`;
-    document.body.appendChild(modal);
-    modal.querySelector('#fld-cmp-mount').appendChild(ws.container);
-    modal.querySelector('#fld-cmp-close').addEventListener('click', () => {
-      container.appendChild(ws.container); // return to DOM (avoid GC)
-      modal.remove();
-    });
-    modal.addEventListener('click', e => {
-      if (e.target === modal) {
-        container.appendChild(ws.container);
-        modal.remove();
-      }
-    });
-  });
 
   // ── Load files ──────────────────────────────────────────────
   try {
@@ -543,7 +425,22 @@ export async function render(container, hash) {
     });
 
     updateBreadcrumb();
+    fetchSidecars(currentHandle, allEntries);
     applyFilter();
+  }
+  
+  function fetchSidecars(handle, entries) {
+    Promise.allSettled(entries.map(async ent => {
+      if (ent.sidecar) return; // already loaded
+      try { ent.sidecar = await readSidecar(handle, ent.file.name); } catch {}
+    })).then(() => {
+       if (mediaBrowser && activeSubHandle === handle) {
+         mediaBrowser.entries.forEach(mbEnt => {
+           if (mbEnt._ent && mbEnt._ent.sidecar) mbEnt.sidecar = mbEnt._ent.sidecar;
+         });
+         mediaBrowser.applyFilters();
+       }
+    });
   }
 
   function updateBreadcrumb() {
@@ -623,21 +520,21 @@ export async function render(container, hash) {
     });
     // Sort files
     filtered.sort((a, b) => {
-      if (sortKey === 'type') return fileType(a.file.name).localeCompare(fileType(b.file.name)) || a.file.name.localeCompare(b.file.name);
-      if (sortKey === 'size') return b.file.size - a.file.size;
       return a.file.name.localeCompare(b.file.name);
     });
     // Folders always shown after files, sorted by name
     filteredFolders = [...allFolders].sort((a, b) => a.name.localeCompare(b.name));
     renderMain();
   }
+
+
   // ── Render main area ────────────────────────────────────────
   function renderMain() {
     revokeBlobUrls();
     const main = container.querySelector('#fld-main');
     if (!main) return;
 
-    if (!filtered.length && !filteredFolders.length) {
+    if (!filtered.length && !filteredFolders.length && dirStack.length === 0) {
       const emptyMsg = runFilter
         ? 'No output files found for this run. Toggle "Run results" to see all files in the folder.'
         : 'No files match the current filter.';
@@ -646,17 +543,87 @@ export async function render(container, hash) {
         <div class="empty-state-title">No files match</div>
         <div class="empty-state-desc">${emptyMsg}</div>
       </div>`;
-      updateSelectionUI();
       return;
     }
 
-    if (viewMode === 'grid')       renderGrid(main);
-    else if (viewMode === 'filmstrip') renderFilmstrip(main);
-    else                           renderList(main);
+    if (!main.querySelector('#ic-mb-container')) {
+      main.innerHTML = `<div id="ic-mb-container" style="height:100%"></div>`;
+    }
+    const mbContainer = main.querySelector('#ic-mb-container');
+    
+    // Combine folders and files into the new format
+    const mbEntries = [];
+    filteredFolders.forEach(folder => {
+      mbEntries.push({ name: folder.name, file: null, isFolder: true, _folder: folder });
+    });
+    filtered.forEach(ent => {
+      const preview = fileType(ent.file.name) === 'video' ? videoPreviews.get(ent.file.name) : null;
+      mbEntries.push({ name: ent.file.name, file: ent.file, preview, _ent: ent, sidecar: ent.sidecar });
+    });
 
-    updateSelectionUI();
+    if (dirStack.length > 0) {
+      mbEntries.push({ name: '..', file: null, isFolder: true, _up: true });
+    }
 
-    // Kick off background preview generation for any videos that don't have one yet
+    if (!mediaBrowser) {
+      mediaBrowser = new MediaBrowser(mbContainer, {
+        mode: viewMode,
+        entries: mbEntries,
+        breadcrumbs: dirStack.map(d => d.name),
+        currentFolderName: currentHandle ? currentHandle.name : 'Current Folder',
+        canGoUp: dirStack.length > 0,
+        childFolders: allFolders.map(f => f.name),
+        onChildFolderSelect: async (name) => {
+          const folder = allFolders.find(f => f.name === name);
+          if (folder) enterFolder(folder);
+        },
+        onChangeFolderClick: async () => {
+          try {
+            await pickFolder('browse');
+            navigate('#fld');
+          } catch (e) { if (e.name !== 'AbortError') console.error(e); }
+        },
+        onNavigateUp: () => navigateTo(dirStack.length - 1),
+        onNavigateTo: (idx) => navigateTo(idx),
+        onDeleteSelected: deleteSelected,
+        onDownloadSelected: downloadSelected,
+        onSelectionChange: async (selectedNames) => {
+          selectedSet.clear();
+          selectedNames.forEach(name => selectedSet.add(name));
+          
+          if (selectedNames.length === 1) {
+             const ent = allEntries.find(e => e.file.name === selectedNames[0]);
+             if (ent) {
+               selected = ent;
+               metaPanel.setDirHandle(currentHandle);
+               await metaPanel.setFile(ent.file);
+             }
+          } else {
+             selected = null;
+             metaPanel.clear();
+          }
+        },
+        onDoubleClick: (ent, index, all) => {
+          if (ent._up) {
+            navigateTo(dirStack.length - 1);
+          } else if (ent._folder) {
+            enterFolder(ent._folder);
+          } else {
+            // Strip folders before passing to lightbox
+            const filesOnly = all.filter(e => !e.isFolder);
+            const fileIdx = filesOnly.findIndex(e => e.name === ent.name);
+            globalLightbox.show(filesOnly, fileIdx);
+          }
+        }
+      });
+    } else {
+      mediaBrowser.options.breadcrumbs = dirStack.map(d => d.name);
+      mediaBrowser.options.currentFolderName = currentHandle ? currentHandle.name : 'Current Folder';
+      mediaBrowser.options.canGoUp = dirStack.length > 0;
+      mediaBrowser.options.childFolders = allFolders.map(f => f.name);
+      mediaBrowser.setEntries(mbEntries);
+    }
+
     schedulePreviewGeneration();
   }
 
@@ -676,12 +643,14 @@ export async function render(container, hash) {
           const blob   = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
           if (blob && activeSubHandle) {
             await writeVideoPreview(activeSubHandle, ent.file.name, blob);
-            // Update the in-memory map and refresh cards in the DOM
             const previewFile = await activeSubHandle.getFileHandle(`.${ent.file.name}.preview.jpg`)
               .then(h => h.getFile()).catch(() => null);
             if (previewFile) {
               videoPreviews.set(ent.file.name, previewFile);
-              replaceVideoThumb(ent.file.name, previewFile);
+              if (mediaBrowser) {
+                const mbEnt = mediaBrowser.entries.find(e => e.name === ent.file.name);
+                if (mbEnt) { mbEnt.preview = previewFile; mediaBrowser.render(); }
+              }
             }
           }
         } catch { /* skip this video */ }
@@ -692,260 +661,6 @@ export async function render(container, hash) {
     })();
   }
 
-  /** Swap a pending <video> placeholder with the newly-generated preview <img>. */
-  function replaceVideoThumb(videoName, previewFile) {
-    const previewUrl = URL.createObjectURL(previewFile);
-    blobUrls.push(previewUrl);
-
-    // Grid cells
-    container.querySelectorAll(`[data-preview-pending="${CSS.escape(videoName)}"]`).forEach(vid => {
-      const thumb = vid.closest('.fld-thumb') || vid.closest('.fld-fs-thumb') || vid.parentElement;
-      const isGrid = vid.classList.contains('fld-thumb-vid');
-      const isFs   = vid.classList.contains('fld-fs-thumb-img');
-
-      const img = document.createElement('img');
-      img.draggable = false;
-      img.src       = previewUrl;
-
-      if (isGrid) {
-        img.className = 'fld-thumb-img';
-        vid.replaceWith(img);
-        // Remove any existing camera button (no-preview variant), then add the hover-only one
-        thumb?.querySelectorAll('.fld-thumb-chg-preview').forEach(b => b.remove());
-        const btn = document.createElement('button');
-        btn.className = 'fld-thumb-chg-preview';
-        btn.title = 'Change preview frame';
-        btn.dataset.name = videoName;
-        btn.innerHTML = '<span class="material-symbols-outlined">photo_camera</span>';
-        const ent = allEntries.find(e => e.file.name === videoName);
-        if (ent) btn.addEventListener('click', e => { e.stopPropagation(); showChangePreviewDialog(ent); });
-        thumb?.appendChild(btn);
-      } else if (isFs) {
-        img.className = 'fld-fs-thumb-img';
-        // Remove any existing camera button (no-preview variant)
-        thumb?.querySelectorAll('.fld-thumb-chg-preview').forEach(b => b.remove());
-        vid.replaceWith(img);
-      } else {
-        // List view — replace movie icon with img
-        img.className = 'fld-list-thumb';
-        vid.replaceWith(img);
-      }
-    });
-
-    // List view icons (no data-preview-pending, use name lookup)
-    container.querySelectorAll('.fld-list-icon').forEach(icon => {
-      const row = icon.closest('[data-fld-ent-name]');
-      if (row?.dataset.fldEntName === videoName) {
-        const img = document.createElement('img');
-        img.className = 'fld-list-thumb';
-        img.src = previewUrl;
-        img.draggable = false;
-        icon.replaceWith(img);
-      }
-    });
-  }
-
-  // ── Change Preview Frame dialog ──────────────────────────────
-  async function showChangePreviewDialog(ent) {
-    const existing = document.getElementById('fld-chg-preview-dialog');
-    if (existing) existing.remove();
-
-    const dialog = document.createElement('div');
-    dialog.id = 'fld-chg-preview-dialog';
-    dialog.className = 'fld-modal-overlay';
-    dialog.innerHTML = `
-      <div class="fld-modal" style="max-width:700px;width:90vw">
-        <div class="fld-modal-header">
-          <strong>Change Preview Frame</strong>
-          <span style="color:var(--ps-text-muted);font-size:13px;margin-left:8px">${escHtml(ent.file.name)}</span>
-          <button class="btn-icon" id="fld-chg-close" style="margin-left:auto">
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-        <div class="fld-modal-body" style="display:flex;flex-direction:column;gap:12px;padding:16px">
-          <video id="fld-chg-video" controls muted style="width:100%;border-radius:6px;background:#000;max-height:50vh"></video>
-          <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
-            <span style="font-size:13px;color:var(--ps-text-muted)">Seek to the frame you want, then capture.</span>
-            <button class="btn-primary" id="fld-chg-capture">
-              <span class="material-symbols-outlined">photo_camera</span> Use This Frame
-            </button>
-          </div>
-        </div>
-      </div>`;
-
-    document.body.appendChild(dialog);
-
-    const videoEl = dialog.querySelector('#fld-chg-video');
-    const fileUrl = URL.createObjectURL(ent.file);
-    videoEl.src = fileUrl;
-
-    dialog.querySelector('#fld-chg-close').addEventListener('click', () => {
-      URL.revokeObjectURL(fileUrl);
-      dialog.remove();
-    });
-    dialog.addEventListener('click', e => {
-      if (e.target === dialog) { URL.revokeObjectURL(fileUrl); dialog.remove(); }
-    });
-
-    dialog.querySelector('#fld-chg-capture').addEventListener('click', async () => {
-      const canvas = document.createElement('canvas');
-      canvas.width  = videoEl.videoWidth;
-      canvas.height = videoEl.videoHeight;
-      canvas.getContext('2d').drawImage(videoEl, 0, 0);
-
-      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
-      if (blob && activeSubHandle) {
-        await writeVideoPreview(activeSubHandle, ent.file.name, blob);
-        const previewHandle = await activeSubHandle.getFileHandle(`.${ent.file.name}.preview.jpg`).catch(() => null);
-        const previewFile   = previewHandle ? await previewHandle.getFile() : null;
-        if (previewFile) {
-          videoPreviews.set(ent.file.name, previewFile);
-          replaceVideoThumb(ent.file.name, previewFile);
-          // Also update the camera button's already-visible state
-          container.querySelectorAll(`[data-name="${CSS.escape(ent.file.name)}"].fld-thumb-chg-preview`)
-            .forEach(btn => {
-              const thumb = btn.closest('.fld-thumb');
-              const img = thumb?.querySelector('.fld-thumb-img');
-              if (img) { URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(previewFile); blobUrls.push(img.src); }
-            });
-        }
-      }
-      URL.revokeObjectURL(fileUrl);
-      dialog.remove();
-    });
-  }
-
-  // ── File preview modal (double-click from grid or list) ─────────
-  function showFilePreviewModal(ent, allEntries, startIdx) {
-    // Archives have no in-app preview — fall back to a direct download
-    // when the user double-clicks one. Other entries continue to use
-    // the image/video lightbox.
-    if (fileType(ent.file.name) === 'archive') {
-      downloadFile(ent.file);
-      return;
-    }
-    const existing = document.getElementById('fld-preview-modal');
-    if (existing) existing.remove();
-
-    let currentIdx = startIdx ?? allEntries.indexOf(ent);
-    let blobUrl = null;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'fld-preview-modal';
-    overlay.className = 'fld-preview-overlay';
-
-    const render = () => {
-      const cur = allEntries[currentIdx];
-      const type = fileType(cur.file.name);
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-      blobUrl = URL.createObjectURL(cur.file);
-
-      overlay.innerHTML = `
-        <div class="fld-preview-box">
-          <div class="fld-preview-header">
-            <span class="material-symbols-outlined" style="color:var(--ps-blue);font-size:18px">${type === 'video' ? 'movie' : 'image'}</span>
-            <span class="fld-preview-title">${escHtml(cur.file.name)}</span>
-            <span class="fld-preview-counter">${currentIdx + 1} / ${allEntries.length}</span>
-            <button class="btn-icon fld-preview-close" title="Close (Esc)">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div class="fld-preview-media">
-            ${type === 'video'
-              ? `<video class="fld-preview-video" src="${blobUrl}" controls autoplay></video>`
-              : type === 'audio'
-              ? `<div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%"><audio class="fld-preview-audio" src="${blobUrl}" controls autoplay style="width:80%;max-width:500px"></audio></div>`
-              : type === 'document'
-              ? `<div style="text-align:center;color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%">
-                   <span class="material-symbols-outlined" style="font-size:64px;margin-bottom:16px">description</span>
-                   <div style="font-size:18px;margin-bottom:8px">No preview available</div>
-                   <div style="font-size:13px;color:rgba(255,255,255,0.7)">${escHtml(cur.file.name)}</div>
-                 </div>`
-              : `<img class="fld-preview-img" src="${blobUrl}" alt="${escHtml(cur.file.name)}">`}
-            ${currentIdx > 0
-              ? `<button class="fld-preview-nav fld-preview-nav--prev" title="Previous"><span class="material-symbols-outlined">chevron_left</span></button>`
-              : ''}
-            ${currentIdx < allEntries.length - 1
-              ? `<button class="fld-preview-nav fld-preview-nav--next" title="Next"><span class="material-symbols-outlined">chevron_right</span></button>`
-              : ''}
-          </div>
-          <div class="fld-preview-footer">
-            <span class="fld-preview-meta">${formatBytes(cur.file.size)}</span>
-            <span class="fld-preview-meta">${new Date(cur.file.lastModified).toLocaleString()}</span>
-          </div>
-        </div>`;
-
-      overlay.querySelector('.fld-preview-close')?.addEventListener('click', close);
-      overlay.querySelector('.fld-preview-nav--prev')?.addEventListener('click', e => { e.stopPropagation(); currentIdx--; render(); });
-      overlay.querySelector('.fld-preview-nav--next')?.addEventListener('click', e => { e.stopPropagation(); currentIdx++; render(); });
-    };
-
-    const close = () => {
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-      blobUrl = null;
-      overlay.remove();
-      document.removeEventListener('keydown', onKey);
-    };
-
-    const onKey = e => {
-      if (e.key === 'Escape') { close(); }
-      else if (e.key === 'ArrowLeft'  && currentIdx > 0)                    { currentIdx--; render(); }
-      else if (e.key === 'ArrowRight' && currentIdx < allEntries.length - 1) { currentIdx++; render(); }
-    };
-
-    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-    document.addEventListener('keydown', onKey);
-    document.body.appendChild(overlay);
-    render();
-  }
-
-  // ── Async dimension loader for list/grid cells ────────────────
-  async function loadDimensions(file, spanEl) {
-    try {
-      const type = fileType(file.name);
-      if (type === 'image') {
-        const bitmap = await createImageBitmap(file);
-        spanEl.textContent = `${bitmap.width} × ${bitmap.height}`;
-        bitmap.close?.();
-      } else if (type === 'video') {
-        const url = URL.createObjectURL(file);
-        await new Promise(resolve => {
-          const v = document.createElement('video');
-          v.preload = 'metadata';
-          v.onloadedmetadata = () => {
-            spanEl.textContent = `${v.videoWidth} × ${v.videoHeight}`;
-            URL.revokeObjectURL(url);
-            resolve();
-          };
-          v.onerror = () => { URL.revokeObjectURL(url); resolve(); };
-          v.src = url;
-        });
-      }
-    } catch { /* best-effort */ }
-  }
-
-  function handleFileClick(ent, index, e) {
-    const isCmd = e.metaKey || e.ctrlKey;
-    const isShift = e.shiftKey;
-
-    if (isShift && lastIdx >= 0) {
-      const start = Math.min(lastIdx, index);
-      const end = Math.max(lastIdx, index);
-      for (let i = start; i <= end; i++) {
-        selectedSet.add(filtered[i].file.name);
-      }
-    } else if (isCmd) {
-      if (selectedSet.has(ent.file.name)) selectedSet.delete(ent.file.name);
-      else selectedSet.add(ent.file.name);
-      lastIdx = index;
-    } else {
-      selectedSet.clear();
-      selectedSet.add(ent.file.name);
-      lastIdx = index;
-      selectFile(ent); // Open in preview
-    }
-    updateSelectionUI();
-  }
 
   async function deleteSelected() {
     const names = Array.from(selectedSet);
@@ -975,6 +690,7 @@ export async function render(container, hash) {
       selectedSet.clear();
       lastIdx = -1;
       selected = null;
+      fetchSidecars(activeSubHandle, allEntries);
       applyFilter();
 
       if (window.AuroraToast) {
@@ -996,516 +712,9 @@ export async function render(container, hash) {
     }
   }
 
-  function updateSelectionUI() {
-    const selCount = selectedSet.size;
+  // Replaced by smaller updateSelectionUI above
 
-    const selectAllBtn = container.querySelector('#fld-btn-select-all');
-    const deselectBtn  = container.querySelector('#fld-btn-deselect-all');
-    const dlBtn        = container.querySelector('#fld-btn-download-sel');
-    const delBtn       = container.querySelector('#fld-btn-delete-sel');
 
-    if (selectAllBtn) selectAllBtn.style.display = selCount < filtered.length ? '' : 'none';
-    if (deselectBtn)  deselectBtn.style.display  = selCount > 0 ? '' : 'none';
-    if (dlBtn)        dlBtn.disabled             = selCount === 0;
-    if (delBtn)       delBtn.disabled            = selCount === 0;
-
-    // Update detail-panel download button label to reflect selection count
-    container.querySelectorAll('.fld-detail-dl-btn').forEach(btn => {
-      btn.innerHTML = selCount > 1
-        ? `<span class="material-symbols-outlined">download</span> Download ${selCount} files`
-        : `<span class="material-symbols-outlined">download</span> Download`;
-    });
-
-    container.querySelectorAll('[data-fld-ent-name]').forEach(el => {
-      el.classList.toggle('is-multiselected', selectedSet.has(el.dataset.fldEntName));
-    });
-  }
-
-  // ── Grid view ───────────────────────────────────────────────
-  function renderGrid(main) {
-    main.className = 'fld-main fld-main--grid';
-    main.innerHTML = '';
-    const grid = document.createElement('div');
-    grid.className = 'fld-grid';
-    main.appendChild(grid);
-
-    filtered.forEach((ent, i) => {
-      const type = fileType(ent.file.name);
-      const cell = document.createElement('div');
-      cell.className = `fld-cell${selected?.file.name === ent.file.name ? ' is-selected' : ''}`;
-      cell.dataset.idx = i;
-      cell.dataset.fldEntName = ent.file.name;
-
-      const url = URL.createObjectURL(ent.file);
-      blobUrls.push(url);
-
-      const previewFile = type === 'video' ? videoPreviews.get(ent.file.name) : null;
-      const previewUrl  = previewFile ? URL.createObjectURL(previewFile) : null;
-      if (previewUrl) blobUrls.push(previewUrl);
-
-      const archiveExt = ent.file.name.slice(ent.file.name.lastIndexOf('.') + 1).toUpperCase();
-      cell.innerHTML = `
-        <div class="fld-thumb ${type === 'video' ? 'fld-thumb--video' : ''} ${(type === 'archive' || type === 'audio' || type === 'document') ? 'fld-thumb--archive' : ''}">
-          ${type === 'video'
-            ? previewUrl
-              ? `<img src="${previewUrl}" class="fld-thumb-img" draggable="false">
-                 <div class="fld-thumb-video-badge"><span class="material-symbols-outlined">play_circle</span></div>
-                 <button class="fld-thumb-chg-preview" title="Change preview frame" data-name="${escHtml(ent.file.name)}">
-                   <span class="material-symbols-outlined">photo_camera</span>
-                 </button>`
-              : `<video src="${url}" class="fld-thumb-vid" preload="metadata" muted data-preview-pending="${escHtml(ent.file.name)}"></video>
-                 <div class="fld-thumb-video-badge"><span class="material-symbols-outlined">play_circle</span></div>
-                 <button class="fld-thumb-chg-preview fld-thumb-chg-preview--noprev" title="Set preview frame" data-name="${escHtml(ent.file.name)}">
-                   <span class="material-symbols-outlined">photo_camera</span>
-                 </button>`
-            : type === 'archive'
-              ? `<div class="fld-archive-tile">
-                   <span class="material-symbols-outlined">${archiveExt === 'PPTX' ? 'slideshow' : 'folder_zip'}</span>
-                   <span class="fld-archive-tile__ext">${archiveExt}</span>
-                 </div>`
-            : type === 'audio'
-              ? `<div class="fld-archive-tile" style="color:var(--ps-blue)">
-                   <span class="material-symbols-outlined">audio_file</span>
-                   <span class="fld-archive-tile__ext">${archiveExt}</span>
-                 </div>`
-            : type === 'document'
-              ? `<div class="fld-archive-tile" style="color:var(--ps-blue)">
-                   <span class="material-symbols-outlined">description</span>
-                   <span class="fld-archive-tile__ext">${archiveExt}</span>
-                 </div>`
-              : `<img src="${url}" class="fld-thumb-img" loading="lazy" draggable="false">`
-          }
-        </div>
-        <div class="fld-cell-name">${escHtml(ent.file.name)}</div>`;
-
-      cell.querySelector('.fld-thumb-chg-preview')?.addEventListener('click', e => {
-        e.stopPropagation();
-        showChangePreviewDialog(ent);
-      });
-      cell.addEventListener('click', e => {
-        handleFileClick(ent, i, e);
-      });
-      cell.addEventListener('dblclick', e => {
-        e.stopPropagation();
-        showFilePreviewModal(ent, filtered, i);
-      });
-      grid.appendChild(cell);
-    });
-
-    // ".." up entry + folders after files
-    if (dirStack.length > 0) {
-      const upCell = document.createElement('div');
-      upCell.className = 'fld-cell fld-cell--folder fld-cell--up';
-      upCell.title = `Up to ${dirStack[dirStack.length - 1].name}`;
-      upCell.innerHTML = `
-        <div class="fld-thumb fld-thumb--folder">
-          <span class="material-symbols-outlined">drive_folder_upload</span>
-        </div>
-        <div class="fld-cell-name">..</div>`;
-      upCell.addEventListener('click', () => navigateTo(dirStack.length - 2));
-      grid.appendChild(upCell);
-    }
-    filteredFolders.forEach(folder => {
-      const cell = document.createElement('div');
-      cell.className = 'fld-cell fld-cell--folder';
-      cell.innerHTML = `
-        <div class="fld-thumb fld-thumb--folder">
-          <span class="material-symbols-outlined">folder</span>
-        </div>
-        <div class="fld-cell-name">${escHtml(folder.name)}</div>`;
-      cell.addEventListener('click', () => enterFolder(folder));
-      grid.appendChild(cell);
-    });
-  }
-
-  // ── Filmstrip view ──────────────────────────────────────────
-  function renderFilmstrip(main) {
-    main.className = 'fld-main fld-main--filmstrip';
-    main.innerHTML = `
-      <div class="fld-fs-preview" id="fld-fs-preview">
-        <div class="empty-state" style="height:100%">
-          <span class="material-symbols-outlined" style="font-size:40px">touch_app</span>
-          <div class="empty-state-title">Select a file below</div>
-        </div>
-      </div>
-      <div class="fld-fs-strip" id="fld-fs-strip"></div>`;
-
-    const strip = main.querySelector('#fld-fs-strip');
-    filtered.forEach((ent, i) => {
-      const type = fileType(ent.file.name);
-      const thumb = document.createElement('div');
-      thumb.className = `fld-fs-thumb${selected?.file.name === ent.file.name ? ' is-selected' : ''}`;
-      thumb.dataset.idx = i;
-      thumb.dataset.fldEntName = ent.file.name;
-
-      const url = URL.createObjectURL(ent.file);
-      blobUrls.push(url);
-
-      const fsPreviewFile = type === 'video' ? videoPreviews.get(ent.file.name) : null;
-      const fsPreviewUrl  = fsPreviewFile ? URL.createObjectURL(fsPreviewFile) : null;
-      if (fsPreviewUrl) blobUrls.push(fsPreviewUrl);
-
-      const fsArchiveExt = ent.file.name.slice(ent.file.name.lastIndexOf('.') + 1).toUpperCase();
-      thumb.innerHTML = `
-        ${type === 'video'
-          ? fsPreviewUrl
-            ? `<img src="${fsPreviewUrl}" class="fld-fs-thumb-img" draggable="false">
-               <span class="fld-fs-video-badge material-symbols-outlined">play_circle</span>`
-            : `<video src="${url}" class="fld-fs-thumb-img" preload="metadata" muted data-preview-pending="${escHtml(ent.file.name)}"></video>
-               <span class="fld-fs-video-badge material-symbols-outlined">play_circle</span>
-               <button class="fld-thumb-chg-preview fld-thumb-chg-preview--noprev" title="Set preview frame" data-name="${escHtml(ent.file.name)}">
-                 <span class="material-symbols-outlined">photo_camera</span>
-               </button>`
-          : type === 'archive'
-            ? `<div class="fld-archive-tile fld-archive-tile--strip">
-                 <span class="material-symbols-outlined">${fsArchiveExt === 'PPTX' ? 'slideshow' : 'folder_zip'}</span>
-                 <span class="fld-archive-tile__ext">${fsArchiveExt}</span>
-               </div>`
-          : type === 'audio'
-            ? `<div class="fld-archive-tile fld-archive-tile--strip" style="color:var(--ps-blue)">
-                 <span class="material-symbols-outlined">audio_file</span>
-                 <span class="fld-archive-tile__ext">${fsArchiveExt}</span>
-               </div>`
-          : type === 'document'
-            ? `<div class="fld-archive-tile fld-archive-tile--strip" style="color:var(--ps-blue)">
-                 <span class="material-symbols-outlined">description</span>
-                 <span class="fld-archive-tile__ext">${fsArchiveExt}</span>
-               </div>`
-            : `<img src="${url}" class="fld-fs-thumb-img" loading="lazy" draggable="false">`
-        }`;
-
-      thumb.querySelector('.fld-thumb-chg-preview')?.addEventListener('click', e => {
-        e.stopPropagation();
-        showChangePreviewDialog(ent);
-      });
-      thumb.addEventListener('click', e => {
-        handleFileClick(ent, i, e);
-      });
-      strip.appendChild(thumb);
-    });
-
-    // Folders after files
-    filteredFolders.forEach(folder => {
-      const thumb = document.createElement('div');
-      thumb.className = 'fld-fs-thumb fld-fs-thumb--folder';
-      thumb.title = folder.name;
-      thumb.innerHTML = `
-        <span class="material-symbols-outlined" style="font-size:32px;color:var(--ps-blue)">folder</span>
-        <span class="fld-fs-folder-name">${escHtml(folder.name)}</span>`;
-      thumb.addEventListener('click', () => enterFolder(folder));
-      strip.appendChild(thumb);
-    });
-
-    // If something was selected, show it in main area
-    if (selected) {
-      renderFilmstripPreview(selected);
-    }
-  }
-
-  async function renderFilmstripPreview(ent) {
-    const preview = container.querySelector('#fld-fs-preview');
-    if (!preview) return;
-    await renderDetailContent(preview, ent, true);
-    // Scroll selected thumb into view
-    const strip = container.querySelector('#fld-fs-strip');
-    const sel = strip?.querySelector('.fld-fs-thumb.is-selected');
-    sel?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }
-
-  // ── List view ───────────────────────────────────────────────
-  function renderList(main) {
-    main.className = 'fld-main fld-main--list';
-    main.innerHTML = `
-      <table class="fld-list-table">
-        <thead>
-          <tr>
-            <th class="fld-list-th" style="width:40px"></th>
-            <th class="fld-list-th">Name</th>
-            <th class="fld-list-th" style="width:80px">Type</th>
-            <th class="fld-list-th" style="width:70px">Size</th>
-            <th class="fld-list-th" style="width:110px">Modified</th>
-            <th class="fld-list-th" style="width:100px">Dimensions</th>
-            <th class="fld-list-th" style="width:80px;text-align:right">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="fld-list-body"></tbody>
-      </table>`;
-
-    const tbody = main.querySelector('#fld-list-body');
-    filtered.forEach((ent, i) => {
-      const type = fileType(ent.file.name);
-      const tr = document.createElement('tr');
-      tr.className = `fld-list-row${selected?.file.name === ent.file.name ? ' is-selected' : ''}`;
-      tr.dataset.idx = i;
-      tr.dataset.fldEntName = ent.file.name;
-
-      const thumbUrl = URL.createObjectURL(ent.file);
-      blobUrls.push(thumbUrl);
-
-      const listPreviewFile = type === 'video' ? videoPreviews.get(ent.file.name) : null;
-      const listPreviewUrl  = listPreviewFile ? URL.createObjectURL(listPreviewFile) : null;
-      if (listPreviewUrl) blobUrls.push(listPreviewUrl);
-
-      const isSel = selectedSet.has(ent.file.name);
-      const modDate = ent.file.lastModified
-        ? new Date(ent.file.lastModified).toLocaleDateString(undefined, { day:'2-digit', month:'short', year:'numeric' })
-        : '—';
-
-      const archiveIcon = extOf(ent.file.name) === '.pptx' ? 'slideshow' : 'folder_zip';
-      tr.innerHTML = `
-        <td class="fld-list-td">
-          ${type === 'video'
-            ? listPreviewUrl
-              ? `<img src="${listPreviewUrl}" class="fld-list-thumb" draggable="false">`
-              : `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">movie</span></div>`
-            : type === 'archive'
-              ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">${archiveIcon}</span></div>`
-            : type === 'audio'
-              ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">audio_file</span></div>`
-            : type === 'document'
-              ? `<div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue)">description</span></div>`
-              : `<img src="${thumbUrl}" class="fld-list-thumb" loading="lazy" draggable="false">`}
-        </td>
-        <td class="fld-list-td">
-          <span class="fld-list-name">${escHtml(ent.file.name)}</span>
-        </td>
-        <td class="fld-list-td">${
-          type === 'video'   ? '<span class="ic-badge ic-badge--blue">MP4</span>' :
-          type === 'archive' ? `<span class="ic-badge ic-badge--blue">${extOf(ent.file.name).slice(1).toUpperCase()}</span>` :
-                                `<span class="ic-badge">${extOf(ent.file.name).slice(1).toUpperCase()}</span>`
-        }</td>
-        <td class="fld-list-td mono text-sm text-muted">${formatBytes(ent.file.size)}</td>
-        <td class="fld-list-td fld-list-modified">${modDate}</td>
-        <td class="fld-list-td fld-list-dims"><span class="fld-list-dims-val">—</span></td>
-        <td class="fld-list-td" style="text-align:right">
-          <button class="btn-icon fld-list-dl" data-idx="${i}" title="Download">
-            <span class="material-symbols-outlined" style="font-size:15px">download</span>
-          </button>
-        </td>`;
-
-      tr.addEventListener('click', e => {
-        if (!e.target.closest('.fld-list-dl')) handleFileClick(ent, i, e);
-      });
-      tr.addEventListener('dblclick', e => {
-        if (!e.target.closest('.fld-list-dl')) showFilePreviewModal(ent, filtered, i);
-      });
-      tr.querySelector('.fld-list-dl')?.addEventListener('click', e => {
-        e.stopPropagation();
-        downloadFile(ent.file);
-      });
-      tbody.appendChild(tr);
-
-      // Load dimensions asynchronously
-      const dimsSpan = tr.querySelector('.fld-list-dims-val');
-      if (dimsSpan && (type === 'image' || type === 'video')) loadDimensions(ent.file, dimsSpan);
-    });
-
-    // Folders after files
-    filteredFolders.forEach(folder => {
-      const tr = document.createElement('tr');
-      tr.className = 'fld-list-row fld-list-row--folder';
-      tr.innerHTML = `
-        <td class="fld-list-td">
-          <div class="fld-list-icon"><span class="material-symbols-outlined" style="color:var(--ps-blue);font-size:22px">folder</span></div>
-        </td>
-        <td class="fld-list-td"><span class="fld-list-name">${escHtml(folder.name)}</span></td>
-        <td class="fld-list-td"><span class="ic-badge" style="background:rgba(0,119,255,.12);color:var(--ps-blue)">Folder</span></td>
-        <td class="fld-list-td"></td>
-        <td class="fld-list-td"></td>
-        <td class="fld-list-td"></td>
-        <td class="fld-list-td"></td>`;
-      tr.addEventListener('click', () => enterFolder(folder));
-      tbody.appendChild(tr);
-    });
-  }
-
-  // ── Unified Image Workspace ───────────────────────────────
-  let fldWorkspace = null;
-
-  async function ensureWorkspace() {
-    if (fldWorkspace) return fldWorkspace;
-    const { ImageWorkspace } = await import('../components/image-workspace.js');
-    
-    const wsDiv = document.createElement('div');
-    wsDiv.style.flex = "1";
-    wsDiv.style.display = "flex";
-    wsDiv.style.flexDirection = "column";
-    wsDiv.style.minWidth = "0";
-    wsDiv.style.minHeight = "0";
-
-    fldWorkspace = new ImageWorkspace(wsDiv, {
-      allowUpload: false,
-      allowFolder: false,
-      customControlsHtml: `
-        <button class="btn-icon iw-meta-btn" title="View Extracted AI Metadata">
-           <span class="material-symbols-outlined">edit_note</span>
-        </button>
-      `,
-      onBindCustomControls: (container) => {
-        container.querySelector('.iw-meta-btn')?.addEventListener('click', async () => {
-          if (!fldWorkspace.activeFile) return;
-          injectAssetPanelStyles();
-          const p = container.querySelector('.iw-stage');
-          p.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><div class="spinner"></div></div>';
-          const ap = await renderAssetPanel(fldWorkspace.activeFile);
-          p.innerHTML = '';
-          p.style.overflow = 'hidden';
-          p.appendChild(ap);
-        });
-      },
-      onRender: async (file) => {
-        // Try matching various suffix patterns (underscores or hyphens)
-        const baseName    = file.name.replace(/\.[^.]+$/, '');
-        const baseNoSuf   = baseName.replace(/[-_][a-z0-9]+$/i, '');
-        const inputFile   = inputByBase.get(baseName) || inputByBase.get(baseNoSuf);
-
-        const beforeUrl = URL.createObjectURL(inputFile || file);
-        const afterUrl = URL.createObjectURL(file);
-        blobUrls.push(beforeUrl, afterUrl);
-        
-        return {
-          beforeUrl,
-          afterUrl,
-          beforeLabel: inputFile ? 'Input' : 'File',
-          afterLabel: inputFile ? 'Output' : 'File',
-          context: { filename: file.name },
-          canCompare: !!inputFile
-        };
-      }
-    });
-    return fldWorkspace;
-  }
-
-  // ── Select / detail panel ───────────────────────────────────
-  async function selectFile(ent) {
-    selected = ent;
-
-    // Highlight selected cell in current view
-    container.querySelectorAll('.fld-cell, .fld-fs-thumb, .fld-list-row').forEach(el => {
-      const idx = parseInt(el.dataset.idx);
-      el.classList.toggle('is-selected', filtered[idx] === ent);
-    });
-
-    if (viewMode === 'filmstrip') {
-      await renderFilmstripPreview(ent);
-    }
-
-    // Update the persistent right metadata panel
-    metaPanel.setDirHandle(currentHandle);
-    await metaPanel.setFile(ent.file);
-  }
-
-  /** Render file preview into an element (used by both detail panel + filmstrip preview). */
-  async function renderDetailContent(el, ent, fullSize) {
-    const file = ent.file;
-    const type = fileType(file.name);
-    const fileUrl = URL.createObjectURL(file);
-    blobUrls.push(fileUrl);
-
-    if (type === 'video') {
-      el.innerHTML = `
-        <div class="fld-detail-inner">
-          ${!fullSize ? `
-          <div class="fld-detail-header">
-            <div class="fld-detail-title">${escHtml(file.name)}</div>
-            <div class="fld-detail-meta">
-              <span class="ic-badge" style="background:rgba(0,119,255,.15);color:var(--ps-blue)">Video</span>
-              <span class="text-sm text-muted">${formatBytes(file.size)}</span>
-            </div>
-          </div>` : ''}
-          <div class="fld-detail-preview" style="flex:1;display:flex;align-items:center;justify-content:center;background:#000;position:relative">
-            <video src="${fileUrl}" class="fld-detail-video" controls preload="metadata"
-              style="max-width:100%;max-height:100%;display:block"></video>
-          </div>
-          ${!fullSize ? `
-          <div class="fld-detail-footer">
-            <button class="btn-secondary fld-detail-dl-btn" style="width:100%">
-              <span class="material-symbols-outlined">download</span> Download
-            </button>
-          </div>` : ''}
-        </div>`;
-      el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
-        if (selectedSet.size > 1) downloadSelected();
-        else downloadFile(file);
-      });
-    } else if (type === 'archive' || type === 'audio' || type === 'document') {
-      // Audio, docs, and archives use a clean info pane with
-      // file metadata and a prominent Download button. The card style
-      // matches the grid/list tile so the user recognises it.
-      const ext = extOf(file.name).slice(1).toUpperCase();
-      let icon = 'description';
-      let desc = 'Document file';
-      if (type === 'archive') {
-         icon = ext === 'PPTX' ? 'slideshow' : 'folder_zip';
-         desc = 'PicMachina-produced archive';
-      } else if (type === 'audio') {
-         icon = 'audio_file';
-         desc = 'Audio file';
-      }
-      el.innerHTML = `
-        <div class="fld-detail-inner">
-          ${!fullSize ? `
-          <div class="fld-detail-header">
-            <div class="fld-detail-title">${escHtml(file.name)}</div>
-            <div class="fld-detail-meta">
-              <span class="ic-badge ic-badge--blue">${ext}</span>
-              <span class="text-sm text-muted">${formatBytes(file.size)}</span>
-            </div>
-          </div>` : ''}
-          <div class="fld-detail-preview" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--ps-text-muted);background:linear-gradient(135deg, rgba(96,165,250,0.06), rgba(139,92,246,0.04))">
-            <span class="material-symbols-outlined" style="font-size:96px;color:var(--ps-blue)">${icon}</span>
-            <div style="font-size:13px">${desc}</div>
-            <div class="mono text-sm text-muted">${escHtml(file.name)}</div>
-            ${type === 'audio' ? `<audio src="${fileUrl}" controls style="margin-top:20px;max-width:80%"></audio>` : ''}
-          </div>
-          ${!fullSize ? `
-          <div class="fld-detail-footer">
-            <button class="btn-secondary fld-detail-dl-btn" style="width:100%">
-              <span class="material-symbols-outlined">download</span> Download
-            </button>
-          </div>` : ''}
-        </div>`;
-      el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
-        if (selectedSet.size > 1) downloadSelected();
-        else downloadFile(file);
-      });
-    } else {
-      const ws = await ensureWorkspace();
-      
-      el.innerHTML = `
-        <div class="fld-detail-inner">
-          ${!fullSize ? `
-          <div class="fld-detail-header">
-            <div class="fld-detail-title">${escHtml(file.name)}</div>
-            <div class="fld-detail-meta">
-              <span class="ic-badge">${extOf(file.name).slice(1).toUpperCase()}</span>
-              <span class="text-sm text-muted">${formatBytes(file.size)}</span>
-            </div>
-          </div>` : ''}
-          <div class="fld-detail-preview" id="fld-ws-mount" style="flex:1;display:flex;flex-direction:column;min-height:0"></div>
-          ${!fullSize ? `
-          <div class="fld-detail-footer">
-            <button class="btn-secondary fld-detail-dl-btn" style="flex:1">
-              <span class="material-symbols-outlined">download</span> Download
-            </button>
-            ${run?.recipeId ? `<button class="btn-secondary fld-btn-set-thumb" title="Set as recipe thumbnail">
-              <span class="material-symbols-outlined">photo_library</span>
-            </button>` : ''}
-          </div>` : ''}
-        </div>`;
-
-      el.querySelector('.fld-detail-dl-btn')?.addEventListener('click', () => {
-        if (selectedSet.size > 1) downloadSelected();
-        else downloadFile(file);
-      });
-      const mountNode = el.querySelector('#fld-ws-mount');
-      mountNode.appendChild(ws.container);
-      el.querySelector('.fld-btn-set-thumb')?.addEventListener('click', e => wireThumbBtn(file, e.currentTarget));
-
-      ws.setFiles([file]);
-
-    }
-  }
 
   function downloadFile(file) {
     const url = URL.createObjectURL(file);
