@@ -27,7 +27,21 @@ export class GlobalLightbox {
         .ic-gl-btn:hover { background: rgba(255,255,255,0.1); color: var(--ps-text); }
         
         .ic-gl-viewer { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000; min-height: 0; min-width: 0; }
-        .ic-gl-viewer img, .ic-gl-viewer video { max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; }
+        .ic-gl-viewer img:not(.ic-gl-zoom-img), .ic-gl-viewer video { max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; }
+        
+        .ic-gl-zoom-wrapper { width: 100%; height: 100%; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
+        .ic-gl-zoom-wrapper.is-panning { cursor: grabbing; }
+        .ic-gl-zoom-img { will-change: transform; transform-origin: 0 0; position: absolute; left: 0; top: 0; max-width: none; max-height: none; width: auto; height: auto; }
+        
+        .ic-gl-zoom-ui { position: absolute; bottom: 16px; right: 16px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); border: 1px solid var(--ps-border); border-radius: 8px; display: flex; align-items: center; padding: 4px; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+        .ic-gl-zoom-wrapper:hover .ic-gl-zoom-ui, .ic-gl-zoom-ui:hover { opacity: 1; pointer-events: auto; }
+        .ic-gl-zoom-dropdown-wrap { position: relative; }
+        .ic-gl-zoom-label { background: none; border: none; color: #fff; font-size: 12px; font-weight: 500; min-width: 60px; text-align: center; font-variant-numeric: tabular-nums; display: flex; align-items: center; justify-content: center; padding: 4px 8px; cursor: pointer; border-radius: 4px; transition: 0.15s; }
+        .ic-gl-zoom-label:hover { background: rgba(255,255,255,0.1); }
+        .ic-gl-zoom-dropdown { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); border: 1px solid var(--ps-border); border-radius: 6px; padding: 4px 0; min-width: 100px; display: none; z-index: 10; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+        .ic-gl-zoom-dropdown.show { display: block; }
+        .ic-gl-zoom-item { padding: 6px 12px; font-size: 12px; color: #fff; cursor: pointer; text-align: center; }
+        .ic-gl-zoom-item:hover { background: rgba(255,255,255,0.1); }
         
         .ic-gl-sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--ps-border); font-weight: 600; font-size: 13px; color: var(--ps-text); display: flex; justify-content: space-between; align-items: center; }
         .ic-gl-sidebar-content { flex: 1; padding: 16px; overflow-y: auto; font-size: 13px; color: var(--ps-text-muted); }
@@ -89,8 +103,25 @@ export class GlobalLightbox {
     document.addEventListener('keydown', (e) => {
       if (this.container.style.display !== 'none') {
         if (e.key === 'Escape') close();
-        if (e.key === 'ArrowRight') this.navigate(1);
-        if (e.key === 'ArrowLeft') this.navigate(-1);
+        
+        if (this._zoomControl) {
+           if (e.key === '=' || e.key === '+') this._zoomControl('in');
+           if (e.key === '-') this._zoomControl('out');
+           if (e.key === '0') this._zoomControl('fit');
+           if (e.key === '1') this._zoomControl('100');
+           
+           if (e.key === 'ArrowRight') {
+               if (this._zoomControl('is-zoomed')) this._zoomControl('pan-right'); else this.navigate(1);
+           }
+           if (e.key === 'ArrowLeft') {
+               if (this._zoomControl('is-zoomed')) this._zoomControl('pan-left'); else this.navigate(-1);
+           }
+           if (e.key === 'ArrowUp' && this._zoomControl('is-zoomed')) this._zoomControl('pan-up');
+           if (e.key === 'ArrowDown' && this._zoomControl('is-zoomed')) this._zoomControl('pan-down');
+        } else {
+           if (e.key === 'ArrowRight') this.navigate(1);
+           if (e.key === 'ArrowLeft') this.navigate(-1);
+        }
       }
     });
   }
@@ -109,6 +140,12 @@ export class GlobalLightbox {
    * @param {Number} startIndex 
    */
   async show(entries, startIndex = 0) {
+    if (this._cleanupZoom) {
+      this._cleanupZoom();
+      this._cleanupZoom = null;
+      this._zoomControl = null;
+    }
+
     this.entries = entries;
     this.currentIndex = startIndex;
     const ent = this.entries[this.currentIndex];
@@ -291,7 +328,30 @@ export class GlobalLightbox {
         this.viewer.innerHTML = `<div style="padding:20px; color:var(--ps-red);">Failed to parse archive: ${e.message}</div>`;
       }
     } else {
-      this.viewer.innerHTML = `<img src="${this.currentBlobUrl}">`;
+      const zoomWrapper = document.createElement('div');
+      zoomWrapper.className = 'ic-gl-zoom-wrapper';
+      zoomWrapper.innerHTML = `
+         <img src="${this.currentBlobUrl}" class="ic-gl-zoom-img">
+         <div class="ic-gl-zoom-ui">
+            <button class="ic-gl-btn ic-gl-btn-zoom-out" title="Zoom Out (-)"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+            <div class="ic-gl-zoom-dropdown-wrap">
+               <button class="ic-gl-zoom-label" title="Select Zoom">Fit <span class="material-symbols-outlined text-[14px] ml-1">arrow_drop_up</span></button>
+               <div class="ic-gl-zoom-dropdown">
+                  <div class="ic-gl-zoom-item" data-zoom="fit">Fit</div>
+                  <div class="ic-gl-zoom-item" data-zoom="0.5">50%</div>
+                  <div class="ic-gl-zoom-item" data-zoom="1">100%</div>
+                  <div class="ic-gl-zoom-item" data-zoom="1.5">150%</div>
+                  <div class="ic-gl-zoom-item" data-zoom="2">200%</div>
+                  <div class="ic-gl-zoom-item" data-zoom="4">400%</div>
+               </div>
+            </div>
+            <button class="ic-gl-btn ic-gl-btn-zoom-in" title="Zoom In (+)"><span class="material-symbols-outlined text-[16px]">add</span></button>
+         </div>
+      `;
+      this.viewer.innerHTML = '';
+      this.viewer.appendChild(zoomWrapper);
+      
+      this.initZoomPan(zoomWrapper);
     }
 
     // Render Sidecar
@@ -304,12 +364,187 @@ export class GlobalLightbox {
   }
 
   hide() {
+    if (this._cleanupZoom) {
+      this._cleanupZoom();
+      this._cleanupZoom = null;
+      this._zoomControl = null;
+    }
     this.container.style.display = 'none';
     this.viewer.innerHTML = '';
     if (this.currentBlobUrl) {
       URL.revokeObjectURL(this.currentBlobUrl);
       this.currentBlobUrl = null;
     }
+  }
+
+  initZoomPan(wrapper) {
+    const img = wrapper.querySelector('.ic-gl-zoom-img');
+    const uiLabel = wrapper.querySelector('.ic-gl-zoom-label');
+    const zoomInBtn = wrapper.querySelector('.ic-gl-btn-zoom-in');
+    const zoomOutBtn = wrapper.querySelector('.ic-gl-btn-zoom-out');
+    const dropdownWrap = wrapper.querySelector('.ic-gl-zoom-dropdown-wrap');
+    const dropdownMenu = wrapper.querySelector('.ic-gl-zoom-dropdown');
+    
+    let scale = 1;
+    let x = 0;
+    let y = 0;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+    
+    let fitScale = 1;
+
+    const updateTransform = (smooth = false) => {
+      img.style.transition = smooth ? 'transform 0.2s ease-out' : 'none';
+      img.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      if (uiLabel) {
+        const text = Math.abs(scale - fitScale) < 0.01 ? 'Fit' : `${Math.round(scale * 100)}%`;
+        uiLabel.innerHTML = `${text} <span class="material-symbols-outlined text-[14px] ml-1">arrow_drop_up</span>`;
+      }
+    };
+
+    const fitToScreen = () => {
+      if (!img.naturalWidth) return;
+      const wr = wrapper.clientWidth / img.naturalWidth;
+      const hr = wrapper.clientHeight / img.naturalHeight;
+      fitScale = Math.min(wr, hr, 1); 
+      scale = fitScale;
+      x = (wrapper.clientWidth - img.naturalWidth * scale) / 2;
+      y = (wrapper.clientHeight - img.naturalHeight * scale) / 2;
+      updateTransform(true);
+    };
+
+    const zoomTo100 = () => {
+      if (!img.naturalWidth) return;
+      const oldScale = scale;
+      scale = 1;
+      const cx = wrapper.clientWidth / 2;
+      const cy = wrapper.clientHeight / 2;
+      x = cx - (cx - x) * (scale / oldScale);
+      y = cy - (cy - y) * (scale / oldScale);
+      updateTransform(true);
+    };
+
+    img.onload = () => fitToScreen();
+
+    const doZoom = (deltaY, clientX, clientY) => {
+      const rect = wrapper.getBoundingClientRect();
+      const ox = clientX - rect.left;
+      const oy = clientY - rect.top;
+
+      const zoomFactor = deltaY > 0 ? 0.9 : 1.1;
+      const oldScale = scale;
+      
+      scale *= zoomFactor;
+      scale = Math.max(fitScale * 0.2, Math.min(scale, 10)); 
+      
+      const actualFactor = scale / oldScale;
+      x = ox - (ox - x) * actualFactor;
+      y = oy - (oy - y) * actualFactor;
+      
+      updateTransform(false);
+    };
+
+    wrapper.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      doZoom(e.deltaY, e.clientX, e.clientY);
+    }, { passive: false });
+
+    wrapper.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      isPanning = true;
+      startX = e.clientX - x;
+      startY = e.clientY - y;
+      wrapper.classList.add('is-panning');
+      img.style.transition = 'none';
+      e.preventDefault(); // Prevents default drag behavior
+    });
+
+    const onPointerMove = (e) => {
+      if (!isPanning) return;
+      x = e.clientX - startX;
+      y = e.clientY - startY;
+      updateTransform(false);
+    };
+
+    const onPointerUp = () => {
+      if (isPanning) {
+        isPanning = false;
+        wrapper.classList.remove('is-panning');
+      }
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+
+    wrapper.addEventListener('dblclick', (e) => {
+      if (Math.abs(scale - fitScale) < 0.01) {
+        const oldScale = scale;
+        scale = 1;
+        const rect = wrapper.getBoundingClientRect();
+        const ox = e.clientX - rect.left;
+        const oy = e.clientY - rect.top;
+        const actualFactor = scale / oldScale;
+        x = ox - (ox - x) * actualFactor;
+        y = oy - (oy - y) * actualFactor;
+        updateTransform(true);
+      } else {
+        fitToScreen();
+      }
+    });
+
+    if (zoomInBtn) zoomInBtn.addEventListener('click', (e) => { e.stopPropagation(); doZoom(-100, wrapper.clientWidth/2, wrapper.clientHeight/2); });
+    if (zoomOutBtn) zoomOutBtn.addEventListener('click', (e) => { e.stopPropagation(); doZoom(100, wrapper.clientWidth/2, wrapper.clientHeight/2); });
+
+    if (uiLabel) {
+      uiLabel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownMenu.classList.toggle('show');
+      });
+    }
+
+    if (dropdownMenu) {
+      dropdownMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const item = e.target.closest('.ic-gl-zoom-item');
+        if (!item) return;
+        dropdownMenu.classList.remove('show');
+        const zoomVal = item.getAttribute('data-zoom');
+        if (zoomVal === 'fit') {
+          fitToScreen();
+        } else {
+          const targetScale = parseFloat(zoomVal);
+          const oldScale = scale;
+          scale = targetScale;
+          const cx = wrapper.clientWidth / 2;
+          const cy = wrapper.clientHeight / 2;
+          x = cx - (cx - x) * (scale / oldScale);
+          y = cy - (cy - y) * (scale / oldScale);
+          updateTransform(true);
+        }
+      });
+    }
+    
+    wrapper.addEventListener('click', () => {
+      if (dropdownMenu) dropdownMenu.classList.remove('show');
+    });
+
+    this._zoomControl = (action) => {
+       if (action === 'is-zoomed') return Math.abs(scale - fitScale) > 0.01;
+       if (action === 'in') doZoom(-100, wrapper.clientWidth/2, wrapper.clientHeight/2);
+       if (action === 'out') doZoom(100, wrapper.clientWidth/2, wrapper.clientHeight/2);
+       if (action === 'fit') fitToScreen();
+       if (action === '100') zoomTo100();
+       if (action === 'pan-right') { x -= 50; updateTransform(true); }
+       if (action === 'pan-left') { x += 50; updateTransform(true); }
+       if (action === 'pan-up') { y += 50; updateTransform(true); }
+       if (action === 'pan-down') { y -= 50; updateTransform(true); }
+    };
+
+    this._cleanupZoom = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
   }
 }
 
