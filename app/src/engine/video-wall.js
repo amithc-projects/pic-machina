@@ -20,7 +20,7 @@ import { drawPerspectiveCell } from './utils/perspective.js';
 
 // ─── Streaming VideoStream ─────────────────────────────────
 
-class VideoStream {
+export class VideoStream {
   /**
    * @param {EncodedVideoChunk[]} encodedChunks
    * @param {string}              codecString

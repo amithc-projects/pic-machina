@@ -1032,6 +1032,19 @@ export async function render(container) {
         block.style.color = '#fff';
         block.style.cursor = 'grab';
         block.dataset.id = clip.id;
+        let tooltip = poolItem.name || poolItem.fileHandle?.name || 'Clip';
+        if (poolItem.meta) {
+           const dateStr = poolItem.meta.lastModified ? new Date(poolItem.meta.lastModified).toLocaleString() : '';
+           const sizeStr = poolItem.meta.size ? formatBytes(poolItem.meta.size) : '';
+           let typeStr = '';
+           if (poolItem.type === 'video') {
+             typeStr = `Video: ${poolItem.meta.width || '?'}x${poolItem.meta.height || '?'} • ${poolItem.meta.duration ? poolItem.meta.duration.toFixed(1) + 's' : '?s'}`;
+           } else if (poolItem.type === 'image') {
+             typeStr = `Image: ${poolItem.meta.width || '?'}x${poolItem.meta.height || '?'}`;
+           }
+           tooltip = `${tooltip}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
+        }
+        block.title = tooltip;
 
         const tIn = clip.transitionIn;
         if (tIn && tIn.style !== 'none' && tIn.duration > 0) {
@@ -1327,6 +1340,14 @@ export async function render(container) {
           block.style.color = '#fff';
           block.style.cursor = 'grab';
           block.dataset.id = clip.id;
+          let tooltip = poolItem.name || poolItem.fileHandle?.name || 'Audio Clip';
+          if (poolItem.meta) {
+             const dateStr = poolItem.meta.lastModified ? new Date(poolItem.meta.lastModified).toLocaleString() : '';
+             const sizeStr = poolItem.meta.size ? formatBytes(poolItem.meta.size) : '';
+             const typeStr = poolItem.meta.duration ? `Duration: ${poolItem.meta.duration.toFixed(1)}s` : '';
+             tooltip = `${tooltip}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
+          }
+          block.title = tooltip;
 
           setupDrag(block, clip, 'audio');
           

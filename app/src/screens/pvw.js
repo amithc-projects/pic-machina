@@ -12,6 +12,7 @@ import { extractExif }                             from '../engine/exif-reader.j
 import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }                   from '../utils/image-info.js';
 import { flattenNodes, countNodes }               from '../utils/nodes.js';
+import { getRunsForRecipe }                       from '../data/runs.js';
 
 // Node category accent colours (match app.css node-category-tag vars)
 const CAT_COLORS = {
@@ -131,8 +132,14 @@ export async function render(container, hash) {
             </div>
             <div class="pvw-meta-body">
               ${recipe.description ? `<p class="pvw-desc">${recipe.description}</p>` : ''}
-              <div class="pvw-tags">
+              <div class="pvw-tags" style="margin-bottom:12px">
                 ${(recipe.tags || []).map(t => `<span class="ic-badge">${t}</span>`).join('')}
+              </div>
+              <div id="pvw-history" style="display:none;border-top:1px solid var(--ps-border);padding-top:10px;">
+                <a href="#out?recipe=${recipe.id}" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ps-blue);text-decoration:none;font-weight:500;">
+                  <span class="material-symbols-outlined" style="font-size:16px">history</span>
+                  <span id="pvw-history-label">View recent runs</span>
+                </a>
               </div>
             </div>
           </div>
@@ -235,6 +242,21 @@ export async function render(container, hash) {
 
     if (window._icTestImage?.file) workspace.triggerProcess();
   });
+
+  // ── History link ──────────────────────────────────────────
+  try {
+    const runs = await getRunsForRecipe(recipe.id);
+    if (runs && runs.length > 0) {
+      const histSection = container.querySelector('#pvw-history');
+      const histLabel   = container.querySelector('#pvw-history-label');
+      if (histSection && histLabel) {
+        histSection.style.display = 'block';
+        histLabel.textContent = runs.length === 1 ? 'View 1 recent run' : `View ${runs.length} recent runs`;
+      }
+    }
+  } catch (err) {
+    // ignore
+  }
 }
 
 // ── Cover gradient helper (same as lib.js) ─────────────────

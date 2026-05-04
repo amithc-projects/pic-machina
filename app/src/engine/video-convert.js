@@ -478,13 +478,13 @@ export async function trimVideo(file, { start = 0, end } = {}) {
 }
 
 /**
- * Compress a video by reducing its bitrate.
+ * Compress a video by reducing its bitrate and optionally resizing it.
  *
  * @param {File} file
- * @param {{ quality?: 'low'|'medium'|'high', bitrate?: number }} options
+ * @param {{ quality?: 'low'|'medium'|'high', bitrate?: number, width?: number, height?: number }} options
  * @returns {Promise<Blob>}
  */
-export async function compressVideo(file, { quality = 'medium', bitrate } = {}) {
+export async function compressVideo(file, { quality = 'medium', bitrate, width, height } = {}) {
   const { QUALITY_LOW, QUALITY_MEDIUM, QUALITY_HIGH } = await import('mediabunny');
 
   const qualityMap = { low: QUALITY_LOW, medium: QUALITY_MEDIUM, high: QUALITY_HIGH };
@@ -496,7 +496,14 @@ export async function compressVideo(file, { quality = 'medium', bitrate } = {}) 
   const { OutputFormat, mime } = await resolveOutputFormat(['webm', 'ogg', 'mkv', 'mov'].includes(ext) ? ext : 'mp4');
 
   const input = await makeInput(file);
-  return runConversion(input, ext, OutputFormat, mime, { video: { bitrate: videoBitrate } });
+
+  const videoOpts = { bitrate: videoBitrate };
+  const parsedWidth = parseInt(width);
+  const parsedHeight = parseInt(height);
+  if (parsedWidth && parsedWidth > 0) videoOpts.width = parsedWidth;
+  if (parsedHeight && parsedHeight > 0) videoOpts.height = parsedHeight;
+
+  return runConversion(input, ext, OutputFormat, mime, { video: videoOpts });
 }
 
 /**

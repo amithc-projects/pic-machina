@@ -45,7 +45,7 @@ export async function mountVideoScrubber(hostEl, file, { initialTime = null, onS
     <div class="vs-root">
       <div class="vs-bar">
         <span class="material-symbols-outlined vs-icon">movie</span>
-        <span class="vs-label">Preview frame</span>
+        <span class="vs-label">Preview frame: ${file.name}</span>
         <span class="vs-time" id="vs-time">—</span>
         <span class="vs-dur" id="vs-dur"></span>
       </div>

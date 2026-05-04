@@ -20,7 +20,7 @@ export async function render(container, hash) {
   container.innerHTML = `
     <div class="h-full flex flex-col bg-[var(--ps-bg)]">
       <div class="border-b border-[var(--ps-border)] p-4 flex items-center shrink-0">
-        <h1 class="text-xl font-bold flex-1">Audio Studio</h1>
+        <h1 class="text-xl font-bold flex-1">Speech Studio</h1>
         <div class="flex gap-2">
           <button id="aud-tab-dialogue" class="btn btn-primary">Dialogue Studio</button>
           <button id="aud-tab-voicecraft" class="btn btn-secondary">VoiceCraft (Custom Voices)</button>
@@ -63,7 +63,7 @@ export async function render(container, hash) {
                 <button id="aud-btn-upload-script" class="btn btn-secondary text-xs py-1 px-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">upload_file</span> Load File</button>
                 <input type="file" id="aud-input-upload-script" class="hidden" accept=".txt,.srt,.vtt,.md">
               </div>
-              <textarea id="aud-input" class="w-full flex-1 bg-[var(--ps-bg)] text-[var(--ps-text)] border border-[var(--ps-border)] rounded p-3 font-mono text-sm resize-none focus:outline-none focus:border-[var(--ps-blue)]" placeholder="[Narrator]: Welcome to Audio Studio.&#10;[Dwight]: You can paste multiple speakers here!"></textarea>
+              <textarea id="aud-input" class="w-full flex-1 bg-[var(--ps-bg)] text-[var(--ps-text)] border border-[var(--ps-border)] rounded p-3 font-mono text-sm resize-none focus:outline-none focus:border-[var(--ps-blue)]" placeholder="[Narrator]: Welcome to Speech Studio.&#10;[Dwight]: You can paste multiple speakers here!"></textarea>
             </div>
             
             <button id="aud-btn-parse" class="btn btn-primary mt-4 w-full justify-center shrink-0">Parse Speakers</button>

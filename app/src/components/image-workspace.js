@@ -528,6 +528,20 @@ export class ImageWorkspace {
         thumb.onload = () => URL.revokeObjectURL(url);
       }
       
+      const formatBytes = (bytes) => {
+        if (!bytes) return '0 B';
+        const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+        const j = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, j)).toFixed(2)) + ' ' + sizes[j];
+      };
+      
+      const modDate = file.lastModified ? new Date(file.lastModified).toLocaleString() : '';
+      let tooltip = file.name;
+      if (isVideoFile(file)) tooltip += '\nVideo';
+      else tooltip += '\nImage';
+      tooltip += `\nModified: ${modDate}\nSize: ${formatBytes(file.size)}`;
+      thumb.title = tooltip;
+      
       thumb.addEventListener('click', () => {
         this.activeFile = file;
         this.options.onFilesChange(this.files, this.activeFile);

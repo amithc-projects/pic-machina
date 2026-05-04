@@ -408,6 +408,29 @@ registry.register({
   apply() { /* handled by batch.js as aggregation node */ }
 });
 
+// ─── Video PiP ────────────────────────────────────────────
+registry.register({
+  id: 'flow-video-pip', name: 'Video PiP', category: 'Flow Control', categoryKey: 'flow',
+  icon: 'picture_in_picture',
+  description: 'Composite a Picture-in-Picture overlay (e.g. talking head) onto a background video. Requires exactly 2 input videos (alphabetically sorted: 1st = background, 2nd = PiP).',
+  params: [
+    { name: 'filename',         label: 'Output Filename',             type: 'text',   defaultValue: 'video-pip.mp4' },
+    { name: 'layout',           label: 'PiP Position',                type: 'select',
+      options: [
+        { label: 'Bottom Right', value: 'pip-corner-br' },
+        { label: 'Bottom Left',  value: 'pip-corner-bl' },
+        { label: 'Top Right',    value: 'pip-corner-tr' },
+        { label: 'Top Left',     value: 'pip-corner-tl' },
+      ],
+      defaultValue: 'pip-corner-br' },
+    { name: 'outputWidth',      label: 'Output Width (px)',           type: 'number', defaultValue: 1920 },
+    { name: 'outputHeight',     label: 'Output Height (px)',          type: 'number', defaultValue: 1080 },
+    { name: 'fps',              label: 'FPS',                         type: 'number', defaultValue: 30 },
+    { name: 'bitrate',          label: 'Bitrate (bps)',               type: 'number', defaultValue: 8000000 },
+  ],
+  apply() { /* handled by batch.js as aggregation node */ }
+});
+
 // ─── Template Aggregator ──────────────────────────────────
 registry.register({
   id: 'flow-template-aggregator', name: 'Template Render', category: 'Flow Control', categoryKey: 'flow',
@@ -598,7 +621,7 @@ registry.register({
 registry.register({
   id: 'flow-video-compress', name: 'Video: Compress', category: 'Flow Control', categoryKey: 'flow',
   icon: 'compress',
-  description: 'Reduce video file size by lowering the output bitrate. Skips non-video files.',
+  description: 'Reduce video file size by lowering the output bitrate and optionally resizing the dimensions. Skips non-video files.',
   params: [
     { name: 'quality', label: 'Quality Preset', type: 'select',
       options: [
@@ -609,6 +632,8 @@ registry.register({
       ],
       defaultValue: 'medium' },
     { name: 'bitrate', label: 'Custom Bitrate (Mbps — only used when Custom is selected)', type: 'number', defaultValue: 4 },
+    { name: 'width',   label: 'Output Width (px — leave blank to keep aspect ratio)', type: 'number', defaultValue: '' },
+    { name: 'height',  label: 'Output Height (px — leave blank to keep aspect ratio)', type: 'number', defaultValue: '' },
     { name: 'suffix',  label: 'Filename Suffix', type: 'text', defaultValue: '_compressed' },
   ],
   apply() { /* handled by Processor — runs mediabunny Conversion per file */ }

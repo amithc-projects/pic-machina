@@ -53,6 +53,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'flow-animate-stack',
   // video-wall uses document.fonts (loadHandwritingFont) — must run on main thread
   'flow-video-wall',
+  'flow-video-pip',
   // video-extract-frame uses <video> element — not available in workers
   'video-extract-frame',
   // flow-template-aggregator draws onto canvas on the main thread
@@ -170,7 +171,7 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
     if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-video-fast-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph', 'flow-render-hyperframe'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
-    if (node.transformId === 'flow-video-wall') {
+    if (node.transformId === 'flow-video-wall' || node.transformId === 'flow-video-pip') {
       aggregations[node.id] = { node, blobs: [], files: [] };
     }
     if (node.transformId === 'flow-video-concat') {
@@ -303,8 +304,8 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
   // Post-process aggregations
   let aggCount = 0;
   for (const [, agg] of Object.entries(aggregations)) {
-    // Video wall uses files[], all others use blobs[]
-    if (agg.node.transformId === 'flow-video-wall') {
+    // Video wall & pip uses files[], all others use blobs[]
+    if (agg.node.transformId === 'flow-video-wall' || agg.node.transformId === 'flow-video-pip') {
       if (!agg.files?.length) continue;
       try {
         onLog('info', `Rendering video wall: ${agg.files.length} video(s)`);

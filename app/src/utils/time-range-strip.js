@@ -298,8 +298,6 @@ export function bindTimeRangeControls(container, node, def, { onChange } = {}) {
     if (!file || !filmstripEl) return;
     try {
       const { urls, duration } = await extractVideoFilmstrip(file, 8, 48);
-      // Revoke old URLs
-      filmstripUrls.forEach(u => URL.revokeObjectURL(u));
       filmstripUrls = urls;
       videoDuration = duration;
       if (durLabel) durLabel.textContent = `${duration.toFixed(1)}s`;
@@ -314,7 +312,6 @@ export function bindTimeRangeControls(container, node, def, { onChange } = {}) {
   }
 
   function destroy() {
-    filmstripUrls.forEach(u => URL.revokeObjectURL(u));
     filmstripUrls = [];
   }
 

@@ -972,6 +972,7 @@ export async function render(container, hash) {
       bldToggleHelpBtn.style.borderColor = 'var(--ps-blue)';
       modalBox.style.width = '1200px';
       modalBox.style.maxWidth = '95vw';
+      modalBox.style.height = '80vh';
       helpPane.style.display = 'flex';
       helpPane.style.flexDirection = 'column';
       
@@ -986,6 +987,7 @@ export async function render(container, hash) {
       bldToggleHelpBtn.style.borderColor = '';
       modalBox.style.width = '';
       modalBox.style.maxWidth = '';
+      modalBox.style.height = '';
       helpPane.style.display = 'none';
     }
   });

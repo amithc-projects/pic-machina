@@ -42,11 +42,19 @@ export async function shadowWrite(store) {
     const toWrite = (store === 'recipes' || store === 'blocks')
       ? records.filter(r => !r.isSystem)
       : records;
-    // Strip non-serialisable blobs (e.g. templates.backgroundBlob)
-    const serialisable = toWrite.map(r => {
-      if (r.backgroundBlob) { const { backgroundBlob, ...rest } = r; return rest; }
+    // Encode blobs (e.g. templates.backgroundBlob) to base64 so they can be JSON serialized
+    const serialisable = await Promise.all(toWrite.map(async r => {
+      if (r.backgroundBlob) { 
+        const base64 = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(r.backgroundBlob);
+        });
+        const { backgroundBlob, ...rest } = r; 
+        return { ...rest, backgroundDataUrl: base64 }; 
+      }
       return r;
-    });
+    }));
     const blob = new Blob([JSON.stringify(serialisable)], { type: 'application/json' });
     const fh = await dir.getFileHandle(`${store}.json`, { create: true });
     const wr = await fh.createWritable();
@@ -103,7 +111,19 @@ export async function exportAll() {
   
   try {
     for (const store of stores) {
-      snapshot.data[store] = await dbGetAll(store);
+      const records = await dbGetAll(store);
+      snapshot.data[store] = await Promise.all(records.map(async r => {
+        if (r.backgroundBlob) {
+          const base64 = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(r.backgroundBlob);
+          });
+          const { backgroundBlob, ...rest } = r;
+          return { ...rest, backgroundDataUrl: base64 };
+        }
+        return r;
+      }));
     }
     
     // Create downloaded blob automatically
@@ -137,12 +157,26 @@ export async function importAll(file, { wipeFirst = true, silent = false } = {})
 
     for (const store of stores) {
       if (!snapshot.data[store]) continue;
+      
+      const records = snapshot.data[store];
+
+      // Decode blobs before opening the transaction
+      for (let record of records) {
+        if (record.backgroundDataUrl) {
+          try {
+            const resp = await fetch(record.backgroundDataUrl);
+            record.backgroundBlob = await resp.blob();
+          } catch (e) {
+            console.warn('Failed to restore background blob:', e);
+          }
+          delete record.backgroundDataUrl;
+        }
+      }
 
       await new Promise((resolve, reject) => {
         const tx = db.transaction(store, 'readwrite');
         const os = tx.objectStore(store);
 
-        const records = snapshot.data[store];
         if (wipeFirst && records.length > 0) {
           os.clear();
         }

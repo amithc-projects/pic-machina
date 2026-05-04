@@ -1,0 +1,35 @@
+In 
+# README: PicMachina Recipe Icon Style Definition
+
+## Overview
+This document defines the exact visual language and prompting structure required to generate consistent thumbnail icons for the PicMachina application recipe library. 
+
+## Base Aesthetic Rules
+* **Theme:** Minimalist, dark-mode, technical UI iconography.
+* **Background:** Solid, flat, very dark gray/near-black (e.g., `#151515`). No gradients or textures in the background.
+* **Foreground Elements:** Clean, monoline vector-style line art. No filled shapes, only outlines.
+* **Color Palette:** The line art must feature a smooth, vibrant gradient transitioning from deep blue to bright cyan/teal.
+* **Effects:** A very subtle, understated neon glow on the lines. 
+* **Aspect Ratio:** Exactly 2:1.
+
+## Strict Negative Constraints
+* **NO TEXT:** Absolutely no words, letters, or numbers (unless explicitly requested for a specific file format icon like "GIF").
+* **NO UI CHROME:** Do not include play buttons, settings gears, progress bars, sliders, or app window borders.
+* **NO 3D/REALISM:** Keep everything flat and symbolic.
+
+## The Standard Layout (Process Flow)
+The standard recipe icon should depict a transformation process:
+`[Input Concept]  -->  [Output Concept]`
+* The arrow should be a simple, right-pointing line-art arrow in the center.
+
+---
+
+## Universal Master Prompt Template
+*Copy and paste the following block, replacing the bracketed text with your specific needs:*
+
+**Prompt:**
+Generate a UI thumbnail icon in a 2:1 aspect ratio. The style is minimalist, dark-mode vector line-art. The background is a solid very dark gray. The foreground features simple, monoline icons drawn with a smooth color gradient from deep blue to cyan/teal, with a subtle neon glow. 
+
+The composition is a process flow showing: [DESCRIBE INPUT ICON HERE] on the left, a simple right-pointing arrow in the center, and [DESCRIBE OUTPUT ICON HERE] on the right. 
+
+Strictly enforce: No text, no words, no letters. No user interface elements like buttons, settings wheels, or sliders. Purely abstract, flat, and symbolic line art.

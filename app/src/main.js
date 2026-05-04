@@ -30,6 +30,7 @@ const SCREENS = {
   pow: () => import('./screens/pow.js'),
   hlp: () => import('./screens/hlp.js'),
   aud: () => import('./screens/aud.js'),
+  snd: () => import('./screens/snd.js'),
   sys: () => import('./screens/sys.js'),
   bup: () => import('./screens/bup.js'),
   lic: () => import('./screens/lic.js'),
