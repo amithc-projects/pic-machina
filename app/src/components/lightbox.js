@@ -26,8 +26,8 @@ export class GlobalLightbox {
         .ic-gl-btn { background: none; border: none; color: var(--ps-text-muted); cursor: pointer; padding: 6px; border-radius: 4px; display: flex; align-items: center; transition: 0.2s; }
         .ic-gl-btn:hover { background: rgba(255,255,255,0.1); color: var(--ps-text); }
         
-        .ic-gl-viewer { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
-        .ic-gl-viewer img, .ic-gl-viewer video { width: 100%; height: 100%; object-fit: contain; }
+        .ic-gl-viewer { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000; min-height: 0; min-width: 0; }
+        .ic-gl-viewer img, .ic-gl-viewer video { max-width: 100%; max-height: 100%; width: 100%; height: 100%; object-fit: contain; }
         
         .ic-gl-sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--ps-border); font-weight: 600; font-size: 13px; color: var(--ps-text); display: flex; justify-content: space-between; align-items: center; }
         .ic-gl-sidebar-content { flex: 1; padding: 16px; overflow-y: auto; font-size: 13px; color: var(--ps-text-muted); }
@@ -125,11 +125,101 @@ export class GlobalLightbox {
     const isAudio = ['mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(ext);
     const isZip = ['zip'].includes(ext);
     const isPptx = ['pptx'].includes(ext);
+    const isJson = ['json'].includes(ext);
 
     if (isVideo) {
       this.viewer.innerHTML = `
-        <video src="${this.currentBlobUrl}" controls autoplay style="max-width:100%; max-height:100%;"></video>
+        <video src="${this.currentBlobUrl}" controls style="max-width:100%; max-height:100%; object-fit:contain;"></video>
       `;
+    } else if (isJson) {
+      this.viewer.innerHTML = `
+        <div style="display:flex; flex-direction:column; height:100%; width:100%; background:var(--ps-surface);">
+          <div style="padding:16px; border-bottom:1px solid var(--ps-border); display:flex; align-items:center; justify-content:space-between;">
+             <div style="display:flex; align-items:center; gap:8px;">
+               <span class="material-symbols-outlined text-[24px] text-[var(--ps-orange)]">data_object</span>
+               <h2 style="margin:0; font-size:16px; font-weight:600; color:var(--ps-text);">JSON Viewer</h2>
+             </div>
+             <div style="display:flex; gap:8px;">
+                <button class="btn-secondary btn-sm" id="btn-json-expand-all">Expand All</button>
+                <button class="btn-secondary btn-sm" id="btn-json-collapse-all">Collapse All</button>
+             </div>
+          </div>
+          <div style="flex:1; overflow:auto; padding:16px; font-family:monospace; font-size:13px; color:var(--ps-text);" id="json-tree-container">
+             <div class="spinner spinner--lg"></div>
+          </div>
+        </div>
+      `;
+      const escHtml = (str) => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      try {
+        const text = await ent.file.text();
+        const obj = JSON.parse(text);
+        
+        const renderNode = (key, value, isLast) => {
+          const type = Array.isArray(value) ? 'array' : typeof value;
+          if (value === null) {
+            return `<div style="padding-left: 20px;"><span style="color:var(--ps-blue);">${key !== null ? `"${key}": ` : ''}</span><span style="color:var(--ps-red);">null</span>${isLast ? '' : ','}</div>`;
+          }
+          if (type === 'object' || type === 'array') {
+            const isArray = type === 'array';
+            const openBracket = isArray ? '[' : '{';
+            const closeBracket = isArray ? ']' : '}';
+            const keys = Object.keys(value);
+            if (keys.length === 0) {
+              return `<div style="padding-left: 20px;"><span style="color:var(--ps-blue);">${key !== null ? `"${key}": ` : ''}</span>${openBracket}${closeBracket}${isLast ? '' : ','}</div>`;
+            }
+            let childHtml = keys.map((k, i) => renderNode(isArray ? null : k, value[k], i === keys.length - 1)).join('');
+            return `
+              <div style="padding-left: 20px;" class="json-node expanded">
+                <div style="cursor:pointer; user-select:none; display:flex; align-items:flex-start;" class="json-toggle">
+                  <span class="material-symbols-outlined" style="font-size:16px; margin-right:4px; margin-left:-20px; transition:transform 0.2s;">arrow_drop_down</span>
+                  <span style="color:var(--ps-blue);">${key !== null ? `"${key}": ` : ''}</span><span>${openBracket}</span>
+                </div>
+                <div class="json-children">${childHtml}</div>
+                <div>${closeBracket}${isLast ? '' : ','}</div>
+              </div>
+            `;
+          }
+          let valStr = String(value);
+          let valColor = 'var(--ps-text)';
+          if (type === 'string') { valStr = `"${value}"`; valColor = 'var(--ps-green)'; }
+          else if (type === 'number') { valColor = 'var(--ps-orange)'; }
+          else if (type === 'boolean') { valColor = 'var(--ps-purple)'; }
+          
+          return `<div style="padding-left: 20px;"><span style="color:var(--ps-blue);">${key !== null ? `"${key}": ` : ''}</span><span style="color:${valColor};">${escHtml(valStr)}</span>${isLast ? '' : ','}</div>`;
+        };
+        
+        const container = this.viewer.querySelector('#json-tree-container');
+        container.innerHTML = `<div style="margin-left:-20px;">${renderNode(null, obj, true)}</div>`;
+        
+        if (!document.getElementById('json-viewer-styles')) {
+           const style = document.createElement('style');
+           style.id = 'json-viewer-styles';
+           style.innerHTML = `
+             .json-node > .json-children { display: none; }
+             .json-node.expanded > .json-children { display: block; }
+             .json-node > .json-toggle > .material-symbols-outlined { transform: rotate(-90deg); }
+             .json-node.expanded > .json-toggle > .material-symbols-outlined { transform: rotate(0deg); }
+           `;
+           document.head.appendChild(style);
+        }
+        
+        container.querySelectorAll('.json-toggle').forEach(t => {
+           t.addEventListener('click', (e) => {
+              e.stopPropagation();
+              t.parentElement.classList.toggle('expanded');
+           });
+        });
+        
+        this.viewer.querySelector('#btn-json-expand-all').addEventListener('click', () => {
+           container.querySelectorAll('.json-node').forEach(n => n.classList.add('expanded'));
+        });
+        this.viewer.querySelector('#btn-json-collapse-all').addEventListener('click', () => {
+           container.querySelectorAll('.json-node').forEach(n => n.classList.remove('expanded'));
+        });
+        
+      } catch (e) {
+        this.viewer.querySelector('#json-tree-container').innerHTML = `<div style="color:var(--ps-red);">Failed to parse JSON: ${e.message}</div>`;
+      }
     } else if (isAudio) {
       this.viewer.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; background:var(--ps-surface);">

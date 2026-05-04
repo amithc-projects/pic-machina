@@ -58,7 +58,8 @@ export class MediaBrowser {
   initDOM() {
     this.container.innerHTML = `
       <style>
-        .ic-mb { display: flex; flex-direction: column; height: 100%; background: var(--ps-bg); font-family: system-ui, sans-serif; position: relative; }
+        .ic-mb { display: flex; flex-direction: column; height: 100%; background: var(--ps-bg); font-family: system-ui, sans-serif; position: relative; outline: none; }
+        .ic-mb:focus, .ic-mb:focus-within, .ic-mb-main:focus, .ic-mb-fs:focus { outline: none !important; box-shadow: none !important; }
         
         /* Header */
         .ic-mb-header { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--ps-border); background: var(--ps-surface); }
@@ -173,39 +174,9 @@ export class MediaBrowser {
     const bc = this.options.breadcrumbs || [];
 
     if (!this.headerEl.querySelector('.ic-mb-search')) {
-      let bcHtml = '';
-      if (this.options.onChangeFolderClick) {
-        bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-change-folder" title="Browse for new folder"><span class="material-symbols-outlined text-[18px]">folder_open</span></button>`;
-      }
-      if (this.options.canGoUp) {
-        if (bcHtml) bcHtml += `<span class="ic-mb-crumb-sep">/</span>`;
-        bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-up" title="Up one folder">..</button>`;
-      }
-      
-      const currentFolderName = this.options.currentFolderName || 'Current Folder';
-      
-      if (bc && bc.length > 0) {
-        bc.forEach((crumb, idx) => {
-          bcHtml += `<span class="ic-mb-crumb-sep">/</span>`;
-          bcHtml += `<button class="ic-mb-crumb-btn ic-mb-path-crumb" data-idx="${idx}">${escHtml(crumb)}</button>`;
-        });
-      }
-      
-      bcHtml += `<span class="ic-mb-crumb-sep">/</span>`;
-      bcHtml += `<span class="ic-mb-crumb-current" id="mb-bc-current">${escHtml(currentFolderName)}</span>`;
-      
-      if (this.options.childFolders && this.options.childFolders.length > 0) {
-        bcHtml += `
-          <div class="ic-mb-child-dropdown-wrap ml-1">
-             <button class="ic-mb-crumb-btn" id="mb-btn-child-folders" title="Subfolders"><span class="material-symbols-outlined text-[16px]">expand_more</span></button>
-             <div class="ic-mb-child-dropdown" id="mb-child-dropdown"></div>
-          </div>
-        `;
-      }
-
       this.headerEl.innerHTML = `
         <div class="ic-mb-top-row">
-          <div class="ic-mb-breadcrumbs">${bcHtml}</div>
+          <div class="ic-mb-breadcrumbs" id="mb-bc-wrapper"></div>
           <div class="ic-mb-toolbar">
             <input type="text" class="ic-mb-search" placeholder="Search files..." value="${escHtml(this.searchQuery)}">
             <div class="ic-mb-actions">
@@ -242,20 +213,6 @@ export class MediaBrowser {
         </div>
       `;
 
-      this.headerEl.querySelector('#mb-btn-change-folder')?.addEventListener('click', () => this.options.onChangeFolderClick?.());
-      this.headerEl.querySelector('#mb-btn-up')?.addEventListener('click', () => this.options.onNavigateUp?.());
-      this.headerEl.querySelectorAll('.ic-mb-path-crumb').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const idx = parseInt(btn.dataset.idx);
-          if (this.options.onNavigateTo) this.options.onNavigateTo(idx);
-        });
-      });
-      
-      this.headerEl.querySelector('#mb-btn-select-all')?.addEventListener('click', () => this.selectAll());
-      this.headerEl.querySelector('#mb-btn-deselect-all')?.addEventListener('click', () => this.deselectAll());
-      this.headerEl.querySelector('#mb-btn-download')?.addEventListener('click', () => this.options.onDownloadSelected?.(Array.from(this.selectedIds)));
-      this.headerEl.querySelector('#mb-btn-delete')?.addEventListener('click', () => this.options.onDeleteSelected?.(Array.from(this.selectedIds)));
-
       this.headerEl.querySelector('.ic-mb-search').addEventListener('input', (e) => {
         this.searchQuery = e.target.value.toLowerCase();
         this.applyFilters();
@@ -277,6 +234,56 @@ export class MediaBrowser {
         this.applyFilters();
       });
       
+      this.headerEl.querySelector('#mb-btn-select-all')?.addEventListener('click', () => this.selectAll());
+      this.headerEl.querySelector('#mb-btn-deselect-all')?.addEventListener('click', () => this.deselectAll());
+      this.headerEl.querySelector('#mb-btn-download')?.addEventListener('click', () => this.options.onDownloadSelected?.(Array.from(this.selectedIds)));
+      this.headerEl.querySelector('#mb-btn-delete')?.addEventListener('click', () => this.options.onDeleteSelected?.(Array.from(this.selectedIds)));
+    }
+
+    // Always update breadcrumbs
+    let bcHtml = '';
+    if (this.options.onChangeFolderClick) {
+      bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-change-folder" title="Browse for new folder"><span class="material-symbols-outlined text-[18px]">folder_open</span></button>`;
+    }
+    if (this.options.canGoUp) {
+      if (bcHtml) bcHtml += `<span class="ic-mb-crumb-sep">/</span>`;
+      bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-up" title="Up one folder">..</button>`;
+    }
+    
+    const currentFolderName = this.options.currentFolderName || 'Current Folder';
+    
+    if (bc && bc.length > 0) {
+      bc.forEach((crumb, idx) => {
+        bcHtml += `<span class="ic-mb-crumb-sep">/</span>`;
+        bcHtml += `<button class="ic-mb-crumb-btn ic-mb-path-crumb" data-idx="${idx}">${escHtml(crumb)}</button>`;
+      });
+    }
+    
+    bcHtml += `<span class="ic-mb-crumb-sep">/</span>`;
+    bcHtml += `<span class="ic-mb-crumb-current" id="mb-bc-current">${escHtml(currentFolderName)}</span>`;
+    
+    if (this.options.childFolders && this.options.childFolders.length > 0) {
+      bcHtml += `
+        <div class="ic-mb-child-dropdown-wrap ml-1">
+           <button class="ic-mb-crumb-btn" id="mb-btn-child-folders" title="Subfolders"><span class="material-symbols-outlined text-[16px]">expand_more</span></button>
+           <div class="ic-mb-child-dropdown" id="mb-child-dropdown"></div>
+        </div>
+      `;
+    }
+    
+    const bcWrapper = this.headerEl.querySelector('#mb-bc-wrapper');
+    if (bcWrapper) {
+      bcWrapper.innerHTML = bcHtml;
+      
+      this.headerEl.querySelector('#mb-btn-change-folder')?.addEventListener('click', () => this.options.onChangeFolderClick?.());
+      this.headerEl.querySelector('#mb-btn-up')?.addEventListener('click', () => this.options.onNavigateUp?.());
+      this.headerEl.querySelectorAll('.ic-mb-path-crumb').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx);
+          if (this.options.onNavigateTo) this.options.onNavigateTo(idx);
+        });
+      });
+
       const dropdownBtn = this.headerEl.querySelector('#mb-btn-child-folders');
       const dropdownEl = this.headerEl.querySelector('#mb-child-dropdown');
       if (dropdownBtn && dropdownEl) {
@@ -295,6 +302,7 @@ export class MediaBrowser {
         document.addEventListener('click', () => dropdownEl.classList.remove('show'));
       }
     }
+    
     const selCountEl = this.headerEl.querySelector('#mb-sel-count');
     if (selCountEl) selCountEl.textContent = this.selectedIds.size > 0 ? `${this.selectedIds.size} selected` : '';
 
@@ -430,8 +438,34 @@ export class MediaBrowser {
       this.tooltipEl.textContent = this.getTooltipText(ent);
       el.style.anchorName = '--mb-hovered-cell';
       this.tooltipEl.classList.add('show');
+      
+      const type = getFileType(ent.name, ent.isFolder);
+      if (ent.file && (type === 'image' || type === 'video') && (!ent.sidecar?.width)) {
+        const hoverId = ++this._hoverId;
+        const url = URL.createObjectURL(ent.file);
+        if (type === 'image') {
+          const img = new Image();
+          img.onload = () => {
+            if (this._hoverId === hoverId) {
+              this.tooltipEl.textContent += `\nDimensions: ${img.naturalWidth} x ${img.naturalHeight}`;
+            }
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        } else {
+          const vid = document.createElement('video');
+          vid.onloadedmetadata = () => {
+            if (this._hoverId === hoverId) {
+              this.tooltipEl.textContent += `\nDimensions: ${vid.videoWidth} x ${vid.videoHeight}`;
+            }
+            URL.revokeObjectURL(url);
+          };
+          vid.src = url;
+        }
+      }
     });
     el.addEventListener('mouseleave', () => {
+      this._hoverId = (this._hoverId || 0) + 1; // Invalidate pending tooltips
       el.style.anchorName = '';
       this.tooltipEl.classList.remove('show');
     });
@@ -451,8 +485,8 @@ export class MediaBrowser {
 
     if (type === 'video') {
       return previewUrl 
-        ? `<img src="${previewUrl}" loading="lazy">`
-        : `<video src="${url}#t=0.1" preload="metadata" muted></video><div class="ic-mb-badge"><span class="material-symbols-outlined text-[12px] mr-1">play_circle</span>Video</div>`;
+        ? `<div style="position:relative; width:100%; height:100%;"><img src="${previewUrl}" loading="lazy"><div style="position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.6); color:#fff; border-radius:4px; padding:2px; display:flex;"><span class="material-symbols-outlined text-[14px]">play_circle</span></div></div>`
+        : `<div style="position:relative; width:100%; height:100%;"><video src="${url}#t=0.1" preload="metadata" muted></video><div style="position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.6); color:#fff; border-radius:4px; padding:2px; display:flex;"><span class="material-symbols-outlined text-[14px]">play_circle</span></div></div>`;
     }
     if (type === 'image') return `<img src="${url}" loading="lazy">`;
     if (type === 'audio') return `<div class="flex items-center justify-center h-full w-full text-[var(--ps-text-muted)] bg-[var(--ps-surface)]"><span class="material-symbols-outlined text-[32px]">music_note</span></div>`;
@@ -549,7 +583,7 @@ export class MediaBrowser {
     if (activeType === 'folder' || activeEnt.isFolder) {
       const icon = activeEnt.name === '..' ? 'reply' : 'folder';
       viewerHtml = `<div class="flex flex-col items-center justify-center text-[var(--ps-blue)]"><span class="material-symbols-outlined text-[64px] mb-4">${icon}</span><span class="text-lg">${escHtml(activeEnt.name)}</span></div>`;
-    } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls autoplay></video>`;
+    } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls></video>`;
     else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}">`;
     else viewerHtml = `<div class="text-[var(--ps-text-muted)]">Preview not available</div>`;
 
@@ -558,7 +592,24 @@ export class MediaBrowser {
       <div class="ic-mb-fs-strip"></div>
     `;
 
+    const viewerEl = fs.querySelector('.ic-mb-fs-viewer');
+    viewerEl.addEventListener('dblclick', () => {
+      const active = this._currentFsActiveEnt || activeEnt;
+      if (active) {
+        this.options.onDoubleClick(active, this.filtered.indexOf(active), this.filtered);
+      }
+    });
+
     const strip = fs.querySelector('.ic-mb-fs-strip');
+    
+    // Restore scroll position
+    if (this._fsScrollLeft !== undefined) {
+      setTimeout(() => strip.scrollLeft = this._fsScrollLeft, 0);
+    }
+    strip.addEventListener('scroll', () => {
+      this._fsScrollLeft = strip.scrollLeft;
+    });
+
     const limit = Math.min(this.filtered.length, this.renderLimit);
     
     for (let i = 0; i < limit; i++) {
@@ -575,28 +626,13 @@ export class MediaBrowser {
       this.bindTooltip(thumb, ent);
       
       // Override default cell bind to trigger re-render in filmstrip
-      thumb.addEventListener('click', (e) => {
-        if (e.shiftKey && this.lastSelectedIdx !== -1) {
-          const start = Math.min(this.lastSelectedIdx, i);
-          const end = Math.max(this.lastSelectedIdx, i);
-          if (!e.metaKey && !e.ctrlKey) this.selectedIds.clear();
-          for (let k = start; k <= end; k++) {
-            this.selectedIds.add(this.filtered[k].name);
-          }
-        } else if (e.metaKey || e.ctrlKey) {
-          if (this.selectedIds.has(ent.name)) this.selectedIds.delete(ent.name);
-          else this.selectedIds.add(ent.name);
-          this.lastSelectedIdx = i;
-        } else {
-          this.selectedIds.clear();
-          this.selectedIds.add(ent.name);
-          this.lastSelectedIdx = i;
-        }
-        this.options.onSelectionChange(Array.from(this.selectedIds));
-        this.render(); // Redraw the whole view so viewer updates
-      });
+      thumb.addEventListener('click', (e) => this._handleItemClick(e, ent, i));
       
       thumb.addEventListener('dblclick', () => {
+        this.selectedIds.clear();
+        this.selectedIds.add(ent.name);
+        this.lastSelectedIdx = i;
+        this._syncSelectionUI();
         this.options.onDoubleClick(ent, i, this.filtered);
       });
       
@@ -606,27 +642,52 @@ export class MediaBrowser {
     this.mainEl.appendChild(fs);
   }
 
-  bindCellEvents(el, ent, index) {
-    el.addEventListener('click', (e) => {
-      if (e.shiftKey && this.lastSelectedIdx !== -1) {
-        const start = Math.min(this.lastSelectedIdx, index);
-        const end = Math.max(this.lastSelectedIdx, index);
-        if (!e.metaKey && !e.ctrlKey) this.selectedIds.clear();
-        for (let i = start; i <= end; i++) {
-          this.selectedIds.add(this.filtered[i].name);
-        }
-      } else if (e.metaKey || e.ctrlKey) {
-        if (this.selectedIds.has(ent.name)) this.selectedIds.delete(ent.name);
-        else this.selectedIds.add(ent.name);
+  _handleItemClick(e, ent, index) {
+    if (e.shiftKey && this.lastSelectedIdx !== -1) {
+      const start = Math.min(this.lastSelectedIdx, index);
+      const end = Math.max(this.lastSelectedIdx, index);
+      if (!e.metaKey && !e.ctrlKey) this.selectedIds.clear();
+      for (let i = start; i <= end; i++) {
+        this.selectedIds.add(this.filtered[i].name);
+      }
+      this.lastSelectedIdx = index;
+    } else if (e.metaKey || e.ctrlKey) {
+      if (this.selectedIds.has(ent.name)) {
+        this.selectedIds.delete(ent.name);
+      } else {
+        this.selectedIds.add(ent.name);
         this.lastSelectedIdx = index;
+      }
+    } else {
+      if (this.selectedIds.has(ent.name) && this.selectedIds.size === 1) {
+        this.selectedIds.clear();
       } else {
         this.selectedIds.clear();
         this.selectedIds.add(ent.name);
         this.lastSelectedIdx = index;
       }
-      
-      if (this.mode !== 'filmstrip') {
-        const items = this.mainEl.children[0].children;
+    }
+    
+    this._syncSelectionUI();
+  }
+
+  _syncSelectionUI() {
+    const selCountEl = this.headerEl.querySelector('#mb-sel-count');
+    if (selCountEl) selCountEl.textContent = this.selectedIds.size > 0 ? `${this.selectedIds.size} selected` : '';
+
+    if (this.mode === 'filmstrip') {
+      const strip = this.mainEl.querySelector('.ic-mb-fs-strip');
+      if (strip) {
+        const items = strip.children;
+        for (let i = 0; i < items.length; i++) {
+           items[i].classList.toggle('is-selected', this.selectedIds.has(this.filtered[i].name));
+        }
+      }
+      this._updateFilmstripViewer();
+    } else {
+      const listContainer = this.mainEl.children[0];
+      if (listContainer) {
+        const items = listContainer.children;
         for (let i = 0; i < items.length; i++) {
           const domIdx = this.mode === 'list' ? i - 1 : i;
           if (domIdx >= 0 && domIdx < this.filtered.length) {
@@ -634,11 +695,49 @@ export class MediaBrowser {
           }
         }
       }
-      
-      this.options.onSelectionChange(Array.from(this.selectedIds));
-    });
+    }
+    
+    this.options.onSelectionChange(Array.from(this.selectedIds));
+  }
+
+  _updateFilmstripViewer() {
+    let activeEnt = this.filtered[this.lastSelectedIdx !== -1 ? this.lastSelectedIdx : 0];
+    if (!activeEnt) return;
+    if (this.selectedIds.size > 0 && !this.selectedIds.has(activeEnt.name)) {
+      activeEnt = this.filtered.find(e => this.selectedIds.has(e.name)) || activeEnt;
+    }
+    
+    this._currentFsActiveEnt = activeEnt;
+    
+    const viewerEl = this.mainEl.querySelector('.ic-mb-fs-viewer');
+    if (!viewerEl) return;
+
+    const activeType = getFileType(activeEnt.name, activeEnt.isFolder);
+    let activeUrl = '';
+    if (activeEnt.file) {
+      activeUrl = URL.createObjectURL(activeEnt.file);
+      this.blobUrls.push(activeUrl);
+    }
+
+    let viewerHtml = '';
+    if (activeType === 'folder' || activeEnt.isFolder) {
+      const icon = activeEnt.name === '..' ? 'reply' : 'folder';
+      viewerHtml = `<div class="flex flex-col items-center justify-center text-[var(--ps-blue)] w-full h-full"><span class="material-symbols-outlined text-[64px] mb-4">${icon}</span><span class="text-lg">${escHtml(activeEnt.name)}</span></div>`;
+    } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls style="max-width:100%; max-height:100%; object-fit:contain;"></video>`;
+    else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+    else viewerHtml = `<div class="text-[var(--ps-text-muted)] flex items-center justify-center w-full h-full">Preview not available</div>`;
+
+    viewerEl.innerHTML = viewerHtml;
+  }
+
+  bindCellEvents(el, ent, index) {
+    el.addEventListener('click', (e) => this._handleItemClick(e, ent, index));
 
     el.addEventListener('dblclick', () => {
+      this.selectedIds.clear();
+      this.selectedIds.add(ent.name);
+      this.lastSelectedIdx = index;
+      this._syncSelectionUI();
       this.options.onDoubleClick(ent, index, this.filtered);
     });
   }
@@ -682,20 +781,21 @@ export class MediaBrowser {
       this.selectedIds.add(ent.name);
     }
     
-    if (this.mode === 'filmstrip') this.render();
-    else {
-      const items = this.mainEl.children[0].children;
+    this._syncSelectionUI();
+    
+    // Ensure the new selected item is scrolled into view smoothly
+    const listContainer = this.mode === 'filmstrip' 
+      ? this.mainEl.querySelector('.ic-mb-fs-strip') 
+      : this.mainEl.children[0];
+      
+    if (listContainer) {
+      const items = listContainer.children;
       for (let i = 0; i < items.length; i++) {
         const domIdx = this.mode === 'list' ? i - 1 : i;
-        if (domIdx >= 0 && domIdx < this.filtered.length) {
-           items[i].classList.toggle('is-selected', this.selectedIds.has(this.filtered[domIdx].name));
-           if (domIdx === newIdx && items[i].scrollIntoView) {
-             items[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-           }
+        if (domIdx === newIdx && items[i].scrollIntoView) {
+           items[i].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
         }
       }
     }
-    
-    this.options.onSelectionChange(Array.from(this.selectedIds));
   }
 }
