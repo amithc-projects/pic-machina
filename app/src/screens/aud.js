@@ -170,7 +170,10 @@ export async function render(container, hash) {
                       }
                   } else if (prog.status === 'done') {
                       if (statusEl) statusEl.innerHTML = `<span class="animate-pulse" style="display: inline-block; background-color: #fbbf24; color: #000; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 0.75rem;">Loaded ${prog.name}. Compiling sessions...</span>`;
-                      if (progressEl) progressEl.classList.add('hidden');
+                      if (progressEl) {
+                          progressEl.classList.remove('hidden');
+                          progressEl.removeAttribute('value');
+                      }
                   } else if (prog.status === 'encoding_speaker') {
                       if (statusEl) statusEl.textContent = `Encoding speaker...`;
                   } else if (prog.status === 'generating') {

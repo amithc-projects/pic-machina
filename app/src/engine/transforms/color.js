@@ -574,6 +574,124 @@ registry.register({
   }
 });
 
+// ─── Directional Blur ──────────────────────────────────────
+registry.register({
+  id: 'filter-directional-blur', name: 'Directional Blur', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'motion_blur',
+  description: 'Applies a linear motion blur along a specific angle.',
+  params: [
+    { name: 'length', label: 'Blur Length (px)', type: 'range', min: 1, max: 200, defaultValue: 30 },
+    { name: 'angle',  label: 'Angle (degrees)',  type: 'range', min: 0, max: 360, defaultValue: 45 },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const length = p.length ?? 30;
+    const angle = ((p.angle ?? 45) * Math.PI) / 180;
+    if (length <= 1) return;
+    
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    tmp.getContext('2d').drawImage(ctx.canvas, 0, 0);
+    
+    ctx.clearRect(0, 0, W, H);
+    
+    const half = length / 2;
+    for (let i = 0; i < length; i++) {
+      ctx.globalAlpha = 1.0 / (i + 1);
+      const offset = i - half;
+      ctx.drawImage(tmp, offset * dx, offset * dy);
+    }
+    ctx.globalAlpha = 1.0;
+  }
+});
+
+// ─── Radial Blur ──────────────────────────────────────
+registry.register({
+  id: 'filter-radial-blur', name: 'Radial Blur', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'motion_blur',
+  description: 'Zoom blur radiating from a center point.',
+  params: [
+    { name: 'amount', label: 'Amount (%)', type: 'range', min: 1, max: 100, defaultValue: 20 },
+    { name: 'centerX', label: 'Center X (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'centerY', label: 'Center Y (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const amount = (p.amount ?? 20) / 100;
+    const cx = W * (p.centerX ?? 50) / 100;
+    const cy = H * (p.centerY ?? 50) / 100;
+    if (amount <= 0) return;
+
+    const tmp = document.createElement('canvas');
+    tmp.width = W; tmp.height = H;
+    tmp.getContext('2d').drawImage(ctx.canvas, 0, 0);
+    
+    ctx.clearRect(0, 0, W, H);
+    
+    const steps = 30; // fixed steps for performance
+    for (let i = 0; i < steps; i++) {
+      const scale = 1.0 + (i / steps) * amount;
+      ctx.globalAlpha = 1.0 / (i + 1);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      ctx.translate(-cx, -cy);
+      ctx.drawImage(tmp, 0, 0);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1.0;
+  }
+});
+
+// ─── Gradient Ramp ──────────────────────────────────────
+registry.register({
+  id: 'filter-gradient-ramp', name: 'Gradient Ramp', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'gradient',
+  description: 'Overlay a linear or radial gradient over the image.',
+  params: [
+    { name: 'color1', label: 'Start Color', type: 'color', defaultValue: '#000000' },
+    { name: 'color2', label: 'End Color', type: 'color', defaultValue: '#ffffff' },
+    { name: 'type', label: 'Ramp Shape', type: 'select', options: [{label:'Linear', value:'linear'}, {label:'Radial', value:'radial'}], defaultValue: 'linear' },
+    { name: 'angle', label: 'Linear Angle', type: 'range', min: 0, max: 360, defaultValue: 90 },
+    { name: 'blendMode', label: 'Blend Mode', type: 'select', options: [{label:'Normal', value:'source-over'}, {label:'Multiply', value:'multiply'}, {label:'Screen', value:'screen'}, {label:'Overlay', value:'overlay'}], defaultValue: 'source-over' },
+    { name: 'opacity', label: 'Opacity (%)', type: 'range', min: 0, max: 100, defaultValue: 100 }
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const c1 = p.color1 || '#000000';
+    const c2 = p.color2 || '#ffffff';
+    const type = p.type || 'linear';
+    const angle = ((p.angle ?? 90) * Math.PI) / 180;
+    
+    let grad;
+    if (type === 'linear') {
+      const cx = W/2, cy = H/2;
+      const r = Math.sqrt(cx*cx + cy*cy);
+      const x1 = cx - Math.cos(angle) * r;
+      const y1 = cy - Math.sin(angle) * r;
+      const x2 = cx + Math.cos(angle) * r;
+      const y2 = cy + Math.sin(angle) * r;
+      grad = ctx.createLinearGradient(x1, y1, x2, y2);
+    } else {
+      const cx = W/2, cy = H/2;
+      const r = Math.sqrt(cx*cx + cy*cy);
+      grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    }
+    grad.addColorStop(0, c1);
+    grad.addColorStop(1, c2);
+    
+    ctx.save();
+    ctx.globalAlpha = (p.opacity ?? 100) / 100;
+    ctx.globalCompositeOperation = p.blendMode || 'source-over';
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+});
+
 // ─── Bloom / Glow ─────────────────────────────────────────
 registry.register({
   id: 'filter-bloom', name: 'Bloom / Glow', category: 'Color & Tone', categoryKey: 'color',
