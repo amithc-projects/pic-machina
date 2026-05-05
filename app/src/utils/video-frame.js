@@ -48,7 +48,7 @@ export async function extractVideoFrame(source, seekTime = null) {
   const video = document.createElement('video');
   video.muted   = true;
   video.preload = 'metadata';
-  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;top:-9999px;left:-9999px;';
   document.body.appendChild(video);
 
   try {
@@ -101,7 +101,7 @@ export async function getVideoDuration(file) {
   const video = document.createElement('video');
   video.muted = true;
   video.preload = 'metadata';
-  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  video.style.cssText = 'position:fixed;opacity:0;pointer-events:none;top:-9999px;left:-9999px;';
   document.body.appendChild(video);
   try {
     await new Promise((res, rej) => {
@@ -139,7 +139,7 @@ export async function extractVideoFilmstrip(file, count = 8, height = 48) {
   const metaVideo = document.createElement('video');
   metaVideo.muted   = true;
   metaVideo.preload = 'metadata';
-  metaVideo.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+  metaVideo.style.cssText = 'position:fixed;opacity:0;pointer-events:none;top:-9999px;left:-9999px;';
   document.body.appendChild(metaVideo);
 
   try {
@@ -164,7 +164,7 @@ export async function extractVideoFilmstrip(file, count = 8, height = 48) {
       const v = document.createElement('video');
       v.muted = true;
       v.preload = 'auto'; // Load video data for frame extraction
-      v.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:1px;height:1px';
+      v.style.cssText = 'position:fixed;opacity:0;pointer-events:none;top:-9999px;left:-9999px;';
       document.body.appendChild(v);
       
       try {

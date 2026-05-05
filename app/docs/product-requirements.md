@@ -137,6 +137,16 @@ String-type params support `{{token}}` injection resolved per image at run time:
 | **FLD** | Folder Viewer | Finder-style file browser. Two entry points: (1) from a specific batch run via Output History, (2) direct "open folder" mode that remembers the last browsed folder. Grid, filmstrip, and list views. Slideshow mode. Delete files. Before/after comparison with input folder. Video files show thumbnail preview from `.{videoname}.preview.jpg` sidecars (generated in background); user can set a custom preview frame via the camera button on any video card. |
 | **SHC** | ShowCase | Visual portfolio of highlighted runs. Large card grid list view; each entry captures up to 5 sample images/videos from a single run, a user-editable title and description, and a horizontal pipeline diagram of the recipe steps with parameters. Entry points: "Add to ShowCase" button in Output History run rows and gallery header, and in Folder Viewer when browsing a run's output. Curation (swap images, edit text) is done from within the ShowCase screen. |
 
+### 4.1 Shared Components
+
+**Media Browser**
+A unified, highly-performant filesystem navigation component used across SET, FLD, NED, and BLD screens.
+- **Views**: Supports Grid, List, and Filmstrip layouts.
+- **Compare Mode**: A specialised workspace supporting synchronized panning and zooming for "Before vs. After" analysis (side-by-side or split-slider).
+- **Navigation**: Supports descending into subdirectories and traversing upwards. The `..` (Up) directory acts strictly as a navigation target and cannot be "selected" as an active media item.
+- **Type-Aware Filtering & Warnings**: Enforces strict `inputType` requirements (e.g., Image-only recipes). If a user navigates to a folder that contains zero valid processing targets (e.g., choosing an Image recipe but the folder only has videos), the UI explicitly warns the user that files are hidden due to type mismatch, regardless of the presence of subdirectories.
+- **Performance**: Engineered to handle thousands of items without flexbox layout blowouts, leveraging intersection observers and strict CSS boundaries.
+
 ---
 
 ## 5. User Workflow

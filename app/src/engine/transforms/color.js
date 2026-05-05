@@ -1107,3 +1107,552 @@ registry.register({
     }
   }
 });
+
+// ─── Cinematic Grade (Lumetri) ─────────────────────────────
+registry.register({
+  id: 'color-lumetri', name: 'Cinematic Grade', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'camera',
+  description: 'Pro-level color grading engine. Adjust exposure, contrast, temperature, and shadows using a WebGL shader pipeline for maximum performance.',
+  params: [
+    { name: 'exposure',    label: 'Exposure (f-stops)', type: 'range', min: -3, max: 3, step: 0.1, defaultValue: 0 },
+    { name: 'contrast',    label: 'Contrast',           type: 'range', min: -100, max: 100, defaultValue: 0 },
+    { name: 'highlights',  label: 'Highlights',         type: 'range', min: -100, max: 100, defaultValue: 0 },
+    { name: 'shadows',     label: 'Shadows',            type: 'range', min: -100, max: 100, defaultValue: 0 },
+    { name: 'temperature', label: 'Temperature',        type: 'range', min: -100, max: 100, defaultValue: 0 },
+    { name: 'tint',        label: 'Tint',               type: 'range', min: -100, max: 100, defaultValue: 0 },
+    { name: 'saturation',  label: 'Saturation (%)',     type: 'range', min: 0, max: 200, defaultValue: 100 },
+    { name: 'vibrance',    label: 'Vibrance',           type: 'range', min: -100, max: 100, defaultValue: 0 },
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    
+    // Normalise parameters
+    const exposure = p.exposure || 0;
+    const contrast = (p.contrast || 0) / 100.0;
+    const highlights = (p.highlights || 0) / 100.0;
+    const shadows = (p.shadows || 0) / 100.0;
+    const temp = (p.temperature || 0) / 100.0;
+    const tint = (p.tint || 0) / 100.0;
+    const sat = (p.saturation ?? 100) / 100.0;
+    const vibrance = (p.vibrance || 0) / 100.0;
+
+    // Fast exit if no-op
+    if (exposure === 0 && contrast === 0 && highlights === 0 && shadows === 0 && temp === 0 && tint === 0 && sat === 1 && vibrance === 0) return;
+
+    const glCanvas = document.createElement('canvas');
+    glCanvas.width = W;
+    glCanvas.height = H;
+    // We use webgl2 if available for better float precision, else webgl
+    const gl = glCanvas.getContext('webgl2') || glCanvas.getContext('webgl');
+    if (!gl) {
+      console.warn('[color-lumetri] WebGL not supported, skipping effect');
+      return;
+    }
+
+    const vsSource = `
+      attribute vec2 aPosition;
+      attribute vec2 aTexCoord;
+      varying vec2 vTexCoord;
+      void main() {
+        gl_Position = vec4(aPosition, 0.0, 1.0);
+        vTexCoord = aTexCoord;
+        // Flip Y for WebGL texture so we don't have to use UNPACK_FLIP_Y_WEBGL which can be slow
+        vTexCoord.y = 1.0 - vTexCoord.y; 
+      }
+    `;
+
+    const fsSource = `
+      precision highp float;
+      varying vec2 vTexCoord;
+      uniform sampler2D uImage;
+      
+      uniform float uExposure;
+      uniform float uContrast;
+      uniform float uHighlights;
+      uniform float uShadows;
+      uniform float uTemperature;
+      uniform float uTint;
+      uniform float uSaturation;
+      uniform float uVibrance;
+
+      void main() {
+          vec4 texColor = texture2D(uImage, vTexCoord);
+          vec3 color = texColor.rgb;
+
+          // 1. Exposure (f-stop curve)
+          color *= pow(2.0, uExposure);
+
+          // 2. Temperature & Tint
+          color.r += uTemperature * 0.15;
+          color.b -= uTemperature * 0.15;
+          color.g += uTint * 0.15;
+
+          // 3. Contrast (Pivot at 0.5)
+          float c = (uContrast > 0.0) ? (1.0 / (1.0 - uContrast)) : (1.0 + uContrast);
+          color = (color - 0.5) * c + 0.5;
+
+          // 4. Highlights & Shadows
+          float luma = dot(color, vec3(0.299, 0.587, 0.114));
+          float shadowMask = clamp(1.0 - (luma * 2.0), 0.0, 1.0);
+          float highlightMask = clamp((luma - 0.5) * 2.0, 0.0, 1.0);
+          color += uShadows * 0.5 * shadowMask;
+          color += uHighlights * 0.5 * highlightMask;
+
+          // 5. Saturation & Vibrance
+          float luma2 = dot(color, vec3(0.299, 0.587, 0.114));
+          color = mix(vec3(luma2), color, uSaturation);
+
+          float maxC = max(color.r, max(color.g, color.b));
+          float minC = min(color.r, min(color.g, color.b));
+          float satAmount = maxC - minC;
+          // Vibrance targets less saturated pixels
+          float vib = uVibrance * (1.0 - satAmount);
+          color = mix(color, mix(vec3(luma2), color, 2.0), vib);
+
+          gl_FragColor = vec4(clamp(color, 0.0, 1.0), texColor.a);
+      }
+    `;
+
+    function compileShader(type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          const info = gl.getShaderInfoLog(shader);
+          gl.deleteShader(shader);
+          throw new Error('Shader compilation failed: ' + info);
+      }
+      return shader;
+    }
+
+    let program;
+    try {
+        program = gl.createProgram();
+        gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            throw new Error('Program linking failed: ' + gl.getProgramInfoLog(program));
+        }
+        gl.useProgram(program);
+    } catch (e) {
+        console.error('[color-lumetri]', e);
+        return;
+    }
+
+    // Set uniforms
+    gl.uniform1f(gl.getUniformLocation(program, "uExposure"), exposure);
+    gl.uniform1f(gl.getUniformLocation(program, "uContrast"), contrast);
+    gl.uniform1f(gl.getUniformLocation(program, "uHighlights"), highlights);
+    gl.uniform1f(gl.getUniformLocation(program, "uShadows"), shadows);
+    gl.uniform1f(gl.getUniformLocation(program, "uTemperature"), temp);
+    gl.uniform1f(gl.getUniformLocation(program, "uTint"), tint);
+    gl.uniform1f(gl.getUniformLocation(program, "uSaturation"), sat);
+    gl.uniform1f(gl.getUniformLocation(program, "uVibrance"), vibrance);
+
+    // Quad geometry (2 triangles)
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      -1.0, -1.0,   1.0, -1.0,   -1.0,  1.0,
+      -1.0,  1.0,   1.0, -1.0,    1.0,  1.0
+    ]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(program, "aPosition");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      0.0, 0.0,   1.0, 0.0,   0.0, 1.0,
+      0.0, 1.0,   1.0, 0.0,   1.0, 1.0
+    ]), gl.STATIC_DRAW);
+    const aTex = gl.getAttribLocation(program, "aTexCoord");
+    gl.enableVertexAttribArray(aTex);
+    gl.vertexAttribPointer(aTex, 2, gl.FLOAT, false, 0, 0);
+
+    // Upload canvas to texture
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ctx.canvas);
+
+    // Draw
+    gl.viewport(0, 0, W, H);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Copy webgl canvas back to 2d canvas
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(glCanvas, 0, 0);
+    
+    // Clean up
+    gl.deleteTexture(texture);
+    gl.deleteBuffer(positionBuffer);
+    gl.deleteBuffer(texCoordBuffer);
+    gl.deleteProgram(program);
+  }
+});
+
+// ─── Rain on Lens ─────────────────────────────────────────────
+registry.register({
+  id: 'filter-rain', name: 'Rain on Lens', category: 'Color & Tone', categoryKey: 'color',
+  icon: 'water_drop',
+  description: 'Procedural hardware-accelerated Rain on Lens effect. Includes physical refraction, trails, and clearing fog.',
+  params: [
+    { name: 'density', label: 'Rain Intensity', type: 'range', min: 1, max: 30, step: 1, defaultValue: 10 },
+    { name: 'sizeMin', label: 'Min Drop Size',  type: 'range', min: 0.1, max: 2.0, step: 0.1, defaultValue: 0.5 },
+    { name: 'sizeMax', label: 'Max Drop Size',  type: 'range', min: 0.1, max: 3.0, step: 0.1, defaultValue: 1.5 },
+    { name: 'fogging', label: 'Lens Fogging',   type: 'range', min: 0, max: 100, step: 1, defaultValue: 50 },
+    { name: 'speed',   label: 'Drip Velocity',  type: 'range', min: 0.1, max: 5, step: 0.1, defaultValue: 1.0 },
+    { name: 'offset',  label: 'Time Offset (s)',type: 'number', defaultValue: 0 },
+  ],
+  apply(ctx, p, context) {
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    
+    // Normalise parameters
+    const density = parseFloat(p.density ?? 10);
+    const sizeMin = parseFloat(p.sizeMin ?? 0.5);
+    const sizeMax = Math.max(sizeMin, parseFloat(p.sizeMax ?? 1.5));
+    const fogging = parseFloat(p.fogging ?? 50) / 100.0;
+    const speed = parseFloat(p.speed ?? 1.0);
+    const timeOffset = parseFloat(p.offset ?? 0);
+    const uTime = (context?.timestampSec ?? 0) + timeOffset;
+
+    // Fast exit if no rain and no fog
+    if (density === 0 && fogging === 0) return;
+
+    const glCanvas = document.createElement('canvas');
+    glCanvas.width = W;
+    glCanvas.height = H;
+    // We use webgl2 if available for better float precision, else webgl
+    const gl = glCanvas.getContext('webgl2') || glCanvas.getContext('webgl');
+    if (!gl) {
+      console.warn('[filter-rain] WebGL not supported, skipping effect');
+      return;
+    }
+
+    const vsSource = `
+      attribute vec2 aPosition;
+      attribute vec2 aTexCoord;
+      varying vec2 vTexCoord;
+      void main() {
+        gl_Position = vec4(aPosition, 0.0, 1.0);
+        vTexCoord = aTexCoord;
+        // Flip Y for WebGL texture
+        vTexCoord.y = 1.0 - vTexCoord.y; 
+      }
+    `;
+
+    const fsSource = `
+      precision highp float;
+      varying vec2 vTexCoord;
+      uniform sampler2D uImage;
+      
+      uniform float uTime;
+      uniform float uDensity;
+      uniform float uSizeMin;
+      uniform float uSizeMax;
+      uniform float uFog;
+      uniform float uSpeed;
+
+      // Organic hash functions for randomness
+      float hash12(vec2 p) {
+          vec3 p3  = fract(vec3(p.xyx) * .1031);
+          p3 += dot(p3, p3.yzx + 33.33);
+          return fract((p3.x + p3.y) * p3.z);
+      }
+      
+      vec2 hash22(vec2 p) {
+          vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+          p3 += dot(p3, p3.yzx+33.33);
+          return fract((p3.xx+p3.yz)*p3.zy);
+      }
+
+      // 3x3 Neighborhood Rain Layer
+      vec4 rainLayer(vec2 uv, float t, float aspect, float layerOffset) {
+          vec2 UV = uv;
+          
+          // The grid slowly slides down the glass over time
+          uv.y -= t * 0.3 * uSpeed;
+          
+          // Calculate grid bounds safely based on absolute max drop size
+          float minRadius = uSizeMin * 0.03;
+          float maxRadius = uSizeMax * 0.03;
+          
+          // Grid cells are dynamically sized so the max drop always safely fits inside a 3x3 search area
+          float gridY = 0.8 / maxRadius;
+          vec2 grid = vec2(gridY * aspect, gridY); // Perfectly square physical cells
+          
+          vec2 st = uv * grid;
+          vec2 id = floor(st);
+          vec2 f = fract(st);
+          
+          vec4 result = vec4(0.0);
+          
+          // Density acts purely as a spawn probability gate, not a size modifier
+          float densityProb = clamp(uDensity / 30.0, 0.01, 1.0);
+          
+          for(int y=-1; y<=1; y++) {
+              for(int x=-1; x<=1; x++) {
+                  vec2 offset = vec2(float(x), float(y));
+                  vec2 cellID = id + offset;
+                  vec2 cellST = f - offset;
+                  
+                  vec2 h = hash22(cellID + layerOffset);
+                  
+                  // Respect density limits
+                  if (h.x > densityProb) continue;
+                  
+                  // Physical radius in cell space
+                  float dropRadiusUV = mix(minRadius, maxRadius, h.y);
+                  float r = dropRadiusUV * grid.y;
+                  
+                  // Position inside cell
+                  vec2 hashPos = hash22(cellID * 1.5);
+                  float posX = 0.5 + (hashPos.x - 0.5) * 0.6;
+                  
+                  // Larger drops slide much faster
+                  float dropSpeed = mix(0.5, 2.0, h.y) * uSpeed;
+                  float cycleT = fract(t * dropSpeed + hashPos.y * 10.0);
+                  
+                  // Sliding physics
+                  float slide = smoothstep(0.1, 0.85, cycleT);
+                  float posY = 0.2 + slide * 0.6;
+                  
+                  vec2 p = cellST - vec2(posX, posY);
+                  
+                  // Teardrop shape taper
+                  float shape = r;
+                  if (p.y < 0.0) {
+                      shape *= max(0.0, 1.0 + p.y * 3.0 / r);
+                  }
+                  
+                  float dist = length(p);
+                  float dropMask = smoothstep(0.05, -0.05, dist - shape);
+                  
+                  // Streaming Wipe Trail
+                  float trailWidth = r * mix(0.2, 0.5, smoothstep(0.0, posY, cellST.y));
+                  float trailDist = abs(cellST.x - posX);
+                  float trailMask = smoothstep(trailWidth, trailWidth * 0.2, trailDist);
+                  
+                  trailMask *= smoothstep(-0.2, 0.1, cellST.y); // Fade above cell
+                  trailMask *= smoothstep(posY + 0.1, posY - 0.1, cellST.y); // Connect to drop
+                  trailMask *= smoothstep(1.0, 0.8, cycleT); // Fade over cycle
+                  
+                  // Pinned micro-droplets in the trail
+                  float microDrops = smoothstep(0.7, 1.0, hash12(floor(UV * vec2(grid.x, grid.y * 5.0))));
+                  float trailDrops = trailMask * microDrops;
+                  
+                  if (dropMask > 0.0) {
+                      result.xy = p / r; // Spherical normal
+                      result.z = dropMask;
+                      result.w = 1.0;
+                  } else if (trailDrops > 0.0 && result.z == 0.0) {
+                      result.xy = vec2(sign(cellST.x - posX) * trailMask, 0.0) * 0.6;
+                      result.z = 0.5;
+                      result.w = 0.8;
+                  }
+                  
+                  float wipe = trailMask * smoothstep(0.1, 0.2, cycleT);
+                  result.w = max(result.w, wipe * 0.7);
+              }
+          }
+          
+          return result;
+      }
+
+      vec4 staticDrops(vec2 uv, float aspect) {
+          float maxRadius = 0.015;
+          float gridY = 0.8 / maxRadius;
+          vec2 grid = vec2(gridY * aspect, gridY);
+          
+          vec2 st = uv * grid;
+          vec2 id = floor(st);
+          vec2 f = fract(st);
+          
+          vec4 result = vec4(0.0);
+          float densityProb = clamp(uDensity / 30.0, 0.01, 1.0);
+          
+          for(int y=-1; y<=1; y++) {
+              for(int x=-1; x<=1; x++) {
+                  vec2 offset = vec2(float(x), float(y));
+                  vec2 cellID = id + offset;
+                  vec2 cellST = f - offset;
+                  
+                  vec2 h = hash22(cellID + 123.45);
+                  if (h.x > densityProb * 1.5) continue;
+                  
+                  float r = mix(0.005, maxRadius, h.y) * grid.y;
+                  vec2 pos = vec2(0.5) + (hash22(cellID * 2.0) - 0.5) * 0.6;
+                  vec2 p = cellST - pos;
+                  
+                  float dist = length(p);
+                  float mask = smoothstep(0.05, -0.05, dist - r);
+                  
+                  if (mask > 0.0) {
+                      result.xy = p / r;
+                      result.z = mask;
+                      result.w = mask;
+                  }
+              }
+          }
+          return result;
+      }
+
+      void main() {
+          vec2 uv = vTexCoord;
+          float t = uTime;
+          float aspect = 16.0 / 9.0;
+          
+          // 2 Dynamic Layers (offset to prevent overlap)
+          vec4 layer1 = rainLayer(uv, t, aspect, 0.0);
+          vec4 layer2 = rainLayer(uv + vec2(0.345, 0.678), t * 1.3, aspect, 10.0);
+          
+          // 1 Static Condensation Layer
+          vec4 statics = staticDrops(uv, aspect);
+          
+          // Combine layers
+          vec4 combined = vec4(0.0);
+          
+          // Layer precedence (closest/biggest first)
+          if (layer1.z > 0.0) combined = layer1;
+          else if (layer2.z > 0.0) combined = layer2;
+          else {
+              // Statics only where there is no wipe
+              float totalWipe = max(layer1.w, layer2.w);
+              if (totalWipe == 0.0 && statics.z > 0.0) combined = statics;
+              else combined.w = totalWipe; // Pass the wipe mask through
+          }
+          
+          // Lensing effect: we invert and scale the normal to sample behind the drop
+          vec2 dropUV = uv - combined.xy * 0.03;
+          dropUV = clamp(dropUV, 0.0, 1.0);
+          
+          vec4 col = texture2D(uImage, dropUV);
+          
+          // Lens Fogging / Blurring
+          if (uFog > 0.0) {
+              // Fog the glass, but keep droplets and wipe trails clear
+              float fogFactor = uFog * (1.0 - combined.w);
+              
+              if (fogFactor > 0.0) {
+                  float fAmt = fogFactor * 0.015;
+                  vec4 blur = texture2D(uImage, clamp(dropUV + vec2(fAmt, fAmt), 0.0, 1.0)) +
+                              texture2D(uImage, clamp(dropUV + vec2(-fAmt, fAmt), 0.0, 1.0)) +
+                              texture2D(uImage, clamp(dropUV + vec2(fAmt, -fAmt), 0.0, 1.0)) +
+                              texture2D(uImage, clamp(dropUV + vec2(-fAmt, -fAmt), 0.0, 1.0));
+                  blur *= 0.25;
+                  col = mix(col, blur, fogFactor);
+                  col.rgb += vec3(0.15 * fogFactor); // Frosted glass brightening
+              }
+          }
+          
+          // Volumetric specular highlight
+          if (combined.z > 0.0) {
+              // Light from top left
+              vec2 lightDir = normalize(vec2(-1.0, -1.0));
+              // The normal of the sphere is effectively combined.xy
+              float spec = max(0.0, dot(combined.xy, lightDir));
+              spec = pow(spec, 6.0); // Sharp highlight
+              
+              // Internal reflection (bottom right)
+              float internal = max(0.0, dot(combined.xy, -lightDir));
+              internal = pow(internal, 2.0) * 0.4;
+              
+              col.rgb += vec3(spec + internal);
+              
+              // Darken the droplet edge for physical contrast
+              float edgeDarken = smoothstep(0.8, 1.0, length(combined.xy));
+              col.rgb *= (1.0 - edgeDarken * 0.3);
+          }
+          
+          gl_FragColor = vec4(col.rgb, 1.0);
+      }
+    `;
+
+    function compileShader(type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          const info = gl.getShaderInfoLog(shader);
+          gl.deleteShader(shader);
+          throw new Error('Shader compilation failed: ' + info);
+      }
+      return shader;
+    }
+
+    let program;
+    try {
+        program = gl.createProgram();
+        gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vsSource));
+        gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fsSource));
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            throw new Error('Program linking failed: ' + gl.getProgramInfoLog(program));
+        }
+        gl.useProgram(program);
+    } catch (e) {
+        console.error('[filter-rain]', e);
+        return;
+    }
+
+    // Set uniforms
+    gl.uniform1f(gl.getUniformLocation(program, "uTime"), uTime);
+    gl.uniform1f(gl.getUniformLocation(program, "uDensity"), density);
+    gl.uniform1f(gl.getUniformLocation(program, "uSizeMin"), sizeMin);
+    gl.uniform1f(gl.getUniformLocation(program, "uSizeMax"), sizeMax);
+    gl.uniform1f(gl.getUniformLocation(program, "uFog"), fogging);
+    gl.uniform1f(gl.getUniformLocation(program, "uSpeed"), speed);
+
+    // Quad geometry (2 triangles)
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      -1.0, -1.0,   1.0, -1.0,   -1.0,  1.0,
+      -1.0,  1.0,   1.0, -1.0,    1.0,  1.0
+    ]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(program, "aPosition");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      0.0, 0.0,   1.0, 0.0,   0.0, 1.0,
+      0.0, 1.0,   1.0, 0.0,   1.0, 1.0
+    ]), gl.STATIC_DRAW);
+    const aTex = gl.getAttribLocation(program, "aTexCoord");
+    gl.enableVertexAttribArray(aTex);
+    gl.vertexAttribPointer(aTex, 2, gl.FLOAT, false, 0, 0);
+
+    // Upload canvas to texture
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ctx.canvas);
+
+    // Draw
+    gl.viewport(0, 0, W, H);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Copy webgl canvas back to 2d canvas
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(glCanvas, 0, 0);
+    
+    // Clean up
+    gl.deleteTexture(texture);
+    gl.deleteBuffer(positionBuffer);
+    gl.deleteBuffer(texCoordBuffer);
+    gl.deleteProgram(program);
+  }
+});
+

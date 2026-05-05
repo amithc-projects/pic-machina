@@ -131,7 +131,7 @@ export class MediaBrowser {
         .ic-mb-list-row.is-selected { background: rgba(56, 139, 253, 0.15); }
         .ic-mb-list-row.is-header { background: var(--ps-surface); font-weight: 600; font-size: 11px; color: var(--ps-text-muted); text-transform: uppercase; border-bottom: 2px solid var(--ps-border); cursor: default; }
         .ic-mb-list-thumb { width: 32px; height: 32px; border-radius: 4px; overflow: hidden; background: #111; display: flex; align-items: center; justify-content: center; }
-        .ic-mb-list-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .ic-mb-list-thumb img, .ic-mb-list-thumb video { width: 100%; height: 100%; object-fit: cover; }
         .ic-mb-list-col { font-size: 13px; color: var(--ps-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         /* Filmstrip View */
@@ -143,7 +143,7 @@ export class MediaBrowser {
         .ic-mb-fs-thumb { width: 100px; height: 100px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; opacity: 0.6; transition: 0.2s; background: #111; display: flex; align-items: center; justify-content: center; }
         .ic-mb-fs-item:hover .ic-mb-fs-thumb { opacity: 1; }
         .ic-mb-fs-item.is-selected .ic-mb-fs-thumb { border-color: var(--ps-blue); opacity: 1; }
-        .ic-mb-fs-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .ic-mb-fs-thumb img, .ic-mb-fs-thumb video { width: 100%; height: 100%; object-fit: cover; }
         .ic-mb-fs-name { font-size: 10px; color: var(--ps-text); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         .ic-mb-fs-item .ic-mb-sel-indicator { top: 4px; left: 4px; }
