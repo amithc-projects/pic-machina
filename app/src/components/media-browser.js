@@ -35,7 +35,8 @@ export class MediaBrowser {
       onChangeFolderClick: null,
       onNavigateUp: null,
       onDownloadSelected: null,
-      onDeleteSelected: null
+      onDeleteSelected: null,
+      isOrderedSelection: false
     }, options);
 
     this.entries = this.options.entries;
@@ -109,9 +110,14 @@ export class MediaBrowser {
         
         /* Grid View */
         .ic-mb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-        .ic-mb-cell { display: flex; flex-direction: column; gap: 8px; cursor: pointer; border-radius: 8px; padding: 8px; transition: background 0.15s; user-select: none; }
+        .ic-mb-cell { display: flex; flex-direction: column; gap: 8px; cursor: pointer; border-radius: 8px; padding: 8px; transition: background 0.15s; user-select: none; position: relative; }
         .ic-mb-cell:hover { background: rgba(255,255,255,0.05); }
         .ic-mb-cell.is-selected { background: rgba(56, 139, 253, 0.15); box-shadow: inset 0 0 0 1px var(--ps-blue); }
+        
+        .ic-mb-sel-indicator { position: absolute; top: 12px; left: 12px; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.5); opacity: 0; transition: 0.2s; pointer-events: none; }
+        .ic-mb-cell.is-selected .ic-mb-sel-indicator, .ic-mb-list-row.is-selected .ic-mb-sel-indicator, .ic-mb-fs-item.is-selected .ic-mb-sel-indicator { opacity: 1; }
+        .ic-mb-sel-indicator.ordered { background: var(--ps-blue); color: #fff; }
+        .ic-mb-sel-indicator.unordered { background: #fff; color: var(--ps-blue); }
         
         .ic-mb-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: #111; position: relative; display: flex; align-items: center; justify-content: center; }
         .ic-mb-thumb img, .ic-mb-thumb video { width: 100%; height: 100%; object-fit: cover; }
@@ -133,12 +139,15 @@ export class MediaBrowser {
         .ic-mb-fs-viewer { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; position: relative; min-height: 0; overflow: hidden; }
         .ic-mb-fs-viewer img, .ic-mb-fs-viewer video { max-width: 100%; max-height: 100%; object-fit: contain; }
         .ic-mb-fs-strip { height: 140px; background: var(--ps-surface); border-top: 1px solid var(--ps-border); display: flex; gap: 8px; padding: 12px; overflow-x: auto; white-space: nowrap; align-items: flex-start; }
-        .ic-mb-fs-item { display: flex; flex-direction: column; gap: 4px; width: 100px; flex-shrink: 0; cursor: pointer; user-select: none; }
+        .ic-mb-fs-item { display: flex; flex-direction: column; gap: 4px; width: 100px; flex-shrink: 0; cursor: pointer; user-select: none; position: relative; }
         .ic-mb-fs-thumb { width: 100px; height: 100px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; opacity: 0.6; transition: 0.2s; background: #111; display: flex; align-items: center; justify-content: center; }
         .ic-mb-fs-item:hover .ic-mb-fs-thumb { opacity: 1; }
         .ic-mb-fs-item.is-selected .ic-mb-fs-thumb { border-color: var(--ps-blue); opacity: 1; }
         .ic-mb-fs-thumb img { width: 100%; height: 100%; object-fit: cover; }
         .ic-mb-fs-name { font-size: 10px; color: var(--ps-text); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .ic-mb-fs-item .ic-mb-sel-indicator { top: 4px; left: 4px; }
+        .ic-mb-list-row .ic-mb-sel-indicator { top: 12px; left: -4px; transform: scale(0.75); }
       </style>
       <div class="ic-mb">
         <div class="ic-mb-header" id="ic-mb-header"></div>
@@ -208,6 +217,7 @@ export class MediaBrowser {
               <button class="ic-mb-mode-btn" data-mode="grid" title="Grid View"><span class="material-symbols-outlined text-[18px]">grid_view</span></button>
               <button class="ic-mb-mode-btn" data-mode="list" title="List View"><span class="material-symbols-outlined text-[18px]">view_list</span></button>
               <button class="ic-mb-mode-btn" data-mode="filmstrip" title="Filmstrip View"><span class="material-symbols-outlined text-[18px]">view_carousel</span></button>
+              ${this.options.enableCompare ? `<button class="ic-mb-mode-btn" data-mode="compare" title="Compare Mode"><span class="material-symbols-outlined text-[18px]">compare</span></button>` : ''}
             </div>
           </div>
         </div>
@@ -415,9 +425,84 @@ export class MediaBrowser {
       return;
     }
 
-    if (this.mode === 'grid') this.renderGrid();
+    if (this.mode === 'filmstrip') this.renderFilmstrip();
+    else if (this.mode === 'compare') this.renderCompare();
     else if (this.mode === 'list') this.renderList();
-    else if (this.mode === 'filmstrip') this.renderFilmstrip();
+    else this.renderGrid();
+  }
+
+  async renderCompare() {
+    this.mainEl.className = 'ic-mb-main';
+    this.mainEl.style.padding = '0';
+    
+    const fs = document.createElement('div');
+    fs.className = 'ic-mb-fs';
+    
+    let activeEnt = this.filtered[0];
+    if (this.selectedIds.size > 0) {
+      const firstSelected = this.filtered.find(e => this.selectedIds.has(e.name));
+      if (firstSelected) activeEnt = firstSelected;
+    }
+    
+    const viewer = document.createElement('div');
+    viewer.className = 'ic-mb-fs-viewer';
+    viewer.style.position = 'relative';
+    fs.appendChild(viewer);
+    
+    // Instantiate ImageWorkspace inside viewer!
+    const { ImageWorkspace } = await import('./image-workspace.js');
+    this.compareWorkspace = new ImageWorkspace(viewer, {
+      allowFolder: false,
+      allowUpload: false,
+      customControlsHtml: this.options.customControlsHtml || '',
+      onBindCustomControls: this.options.onBindCustomControls || null,
+      onRender: this.options.onCompareRender || (async (file) => ({
+        beforeUrl: URL.createObjectURL(file),
+        afterUrl: URL.createObjectURL(file)
+      })),
+      onInfo: this.options.onCompareInfo || null
+    });
+    
+    if (activeEnt && activeEnt.file && activeEnt.name !== '..') {
+      this.compareWorkspace.setFiles([activeEnt.file]);
+    }
+    
+    const strip = document.createElement('div');
+    strip.className = 'ic-mb-fs-strip';
+    
+    const limit = Math.min(this.filtered.length, 100);
+    for (let i = 0; i < limit; i++) {
+      const ent = this.filtered[i];
+      const type = getFileType(ent.name, ent.isFolder);
+      
+      const thumb = document.createElement('div');
+      thumb.className = `ic-mb-fs-item ${activeEnt?.name === ent.name ? 'is-selected' : ''}`;
+      thumb.setAttribute('data-name', ent.name);
+      thumb.innerHTML = `
+        <div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>
+        <div class="ic-mb-fs-thumb">${this._createThumbnailHtml(ent, type)}</div>
+        <div class="ic-mb-fs-name">${escHtml(ent.name)}</div>
+      `;
+      
+      this.bindTooltip(thumb, ent);
+      
+      thumb.addEventListener('click', (e) => this._handleItemClick(e, ent, i));
+      
+      thumb.addEventListener('dblclick', () => {
+        this.selectedIds.clear();
+        if (ent.name !== '..') {
+          this.selectedIds.add(ent.name);
+          this.lastSelectedIdx = i;
+        }
+        this._syncSelectionUI();
+        this.options.onDoubleClick(ent, i, this.filtered);
+      });
+      
+      strip.appendChild(thumb);
+    }
+    
+    fs.appendChild(strip);
+    this.mainEl.appendChild(fs);
   }
 
   getTooltipText(ent) {
@@ -509,7 +594,9 @@ export class MediaBrowser {
       
       const cell = document.createElement('div');
       cell.className = `ic-mb-cell ${this.selectedIds.has(ent.name) ? 'is-selected' : ''}`;
+      cell.setAttribute('data-name', ent.name);
       cell.innerHTML = `
+        <div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>
         <div class="ic-mb-thumb">${this._createThumbnailHtml(ent, type)}</div>
         <div class="ic-mb-name">${escHtml(ent.name)}</div>
       `;
@@ -544,8 +631,12 @@ export class MediaBrowser {
       
       const row = document.createElement('div');
       row.className = `ic-mb-list-row ${this.selectedIds.has(ent.name) ? 'is-selected' : ''}`;
+      row.setAttribute('data-name', ent.name);
       row.innerHTML = `
-        <div class="ic-mb-list-thumb">${this._createThumbnailHtml(ent, type)}</div>
+        <div class="ic-mb-list-thumb" style="position:relative;">
+          <div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>
+          ${this._createThumbnailHtml(ent, type)}
+        </div>
         <div class="ic-mb-list-col">${escHtml(ent.name)}</div>
         <div class="ic-mb-list-col text-[var(--ps-text-muted)]">${type.toUpperCase()}</div>
         <div class="ic-mb-list-col text-[var(--ps-text-muted)]">${ent.file ? formatBytes(ent.file.size) : '--'}</div>
@@ -618,7 +709,9 @@ export class MediaBrowser {
       
       const thumb = document.createElement('div');
       thumb.className = `ic-mb-fs-item ${activeEnt.name === ent.name ? 'is-selected' : ''}`;
+      thumb.setAttribute('data-name', ent.name);
       thumb.innerHTML = `
+        <div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>
         <div class="ic-mb-fs-thumb">${this._createThumbnailHtml(ent, type)}</div>
         <div class="ic-mb-fs-name">${escHtml(ent.name)}</div>
       `;
@@ -630,8 +723,10 @@ export class MediaBrowser {
       
       thumb.addEventListener('dblclick', () => {
         this.selectedIds.clear();
-        this.selectedIds.add(ent.name);
-        this.lastSelectedIdx = i;
+        if (ent.name !== '..') {
+          this.selectedIds.add(ent.name);
+          this.lastSelectedIdx = i;
+        }
         this._syncSelectionUI();
         this.options.onDoubleClick(ent, i, this.filtered);
       });
@@ -643,6 +738,8 @@ export class MediaBrowser {
   }
 
   _handleItemClick(e, ent, index) {
+    if (ent.name === '..') return;
+
     if (e.shiftKey && this.lastSelectedIdx !== -1) {
       const start = Math.min(this.lastSelectedIdx, index);
       const end = Math.max(this.lastSelectedIdx, index);
@@ -675,7 +772,7 @@ export class MediaBrowser {
     const selCountEl = this.headerEl.querySelector('#mb-sel-count');
     if (selCountEl) selCountEl.textContent = this.selectedIds.size > 0 ? `${this.selectedIds.size} selected` : '';
 
-    if (this.mode === 'filmstrip') {
+    if (this.mode === 'filmstrip' || this.mode === 'compare') {
       const strip = this.mainEl.querySelector('.ic-mb-fs-strip');
       if (strip) {
         const items = strip.children;
@@ -683,7 +780,17 @@ export class MediaBrowser {
            items[i].classList.toggle('is-selected', this.selectedIds.has(this.filtered[i].name));
         }
       }
-      this._updateFilmstripViewer();
+      if (this.mode === 'filmstrip') {
+        this._updateFilmstripViewer();
+      } else if (this.mode === 'compare' && this.compareWorkspace) {
+        let activeEnt = this.filtered[this.lastSelectedIdx];
+        if (this.selectedIds.size > 0 && (!activeEnt || !this.selectedIds.has(activeEnt.name))) {
+          activeEnt = this.filtered.find(e => this.selectedIds.has(e.name));
+        }
+        if (activeEnt && activeEnt.file && activeEnt.name !== '..') {
+          this.compareWorkspace.setFiles([activeEnt.file]);
+        }
+      }
     } else {
       const listContainer = this.mainEl.children[0];
       if (listContainer) {
@@ -696,6 +803,21 @@ export class MediaBrowser {
         }
       }
     }
+    
+    // Update indicators
+    const selArr = Array.from(this.selectedIds);
+    this.mainEl.querySelectorAll('[data-name]').forEach(el => {
+      const name = el.getAttribute('data-name');
+      const ind = el.querySelector('.ic-mb-sel-indicator');
+      if (!ind) return;
+      if (this.selectedIds.has(name)) {
+        if (this.options.isOrderedSelection) {
+          ind.textContent = selArr.indexOf(name) + 1;
+        } else {
+          ind.innerHTML = '<span class="material-symbols-outlined text-[14px]">check</span>';
+        }
+      }
+    });
     
     this.options.onSelectionChange(Array.from(this.selectedIds));
   }
@@ -735,8 +857,10 @@ export class MediaBrowser {
 
     el.addEventListener('dblclick', () => {
       this.selectedIds.clear();
-      this.selectedIds.add(ent.name);
-      this.lastSelectedIdx = index;
+      if (ent.name !== '..') {
+        this.selectedIds.add(ent.name);
+        this.lastSelectedIdx = index;
+      }
       this._syncSelectionUI();
       this.options.onDoubleClick(ent, index, this.filtered);
     });

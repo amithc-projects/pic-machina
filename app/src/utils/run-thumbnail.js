@@ -182,7 +182,11 @@ export async function ensureRunThumbnail(run, { persist = true } = {}) {
     // looking for a thumbnail source.
     const isThumbCandidate = (name) => {
       const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
-      return ext !== '.zip' && ext !== '.pptx';
+      // Skip archives (can't be rasterised)
+      if (ext === '.zip' || ext === '.pptx') return false;
+      // Skip video formats not natively supported by the browser's <video> element
+      if (ext === '.mkv' || ext === '.avi') return false;
+      return true;
     };
 
     let first = null;
@@ -202,8 +206,9 @@ export async function ensureRunThumbnail(run, { persist = true } = {}) {
       const allFiles = await listImages(subHandle, { includeVideo: true });
       if (!allFiles.length) return null;
       const ours = filterFilesForRun(allFiles, run);
-      if (!ours.length) return null;
-      first = ours[0];
+      const candidates = ours.filter(f => isThumbCandidate(f.name));
+      if (!candidates.length) return null;
+      first = candidates[0];
     }
 
     // Build a source canvas / blob suitable for the thumbnailer.
@@ -236,7 +241,12 @@ export async function ensureRunThumbnail(run, { persist = true } = {}) {
     }
     return dataUrl;
   } catch (err) {
-    console.warn('[run-thumbnail] generation failed', err);
+    if (err.message && err.message.includes('Video metadata load failed')) {
+      // Silently ignore unsupported formats or incomplete video files
+      // rather than spamming the console with warnings.
+    } else {
+      console.warn('[run-thumbnail] generation failed', err);
+    }
     return null;
   }
 }

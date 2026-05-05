@@ -215,7 +215,9 @@ export async function render(container, hash) {
   let _previewTimer = null;
   function schedulePreview() {
     clearTimeout(_previewTimer);
-    _previewTimer = setTimeout(() => workspace?.triggerProcess(), 300);
+    _previewTimer = setTimeout(() => {
+       if (workspace && workspace.compareWorkspace) workspace.compareWorkspace.triggerProcess();
+    }, 300);
   }
 
   // ── Time Range controls (video-effect only) ──────────────
@@ -240,195 +242,258 @@ export async function render(container, hash) {
   }
 
   // ── Unified Image Workspace ───────────────────────────────
-  const { ImageWorkspace } = await import('../components/image-workspace.js');
+  const { MediaBrowser } = await import('../components/media-browser.js');
   const wsContainer = container.querySelector('#ned-workspace-container');
   let testFile = null;
   let _nedScrubber = null;
 
-  // For video-specific steps show only videos; otherwise follow the recipe's inputType.
-  // A step is video-specific if its transform ID starts with 'flow-video-' or it is a
-  // video-effect variant (sourceTransformId set).
+  let mbDirStack = [];
+  let mbCurrentHandle = null;
+  let workspace = null;
+
   const stepIsVideoOnly = node.transformId?.startsWith('flow-video-') || !!def?.sourceTransformId || def?.categoryKey === 'video-effect';
   const stepFileFilter  = stepIsVideoOnly
     ? { includeVideo: true, onlyVideo: true }
     : fileFilterForRecipe(recipe);
 
-  const workspace = new ImageWorkspace(wsContainer, {
-    allowUpload: true,
-    allowFolder: true,
-    fileFilter: stepFileFilter,
-    onFilesChange: async (files, activeFile) => {
-      window._icTestFolderFiles = files;
-      window._icTestImage = { file: activeFile };
-      testFile = activeFile;
-      // Refresh the input folder handle on the panel (user may have just picked a folder)
-      if (_infoPanel && activeFile) {
-        const { getFolder } = await import('../data/folders.js');
-        const inputHandle = await getFolder('input').catch(() => null);
-        if (inputHandle) _infoPanel.setDirHandle(inputHandle);
-        _infoPanel.setFile(activeFile);
+  async function loadNedFolder(handle) {
+    if (!handle) return;
+    mbCurrentHandle = handle;
+    const { IMAGE_EXTS, VIDEO_EXTS } = await import('../data/folders.js');
+    const { includeVideo, onlyVideo } = stepFileFilter;
+    
+    const files = [];
+    const allFolders = [];
+    
+    for await (const [name, entry] of handle.entries()) {
+      if (name.startsWith('.')) continue;
+      if (entry.kind === 'directory') allFolders.push({ name, handle: entry });
+      else if (entry.kind === 'file') {
+        const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+        const isImg = IMAGE_EXTS.has(ext);
+        const isVid = VIDEO_EXTS.has(ext);
+        let match = false;
+        if (onlyVideo) match = isVid;
+        else if (includeVideo) match = isImg || isVid;
+        else match = isImg;
+        if (match) files.push({ file: await entry.getFile(), handle: entry });
       }
-      // Load filmstrip thumbnails for the time-range strip
-      if (trControls && activeFile && isVideoFile(activeFile)) {
-        trControls.loadFilmstrip(activeFile);
-      }
-      // Mount/remount video scrubber
-      if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
-      const scrubberMount = wsContainer.querySelector('#ned-scrubber-mount');
-      if (activeFile && isVideoFile(activeFile) && scrubberMount) {
-        _nedScrubber = await mountVideoScrubber(scrubberMount, activeFile, {
-          initialTime: getStoredSeekTime(activeFile.name),
-          onSeek: (t) => {
-            setStoredSeekTime(activeFile.name, t);
-            schedulePreview();
-          },
-        });
-      } else if (scrubberMount) {
-        scrubberMount.innerHTML = '';
-      }
-    },
-    onInfo: async (file) => {
-      const panel = await getOrCreateInfoPanel();
-      await panel.setFile(file);
-      panel.show();
-    },
-    onRender: async (file) => {
-      // Non-transform nodes (conditional, branch, block-ref) have no visual output
-      if (!def) return { noPreview: true };
-
-
-      // Transforms that produce no visual output or require full batch context
-      const NO_PREVIEW_IDS = new Set([
-        'flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx',
-        'flow-create-zip', 'flow-video-wall', 'flow-video-stitcher', 'flow-geo-timeline',
-        'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack',
-        'flow-template-aggregator', 'flow-face-swap', 'flow-gif-from-states',
-        'flow-video-concat',
-        // Video-only transforms (no canvas output, file is mutated via mediabunny)
-        'flow-video-convert', 'flow-video-trim', 'flow-video-compress',
-        'flow-video-change-fps', 'flow-video-speed',
-        'flow-video-strip-audio', 'flow-video-extract-audio',
-        'flow-video-remix-audio',
-      ]);
-      if (NO_PREVIEW_IDS.has(node.transformId)) {
-        return { noPreview: true };
-      }
-
-      // Video-only canvas transforms can't be applied to image files
-      const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
-      const fileIsVideo = VIDEO_EXTS.has(file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase());
-      if (!fileIsVideo && (def.sourceTransformId || def.categoryKey === 'video-effect')) {
-        // video-effect transforms — skip on image files
-        return { noPreview: true, noPreviewReason: 'This step only applies to video files. Select a video to preview.' };
-      }
-
-      const params = collectParams(container, def.params || [], 'ned');
-      const exif   = await extractExif(file);
-
-      // Load sidecar JSON for this file, if an input folder handle is available.
-      // Best-effort: missing / unreadable sidecars just leave sidecar=null.
-      let sidecar = null;
-      try {
-        const { getFolder }   = await import('../data/folders.js');
-        const { readSidecar } = await import('../data/sidecar.js');
-        const inputHandle = await getFolder('input').catch(() => null);
-        if (inputHandle) {
-          sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
-        }
-      } catch { /* best-effort */ }
-
-      // Update Notice
-      let notice = null;
-      if (node.transformId === 'flow-geo-timeline' && (!exif?.gps?.lat)) {
-        notice = 'Timeline requires an image with GPS Exif data. This step will skip images lacking location metadata.';
-      }
-      const noticeEl = container.querySelector('#ned-notice');
-      if (noticeEl) {
-        noticeEl.textContent = notice || '';
-        noticeEl.style.display = notice ? 'block' : 'none';
-      }
-
-      const context = {
-        filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
-        originalFile: file,
-        _previewMode: true,
-      };
-
-      // Cache this context so the {{vars}} picker can show resolved values
-      // for the currently-previewed file.
-      _latestVarContext = {
-        filename: file.name.replace(/\.[^.]+$/, ''),
-        ext: file.name.slice(file.name.lastIndexOf('.') + 1),
-        sourceFilename: file.name,
-        file,                 // passed to getImageInfo() for the richer walk
-        exif, meta: {}, sidecar,
-      };
-
-      // For video files, extract a representative frame as the canvas base.
-      // Use the stored scrubber seek time if available.
-      let imageSource;
-      let beforeUrl;
-      if (isVideoFile(file)) {
-        const seekTime = getStoredSeekTime(file.name);
-        const frameCanvas = await extractVideoFrame(file, seekTime);
-        imageSource = frameCanvas;
-        beforeUrl = await new Promise(r => frameCanvas.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.88));
-      } else {
-        const rawUrl = URL.createObjectURL(file);
-        const img    = new Image();
-        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = rawUrl; });
-        imageSource = img;
-        beforeUrl   = rawUrl; // keep alive; workspace will display it
-      }
-
-      const proc = new ImageProcessor();
-      proc.canvas.width  = imageSource.width  ?? imageSource.naturalWidth;
-      proc.canvas.height = imageSource.height ?? imageSource.naturalHeight;
-      proc.ctx.drawImage(imageSource, 0, 0);
-
-      // Video-effect transforms: use applyPerFrame if defined, else delegate to sourceTransformId.
-      // Other transforms call their own apply() as usual.
-      let applyFn;
-      if (typeof def.applyPerFrame === 'function') {
-        applyFn = (ctx, p, c) => def.applyPerFrame(ctx, p, c);
-      } else {
-        const applyDef = def.sourceTransformId ? registry.get(def.sourceTransformId) : def;
-        if (applyDef?.apply) applyFn = (ctx, p, c) => applyDef.apply(ctx, p, c);
-      }
-      if (applyFn) {
-        try { await applyFn(proc.ctx, params, context); } catch (err) { /* ignore */ }
-      }
-
-      const afterUrl = await new Promise(res => proc.canvas.toBlob(b => {
-        res(b ? URL.createObjectURL(b) : null);
-      }, 'image/jpeg', 0.88));
-
-      return {
-        beforeUrl,
-        afterUrl,
-        beforeLabel: 'Original',
-        afterLabel: 'Result',
-        context
-      };
     }
-  });
+    files.sort((a,b) => a.file.name.localeCompare(b.file.name));
+    allFolders.sort((a,b) => a.name.localeCompare(b.name));
+    
+    const mbEntries = [];
+    if (mbDirStack.length > 0) mbEntries.push({ name: '..', isFolder: true, handle: null });
+    allFolders.forEach(f => mbEntries.push({ name: f.name, isFolder: true, handle: f.handle }));
+    files.forEach(f => mbEntries.push({ name: f.file.name, file: f.file, isFolder: false, handle: f.handle }));
 
-  // Inject scrubber mount point between preview stage and carousel
-  {
-    const iwEl = wsContainer.querySelector('.ic-image-workspace');
-    const carousel = wsContainer.querySelector('.iw-carousel');
-    if (iwEl && carousel) {
-      const mount = document.createElement('div');
-      mount.id = 'ned-scrubber-mount';
-      iwEl.insertBefore(mount, carousel);
+    if (!workspace) {
+      workspace = new MediaBrowser(wsContainer, {
+        mode: 'compare',
+        enableCompare: true,
+        entries: mbEntries,
+        breadcrumbs: mbDirStack.map(d => d.name),
+        currentFolderName: handle.name,
+        canGoUp: mbDirStack.length > 0,
+        onChangeFolderClick: async () => {
+          const { pickFolder } = await import('../data/folders.js');
+          const h = await pickFolder('input');
+          if (h) { mbDirStack = []; await loadNedFolder(h); }
+        },
+        onNavigateUp: async () => {
+          if (mbDirStack.length === 0) return;
+          const parent = mbDirStack.pop();
+          await loadNedFolder(parent.handle);
+        },
+        onDoubleClick: async (ent) => {
+          if (ent.isFolder && ent.name !== '..') {
+            mbDirStack.push({ name: handle.name, handle: handle });
+            await loadNedFolder(ent.handle);
+          }
+        },
+        onSelectionChange: async (selectedIds, entries) => {
+           let activeFile = null;
+           if (selectedIds.length > 0) {
+             const activeEnt = entries.find(e => e.name === selectedIds[0]);
+             if (activeEnt) activeFile = activeEnt.file;
+           }
+           const filesList = entries.filter(e => !e.isFolder).map(e => e.file);
+           
+           window._icTestFolderFiles = filesList;
+           window._icTestImage = { file: activeFile };
+           testFile = activeFile;
+           if (_infoPanel && activeFile) {
+             const { getFolder } = await import('../data/folders.js');
+             const inputHandle = await getFolder('input').catch(() => null);
+             if (inputHandle) _infoPanel.setDirHandle(inputHandle);
+             _infoPanel.setFile(activeFile);
+           }
+           if (trControls && activeFile && isVideoFile(activeFile)) {
+             trControls.loadFilmstrip(activeFile);
+           }
+           if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
+           const scrubberMount = wsContainer.querySelector('#ned-scrubber-mount');
+           if (activeFile && isVideoFile(activeFile) && scrubberMount) {
+             _nedScrubber = await mountVideoScrubber(scrubberMount, activeFile, {
+               initialTime: getStoredSeekTime(activeFile.name),
+               onSeek: (t) => {
+                 setStoredSeekTime(activeFile.name, t);
+                 schedulePreview();
+               },
+             });
+           } else if (scrubberMount) {
+             scrubberMount.innerHTML = '';
+           }
+        },
+        onCompareInfo: async (file) => {
+          const panel = await getOrCreateInfoPanel();
+          await panel.setFile(file);
+          panel.show();
+        },
+        onCompareRender: async (file) => {
+          if (!def) return { noPreview: true };
+
+          const NO_PREVIEW_IDS = new Set([
+            'flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx',
+            'flow-create-zip', 'flow-video-wall', 'flow-video-stitcher', 'flow-geo-timeline',
+            'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack',
+            'flow-template-aggregator', 'flow-face-swap', 'flow-gif-from-states',
+            'flow-video-concat',
+            'flow-video-convert', 'flow-video-trim', 'flow-video-compress',
+            'flow-video-change-fps', 'flow-video-speed',
+            'flow-video-strip-audio', 'flow-video-extract-audio',
+            'flow-video-remix-audio',
+          ]);
+          if (NO_PREVIEW_IDS.has(node.transformId)) {
+            return { noPreview: true };
+          }
+
+          const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+          const fileIsVideo = VIDEO_EXTS.has(file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase());
+          if (!fileIsVideo && (def.sourceTransformId || def.categoryKey === 'video-effect')) {
+            return { noPreview: true, noPreviewReason: 'This step only applies to video files. Select a video to preview.' };
+          }
+
+          const params = collectParams(container, def.params || [], 'ned');
+          const exif   = await extractExif(file);
+
+          let sidecar = null;
+          try {
+            const { getFolder }   = await import('../data/folders.js');
+            const { readSidecar } = await import('../data/sidecar.js');
+            const inputHandle = await getFolder('input').catch(() => null);
+            if (inputHandle) {
+              sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
+            }
+          } catch { /* best-effort */ }
+
+          let notice = null;
+          if (node.transformId === 'flow-geo-timeline' && (!exif?.gps?.lat)) {
+            notice = 'Timeline requires an image with GPS Exif data. This step will skip images lacking location metadata.';
+          }
+          const noticeEl = container.querySelector('#ned-notice');
+          if (noticeEl) {
+            noticeEl.textContent = notice || '';
+            noticeEl.style.display = notice ? 'block' : 'none';
+          }
+
+          const context = {
+            filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
+            originalFile: file,
+            _previewMode: true,
+          };
+
+          _latestVarContext = {
+            filename: file.name.replace(/\.[^.]+$/, ''),
+            ext: file.name.slice(file.name.lastIndexOf('.') + 1),
+            sourceFilename: file.name,
+            file,
+            exif, meta: {}, sidecar,
+          };
+
+          let imageSource;
+          let beforeUrl;
+          if (isVideoFile(file)) {
+            const seekTime = getStoredSeekTime(file.name);
+            const frameCanvas = await extractVideoFrame(file, seekTime);
+            imageSource = frameCanvas;
+            beforeUrl = await new Promise(r => frameCanvas.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.88));
+          } else {
+            const rawUrl = URL.createObjectURL(file);
+            const img    = new Image();
+            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = rawUrl; });
+            imageSource = img;
+            beforeUrl   = rawUrl;
+          }
+
+          const proc = new ImageProcessor();
+          proc.canvas.width  = imageSource.width  ?? imageSource.naturalWidth;
+          proc.canvas.height = imageSource.height ?? imageSource.naturalHeight;
+          proc.ctx.drawImage(imageSource, 0, 0);
+
+          let applyFn;
+          if (typeof def.applyPerFrame === 'function') {
+            applyFn = (ctx, p, c) => def.applyPerFrame(ctx, p, c);
+          } else {
+            const applyDef = def.sourceTransformId ? registry.get(def.sourceTransformId) : def;
+            if (applyDef?.apply) applyFn = (ctx, p, c) => applyDef.apply(ctx, p, c);
+          }
+          if (applyFn) {
+            try { await applyFn(proc.ctx, params, context); } catch (err) { /* ignore */ }
+          }
+
+          const afterUrl = await new Promise(res => proc.canvas.toBlob(b => {
+            res(b ? URL.createObjectURL(b) : null);
+          }, 'image/jpeg', 0.88));
+
+          return {
+            beforeUrl,
+            afterUrl,
+            beforeLabel: 'Original',
+            afterLabel: 'Result',
+            context
+          };
+        }
+      });
+      
+      const idx = window._icTestFolderFiles?.findIndex(f => f.name === window._icTestImage?.file?.name) ?? 0;
+      const fileToSelect = files[idx] || files[0];
+      if (fileToSelect) {
+         workspace.selectedIds.add(fileToSelect.file.name);
+         workspace.lastSelectedIdx = mbEntries.findIndex(e => e.name === fileToSelect.file.name);
+         workspace._syncSelectionUI();
+      }
+    } else {
+      workspace.options.breadcrumbs = mbDirStack.map(d => d.name);
+      workspace.options.currentFolderName = handle.name;
+      workspace.options.canGoUp = mbDirStack.length > 0;
+      workspace.entries = mbEntries;
+      workspace.applyFilters();
+      workspace.renderHeader();
     }
   }
 
+  // Inject scrubber mount point
+  {
+    const mount = document.createElement('div');
+    mount.id = 'ned-scrubber-mount';
+    mount.style.position = 'absolute';
+    mount.style.bottom = '110px';
+    mount.style.left = '0';
+    mount.style.right = '0';
+    mount.style.zIndex = '100';
+    wsContainer.style.position = 'relative';
+    wsContainer.appendChild(mount);
+  }
+
   if (window._icTestFolderFiles && window._icTestFolderFiles.length > 0) {
-    const idx = window._icTestFolderFiles.findIndex(f => f.name === window._icTestImage?.file?.name);
-    workspace.setFiles(window._icTestFolderFiles, idx >= 0 ? idx : 0);
-  } else if (window._icTestImage?.file) {
-    workspace.setFiles([window._icTestImage.file]);
+    const { getFolder } = await import('../data/folders.js');
+    const initHandle = await getFolder('input').catch(()=>null);
+    await loadNedFolder(initHandle);
+  } else {
+    const { getFolder } = await import('../data/folders.js');
+    const initHandle = await getFolder('input').catch(()=>null);
+    await loadNedFolder(initHandle);
   }
 
   // ── Toolbar (i) button — toggle the same shared panel ────────────────

@@ -6,7 +6,7 @@
  */
 
 import { pickFolder, getFolder, setCurrentFolder, fileFilterForRecipe,
-         listImages, loadVideoPreviews, writeVideoPreview } from '../data/folders.js';
+         listImages, loadVideoPreviews, writeVideoPreview, IMAGE_EXTS, VIDEO_EXTS } from '../data/folders.js';
 import { isVideoFile, extractVideoFrame, getVideoDuration } from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { getRunsForRecipe }                          from '../data/runs.js';
@@ -21,7 +21,9 @@ import { renderParamField, collectParams,
 import { showThreeWayConfirm }                      from '../utils/dialogs.js';
 import { registry }                                 from '../engine/index.js';
 import { computeStrength }                          from '../engine/video-convert.js';
-import { checkRecipeAvailability }                   from '../engine/capabilities.js';
+import { checkRecipeAvailability }                  from '../engine/capabilities.js';
+import { MediaBrowser }                             from '../components/media-browser.js';
+import { GlobalLightbox }                           from '../components/lightbox.js';
 
 export async function render(container, hash) {
   injectStyles();
@@ -29,9 +31,12 @@ export async function render(container, hash) {
   const recipeId = new URLSearchParams(hash.split('?')[1] || '').get('recipe');
 
   // ── State ──────────────────────────────────────────────
-  let inputHandle    = null;     // FileSystemDirectoryHandle
+  let inputHandle    = null;     // FileSystemDirectoryHandle (root)
+  let currentHandle  = null;     // Currently navigated directory
   let outputHandle   = null;
   let selectedFiles  = [];       // File[] from input folder
+  let dirStack       = [];       // [{handle, name}]
+  let allFolders     = [];       // {name, handle}[]
   let setVideoPreviews = new Map(); // videoName → preview File
   let setFileMetadata = new Map(); // videoName → { width, height, duration }
   let selectedIds    = new Map();// Map<filename, sequenceInt>
@@ -43,6 +48,7 @@ export async function render(container, hash) {
   let inputHistory   = [];
   let outputHistory  = [];
   let gridSearchTerm = '';
+  let mediaBrowser   = null;
 
   // ── State declared early to avoid temporal dead zone (TDZ) ──
   const BUILTIN_SLOT_COUNTS = {
@@ -63,11 +69,7 @@ export async function render(container, hash) {
         </div>
         <div class="flex items-center gap-2">
           <span id="set-order-hint" style="display:none; font-size:12px; margin-right:4px; font-style:italic;" class="text-muted">Select photos in sequence</span>
-          <span id="set-sel-count" class="ic-badge"></span>
           <span id="set-run-warning" style="color:var(--ps-danger);display:none;font-size:12px;font-weight:500;padding-right:8px;"></span>
-          <button class="btn-secondary" id="btn-select-none" style="display:none">Select None</button>
-          <button class="btn-secondary" id="btn-select-filtered" style="display:none">Select Filtered</button>
-          <button class="btn-secondary" id="btn-select-all">Select All</button>
           <button class="btn-secondary" id="btn-edit-recipe" style="display:none" title="Edit selected recipe">
             <span class="material-symbols-outlined">edit</span>
             Edit Recipe
@@ -76,19 +78,6 @@ export async function render(container, hash) {
             <span class="material-symbols-outlined">play_arrow</span>
             Run Batch
           </button>
-        </div>
-      </div>
-
-      <!-- Image preview lightbox -->
-      <div id="set-lightbox" class="set-lightbox" style="display:none" role="dialog" aria-modal="true">
-        <div class="set-lightbox-bg" id="set-lb-bg"></div>
-        <button class="set-lb-close btn-icon" id="set-lb-close" title="Close (Esc)">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-        <div class="set-lb-label" id="set-lb-label"></div>
-        <div class="set-lb-hint">Scroll to zoom &nbsp;·&nbsp; Drag to pan &nbsp;·&nbsp; Double-click to reset</div>
-        <div class="set-lb-stage" id="set-lb-stage">
-          <img id="set-lb-img" class="set-lb-img" draggable="false" alt="">
         </div>
       </div>
 
@@ -108,21 +97,6 @@ export async function render(container, hash) {
             <div id="set-recipe-desc" class="text-muted" style="font-size: 12px; margin-top: 8px; line-height: 1.4; display: none;"></div>
           </section>
 
-          <!-- Input folder -->
-          <section class="set-section">
-            <div class="set-section-title">Input Folder</div>
-            <div class="set-folder-row" id="set-input-row" style="flex-wrap:wrap">
-              <span class="material-symbols-outlined" style="color:var(--ps-text-faint)">folder</span>
-              <span id="set-input-path" class="set-folder-path text-muted">Not selected</span>
-              <select id="set-input-mru" class="ic-input" style="width: auto; height: 33px; padding: 4px 8px; display: none; max-width:140px; font-size: 11px;">
-                <option value="">Recent...</option>
-              </select>
-              <button class="btn-secondary" id="btn-pick-input">
-                <span class="material-symbols-outlined">folder_open</span>Browse
-              </button>
-            </div>
-            <div id="set-input-stats" class="text-sm text-muted" style="margin-top:4px;"></div>
-          </section>
 
           <!-- Output folder -->
           <section class="set-section" id="set-output-section">
@@ -179,24 +153,12 @@ export async function render(container, hash) {
         </div>
 
         <!-- Right: image grid -->
-        <div class="set-grid-area">
-          <div class="set-grid-search-bar">
-            <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-text-muted)">search</span>
-            <input id="set-grid-search" type="text" placeholder="Filter by filename…" autocomplete="off"
-              style="flex:1;background:none;border:none;outline:none;color:var(--ps-text);font-size:13px;">
-            <button id="set-grid-search-clear" class="btn-icon" style="display:none" title="Clear search">
-              <span class="material-symbols-outlined" style="font-size:16px">close</span>
-            </button>
+        <div class="set-grid-area" style="display:flex; flex-direction:column; background:var(--ps-surface);">
+          <div id="set-filter-warning" style="display:none; background: rgba(227, 179, 65, 0.15); color: #e3b341; padding: 12px 16px; font-size: 13px; font-weight: 500; border-bottom: 1px solid rgba(227, 179, 65, 0.2); align-items:center; gap: 8px;">
+            <span class="material-symbols-outlined" style="font-size:18px;">warning</span>
+            <span id="set-filter-warning-text"></span>
           </div>
-          <div class="set-grid-scroll">
-            <div id="set-image-grid" class="set-image-grid">
-              <div class="empty-state" style="grid-column:1/-1">
-                <span class="material-symbols-outlined">photo_library</span>
-                <div class="empty-state-title">No input folder selected</div>
-                <div class="empty-state-desc">Pick an input folder to see images here.</div>
-              </div>
-            </div>
-          </div>
+          <div id="set-mb-host" style="flex: 1; display:flex; flex-direction:column; min-height: 0;"></div>
         </div>
       </div>
 
@@ -216,7 +178,13 @@ export async function render(container, hash) {
   // Restore persisted folder handles
   inputHandle  = await getFolder('input').catch(() => null);
   outputHandle = await getFolder('output').catch(() => null);
-  if (inputHandle)  { container.querySelector('#set-input-path').textContent  = inputHandle.name; await refreshImageGrid(); }
+  if (inputHandle) {
+    currentHandle = inputHandle;
+    dirStack = [];
+    await refreshImageGrid();
+  } else {
+    renderEmptyState();
+  }
   if (outputHandle) { container.querySelector('#set-output-path').textContent = outputHandle.name; }
 
   // ── Apply Settings ──────────────────────────────────────
@@ -228,43 +196,23 @@ export async function render(container, hash) {
 
   // ── MRU Injection ───────────────────────────────────────
   async function renderMRUs() {
-    inputHistory = await dbGetFolderHistory('input');
     outputHistory = await dbGetFolderHistory('output');
     
     const renderDropdown = (hist, curHandle, selId) => {
       const dp = container.querySelector(selId);
-      if (!hist || hist.length === 0) return dp.style.display = 'none';
+      if (!dp || !hist || hist.length === 0) {
+        if (dp) dp.style.display = 'none';
+        return;
+      }
       let html = `<option value="">History...</option>`;
       hist.forEach((h, i) => html += `<option value="${i}">${h.name}</option>`);
       dp.innerHTML = html;
       dp.style.display = 'block';
     };
 
-    renderDropdown(inputHistory, inputHandle, '#set-input-mru');
     renderDropdown(outputHistory, outputHandle, '#set-output-mru');
   }
   await renderMRUs();
-
-  container.querySelector('#set-input-mru')?.addEventListener('change', async e => {
-    const idx = parseInt(e.target.value);
-    if (isNaN(idx)) return;
-    const h = inputHistory[idx];
-    try {
-      if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted') {
-        if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') return;
-      }
-      inputHandle = h;
-      container.querySelector('#set-input-path').textContent = inputHandle.name;
-      await setCurrentFolder(inputHandle);
-      await dbSaveFolderHistory('input', inputHandle);
-      await renderMRUs();
-      // New folder from MRU → reset selection so we don't carry filenames across folders
-      selectedIds.clear();
-      await refreshImageGrid();
-      updateRunButton();
-      e.target.value = '';
-    } catch (err) { console.error('MRU input load failed', err); }
-  });
 
   container.querySelector('#set-output-mru')?.addEventListener('change', async e => {
     const idx = parseInt(e.target.value);
@@ -291,39 +239,9 @@ export async function render(container, hash) {
 
   updateRunButton();
 
-  // ── Grid search ──────────────────────────────────────
-  container.querySelector('#set-grid-search').addEventListener('input', e => {
-    gridSearchTerm = e.target.value.trim().toLowerCase();
-    container.querySelector('#set-grid-search-clear').style.display = gridSearchTerm ? '' : 'none';
-    const { includeVideo, onlyVideo } = fileFilterForRecipe(currentRecipe);
-    renderImageGrid(onlyVideo, includeVideo);
-    updateSelCount();
-  });
-  container.querySelector('#set-grid-search-clear').addEventListener('click', () => {
-    gridSearchTerm = '';
-    container.querySelector('#set-grid-search').value = '';
-    container.querySelector('#set-grid-search-clear').style.display = 'none';
-    const { includeVideo, onlyVideo } = fileFilterForRecipe(currentRecipe);
-    renderImageGrid(onlyVideo, includeVideo);
-    updateSelCount();
-  });
-
   // ── Pick recipe button ────────────────────────────────
   container.querySelector('#btn-pick-recipe').addEventListener('click', () => showRecipePicker());
 
-  // ── Input folder ─────────────────────────────────────
-  container.querySelector('#btn-pick-input').addEventListener('click', async () => {
-    try {
-      inputHandle = await pickFolder('input');
-      container.querySelector('#set-input-path').textContent = inputHandle.name;
-      await dbSaveFolderHistory('input', inputHandle);
-      await renderMRUs();
-      // New folder picked → reset selection so we don't carry filenames across folders
-      selectedIds.clear();
-      await refreshImageGrid();
-      updateRunButton();
-    } catch (e) { if (e.name !== 'AbortError') console.error(e); }
-  });
 
   // ── Output folder ─────────────────────────────────────
   container.querySelector('#btn-pick-output').addEventListener('click', async () => {
@@ -334,34 +252,6 @@ export async function render(container, hash) {
       await renderMRUs();
       updateRunButton();
     } catch (e) { if (e.name !== 'AbortError') console.error(e); }
-  });
-
-  // ── Select all / none / filtered ─────────────────────
-  container.querySelector('#btn-select-all').addEventListener('click', () => {
-    selectedIds.clear();
-    selectedFiles.forEach((f, i) => selectedIds.set(f.name, i + 1));
-    lastClickedIdx = -1;
-    renderSelectionState();
-  });
-
-  container.querySelector('#btn-select-none').addEventListener('click', () => {
-    selectedIds.clear();
-    lastClickedIdx = -1;
-    renderSelectionState();
-  });
-
-  container.querySelector('#btn-select-filtered').addEventListener('click', () => {
-    const visible = gridSearchTerm
-      ? selectedFiles.filter(f => f.name.toLowerCase().includes(gridSearchTerm))
-      : selectedFiles;
-    // Assign sequence numbers continuing from the highest already-used number
-    const maxExisting = selectedIds.size > 0 ? Math.max(...selectedIds.values()) : 0;
-    let seq = maxExisting;
-    visible.forEach(f => {
-      if (!selectedIds.has(f.name)) selectedIds.set(f.name, ++seq);
-    });
-    lastClickedIdx = -1;
-    renderSelectionState();
   });
 
   // ── Run batch ─────────────────────────────────────────
@@ -423,7 +313,7 @@ export async function render(container, hash) {
         batchControl = await startBatch({
           recipe: currentRecipe,
           files,
-          inputHandle,
+          inputHandle: currentHandle,
           outputHandle: effOutputHandle,
           subfolder,
           runParams,
@@ -510,52 +400,209 @@ export async function render(container, hash) {
         await writeVideoPreview(dirHandle, file.name, blob);
         const previewFile = new File([blob], `.${file.name}.preview.jpg`, { type: 'image/jpeg' });
         setVideoPreviews.set(file.name, previewFile);
-        // Update the thumbnail in the grid if still visible
-        const thumb = container.querySelector(`[data-file-name="${CSS.escape(file.name)}"]`);
-        if (thumb) {
-          const url = URL.createObjectURL(previewFile);
-          thumb.style.backgroundImage    = `url(${url})`;
-          thumb.style.backgroundSize     = 'cover';
-          thumb.style.backgroundPosition = 'center';
-          thumb.querySelector('.set-img-placeholder')?.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        if (mediaBrowser) {
+           const ent = mediaBrowser.entries.find(e => e.name === file.name);
+           if (ent) ent.preview = previewFile;
         }
       } catch { /* silently skip this video */ }
     }
   }
 
   // ── Helpers ───────────────────────────────────────────
+  function renderEmptyState() {
+    const host = container.querySelector('#set-mb-host');
+    if (!host) return;
+    host.innerHTML = `
+      <div class="empty-state" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-text-faint);">folder_open</span>
+        <div class="empty-state-title" style="margin-top:16px;">No Input Folder Selected</div>
+        <div class="empty-state-desc">Select an input folder to view and pick media for processing.</div>
+        <button class="btn-primary" id="set-btn-empty-browse" style="margin-top:16px;">
+          <span class="material-symbols-outlined">folder_open</span> Browse
+        </button>
+      </div>`;
+    host.querySelector('#set-btn-empty-browse')?.addEventListener('click', async () => {
+      try {
+        inputHandle = await pickFolder('input');
+        currentHandle = inputHandle;
+        dirStack = [];
+        await refreshImageGrid();
+      } catch(e) {}
+    });
+  }
+
   async function refreshImageGrid() {
-    if (!inputHandle) return;
+    if (!currentHandle) return;
     try {
       const { includeVideo, onlyVideo } = fileFilterForRecipe(currentRecipe);
 
+      const files = [];
+      allFolders = [];
+      let skippedMediaCount = 0;
+
+      for await (const [name, entry] of currentHandle.entries()) {
+        if (name.startsWith('.')) continue;
+        if (entry.kind === 'directory') {
+          allFolders.push({ name, handle: entry });
+        } else if (entry.kind === 'file') {
+          const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+          const isImg = IMAGE_EXTS.has(ext);
+          const isVid = VIDEO_EXTS.has(ext);
+          const isMedia = isImg || isVid;
+          
+          let match = false;
+          if (onlyVideo) {
+            if (isVid) match = true;
+          } else if (includeVideo) {
+            if (isImg || isVid) match = true;
+          } else {
+            if (isImg) match = true;
+          }
+          
+          if (match) {
+            files.push({ file: await entry.getFile(), handle: entry });
+          } else if (isMedia) {
+            skippedMediaCount++;
+          }
+        }
+      }
+      files.sort((a, b) => a.file.name.localeCompare(b.file.name));
+      allFolders.sort((a, b) => a.name.localeCompare(b.name));
+
+      selectedFiles = files.map(f => f.file);
+      setVideoPreviews = await loadVideoPreviews(currentHandle);
+
       const previousSelection = new Map(selectedIds);
-      [selectedFiles] = await Promise.all([
-        listImages(inputHandle, { includeVideo, onlyVideo }),
-        loadVideoPreviews(inputHandle).then(m => { setVideoPreviews = m; }),
-      ]);
       selectedIds.clear();
 
-      // Preserve any previously-selected filenames that still exist in the new listing
-      // (covers recipe change on same folder, file-type filter toggle, etc.). If nothing
-      // carries over, default to "none selected" — the user can Select All explicitly.
       if (previousSelection.size > 0) {
         selectedFiles.forEach(f => {
           if (previousSelection.has(f.name)) selectedIds.set(f.name, previousSelection.get(f.name));
         });
       }
       
-      renderImageGrid(onlyVideo, includeVideo);
-      renderSlotAssignment();
-      scheduleSetPreviewGeneration(inputHandle);
+      const mbEntries = [];
+      allFolders.forEach(folder => {
+        mbEntries.push({ name: folder.name, file: null, isFolder: true, _folder: folder });
+      });
+      selectedFiles.forEach(f => {
+        mbEntries.push({ name: f.name, file: f, isFolder: false, sidecar: null, preview: setVideoPreviews.get(f.name) });
+      });
+      if (dirStack.length > 0) {
+        mbEntries.push({ name: '..', file: null, isFolder: true, _up: true });
+      }
 
-      // Sync preview window state
+      if (!mediaBrowser) {
+        container.querySelector('#set-mb-host').innerHTML = ''; // Clear empty state
+        mediaBrowser = new MediaBrowser(container.querySelector('#set-mb-host'), {
+          mode: 'grid',
+          entries: mbEntries,
+          breadcrumbs: dirStack.map(d => d.name),
+          currentFolderName: currentHandle.name,
+          canGoUp: dirStack.length > 0,
+          childFolders: allFolders.map(f => f.name),
+          isOrderedSelection: !!currentRecipe?.isOrdered,
+          onChangeFolderClick: async () => {
+            try {
+              inputHandle = await pickFolder('input');
+              currentHandle = inputHandle;
+              dirStack = [];
+              await refreshImageGrid();
+            } catch (e) { if (e.name !== 'AbortError') console.error(e); }
+          },
+          onChildFolderSelect: async (name) => {
+            const folder = allFolders.find(f => f.name === name);
+            if (folder) {
+              dirStack.push({ handle: currentHandle, name: currentHandle.name });
+              currentHandle = folder.handle;
+              await refreshImageGrid();
+            }
+          },
+          onNavigateUp: async () => {
+            if (dirStack.length === 0) return;
+            const up = dirStack.pop();
+            currentHandle = up.handle;
+            await refreshImageGrid();
+          },
+          onNavigateTo: async (idx) => {
+            if (idx < 0 || idx >= dirStack.length) return;
+            currentHandle = dirStack[idx].handle;
+            dirStack = dirStack.slice(0, idx);
+            await refreshImageGrid();
+          },
+          onSelectionChange: (sel) => {
+             selectedIds.clear();
+             sel.forEach((s, i) => selectedIds.set(s, i + 1));
+             updateSelCount();
+             updateRunButton();
+             renderSlotAssignment();
+          },
+          onDoubleClick: (ent) => {
+             if (ent.isFolder) {
+               if (ent.name === '..') {
+                 if (dirStack.length > 0) {
+                   const up = dirStack.pop();
+                   currentHandle = up.handle;
+                   refreshImageGrid();
+                 }
+               } else {
+                 const folder = allFolders.find(f => f.name === ent.name);
+                 if (folder) {
+                   dirStack.push({ handle: currentHandle, name: currentHandle.name });
+                   currentHandle = folder.handle;
+                   refreshImageGrid();
+                 }
+               }
+               return;
+             }
+             if (ent.file) {
+               const url = URL.createObjectURL(ent.file);
+               new GlobalLightbox().open({ url, isVideo: isVideoFile(ent.file), file: ent.file });
+             }
+          }
+        });
+        
+        const selArray = Array.from(selectedIds.entries()).sort((a,b) => a[1] - b[1]).map(x => x[0]);
+        selArray.forEach(s => mediaBrowser.selectedIds.add(s));
+        mediaBrowser._syncSelectionUI();
+        
+      } else {
+        mediaBrowser.options.isOrderedSelection = !!currentRecipe?.isOrdered;
+        mediaBrowser.options.breadcrumbs = dirStack.map(d => d.name);
+        mediaBrowser.options.currentFolderName = currentHandle.name;
+        mediaBrowser.options.canGoUp = dirStack.length > 0;
+        mediaBrowser.options.childFolders = allFolders.map(f => f.name);
+        mediaBrowser.entries = mbEntries;
+        mediaBrowser.applyFilters();
+        
+        const selArray = Array.from(selectedIds.entries()).sort((a,b) => a[1] - b[1]).map(x => x[0]);
+        mediaBrowser.selectedIds.clear();
+        selArray.forEach(s => mediaBrowser.selectedIds.add(s));
+        mediaBrowser._syncSelectionUI();
+        mediaBrowser.renderHeader(); // Re-render breadcrumbs
+      }
+
+      const warningEl = container.querySelector('#set-filter-warning');
+      const warningText = container.querySelector('#set-filter-warning-text');
+      if (warningEl && warningText) {
+        if (skippedMediaCount > 0) {
+           const typeStr = onlyVideo ? 'Videos' : 'Images';
+           warningText.innerHTML = `<b>${skippedMediaCount} file(s) hidden</b> because this recipe only accepts ${typeStr}.`;
+           warningEl.style.display = 'flex';
+        } else if (files.length === 0 && (allFolders.length > 0 || dirStack.length > 0)) {
+           const typeStr = onlyVideo ? 'Videos' : (includeVideo ? 'media files' : 'Images');
+           warningText.innerHTML = `No <b>${typeStr}</b> found in this folder.`;
+           warningEl.style.display = 'flex';
+        } else {
+           warningEl.style.display = 'none';
+        }
+      }
+
+      renderSlotAssignment();
+      scheduleSetPreviewGeneration(currentHandle);
+
       window._icTestFolderFiles = [...selectedFiles];
       
-      const stats = container.querySelector('#set-input-stats');
-      const term = onlyVideo ? 'video' : (includeVideo ? 'file' : 'image');
-      if (stats) stats.textContent = `${selectedFiles.length} ${term}${selectedFiles.length !== 1 ? 's' : ''} found`;
       updateSelCount();
       updateRunButton();
     } catch (err) {
@@ -563,299 +610,10 @@ export async function render(container, hash) {
     }
   }
 
-  function renderImageGrid(onlyVideo = false, includeVideo = false) {
-    const grid = container.querySelector('#set-image-grid');
-    if (!selectedFiles.length) {
-      const termTitle = onlyVideo ? 'videos' : (includeVideo ? 'files' : 'images');
-      const typeDesc  = onlyVideo ? 'videos' : (includeVideo ? 'images and videos' : 'images');
-      const reqCount  = parseInt(currentRecipe?.minItems);
-      const minStr    = reqCount > 0 ? `${reqCount} ` : 'supported ';
-
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-        <span class="material-symbols-outlined">${onlyVideo ? 'movie' : 'image_not_supported'}</span>
-        <div class="empty-state-title">No ${termTitle} found</div>
-        <div class="empty-state-desc">This recipe requires ${minStr}${typeDesc} but none were found in this directory.</div>
-      </div>`;
-      return;
-    }
-    const visibleFiles = gridSearchTerm
-      ? selectedFiles.filter(f => f.name.toLowerCase().includes(gridSearchTerm))
-      : selectedFiles;
-    if (!visibleFiles.length) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-        <span class="material-symbols-outlined">search_off</span>
-        <div class="empty-state-title">No matches</div>
-        <div class="empty-state-desc">No files match &ldquo;${gridSearchTerm}&rdquo;.</div>
-      </div>`;
-      return;
-    }
-    grid.innerHTML = visibleFiles.map(f => {
-      const dateStr = new Date(f.lastModified).toLocaleString();
-      const sizeStr = formatBytes(f.size);
-      let title = `${f.name}\nModified: ${dateStr}\nSize: ${sizeStr}`;
-      
-      if (setFileMetadata.has(f.name)) {
-        const meta = setFileMetadata.get(f.name);
-        const typeStr = isVideoFile(f) 
-          ? `Video: ${meta.width}x${meta.height} • ${meta.duration ? meta.duration.toFixed(1) + 's' : '?s'}` 
-          : `Image: ${meta.width}x${meta.height}`;
-        title = `${f.name}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
-      }
-      return `
-      <label class="set-img-cell ${selectedIds.has(f.name) ? 'is-selected' : ''}" data-name="${f.name}" title="${title}">
-        ${currentRecipe?.isOrdered 
-          ? `<div class="set-img-seq" style="display: ${selectedIds.has(f.name) ? 'flex' : 'none'}">${selectedIds.has(f.name) ? selectedIds.get(f.name) : ''}</div>`
-          : `<div class="set-img-check-icon" style="display: ${selectedIds.has(f.name) ? 'block' : 'none'}"><span class="material-symbols-outlined">check_circle</span></div>`
-        }
-        <div class="set-img-thumb" data-file-name="${f.name}">
-          <span class="material-symbols-outlined set-img-placeholder">image</span>
-        </div>
-        <div class="set-img-name">${f.name}</div>
-        <div class="set-img-size">${formatBytes(f.size)}</div>
-      </label>`;
-    }).join('');
-
-    // Lazy-load thumbnails (use preview JPEG for video files)
-    grid.querySelectorAll('[data-file-name]').forEach(thumb => {
-      const file = selectedFiles.find(f => f.name === thumb.dataset.fileName);
-      if (!file) return;
-
-      // For video files, prefer the cached preview JPEG; fall back to movie icon
-      if (isVideoFile(file)) {
-        const previewFile = setVideoPreviews.get(file.name);
-        if (previewFile) {
-          const url = URL.createObjectURL(previewFile);
-          thumb.style.backgroundImage    = `url(${url})`;
-          thumb.style.backgroundSize     = 'cover';
-          thumb.style.backgroundPosition = 'center';
-          thumb.querySelector('.set-img-placeholder')?.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 60000);
-        } else {
-          // No preview yet — show a video icon instead of a broken image
-          const ph = thumb.querySelector('.set-img-placeholder');
-          if (ph) { ph.textContent = 'movie'; ph.style.color = 'var(--ps-blue)'; }
-        }
-        return;
-      }
-
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        thumb.style.backgroundImage = `url(${url})`;
-        thumb.style.backgroundSize  = 'cover';
-        thumb.style.backgroundPosition = 'center';
-        thumb.querySelector('.set-img-placeholder')?.remove();
-      };
-      img.onerror = () => URL.revokeObjectURL(url);
-      img.src = url;
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    });
-
-    const getNextAvailableNumber = () => {
-      const nums = Array.from(selectedIds.values());
-      for (let i = 1; i <= selectedFiles.length + 1; i++) {
-        if (!nums.includes(i)) return i;
-      }
-      return 1;
-    };
-
-    // Selection — click, ctrl+click, shift+click
-    grid.querySelectorAll('.set-img-cell').forEach((cell, idx) => {
-      cell.addEventListener('click', async e => {
-        // Prevent the label from triggering a synthetic checkbox click,
-        // which would bubble back here and double-fire the handler.
-        e.preventDefault();
-
-        const name = cell.dataset.name;
-        const isOrdered = !!currentRecipe?.isOrdered;
-
-        if (e.shiftKey && lastClickedIdx !== -1) {
-          // Extend range from last click to here
-          const from = Math.min(lastClickedIdx, idx);
-          const to   = Math.max(lastClickedIdx, idx);
-          for (let i = from; i <= to; i++) {
-            const fName = selectedFiles[i].name;
-            if (!selectedIds.has(fName)) selectedIds.set(fName, isOrdered ? getNextAvailableNumber() : 1);
-          }
-        } else {
-          // Toggle this item
-          if (selectedIds.has(name)) {
-            if (!isOrdered) {
-              selectedIds.delete(name);
-            } else {
-              const num = selectedIds.get(name);
-              const maxNum = Math.max(...Array.from(selectedIds.values()));
-              
-              if (num === maxNum) {
-                selectedIds.delete(name);
-              } else {
-                const action = await showThreeWayConfirm({
-                  title: 'Remove from Sequence?',
-                  body: `You are removing item #${num}. What should happen to the items that follow it?`,
-                  btn1Text: 'Leave Gap',
-                  btn1Value: 'leave',
-                  btn2Text: 'Shift Sequence',
-                  btn2Value: 'shift',
-                  icon: 'format_list_numbered'
-                });
-
-                if (action === 'cancel') {
-                  lastClickedIdx = idx; // Update last clicked before aborting
-                  return;
-                }
-                
-                selectedIds.delete(name);
-                
-                if (action === 'shift') {
-                  for (const [k, v] of selectedIds.entries()) {
-                    if (v > num) selectedIds.set(k, v - 1);
-                  }
-                }
-              }
-            }
-          } else {
-            selectedIds.set(name, isOrdered ? getNextAvailableNumber() : 1);
-          }
-          lastClickedIdx = idx;
-        }
-
-        renderSelectionState();
-      });
-
-      // Double-click → open preview lightbox
-      cell.addEventListener('dblclick', e => {
-        e.preventDefault();
-        const name = cell.dataset.name;
-        const file = selectedFiles.find(f => f.name === name);
-        if (!file) return;
-        openSetLightbox(file);
-      });
-    });
-  }
-
-  // ── Lightbox ──────────────────────────────────────────────
-  let _lbUrl = null;
-
-  function openSetLightbox(file) {
-    const lb    = container.querySelector('#set-lightbox');
-    const img   = container.querySelector('#set-lb-img');
-    const label = container.querySelector('#set-lb-label');
-    if (!lb || !img) return;
-
-    if (_lbUrl) URL.revokeObjectURL(_lbUrl);
-
-    if (isVideoFile(file)) {
-      // For video files show the cached preview frame if available, else a placeholder
-      const previewFile = setVideoPreviews.get(file.name);
-      _lbUrl = previewFile ? URL.createObjectURL(previewFile) : null;
-    } else {
-      _lbUrl = URL.createObjectURL(file);
-    }
-
-    img.src = _lbUrl || '';
-    label.textContent = file.name;
-    resetLbTransform();
-    lb.style.display = 'flex';
-  }
-
-  function closeSetLightbox() {
-    const lb = container.querySelector('#set-lightbox');
-    if (lb) lb.style.display = 'none';
-    if (_lbUrl) { URL.revokeObjectURL(_lbUrl); _lbUrl = null; }
-    const img = container.querySelector('#set-lb-img');
-    if (img) img.src = '';
-  }
-
-  // Zoom / pan state
-  let _lbScale = 1, _lbX = 0, _lbY = 0;
-  let _lbDrag = null; // { startX, startY, originX, originY }
-
-  function resetLbTransform() {
-    _lbScale = 1; _lbX = 0; _lbY = 0;
-    applyLbTransform();
-  }
-
-  function applyLbTransform() {
-    const img = container.querySelector('#set-lb-img');
-    if (img) img.style.transform = `translate(${_lbX}px, ${_lbY}px) scale(${_lbScale})`;
-  }
-
-  // Wire up lightbox controls once
-  const _lb = container.querySelector('#set-lightbox');
-  container.querySelector('#set-lb-bg')?.addEventListener('click', closeSetLightbox);
-  container.querySelector('#set-lb-close')?.addEventListener('click', closeSetLightbox);
-
-  const _lbStage = container.querySelector('#set-lb-stage');
-  _lbStage?.addEventListener('wheel', e => {
-    if (_lb.style.display === 'none') return;
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    _lbScale = Math.max(0.2, Math.min(10, _lbScale * delta));
-    applyLbTransform();
-  }, { passive: false });
-
-  _lbStage?.addEventListener('mousedown', e => {
-    if (e.button !== 0) return;
-    _lbDrag = { startX: e.clientX, startY: e.clientY, originX: _lbX, originY: _lbY };
-    _lbStage.style.cursor = 'grabbing';
-  });
-  function _lbMouseMove(e) {
-    if (!_lbDrag) return;
-    _lbX = _lbDrag.originX + (e.clientX - _lbDrag.startX);
-    _lbY = _lbDrag.originY + (e.clientY - _lbDrag.startY);
-    applyLbTransform();
-  }
-  function _lbMouseUp() {
-    if (_lbDrag) { _lbDrag = null; _lbStage && (_lbStage.style.cursor = 'grab'); }
-  }
-  window.addEventListener('mousemove', _lbMouseMove);
-  window.addEventListener('mouseup', _lbMouseUp);
-
-  container.querySelector('#set-lb-img')?.addEventListener('dblclick', resetLbTransform);
-
-  function renderSelectionState() {
-    container.querySelectorAll('.set-img-cell').forEach(cell => {
-      const name = cell.dataset.name;
-      const sel = selectedIds.has(name);
-      cell.classList.toggle('is-selected', sel);
-      const seqEl = cell.querySelector('.set-img-seq');
-      if (seqEl) {
-        seqEl.style.display = sel ? 'flex' : 'none';
-        seqEl.textContent = sel ? selectedIds.get(name) : '';
-      }
-      const chkEl = cell.querySelector('.set-img-check-icon');
-      if (chkEl) {
-        chkEl.style.display = sel ? 'block' : 'none';
-      }
-    });
-    updateSelCount();
-    updateRunButton();
-    renderSlotAssignment();
-
+  function updateSelCount() {
     // Toggle hint
     const hintEl = container.querySelector('#set-order-hint');
     if (hintEl) hintEl.style.display = (currentRecipe?.isOrdered && selectedIds.size > 0) ? '' : 'none';
-  }
-
-  function updateSelCount() {
-    const c = container.querySelector('#set-sel-count');
-    if (!c) return;
-    const n = selectedIds.size;
-    const total = selectedFiles.length;
-    c.textContent = n ? `${n} / ${total} selected` : 'None selected';
-    c.className = `ic-badge ${n ? 'ic-badge--blue' : ''}`;
-
-    // Show/hide selection buttons based on state and active filter
-    const hasFilter  = gridSearchTerm.length > 0;
-    const hasFiles   = total > 0;
-    const hasSelection = n > 0;
-
-    const btnNone     = container.querySelector('#btn-select-none');
-    const btnFiltered = container.querySelector('#btn-select-filtered');
-    const btnAll      = container.querySelector('#btn-select-all');
-    if (btnNone)     btnNone.style.display     = hasSelection ? '' : 'none';
-    if (btnFiltered) btnFiltered.style.display = hasFilter && hasFiles ? '' : 'none';
-    if (btnAll)      btnAll.style.display      = hasFiles ? '' : 'none';
   }
 
   function updateRunButton() {
@@ -1218,14 +976,7 @@ export async function render(container, hash) {
     });
   }
 
-  // Escape closes lightbox
-  function _handleSetKeydown(e) {
-    if (e.key === 'Escape') {
-      const lb = container.querySelector('#set-lightbox');
-      if (lb?.style.display !== 'none') closeSetLightbox();
-    }
-  }
-  document.addEventListener('keydown', _handleSetKeydown);
+
 
   container.querySelector('#btn-edit-recipe')?.addEventListener('click', () => {
     if (currentRecipe) navigate(`#bld?id=${currentRecipe.id}`);
@@ -1286,10 +1037,7 @@ export async function render(container, hash) {
   }
 
   return () => {
-    document.removeEventListener('keydown', _handleSetKeydown);
-    window.removeEventListener('mousemove', _lbMouseMove);
-    window.removeEventListener('mouseup', _lbMouseUp);
-    if (_lbUrl) { URL.revokeObjectURL(_lbUrl); _lbUrl = null; }
+    // cleanup on unmount
   };
 
 }
