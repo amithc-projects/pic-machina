@@ -501,6 +501,8 @@ export async function render(container, hash) {
           currentFolderName: currentHandle.name,
           canGoUp: dirStack.length > 0,
           childFolders: allFolders.map(f => f.name),
+          hiddenFilesCount: skippedMediaCount,
+          hiddenFilesMessage: onlyVideo ? 'because this recipe only accepts Videos.' : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.'),
           isOrderedSelection: !!currentRecipe?.isOrdered,
           onChangeFolderClick: async () => {
             try {
@@ -556,8 +558,8 @@ export async function render(container, hash) {
                return;
              }
              if (ent.file) {
-               const url = URL.createObjectURL(ent.file);
-               new GlobalLightbox().open({ url, isVideo: isVideoFile(ent.file), file: ent.file });
+               const lb = new GlobalLightbox();
+               lb.show([ent], 0);
              }
           }
         });
@@ -572,6 +574,8 @@ export async function render(container, hash) {
         mediaBrowser.options.currentFolderName = currentHandle.name;
         mediaBrowser.options.canGoUp = dirStack.length > 0;
         mediaBrowser.options.childFolders = allFolders.map(f => f.name);
+        mediaBrowser.options.hiddenFilesCount = skippedMediaCount;
+        mediaBrowser.options.hiddenFilesMessage = onlyVideo ? 'because this recipe only accepts Videos.' : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.');
         mediaBrowser.entries = mbEntries;
         mediaBrowser.applyFilters();
         
@@ -1165,7 +1169,7 @@ function injectStyles() {
     .set-history-link__arrow { font-size:16px !important; opacity:.6; transition:transform 120ms ease, opacity 120ms ease; }
     .set-history-link:hover .set-history-link__arrow { transform:translateX(2px); opacity:1; }
 
-    .set-grid-area { flex:1; display:flex; flex-direction:column; min-height:0; }
+    .set-grid-area { flex:1; display:flex; flex-direction:column; min-height:0; min-width:0; }
     .set-grid-search-bar {
       display:flex; align-items:center; gap:8px;
       background:var(--ps-bg-raised); border-bottom:1px solid var(--ps-border);

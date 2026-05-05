@@ -265,6 +265,8 @@ export async function render(container, hash) {
     const files = [];
     const allFolders = [];
     
+    let skippedMediaCount = 0;
+    
     for await (const [name, entry] of handle.entries()) {
       if (name.startsWith('.')) continue;
       if (entry.kind === 'directory') allFolders.push({ name, handle: entry });
@@ -272,11 +274,13 @@ export async function render(container, hash) {
         const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
         const isImg = IMAGE_EXTS.has(ext);
         const isVid = VIDEO_EXTS.has(ext);
+        const isMedia = isImg || isVid;
         let match = false;
         if (onlyVideo) match = isVid;
         else if (includeVideo) match = isImg || isVid;
         else match = isImg;
         if (match) files.push({ file: await entry.getFile(), handle: entry });
+        else if (isMedia) skippedMediaCount++;
       }
     }
     files.sort((a,b) => a.file.name.localeCompare(b.file.name));
@@ -295,6 +299,8 @@ export async function render(container, hash) {
         breadcrumbs: mbDirStack.map(d => d.name),
         currentFolderName: handle.name,
         canGoUp: mbDirStack.length > 0,
+        hiddenFilesCount: skippedMediaCount,
+        hiddenFilesMessage: onlyVideo ? 'because this step only accepts Videos.' : (includeVideo ? 'because this step only accepts Images and Videos.' : 'because this step only accepts Images.'),
         onChangeFolderClick: async () => {
           const { pickFolder } = await import('../data/folders.js');
           const h = await pickFolder('input');
@@ -309,6 +315,10 @@ export async function render(container, hash) {
           if (ent.isFolder && ent.name !== '..') {
             mbDirStack.push({ name: handle.name, handle: handle });
             await loadNedFolder(ent.handle);
+          } else if (ent.file && workspace.mode !== 'compare') {
+             const { GlobalLightbox } = await import('../components/lightbox.js');
+             const lb = new GlobalLightbox();
+             lb.show([ent], 0);
           }
         },
         onSelectionChange: async (selectedIds, entries) => {
@@ -467,6 +477,8 @@ export async function render(container, hash) {
       workspace.options.breadcrumbs = mbDirStack.map(d => d.name);
       workspace.options.currentFolderName = handle.name;
       workspace.options.canGoUp = mbDirStack.length > 0;
+      workspace.options.hiddenFilesCount = skippedMediaCount;
+      workspace.options.hiddenFilesMessage = onlyVideo ? 'because this step only accepts Videos.' : (includeVideo ? 'because this step only accepts Images and Videos.' : 'because this step only accepts Images.');
       workspace.entries = mbEntries;
       workspace.applyFilters();
       workspace.renderHeader();

@@ -90,7 +90,7 @@ export class MediaBrowser {
         .ic-mb-mode-btn:hover { color: var(--ps-text); }
         .ic-mb-mode-btn.is-active { background: var(--ps-surface); color: var(--ps-blue); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         
-        .ic-mb-main { flex: 1; overflow-y: auto; padding: 16px; position: relative; }
+        .ic-mb-main { flex: 1; overflow-y: auto; padding: 16px; position: relative; min-width: 0; min-height: 0; width: 100%; }
         
         /* Tooltips */
         .ic-mb-tooltip { 
@@ -135,10 +135,10 @@ export class MediaBrowser {
         .ic-mb-list-col { font-size: 13px; color: var(--ps-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         /* Filmstrip View */
-        .ic-mb-fs { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-        .ic-mb-fs-viewer { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; position: relative; min-height: 0; overflow: hidden; }
+        .ic-mb-fs { display: flex; flex-direction: column; height: 100%; overflow: hidden; min-width: 0; width: 100%; }
+        .ic-mb-fs-viewer { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; position: relative; min-height: 0; min-width: 0; overflow: hidden; width: 100%; }
         .ic-mb-fs-viewer img, .ic-mb-fs-viewer video { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .ic-mb-fs-strip { height: 140px; background: var(--ps-surface); border-top: 1px solid var(--ps-border); display: flex; gap: 8px; padding: 12px; overflow-x: auto; white-space: nowrap; align-items: flex-start; }
+        .ic-mb-fs-strip { height: 140px; background: var(--ps-surface); border-top: 1px solid var(--ps-border); display: flex; gap: 8px; padding: 12px; overflow-x: auto; white-space: nowrap; align-items: flex-start; min-width: 0; width: 100%; }
         .ic-mb-fs-item { display: flex; flex-direction: column; gap: 4px; width: 100px; flex-shrink: 0; cursor: pointer; user-select: none; position: relative; }
         .ic-mb-fs-thumb { width: 100px; height: 100px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; opacity: 0.6; transition: 0.2s; background: #111; display: flex; align-items: center; justify-content: center; }
         .ic-mb-fs-item:hover .ic-mb-fs-thumb { opacity: 1; }
@@ -359,13 +359,13 @@ export class MediaBrowser {
     this.filtered.forEach(e => {
       if (e.name !== '..') this.selectedIds.add(e.name);
     });
-    this.options.onSelectionChange(Array.from(this.selectedIds));
+    this.options.onSelectionChange(Array.from(this.selectedIds), this.filtered);
     this.render();
   }
 
   deselectAll() {
     this.selectedIds.clear();
-    this.options.onSelectionChange([]);
+    this.options.onSelectionChange([], this.filtered);
     this.render();
   }
 
@@ -447,6 +447,7 @@ export class MediaBrowser {
     const viewer = document.createElement('div');
     viewer.className = 'ic-mb-fs-viewer';
     viewer.style.position = 'relative';
+    viewer.style.display = 'block'; // Prevent flex center from squishing child width
     fs.appendChild(viewer);
     
     // Instantiate ImageWorkspace inside viewer!
@@ -596,7 +597,7 @@ export class MediaBrowser {
       cell.className = `ic-mb-cell ${this.selectedIds.has(ent.name) ? 'is-selected' : ''}`;
       cell.setAttribute('data-name', ent.name);
       cell.innerHTML = `
-        <div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>
+        ${ent.name === '..' ? '' : `<div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>`}
         <div class="ic-mb-thumb">${this._createThumbnailHtml(ent, type)}</div>
         <div class="ic-mb-name">${escHtml(ent.name)}</div>
       `;
@@ -607,6 +608,15 @@ export class MediaBrowser {
     }
     
     this.mainEl.appendChild(grid);
+    
+    const hasFiles = this.filtered.some(e => !e.isFolder);
+    if (!hasFiles && this.options.hiddenFilesCount > 0) {
+      const warning = document.createElement('div');
+      warning.className = 'ic-mb-hidden-warning';
+      warning.style.cssText = 'padding:16px; margin: 16px; background:rgba(var(--ps-orange-rgb, 255,165,0), 0.1); border:1px solid var(--ps-orange); border-radius:8px; color:var(--ps-orange); font-size:14px; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px;';
+      warning.innerHTML = `<span class="material-symbols-outlined">warning</span> <b>${this.options.hiddenFilesCount} file(s) hidden</b> ${this.options.hiddenFilesMessage || 'due to recipe requirements.'}`;
+      this.mainEl.appendChild(warning);
+    }
   }
 
   renderList() {
@@ -634,7 +644,7 @@ export class MediaBrowser {
       row.setAttribute('data-name', ent.name);
       row.innerHTML = `
         <div class="ic-mb-list-thumb" style="position:relative;">
-          <div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>
+          ${ent.name === '..' ? '' : `<div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>`}
           ${this._createThumbnailHtml(ent, type)}
         </div>
         <div class="ic-mb-list-col">${escHtml(ent.name)}</div>
@@ -673,10 +683,10 @@ export class MediaBrowser {
     let viewerHtml = '';
     if (activeType === 'folder' || activeEnt.isFolder) {
       const icon = activeEnt.name === '..' ? 'reply' : 'folder';
-      viewerHtml = `<div class="flex flex-col items-center justify-center text-[var(--ps-blue)]"><span class="material-symbols-outlined text-[64px] mb-4">${icon}</span><span class="text-lg">${escHtml(activeEnt.name)}</span></div>`;
-    } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls></video>`;
-    else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}">`;
-    else viewerHtml = `<div class="text-[var(--ps-text-muted)]">Preview not available</div>`;
+      viewerHtml = `<div class="flex flex-col items-center justify-center text-[var(--ps-blue)] w-full h-full"><span class="material-symbols-outlined text-[64px] mb-4">${icon}</span><span class="text-lg">${escHtml(activeEnt.name)}</span></div>`;
+    } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls style="width:100%; height:100%; object-fit:contain;"></video>`;
+    else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}" style="width:100%; height:100%; object-fit:contain;">`;
+    else viewerHtml = `<div class="text-[var(--ps-text-muted)] flex items-center justify-center w-full h-full">Preview not available</div>`;
 
     fs.innerHTML = `
       <div class="ic-mb-fs-viewer">${viewerHtml}</div>
@@ -711,7 +721,7 @@ export class MediaBrowser {
       thumb.className = `ic-mb-fs-item ${activeEnt.name === ent.name ? 'is-selected' : ''}`;
       thumb.setAttribute('data-name', ent.name);
       thumb.innerHTML = `
-        <div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>
+        ${ent.name === '..' ? '' : `<div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>`}
         <div class="ic-mb-fs-thumb">${this._createThumbnailHtml(ent, type)}</div>
         <div class="ic-mb-fs-name">${escHtml(ent.name)}</div>
       `;
@@ -819,7 +829,7 @@ export class MediaBrowser {
       }
     });
     
-    this.options.onSelectionChange(Array.from(this.selectedIds));
+    this.options.onSelectionChange(Array.from(this.selectedIds), this.filtered);
   }
 
   _updateFilmstripViewer() {
@@ -845,8 +855,8 @@ export class MediaBrowser {
     if (activeType === 'folder' || activeEnt.isFolder) {
       const icon = activeEnt.name === '..' ? 'reply' : 'folder';
       viewerHtml = `<div class="flex flex-col items-center justify-center text-[var(--ps-blue)] w-full h-full"><span class="material-symbols-outlined text-[64px] mb-4">${icon}</span><span class="text-lg">${escHtml(activeEnt.name)}</span></div>`;
-    } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls style="max-width:100%; max-height:100%; object-fit:contain;"></video>`;
-    else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+    } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls style="width:100%; height:100%; object-fit:contain;"></video>`;
+    else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}" style="width:100%; height:100%; object-fit:contain;">`;
     else viewerHtml = `<div class="text-[var(--ps-text-muted)] flex items-center justify-center w-full h-full">Preview not available</div>`;
 
     viewerEl.innerHTML = viewerHtml;

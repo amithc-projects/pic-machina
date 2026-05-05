@@ -56,11 +56,12 @@ export class ImageWorkspace {
              .ic-image-workspace.is-single-mode .iw-custom-controls { opacity: 0.5; pointer-events: none; }
           </style>
           <div class="iw-controls" style="display:flex;align-items:center;gap:8px">
-
             <div class="iw-cmp-controls" style="display:none;align-items:center;gap:8px">
-              <button class="btn-icon iw-zoom-btn" title="Toggle Zoom on hover" style="color:${this.isZoomEnabled ? 'var(--ps-blue)' : 'var(--ps-text-muted)'}">
-                <span class="material-symbols-outlined">search</span>
-              </button>
+              <div class="iw-zoom-controls" style="display:flex;align-items:center;background:var(--ps-bg);border-radius:4px;padding:2px">
+                <button class="btn-icon iw-zoom-out-btn" title="Zoom Out" style="width:24px;height:24px"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+                <button class="btn-icon iw-zoom-fit-btn" title="Fit to Screen" style="padding:0 8px;font-size:12px;height:24px;min-width:40px;width:auto;border-radius:3px">Fit</button>
+                <button class="btn-icon iw-zoom-in-btn" title="Zoom In" style="width:24px;height:24px"><span class="material-symbols-outlined text-[16px]">add</span></button>
+              </div>
               <button class="btn-icon iw-info-btn" title="Toggle Info metadata modal" style="color:var(--ps-text-muted)">
                 <span class="material-symbols-outlined">info</span>
               </button>
@@ -118,6 +119,7 @@ export class ImageWorkspace {
           .iw-thumb.is-active { border-color:var(--ps-blue); }
           
           .iw-cmp-wrap { position:absolute;inset:0;width:100%;height:100%;overflow:hidden; }
+          .iw-cmp-img-clip { position:absolute;inset:0;width:100%;height:100%; }
           .iw-cmp-img { position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;pointer-events:none; }
           .iw-cmp-handle { position:absolute;top:0;bottom:0;width:20px;margin-left:-10px;cursor:col-resize;display:flex;align-items:center;justify-content:center;z-index:10; }
           .iw-cmp-handle-line { position:absolute;top:0;bottom:0;left:9px;width:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,0.5); }
@@ -127,7 +129,7 @@ export class ImageWorkspace {
           .iw-cmp-label--r { right:10px; }
           
           .iw-side-view { display:flex;width:100%;height:100%;overflow:hidden; }
-          .iw-side { flex:1;position:relative;min-width:0;display:flex;align-items:center;justify-content:center; }
+          .iw-side { flex:1;position:relative;min-width:0;display:flex;align-items:center;justify-content:center;overflow:hidden; }
           .iw-side-img { position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block; }
           .iw-divider { width:1px;background:var(--ps-border);z-index:2; }
           .iw-side-label { position:absolute;top:10px;left:10px;padding:4px 8px;background:rgba(0,0,0,0.6);color:#fff;border-radius:4px;font-size:11px;font-weight:500;pointer-events:none;z-index:5;backdrop-filter:blur(4px); }
@@ -145,28 +147,109 @@ export class ImageWorkspace {
   }
 
   bindEvents() {
-    // Zoom Toggle
-    this.container.querySelector('.iw-zoom-btn')?.addEventListener('click', (e) => {
-      this.isZoomEnabled = !this.isZoomEnabled;
-      localStorage.setItem('ic-zoom-enabled', this.isZoomEnabled);
-      e.currentTarget.style.color = this.isZoomEnabled ? 'var(--ps-blue)' : 'var(--ps-text-muted)';
-      if (!this.isZoomEnabled) this.resetZoom();
+    // Zoom is always enabled
+    this.container.querySelector('.iw-zoom-btn')?.remove();
+
+    // Pan and Zoom
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+
+    const updateTransform = (smooth = false) => {
+      const imgs = this.stage.querySelectorAll('.iw-cmp-img, .iw-side-img, .iw-single-img');
+      imgs.forEach(img => {
+        img.style.transformOrigin = '0 0';
+        img.style.transition = smooth ? 'transform 0.2s ease-out' : 'none';
+        img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+      });
+    };
+
+    this.resetZoom = () => {
+      scale = 1; tx = 0; ty = 0;
+      updateTransform(true);
+    };
+
+    const applyZoom = (zoomFactor, ox, oy, smooth = false) => {
+      const rect = this.stage.getBoundingClientRect();
+      ox = ox ?? rect.width / 2;
+      oy = oy ?? rect.height / 2;
+      
+      const oldScale = scale;
+      scale *= zoomFactor;
+      scale = Math.max(1, Math.min(scale, 20));
+      
+      const actualFactor = scale / oldScale;
+      tx = ox - (ox - tx) * actualFactor;
+      ty = oy - (oy - ty) * actualFactor;
+      
+      tx = Math.min(0, Math.max(tx, rect.width - rect.width * scale));
+      ty = Math.min(0, Math.max(ty, rect.height - rect.height * scale));
+      
+      updateTransform(smooth);
+    };
+
+    this.container.querySelector('.iw-zoom-in-btn')?.addEventListener('click', () => applyZoom(1.2, null, null, true));
+    this.container.querySelector('.iw-zoom-out-btn')?.addEventListener('click', () => applyZoom(1/1.2, null, null, true));
+    this.container.querySelector('.iw-zoom-fit-btn')?.addEventListener('click', this.resetZoom);
+
+    this.stage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = this.stage.getBoundingClientRect();
+      const ox = e.clientX - rect.left;
+      const oy = e.clientY - rect.top;
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      applyZoom(zoomFactor, ox, oy, false);
     });
 
-    // Zoom Hover logic
-    this.stage.addEventListener('mousemove', (e) => {
-      if (!this.isZoomEnabled || this.isDraggingLayout) return;
-      const view = this.stage.querySelector('.iw-cmp-wrap, .iw-side-view, .iw-single-wrap');
-      if (!view) return;
-      const rect = this.stage.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      const y = ((e.clientY - rect.top) / rect.height) * 100;
-      view.style.transformOrigin = `${x}% ${y}%`;
-      view.style.transform = 'scale(2)';
-      view.style.transition = 'none';
+    this.stage.addEventListener('mousedown', (e) => {
+      if (scale === 1) return;
+      if (e.target.closest('.iw-slider-divider, .iw-cmp-handle')) return;
+      isPanning = true;
+      startX = e.clientX - tx;
+      startY = e.clientY - ty;
+      this.stage.style.cursor = 'grabbing';
     });
-    this.stage.addEventListener('mouseleave', () => {
-      if (this.isZoomEnabled) this.resetZoom();
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      tx = e.clientX - startX;
+      ty = e.clientY - startY;
+      
+      const rect = this.stage.getBoundingClientRect();
+      tx = Math.min(0, Math.max(tx, rect.width - rect.width * scale));
+      ty = Math.min(0, Math.max(ty, rect.height - rect.height * scale));
+      
+      updateTransform(false);
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isPanning) {
+        isPanning = false;
+        this.stage.style.cursor = '';
+      }
+    });
+
+    // Double click to toggle fullscreen
+    this.stage.addEventListener('dblclick', (e) => {
+      // Don't trigger fullscreen if clicking buttons or inputs
+      if (e.target.closest('button, input, .iw-slider-divider, .iw-cmp-handle')) return;
+      if (!document.fullscreenElement) {
+         // Apply a background color to the container while in fullscreen
+         this.container.style.backgroundColor = 'var(--ps-bg-surface)';
+         this.container.requestFullscreen().catch(() => {});
+      } else {
+         document.exitFullscreen();
+      }
+    });
+    
+    // Clean up background color on exit fullscreen
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        this.container.style.backgroundColor = '';
+      }
     });
 
     // Custom controls binding
@@ -301,11 +384,11 @@ export class ImageWorkspace {
   }
 
   resetZoom() {
-    const view = this.stage.querySelector('.iw-cmp-wrap, .iw-side-view, .iw-single-wrap');
-    if (view) {
-      view.style.transform = 'none';
-      view.style.transition = 'transform 0.1s ease';
-    }
+    const imgs = this.stage.querySelectorAll('.iw-cmp-img, .iw-side-img, .iw-single-img');
+    imgs.forEach(img => {
+      img.style.transform = 'none';
+      img.style.transition = 'transform 0.1s ease';
+    });
   }
 
   loadFiles(filesArr) {
@@ -413,7 +496,7 @@ export class ImageWorkspace {
     if (!effectiveCompareMode) {
       this.stage.innerHTML = `
         <div class="iw-single-wrap">
-          <img src="${afterUrl}" class="iw-cmp-img" style="position:relative" draggable="false">
+          <img src="${afterUrl}" class="iw-cmp-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;" draggable="false">
           ${overlayHtml}
           <span class="iw-cmp-label iw-cmp-label--r" style="display:flex;align-items:center;">
              ${afterLabel || 'Result'}
@@ -446,8 +529,12 @@ export class ImageWorkspace {
     } else {
       this.stage.innerHTML = `
         <div class="iw-cmp-wrap" id="iw-cmp-wrap">
-          <img class="iw-cmp-img" id="iw-cmp-before" src="${beforeUrl}" draggable="false" style="clip-path:inset(0 50% 0 0)">
-          <img class="iw-cmp-img" id="iw-cmp-after" src="${afterUrl}" draggable="false" style="clip-path:inset(0 0 0 50%)">
+          <div class="iw-cmp-img-clip" id="iw-cmp-before-wrap" style="clip-path:inset(0 50% 0 0)">
+            <img class="iw-cmp-img" src="${beforeUrl}" draggable="false">
+          </div>
+          <div class="iw-cmp-img-clip" id="iw-cmp-after-wrap" style="clip-path:inset(0 0 0 50%)">
+            <img class="iw-cmp-img" src="${afterUrl}" draggable="false">
+          </div>
           ${overlayHtml}
           <div class="iw-cmp-handle" id="iw-cmp-handle" style="left:50%">
             <div class="iw-cmp-handle-line"></div>
@@ -465,16 +552,16 @@ export class ImageWorkspace {
         
       const wrap = this.stage.querySelector('#iw-cmp-wrap');
       const handle = this.stage.querySelector('#iw-cmp-handle');
-      const beforeImg = this.stage.querySelector('#iw-cmp-before');
-      const afterImg = this.stage.querySelector('#iw-cmp-after');
+      const beforeWrap = this.stage.querySelector('#iw-cmp-before-wrap');
+      const afterWrap = this.stage.querySelector('#iw-cmp-after-wrap');
       
       const setPos = cx => {
         const rect = wrap.getBoundingClientRect();
         const pos = Math.max(0.01, Math.min(0.99, (cx - rect.left) / rect.width));
         const pct = (pos * 100).toFixed(1);
         handle.style.left = `${pct}%`;
-        beforeImg.style.clipPath = `inset(0 ${(100 - pos * 100).toFixed(1)}% 0 0)`;
-        afterImg.style.clipPath = `inset(0 0 0 ${pct}%)`;
+        beforeWrap.style.clipPath = `inset(0 ${(100 - pos * 100).toFixed(1)}% 0 0)`;
+        afterWrap.style.clipPath = `inset(0 0 0 ${pct}%)`;
       };
       
       handle.addEventListener('mousedown', e => { this.isDraggingLayout = true; e.preventDefault(); });
