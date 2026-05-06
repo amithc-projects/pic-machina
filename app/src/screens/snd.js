@@ -1,4 +1,5 @@
 import * as Tone from 'https://cdn.jsdelivr.net/npm/tone@14.7.77/+esm';
+import JSZip from 'jszip';
 
 // -------------- AUDIO HELPERS --------------
 function audioBufferToWav(buffer, opt_channel) {
@@ -421,11 +422,13 @@ export async function render(container) {
           ZumiLabs <span style="opacity: 0.6; font-weight: 300;">Audio Studio</span>
         </div>
         <div style="display: flex; gap: 16px;">
+          <button id="btn-new-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">add</span> New</button>
+          <button id="btn-save-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">save</span> Save</button>
           <label class="snd-btn snd-btn-blue" style="cursor: pointer; margin: 0;">
              <span class="material-symbols-outlined" style="font-size: 18px;">audio_file</span> Import Clip
              <input type="file" id="snd-import" accept="audio/*,video/*" style="display: none;">
           </label>
-          <button id="btn-export" class="snd-btn snd-btn-primary"><span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> Export Final</button>
+          <button id="btn-export" class="snd-btn snd-btn-primary"><span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> Export</button>
           <button id="btn-close" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">eject</span> Close Audio</button>
         </div>
       </div>
@@ -435,11 +438,17 @@ export async function render(container) {
         
         <!-- Intro Overlay -->
         <div id="snd-intro" style="position: absolute; inset: 0; z-index: 50; background: #0d0d14; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s;">
-            <label class="snd-btn snd-btn-primary" style="padding: 24px 48px; font-size: 18px; border-radius: 16px; cursor: pointer;">
-               <span class="material-symbols-outlined" style="font-size: 32px;">audio_file</span> Upload Audio File
-               <input type="file" id="snd-upload" accept="audio/*,video/*" style="display: none;">
-            </label>
-            <p style="margin-top: 24px; color: #94a3b8;">Supports WAV, MP3, MP4, WebM</p>
+            <div style="display: flex; gap: 24px;">
+                <label class="snd-btn snd-btn-primary" style="padding: 24px 48px; font-size: 18px; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                   <span class="material-symbols-outlined" style="font-size: 32px;">audio_file</span> Import Audio
+                   <input type="file" id="snd-upload" accept="audio/*,video/*" style="display: none;">
+                </label>
+                <label class="snd-btn snd-btn-purple" style="padding: 24px 48px; font-size: 18px; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                   <span class="material-symbols-outlined" style="font-size: 32px;">folder_open</span> Import Project
+                   <input type="file" id="snd-upload-proj" accept=".audioproject,.json,.zip" style="display: none;">
+                </label>
+            </div>
+            <p style="margin-top: 24px; color: #94a3b8;">Supports WAV, MP3, MP4, WebM or .audioproject files</p>
         </div>
 
         <!-- Sidebar Inspector -->
@@ -500,7 +509,7 @@ export async function render(container) {
                 
 
                 
-                <button id="btn-export-json" class="snd-btn snd-btn-blue" style="font-size: 11px; padding: 4px 12px; margin-left: auto;">Export Project JSON</button>
+                
                 <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 6px 16px; border-radius: 20px;">
                     <span class="material-symbols-outlined" style="font-size: 16px; color: #94a3b8;">zoom_out</span>
                     <input type="range" id="zoom-slider" class="snd-slider" min="10" max="200" value="50" style="width: 100px;">
@@ -623,6 +632,13 @@ export async function render(container) {
           }
           if (numTracks === 1) {
               actionsHtml += `<button class="snd-btn snd-btn-blue" id="btn-diarize" style="grid-column: 1 / -1;"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">group</span> Diarize Track</button>`;
+          }
+          if (numClips === 2 && numTracks === 0) {
+              // Only allow joining if they are on the same track
+              const tracksWithSelection = project.tracks.filter(t => t.clips.some(c => affectedClips.includes(c)));
+              if (tracksWithSelection.length === 1) {
+                  actionsHtml += `<button class="snd-btn snd-btn-blue" id="btn-join-clips" style="grid-column: 1 / -1;"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">join_inner</span> Join Selected Clips</button>`;
+              }
           }
           actionsHtml += `<button class="snd-btn snd-btn-pink" id="btn-delete" style="grid-column: 1 / -1;">Delete Selected</button>`;
           actionsGrid.innerHTML = actionsHtml;
@@ -1225,31 +1241,159 @@ export async function render(container) {
       playLoopId = requestAnimationFrame(loop);
   };
   
-  container.querySelector('#btn-export-json').addEventListener('click', () => {
-      const projClean = {
-          tracks: project.tracks.map(t => ({
-              id: t.id,
-              name: t.name,
-              muted: t.muted,
-              color: t.color,
-              clips: t.clips.map(c => ({
-                  id: c.id,
-                  name: c.name,
-                  timelineStart: c.timelineStart,
-                  duration: c.duration,
-                  rate: c.rate,
-                  fx: c.fx.map(f => ({ id: f.id, type: f.type, params: f.params })),
-                  keyframes: c.keyframes,
-                  appliedActions: Array.from(c.appliedActions || [])
+  container.querySelector('#btn-save-proj').addEventListener('click', async () => {
+      try {
+          const zip = new JSZip();
+          const buffers = new Map();
+          
+          const projClean = {
+              tracks: project.tracks.map(t => ({
+                  id: t.id,
+                  name: t.name,
+                  muted: t.muted,
+                  color: t.color,
+                  clips: t.clips.map(c => {
+                      let bufId = null;
+                      if (c.originalBuffer || c.buffer) {
+                          const bufToSave = c.originalBuffer || c.buffer;
+                          bufId = 'buf_' + c.id + '.bin';
+                          buffers.set(bufId, bufToSave);
+                      }
+                      
+                      return {
+                          id: c.id,
+                          name: c.name,
+                          timelineStart: c.timelineStart,
+                          duration: c.duration,
+                          rate: c.rate,
+                          fx: c.fx.map(f => ({ id: f.id, type: f.type, params: f.params })),
+                          keyframes: c.keyframes,
+                          appliedActions: Array.from(c.appliedActions || []),
+                          bufferFile: bufId,
+                          bufferMeta: buffers.has(bufId) ? {
+                              sampleRate: buffers.get(bufId).sampleRate,
+                              channels: buffers.get(bufId).numberOfChannels,
+                              length: buffers.get(bufId).length
+                          } : null
+                      };
+                  })
               }))
-          }))
-      };
-      const blob = new Blob([JSON.stringify(projClean, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'debug_project.json';
-      a.click();
+          };
+          
+          zip.file('project.json', JSON.stringify(projClean, null, 2));
+          const assetsFolder = zip.folder('assets');
+          
+          for (const [bufId, audioBuf] of buffers.entries()) {
+              const numChannels = audioBuf.numberOfChannels;
+              const len = audioBuf.length;
+              const rawData = new Float32Array(numChannels * len);
+              for (let ch = 0; ch < numChannels; ch++) {
+                  const chData = audioBuf.getChannelData(ch);
+                  for (let i = 0; i < len; i++) {
+                      rawData[i * numChannels + ch] = chData[i];
+                  }
+              }
+              assetsFolder.file(bufId, rawData.buffer);
+          }
+          
+          const blob = await zip.generateAsync({ type: 'blob' });
+          
+          if (window.showSaveFilePicker) {
+              const fileHandle = await window.showSaveFilePicker({
+                  suggestedName: 'MyAudioProject.audioproject',
+                  types: [{
+                      description: 'Audio Studio Project',
+                      accept: {'application/x-audioproject': ['.audioproject']}
+                  }]
+              });
+              const writable = await fileHandle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+          } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'MyAudioProject.audioproject';
+              a.click();
+              URL.revokeObjectURL(url);
+          }
+          
+      } catch (err) {
+          console.error(err);
+          if (err.name !== 'AbortError') alert("Failed to save project: " + err.message);
+      }
+  });
+  
+  container.querySelector('#btn-new-proj').addEventListener('click', () => {
+      showDialog('New Session', 'Create a new project? Unsaved changes will be lost.', true, () => {
+          if (isPlaying) container.querySelector('#btn-stop').click();
+          project = { originalToneBuffer: null, tracks: [], masterFx: [] };
+          activeToneNodes.forEach(n => n.dispose && n.dispose());
+          activeToneNodes = [];
+          tracksContainer.innerHTML = '';
+          container.querySelector('#snd-intro').style.opacity = '1';
+          container.querySelector('#snd-intro').style.pointerEvents = 'auto';
+          playheadEl.style.display = 'none';
+          selectedItems = { tracks: new Set(), clips: new Set() };
+          renderInspector();
+      });
+  });
+  
+  container.querySelector('#snd-upload-proj').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+          const zip = new JSZip();
+          await zip.loadAsync(file);
+          
+          const metaFile = zip.file('project.json');
+          if (!metaFile) throw new Error("Invalid project format: missing project.json");
+          
+          const metaText = await metaFile.async('string');
+          const data = JSON.parse(metaText);
+          project.tracks = data.tracks;
+          
+          for (const t of project.tracks) {
+              for (const c of t.clips) {
+                  c.appliedActions = new Set(c.appliedActions || []);
+                  if (c.bufferFile && c.bufferMeta) {
+                      const binFile = zip.file(`assets/${c.bufferFile}`);
+                      if (binFile) {
+                          const arrayBuf = await binFile.async('arraybuffer');
+                          const rawData = new Float32Array(arrayBuf);
+                          
+                          const ctx = getAudioCtx();
+                          const audioBuf = ctx.createBuffer(c.bufferMeta.channels, c.bufferMeta.length, c.bufferMeta.sampleRate);
+                          for (let ch = 0; ch < c.bufferMeta.channels; ch++) {
+                              const chData = audioBuf.getChannelData(ch);
+                              for (let i = 0; i < c.bufferMeta.length; i++) {
+                                  chData[i] = rawData[i * c.bufferMeta.channels + ch];
+                              }
+                          }
+                          c.originalBuffer = audioBuf;
+                      }
+                  }
+              }
+          }
+          
+          project.tracks.forEach(t => t.clips.forEach(c => {
+              if (c.originalBuffer) recomputeClipBuffer(c);
+          }));
+          
+          container.querySelector('#snd-intro').style.opacity = '0';
+          container.querySelector('#snd-intro').style.pointerEvents = 'none';
+          playheadEl.style.display = 'block';
+          selectedItems = { tracks: new Set(), clips: new Set() };
+          renderTimeline();
+          renderInspector();
+          rebuildPlayback();
+          
+      } catch (err) {
+          console.error(err);
+          alert("Failed to load project: " + err.message);
+      }
+      e.target.value = '';
   });
 
   container.querySelector('#btn-play').addEventListener('click', async () => {
@@ -1666,6 +1810,46 @@ export async function render(container) {
               renderTimeline();
               rebuildPlayback();
           });
+      }
+      
+      if (id === 'btn-join-clips') {
+          let track = null;
+          let c1 = null, c2 = null;
+          for (const t of project.tracks) {
+              const selectedInTrack = t.clips.filter(c => affectedClips.includes(c));
+              if (selectedInTrack.length === 2) {
+                  track = t;
+                  selectedInTrack.sort((a,b) => a.timelineStart - b.timelineStart);
+                  c1 = selectedInTrack[0];
+                  c2 = selectedInTrack[1];
+                  break;
+              }
+          }
+          if (track && c1 && c2) {
+              // Join the two clips by extending the first one's duration
+              c1.duration = (c2.timelineStart + c2.duration) - c1.timelineStart;
+              
+              // To handle playback properly across the unified clip, we must concatenate their buffers
+              if (c1.buffer && c2.buffer) {
+                  const newLen = c1.buffer.length + c2.buffer.length;
+                  const newBuf = Tone.context.createBuffer(c1.buffer.numberOfChannels, newLen, c1.buffer.sampleRate);
+                  for(let i=0; i<newBuf.numberOfChannels; i++) {
+                      const channelData = newBuf.getChannelData(i);
+                      channelData.set(c1.buffer.getChannelData(i), 0);
+                      channelData.set(c2.buffer.getChannelData(i), c1.buffer.length);
+                  }
+                  c1.buffer = newBuf;
+                  c1.originalBuffer = newBuf;
+              }
+              
+              // Remove the second clip
+              track.clips = track.clips.filter(c => c !== c2);
+              selectedItems.clips.delete(c2.id);
+              
+              renderInspector();
+              renderTimeline();
+              rebuildPlayback();
+          }
       }
       
       if (id === 'btn-auto-split') {
