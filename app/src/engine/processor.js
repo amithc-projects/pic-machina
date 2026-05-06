@@ -488,9 +488,14 @@ export class ImageProcessor {
         if (_srcDef) _perFrameFn = _srcDef.apply.bind(_srcDef);
       }
 
-      if (context._previewMode) {
-        // In preview mode the processor canvas already holds a video frame —
-        // apply the per-frame function directly so the user sees the live effect.
+      const _file = context.originalFile;
+      const _ext  = _file?.name?.slice(_file.name.lastIndexOf('.') + 1).toLowerCase() ?? '';
+      const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
+      const isVideo = _file && VIDEO_EXTS.has(_ext);
+
+      if (context._previewMode || !isVideo) {
+        // In preview mode, or if the source is an image/non-video —
+        // apply the per-frame function directly so the user sees the effect on the canvas.
         if (_perFrameFn) {
           try { await _perFrameFn(ctx, node.params || {}, context); } catch { /* ignore */ }
         }

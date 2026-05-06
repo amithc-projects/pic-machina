@@ -139,8 +139,18 @@
           "type": "string",
           "examples": ["4:3", "16:9", "1:1", "3:2"]
         },
+        "durationSec": {
+          "description": "Duration in seconds for video or audio assets.",
+          "type": "number",
+          "minimum": 0
+        },
+        "fps": {
+          "description": "Frames per second for video assets.",
+          "type": "number",
+          "minimum": 0
+        },
         "orientation": {
-          "description": "Physical orientation of the image.",
+          "description": "Physical orientation of the image or video.",
           "type": "string",
           "enum": ["landscape", "portrait", "square"]
         },

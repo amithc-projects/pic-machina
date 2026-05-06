@@ -333,6 +333,147 @@ registry.register({
   apply() { /* handled by Processor */ },
 });
 
+registry.register({
+  id: 'video-mesh-warp',
+  name: 'Video Mesh Warp',
+  category: 'Video Effects',
+  categoryKey: 'video-effect',
+  icon: 'waves',
+  description: 'Distort the video frame using WebGL mesh warping (bulge/pinch and wave distortions).',
+  params: [
+    { name: 'bulgeAmount', label: 'Bulge / Pinch', type: 'range', min: -1.0, max: 1.0, step: 0.05, defaultValue: 0.5 },
+    { name: 'bulgeRadius', label: 'Bulge Radius (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'waveAmplitude', label: 'Wave Amplitude', type: 'range', min: 0, max: 0.5, step: 0.01, defaultValue: 0 },
+    { name: 'waveFrequency', label: 'Wave Frequency', type: 'range', min: 0, max: 50, step: 0.5, defaultValue: 10 },
+    { name: 'waveSpeed', label: 'Wave Speed', type: 'range', min: -10, max: 10, step: 0.5, defaultValue: 2 },
+    ...COMMON_PARAMS,
+  ],
+  async applyPerFrame(ctx, p, context) {
+      if (!context._glCanvas) {
+          context._glCanvas = new OffscreenCanvas(ctx.canvas.width, ctx.canvas.height);
+          context._gl = context._glCanvas.getContext('webgl', { premultipliedAlpha: false });
+          const gl = context._gl;
+          if (!gl) return;
+          
+          const vsSource = `
+              attribute vec2 a_position;
+              varying vec2 v_uv;
+              void main() {
+                  gl_Position = vec4(a_position, 0.0, 1.0);
+                  v_uv = a_position * 0.5 + 0.5;
+                  v_uv.y = 1.0 - v_uv.y;
+              }
+          `;
+          const fsSource = `
+              precision highp float;
+              varying vec2 v_uv;
+              uniform sampler2D u_image;
+              uniform float u_bulgeAmount;
+              uniform float u_bulgeRadius;
+              uniform float u_waveAmplitude;
+              uniform float u_waveFrequency;
+              uniform float u_time;
+              uniform vec2 u_resolution;
+
+              void main() {
+                  vec2 uv = v_uv;
+                  
+                  // Wave Distortion
+                  if (u_waveAmplitude > 0.0) {
+                      uv.x += sin(uv.y * u_waveFrequency + u_time) * u_waveAmplitude;
+                  }
+                  
+                  // Bulge / Pinch Distortion
+                  if (u_bulgeRadius > 0.0 && u_bulgeAmount != 0.0) {
+                      vec2 center = vec2(0.5, 0.5);
+                      vec2 toCenter = uv - center;
+                      // Account for aspect ratio in distance calculation
+                      float aspect = u_resolution.x / u_resolution.y;
+                      vec2 toCenterScaled = vec2(toCenter.x * aspect, toCenter.y);
+                      float dist = length(toCenterScaled);
+                      
+                      if (dist < u_bulgeRadius) {
+                          float percent = dist / u_bulgeRadius;
+                          if (u_bulgeAmount > 0.0) {
+                              // Bulge (Puff out)
+                              uv = center + toCenter * mix(1.0, smoothstep(0.0, 1.0, percent), u_bulgeAmount);
+                          } else {
+                              // Pinch (Suck in)
+                              uv = center + toCenter * mix(1.0, pow(percent, 1.0 - u_bulgeAmount), -u_bulgeAmount);
+                          }
+                      }
+                  }
+
+                  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+                      gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+                  } else {
+                      gl_FragColor = texture2D(u_image, uv);
+                  }
+              }
+          `;
+          
+          const compileShader = (type, source) => {
+              const shader = gl.createShader(type);
+              gl.shaderSource(shader, source);
+              gl.compileShader(shader);
+              return shader;
+          };
+          
+          const vs = compileShader(gl.VERTEX_SHADER, vsSource);
+          const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+          const prog = gl.createProgram();
+          gl.attachShader(prog, vs); gl.attachShader(prog, fs);
+          gl.linkProgram(prog);
+          context._glProgram = prog;
+          
+          context._posBuffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, context._posBuffer);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+          
+          context._glTexture = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, context._glTexture);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      }
+
+      const gl = context._gl;
+      if (!gl) return;
+      const prog = context._glProgram;
+      
+      if (context._glCanvas.width !== ctx.canvas.width || context._glCanvas.height !== ctx.canvas.height) {
+          context._glCanvas.width = ctx.canvas.width;
+          context._glCanvas.height = ctx.canvas.height;
+          gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      }
+
+      gl.useProgram(prog);
+
+      gl.bindTexture(gl.TEXTURE_2D, context._glTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ctx.canvas);
+
+      const posLoc = gl.getAttribLocation(prog, "a_position");
+      gl.bindBuffer(gl.ARRAY_BUFFER, context._posBuffer);
+      gl.enableVertexAttribArray(posLoc);
+      gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+      gl.uniform1i(gl.getUniformLocation(prog, "u_image"), 0);
+      gl.uniform1f(gl.getUniformLocation(prog, "u_bulgeAmount"), p.bulgeAmount !== undefined ? p.bulgeAmount : 0.5);
+      gl.uniform1f(gl.getUniformLocation(prog, "u_bulgeRadius"), (p.bulgeRadius !== undefined ? p.bulgeRadius : 50) / 100.0);
+      gl.uniform1f(gl.getUniformLocation(prog, "u_waveAmplitude"), p.waveAmplitude !== undefined ? p.waveAmplitude : 0);
+      gl.uniform1f(gl.getUniformLocation(prog, "u_waveFrequency"), p.waveFrequency !== undefined ? p.waveFrequency : 10);
+      gl.uniform1f(gl.getUniformLocation(prog, "u_time"), (context.timestampSec || 0) * (p.waveSpeed !== undefined ? p.waveSpeed : 2));
+      gl.uniform2f(gl.getUniformLocation(prog, "u_resolution"), gl.canvas.width, gl.canvas.height);
+
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.drawImage(context._glCanvas, 0, 0);
+  },
+  apply() { /* handled by Processor */ },
+});
+
 // ─── Pose Landmarks Overlay ──────────────────────────────────────────────────
 
 // MediaPipe Pose skeleton connections (pairs of landmark indices).

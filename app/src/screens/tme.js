@@ -1,5 +1,6 @@
 import { createEmptyTimeline, saveTimeline, getTimeline, getAllTimelines } from '../data/timeline-store.js';
 import { registry } from '../engine/index.js';
+import { applyBehavior, getAllBehaviors } from '../engine/behaviors.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 import { WebGLCompositor, TRANSITIONS } from '../engine/stitcher.js';
 import { formatBytes } from '../utils/misc.js';
@@ -88,14 +89,16 @@ export async function render(container) {
           
           <!-- Media Pool -->
           <div class="panel-left" style="width: 320px; border-right: 1px solid var(--ps-border);">
-            <div class="panel-header">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
               <span class="panel-header-title">Media Pool</span>
-              <button class="btn-ghost" id="tme-btn-remove-media" title="Remove Selected Media" style="display:none; color: var(--ps-danger);">
-                <span class="material-symbols-outlined">remove</span>
-              </button>
-              <button class="btn-ghost" id="tme-btn-add-media" title="Import Media">
-                <span class="material-symbols-outlined">add</span>
-              </button>
+              <div style="display: flex; gap: 4px;">
+                <button class="btn-ghost" id="tme-btn-remove-media" title="Remove Selected Media" style="display:none; color: var(--ps-danger); padding: 4px;">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+                </button>
+                <button class="btn-ghost" id="tme-btn-add-media" title="Import Media" style="padding: 4px;">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+                </button>
+              </div>
             </div>
             <div class="panel-body" id="tme-media-pool" style="display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start;">
               <!-- Media items rendered here -->
@@ -252,6 +255,8 @@ export async function render(container) {
            typeStr = `Video: ${item.meta.width || '?'}x${item.meta.height || '?'} • ${item.meta.duration ? item.meta.duration.toFixed(1) + 's' : '?s'}`;
          } else if (item.type === 'image') {
            typeStr = `Image: ${item.meta.width || '?'}x${item.meta.height || '?'}`;
+         } else if (item.type === 'audio') {
+           typeStr = `Audio: ${item.meta.duration ? item.meta.duration.toFixed(1) + 's' : '?s'}`;
          }
          tooltip = `${tooltip}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
       }
@@ -259,6 +264,14 @@ export async function render(container) {
       
       if (item.type === 'video') {
         el.innerHTML = '<span class="material-symbols-outlined" style="position:absolute; bottom:2px; right:2px; font-size:14px; background:rgba(0,0,0,0.6); border-radius:4px; padding:2px; color:#fff;">movie</span>';
+      } else if (item.type === 'audio') {
+        el.innerHTML = '<span class="material-symbols-outlined" style="position:absolute; bottom:2px; right:2px; font-size:14px; background:rgba(0,0,0,0.6); border-radius:4px; padding:2px; color:#fff;">music_note</span>';
+        if (!item.thumbnail) {
+          el.style.display = 'flex';
+          el.style.alignItems = 'center';
+          el.style.justifyContent = 'center';
+          el.innerHTML += '<span class="material-symbols-outlined" style="font-size:32px; color:#555;">audio_file</span>';
+        }
       }
 
       el.addEventListener('click', (e) => {
@@ -595,7 +608,48 @@ export async function render(container) {
       paramsHtml = `
         ${kfHeaderHtml}
         <div class="ned-fields" style="padding: 12px;">
-          ${def.params.map(p => renderParamField(p, activeParams[p.name], 'tme')).join('')}
+          ${def.params.map(p => {
+             let html = renderParamField(p, activeParams[p.name], 'tme');
+             if (p.type === 'range' || p.type === 'number') {
+                const behaviorsList = getAllBehaviors();
+                const currentBehav = fxBlock.behaviors?.[p.name];
+                
+                const behavOptions = behaviorsList.map(b => `<option value="${b.id}" ${currentBehav?.id === b.id ? 'selected' : ''}>${b.name}</option>`).join('');
+                
+                let behavParamsHtml = '';
+                if (currentBehav && currentBehav.id) {
+                   const behavDef = behaviorsList.find(b => b.id === currentBehav.id);
+                   if (behavDef && behavDef.params) {
+                      behavParamsHtml = '<div style="margin-top:4px; padding:8px; background:rgba(0,0,0,0.2); border-radius:4px; border: 1px solid var(--ps-border);">' + behavDef.params.map(bp => {
+                         const bVal = currentBehav.params?.[bp.name] ?? bp.defaultValue;
+                         return `
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:10px;">
+                               <label style="color:var(--ps-text-muted);">${bp.label}</label>
+                               <div style="display:flex; align-items:center; gap:4px;">
+                                 <input type="${bp.type === 'range' ? 'range' : 'number'}" class="tme-behavior-param ic-range" data-param="${p.name}" data-bparam="${bp.name}" min="${bp.min}" max="${bp.max}" step="${bp.step||1}" value="${bVal}" style="width:60px;">
+                                 ${bp.type === 'range' ? `<span style="width:20px; text-align:right; color:var(--ps-blue);">${bVal}</span>` : ''}
+                               </div>
+                            </div>
+                         `;
+                      }).join('') + '</div>';
+                   }
+                }
+
+                html += `
+                  <div style="margin-top: 4px; margin-bottom: 12px; display:flex; flex-direction:column; gap:4px; padding-left: 8px; border-left: 2px solid rgba(167, 139, 250, 0.3);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--ps-blue);">
+                      <span><span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle; margin-right:2px;">animation</span> Behavior</span>
+                      <select class="tme-behavior-select ic-input" data-param="${p.name}" style="font-size:10px; padding:2px; height:auto; width: 100px;">
+                        <option value="">None</option>
+                        ${behavOptions}
+                      </select>
+                    </div>
+                    ${behavParamsHtml}
+                  </div>
+                `;
+             }
+             return html;
+          }).join('')}
         </div>
       `;
     }
@@ -648,22 +702,64 @@ export async function render(container) {
         } else {
            fxBlock.params = newParams;
         }
+
+        // Collect behaviors
+        if (!fxBlock.behaviors) fxBlock.behaviors = {};
+        propsContainer.querySelectorAll('.tme-behavior-select').forEach(sel => {
+           const pName = sel.dataset.param;
+           const bId = sel.value;
+           if (!bId) {
+              delete fxBlock.behaviors[pName];
+           } else {
+              if (!fxBlock.behaviors[pName] || fxBlock.behaviors[pName].id !== bId) {
+                 fxBlock.behaviors[pName] = { id: bId, params: {} };
+              }
+           }
+        });
+
+        propsContainer.querySelectorAll('.tme-behavior-param').forEach(inp => {
+           const pName = inp.dataset.param;
+           const bpName = inp.dataset.bparam;
+           if (fxBlock.behaviors[pName]) {
+              fxBlock.behaviors[pName].params[bpName] = parseFloat(inp.value);
+           }
+        });
+
         await saveTimeline(currentTimeline);
         renderFrame();
       };
 
       propsContainer.querySelectorAll('input, select').forEach(el => {
-        if (el.type === 'range' || el.type === 'color') {
-          el.addEventListener('input', () => {
-            if (el.type === 'range') {
-              const valEl = propsContainer.querySelector(`#${el.id}-val`);
-              if (valEl) valEl.textContent = el.value;
-            }
-            onChange();
-          });
-        } else {
-          el.addEventListener('change', onChange);
+        if (!el.classList.contains('tme-behavior-select') && !el.classList.contains('tme-behavior-param')) {
+          if (el.type === 'range' || el.type === 'color') {
+            el.addEventListener('input', () => {
+              if (el.type === 'range') {
+                const valEl = propsContainer.querySelector(`#${el.id}-val`);
+                if (valEl) valEl.textContent = el.value;
+              }
+              onChange();
+            });
+          } else {
+            el.addEventListener('change', onChange);
+          }
         }
+      });
+
+      propsContainer.querySelectorAll('.tme-behavior-select').forEach(sel => {
+         sel.addEventListener('change', async () => {
+            await onChange();
+            renderPropertiesPanel();
+         });
+      });
+
+      propsContainer.querySelectorAll('.tme-behavior-param').forEach(inp => {
+         inp.addEventListener('input', async () => {
+            if (inp.type === 'range') {
+               const valSpan = inp.nextElementSibling;
+               if (valSpan) valSpan.textContent = inp.value;
+            }
+            await onChange();
+         });
       });
     }
   }
@@ -1403,6 +1499,23 @@ export async function render(container) {
         }
       });
       
+      // Global keydown for delete/backspace
+      if (!window._tmeKeyDownBound) {
+        window._tmeKeyDownBound = true;
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' || e.key === 'Delete') {
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+              return; // typing inside an input
+            }
+            if (selectedItemId) {
+              const btnDel = document.querySelector('#tme-btn-delete-selected');
+              if (btnDel) btnDel.click();
+            }
+          }
+        });
+      }
+      
       // Update ruler sizes if timeline grew
       setTimeout(renderRuler, 0);
     } catch (e) {
@@ -2101,49 +2214,69 @@ export async function render(container) {
   }
 
   function getInterpolatedParams(fxBlock, playheadTime) {
+    let baseParams = {};
     if (!Array.isArray(fxBlock.keyframes) || fxBlock.keyframes.length === 0) {
-      return fxBlock.params || {};
-    }
-    const offset = playheadTime - fxBlock.startTime;
-    
-    let kfBefore = null;
-    let kfAfter = null;
-    
-    for (const kf of fxBlock.keyframes) {
-      if (kf.offset <= offset) {
-        if (!kfBefore || kf.offset > kfBefore.offset) kfBefore = kf;
+      baseParams = { ...(fxBlock.params || {}) };
+    } else {
+      const offset = playheadTime - fxBlock.startTime;
+      
+      let kfBefore = null;
+      let kfAfter = null;
+      
+      for (const kf of fxBlock.keyframes) {
+        if (kf.offset <= offset) {
+          if (!kfBefore || kf.offset > kfBefore.offset) kfBefore = kf;
+        }
+        if (kf.offset >= offset) {
+          if (!kfAfter || kf.offset < kfAfter.offset) kfAfter = kf;
+        }
       }
-      if (kf.offset >= offset) {
-        if (!kfAfter || kf.offset < kfAfter.offset) kfAfter = kf;
+      
+      if (!kfBefore && !kfAfter) {
+         baseParams = { ...(fxBlock.params || {}) };
+      } else if (!kfBefore) {
+         baseParams = { ...kfAfter.params };
+      } else if (!kfAfter) {
+         baseParams = { ...kfBefore.params };
+      } else if (kfBefore.offset === kfAfter.offset) {
+         baseParams = { ...kfBefore.params };
+      } else {
+        const t = (offset - kfBefore.offset) / (kfAfter.offset - kfBefore.offset);
+        const allKeys = new Set([...Object.keys(kfBefore.params), ...Object.keys(kfAfter.params)]);
+        
+        for (const key of allKeys) {
+          const v1 = kfBefore.params[key];
+          const v2 = kfAfter.params[key];
+          if (v1 === undefined) baseParams[key] = v2;
+          else if (v2 === undefined) baseParams[key] = v1;
+          else baseParams[key] = interpolateValue(v1, v2, t);
+        }
       }
     }
-    
-    if (!kfBefore && !kfAfter) return fxBlock.params || {};
-    if (!kfBefore) return kfAfter.params;
-    if (!kfAfter) return kfBefore.params;
-    if (kfBefore.offset === kfAfter.offset) return kfBefore.params;
-    
-    const t = (offset - kfBefore.offset) / (kfAfter.offset - kfBefore.offset);
-    
-    const interpolated = {};
-    const allKeys = new Set([...Object.keys(kfBefore.params), ...Object.keys(kfAfter.params)]);
-    
-    for (const key of allKeys) {
-      const v1 = kfBefore.params[key];
-      const v2 = kfAfter.params[key];
-      if (v1 === undefined) interpolated[key] = v2;
-      else if (v2 === undefined) interpolated[key] = v1;
-      else interpolated[key] = interpolateValue(v1, v2, t);
+
+    // Apply Behaviors
+    if (fxBlock.behaviors) {
+      const timeContext = playheadTime - fxBlock.startTime; // Use relative time to the block
+      for (const [pName, bData] of Object.entries(fxBlock.behaviors)) {
+        if (baseParams[pName] !== undefined && typeof baseParams[pName] === 'number') {
+          baseParams[pName] = applyBehavior(bData, baseParams[pName], timeContext);
+        }
+      }
     }
-    return interpolated;
+
+    return baseParams;
   }
 
   let compositor = null;
 
   async function renderFrame() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (canvas.width === 0 || canvas.height === 0) return;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.fillStyle = '#000';
+    tempCtx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (!compositor && canvas.width > 0 && canvas.height > 0) {
       compositor = new WebGLCompositor(canvas.width, canvas.height);
@@ -2220,7 +2353,7 @@ export async function render(container) {
             toMotion: null
           });
 
-          ctx.drawImage(compositor.canvas, 0, 0, canvas.width, canvas.height);
+          tempCtx.drawImage(compositor.canvas, 0, 0, canvas.width, canvas.height);
 
           if (toTex) compositor.gl.deleteTexture(toTex);
           if (fromTex) compositor.gl.deleteTexture(fromTex);
@@ -2229,7 +2362,7 @@ export async function render(container) {
         } else {
           const frameSource = await loadFrame(activeClip);
           if (frameSource) {
-            drawSourceToCtx(frameSource, ctx);
+            drawSourceToCtx(frameSource, tempCtx);
           }
         }
       }
@@ -2289,7 +2422,7 @@ export async function render(container) {
               toMotion: null
             });
 
-            ctx.drawImage(compositor.canvas, 0, 0);
+            tempCtx.drawImage(compositor.canvas, 0, 0);
 
             compositor.gl.deleteTexture(fxTex);
             compositor.gl.deleteTexture(emptyTex);
@@ -2297,9 +2430,9 @@ export async function render(container) {
           } else {
             // Normal direct render
             if (def.applyPerFrame) {
-              await def.applyPerFrame(ctx, interpParams, context);
+              await def.applyPerFrame(tempCtx, interpParams, context);
             } else if (def.apply) {
-              await def.apply(ctx, interpParams, context);
+              await def.apply(tempCtx, interpParams, context);
             }
           }
         } catch (err) {
@@ -2307,6 +2440,9 @@ export async function render(container) {
         }
       }
     }
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(tempCanvas, 0, 0);
   }
 
   async function loop(timestamp) {

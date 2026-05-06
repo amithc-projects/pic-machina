@@ -72,6 +72,29 @@
           "additionalProperties": true,
           "description": "Map of parameters specific to the transformId"
         },
+        "timeRange": {
+          "type": "object",
+          "description": "Timeline configuration: start and end times (in seconds) for when this node is active",
+          "properties": {
+            "start": { "type": "number" },
+            "end": { "type": "number" }
+          }
+        },
+        "behaviors": {
+          "type": "object",
+          "description": "Extensible property behaviors applied to params over time",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "string", "description": "Behavior ID, e.g. 'wiggle', 'oscillate', 'ramp'" },
+              "amount": { "type": "number" },
+              "frequency": { "type": "number" },
+              "phase": { "type": "number" }
+            },
+            "additionalProperties": true
+          }
+        },
         "label": { "type": "string" },
         "disabled": { "type": "boolean", "default": false },
         "condition": {

@@ -14,6 +14,8 @@
     "widthPx": 4000,
     "heightPx": 3000,
     "aspectRatio": "4:3",
+    "durationSec": 0,
+    "fps": 0,
     "orientation": "landscape",
     "contentRating": "general",
     "rightsNotes": "Personal photography",

@@ -217,6 +217,7 @@ These transforms apply existing image effects to every frame of a video using th
 | `video-dither` | `filter-dither` | `palette`, `dithering`, `suffix`, `bitrate` | Retro color limiting on every frame |
 | `video-kuwahara` | `filter-kuwahara` | `radius`, `passes`, `suffix`, `bitrate` | Painterly/oil-paint smoothing on every frame |
 | `video-pixel-sort` | `filter-pixel-sort` | `threshold`, `direction`, `stripHeight`, `suffix`, `bitrate` | Glitch pixel sorting on every frame |
+| `video-mesh-warp` | *None* | `bulgeAmount`, `bulgeRadius`, `waveAmplitude`, `waveFrequency`, `waveSpeed`, `suffix`, `bitrate` | GPU-accelerated parametric mesh distortion (bulge, pinch, and wave) on every frame |
 | `video-pose-landmarks` | MediaPipe Pose | `lineWidth`, `color`, `suffix`, `bitrate` | Renders pose landmarks directly on every frame |
 | `video-watermark` | `overlay-watermark` | `text`, `font`, `size`, `color`, `opacity`, `angle`, `suffix`, `bitrate` | Animated diagonal watermark on every frame |
 | `video-caption` | `overlay-rich-text` | `content`, `font`, `size`, `anchor`, `suffix`, `bitrate` | Simple text overlay/caption on every frame |
