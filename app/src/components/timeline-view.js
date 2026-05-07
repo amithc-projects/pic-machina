@@ -16,7 +16,8 @@ export class TimelineView {
             onClipContextMenu: (clip, event) => {},
             onClipDrag: (clipId, newTimeSec) => {},
             onClipDrop: (clipId) => {},
-            onRenderTrackHeader: (track, element) => {}
+            onRenderTrackHeader: (track, element) => {},
+            onTrackDrop: (track, offsetX, event) => {}
         }, options);
 
         this.pixelsPerSecond = this.options.pixelsPerSecond;
@@ -190,6 +191,23 @@ export class TimelineView {
             body.style.borderBottom = '1px solid var(--ps-border, #333)';
             body.style.position = 'relative';
 
+            // Allow dropping on track body
+            body.addEventListener('dragover', e => {
+                e.preventDefault();
+                body.style.background = 'rgba(255, 255, 255, 0.05)';
+            });
+            body.addEventListener('dragleave', () => {
+                body.style.background = 'transparent';
+            });
+            body.addEventListener('drop', e => {
+                e.preventDefault();
+                body.style.background = 'transparent';
+                const rect = body.getBoundingClientRect();
+                const scrollLeft = this.dom.tracksBody.parentElement.scrollLeft;
+                const offsetX = e.clientX - rect.left + scrollLeft;
+                this.options.onTrackDrop(track, offsetX, e);
+            });
+
             (track.clips || []).forEach(clip => {
                 const el = document.createElement('div');
                 el.style.position = 'absolute';
@@ -211,7 +229,7 @@ export class TimelineView {
                 label.style.zIndex = '2';
                 el.appendChild(label);
                 
-                this.options.onRenderClip(clip, el);
+                this.options.onRenderClip(clip, el, track);
                 
                 el.addEventListener('mousedown', (e) => {
                     if (e.button === 2) {
@@ -250,6 +268,7 @@ export class TimelineView {
             this.dom.tracksBody.appendChild(body);
         });
 
+        this.dom.tracksBody.style.minHeight = '100%'; // Ensures scrolling
         this.updatePlayheadDOM();
     }
 }

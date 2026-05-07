@@ -6,7 +6,7 @@
  *
  * Schema v1:
  *   $version  — always 1
- *   source    — filename, sha256, sizeBytes (set on first write, read-only)
+ *   source    — filename, sizeBytes (set on first write, read-only)
  *   exif      — mirror of EXIF fields (read-only, from image file)
  *   geo       — city/country derived from GPS, user-editable
  *   annotation — rating (1-5|null), flag ('pick'|'reject'|null), tags[], caption

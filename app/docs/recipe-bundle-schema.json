@@ -35,6 +35,10 @@
         "isSystem": { "type": "boolean", "default": false },
         "coverColor": { "type": "string", "description": "Fallback gradient colour hex" },
         "tags": { "type": "array", "items": { "type": "string" } },
+        "thumbnail": {
+          "type": "string",
+          "description": "Base64 data URL of the recipe cover image (JPEG or GIF)"
+        },
         "nodes": {
           "type": "array",
           "items": { "$ref": "#/definitions/RecipeNode" },
@@ -82,17 +86,29 @@
         },
         "behaviors": {
           "type": "object",
-          "description": "Extensible property behaviors applied to params over time",
+          "description": "Map of param-name → behavior animating that param over time. Key is the param name on the parent transform.",
           "additionalProperties": {
             "type": "object",
-            "required": ["type"],
+            "required": ["id"],
             "properties": {
-              "type": { "type": "string", "description": "Behavior ID, e.g. 'wiggle', 'oscillate', 'ramp'" },
-              "amount": { "type": "number" },
-              "frequency": { "type": "number" },
-              "phase": { "type": "number" }
+              "id": {
+                "type": "string",
+                "description": "Registered behavior ID",
+                "enum": ["wiggle", "sine", "ramp"]
+              },
+              "params": {
+                "type": "object",
+                "description": "Behavior-specific params. wiggle/sine: { frequency, amplitude, phase }. ramp: { rate }.",
+                "properties": {
+                  "frequency": { "type": "number" },
+                  "amplitude": { "type": "number" },
+                  "phase":     { "type": "number" },
+                  "rate":      { "type": "number" }
+                },
+                "additionalProperties": true
+              }
             },
-            "additionalProperties": true
+            "additionalProperties": false
           }
         },
         "label": { "type": "string" },

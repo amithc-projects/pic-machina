@@ -1016,6 +1016,36 @@
       "additionalProperties": true
     },
 
+    "computed": {
+      "description": "Scalar values written by Pic-Machina batch transforms (e.g. sharpness analysis, OCR, face count) and arbitrary keys produced by the meta-sidecar-write transform. Open shape — transforms may add additional properties.",
+      "type": "object",
+      "properties": {
+        "sharpnessScore": {
+          "description": "Perceptual sharpness 0 (blurry) to 100 (sharp).",
+          "type": "number", "minimum": 0, "maximum": 100
+        },
+        "blurLabel": {
+          "description": "Human-readable blur classification.",
+          "type": "string",
+          "enum": ["sharp", "soft", "blurry", "unknown"]
+        },
+        "ocrText": {
+          "description": "Full text extracted by OCR.",
+          "type": "string"
+        },
+        "ocrTags": {
+          "description": "Comma-separated keywords from OCR output.",
+          "type": "string"
+        },
+        "faceCount": {
+          "description": "Number of faces detected (string for template compatibility).",
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        }
+      },
+      "additionalProperties": true
+    },
+
     "processing": {
       "description": "Append-only log of every Pic-Machina batch run that has processed this image.",
       "type": "array",
