@@ -1,5 +1,6 @@
 import * as Tone from 'https://cdn.jsdelivr.net/npm/tone@14.7.77/+esm';
 import JSZip from 'jszip';
+import { TimelineView } from '../components/timeline-view.js';
 
 // -------------- AUDIO HELPERS --------------
 function audioBufferToWav(buffer, opt_channel) {
@@ -140,7 +141,10 @@ function applyFade(buffer, type, durationSec) {
     return newBuf;
 }
 
-function drawWaveformToCanvas(canvas, buffer, color, displayWidth, displayHeight) {
+function drawWaveformToCanvas(canvas, buffer, color, displayWidth, displayHeight, sourceStart = 0, sourceDuration = null) {
+    if (!buffer) return;
+    if (sourceDuration === null) sourceDuration = buffer.duration;
+    
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
     
@@ -157,7 +161,11 @@ function drawWaveformToCanvas(canvas, buffer, color, displayWidth, displayHeight
     const scaleX = actualWidth / displayWidth;
     ctx.scale(scaleX, dpr);
     
-    const data = buffer.getChannelData(0);
+    const startFrame = Math.floor(sourceStart * buffer.sampleRate);
+    const endFrame = Math.floor((sourceStart + sourceDuration) * buffer.sampleRate);
+    const channelData = buffer.getChannelData(0);
+    const data = channelData.slice ? channelData.slice(startFrame, endFrame) : channelData.subarray(startFrame, endFrame);
+    
     const step = Math.max(1, Math.floor(data.length / displayWidth));
     const amp = displayHeight / 2;
     
@@ -518,13 +526,7 @@ export async function render(container) {
             </div>
 
             <!-- Scrollable Tracks -->
-            <div id="timeline-scroll" class="snd-scroll" style="flex: 1; overflow: auto; position: relative; background: #0b0b12;">
-                <div id="timeline-ruler" style="height: 24px; background: rgba(255,255,255,0.03); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.1);"></div>
-                <div id="timeline-tracks" style="position: relative; padding-bottom: 200px;"></div>
-                <div id="playhead" style="position: absolute; top: 0; bottom: 0; width: 2px; background: #ef4444; left: 140px; z-index: 20; pointer-events: none; box-shadow: 0 0 10px #ef4444; display: none;">
-                   <div style="position: absolute; top: 0; left: -5px; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #ef4444;"></div>
-                </div>
-            </div>
+            <div id="snd-timeline-wrapper" style="flex: 1; position: relative; background: #0b0b12;"></div>
 
             <div id="diarize-overlay" style="display:none; position: absolute; inset:0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; flex-direction: column; color: #22d3ee;">
                <span class="material-symbols-outlined" style="font-size: 48px; animation: spin 2s linear infinite;">sync</span>
@@ -536,11 +538,11 @@ export async function render(container) {
     </div>
   `;
 
-  // Application State
   let project = {
       originalToneBuffer: null,
       tracks: [],
-      masterFx: []
+      masterFx: [],
+      mediaPool: {}
   };
   let selectedItems = { tracks: new Set(), clips: new Set() };
   let stagedMultiFx = null;
@@ -553,10 +555,6 @@ export async function render(container) {
   let playLoopId = null;
 
   // DOM
-  const timelineScroll = container.querySelector('#timeline-scroll');
-  const tracksContainer = container.querySelector('#timeline-tracks');
-  const rulerContainer = container.querySelector('#timeline-ruler');
-  const playheadEl = container.querySelector('#playhead');
   const timeDisplay = container.querySelector('#time-display');
 
   const formatTime = (secs) => {
@@ -588,6 +586,31 @@ export async function render(container) {
           if (c) return c;
       }
       return null;
+  };
+
+  const recomputeClipBuffer = (clip) => {
+      const actions = clip.appliedActions || new Set();
+      
+      if (actions.size === 0) {
+          clip.buffer = null;
+          return;
+      }
+      
+      let buf;
+      if (clip.poolId && project.mediaPool[clip.poolId]) {
+          const start = clip.sourceStart || 0;
+          buf = sliceAudioBuffer(project.mediaPool[clip.poolId], start, start + clip.duration);
+      } else {
+          return;
+      }
+      
+      if (actions.has('norm')) buf = normalizeAudioBuffer(buf);
+      if (actions.has('rev')) buf = reverseAudioBuffer(buf);
+      if (actions.has('inv')) buf = invertAudioBuffer(buf);
+      if (actions.has('fade-in')) buf = applyFade(buf, 'in', 1.0);
+      if (actions.has('fade-out')) buf = applyFade(buf, 'out', 1.0);
+      
+      clip.buffer = buf;
   };
 
   // ---------------- RENDER UI ----------------
@@ -777,212 +800,320 @@ export async function render(container) {
           bindFxSliders(project.masterFx);
       }
   };
+  let timelineView = null;
   const renderTimeline = () => {
-      tracksContainer.innerHTML = '';
-      let maxTime = 10;
-      project.tracks.forEach(t => t.clips.forEach(c => {
-          const end = c.timelineStart + (c.duration / (c.rate||1));
-          if (end > maxTime) maxTime = end;
-      }));
-      const totalWidth = (maxTime + 10) * pixelsPerSecond;
-      
-      // Ruler
-      rulerContainer.style.width = `${totalWidth + 140}px`;
-      rulerContainer.innerHTML = '';
-      for(let i=0; i<maxTime+10; i++) {
-          const tick = document.createElement('div');
-          tick.style.position = 'absolute';
-          tick.style.left = `${i * pixelsPerSecond + 140}px`; 
-          tick.style.height = '100%';
-          tick.style.borderLeft = '1px solid rgba(255,255,255,0.1)';
-          if (i % 5 === 0) {
-              tick.style.borderLeft = '1px solid rgba(255,255,255,0.4)';
-              const lbl = document.createElement('span');
-              lbl.textContent = i + 's';
-              lbl.style.position = 'absolute';
-              lbl.style.left = '4px';
-              lbl.style.top = '4px';
-              lbl.style.fontSize = '10px';
-              lbl.style.color = '#94a3b8';
-              tick.appendChild(lbl);
-          }
-          rulerContainer.appendChild(tick);
-      }
-      
-      // Tracks
-      project.tracks.forEach(track => {
-          const trkEl = document.createElement('div');
-          trkEl.className = 'snd-track';
-          trkEl.style.width = `${totalWidth + 140}px`;
-          
-          const hdr = document.createElement('div');
-          hdr.className = 'snd-track-header';
-          if (selectedItems.tracks.has(track.id)) {
-              hdr.style.background = '#2e1025';
-              hdr.style.borderRightColor = '#f472b6';
-              hdr.style.color = '#f472b6';
-          }
-          hdr.style.cursor = 'pointer';
-          hdr.onclick = (e) => {
-              if (e.target.closest('button')) return;
-              if (e.shiftKey || e.metaKey) {
-                  if (selectedItems.tracks.has(track.id)) selectedItems.tracks.delete(track.id);
-                  else selectedItems.tracks.add(track.id);
-              } else {
-                  selectedItems.tracks.clear();
-                  selectedItems.clips.clear();
-                  selectedItems.tracks.add(track.id);
-              }
-              renderInspector();
-              renderTimeline();
-          };
-          
-          const nameDiv = document.createElement('div');
-          nameDiv.textContent = track.name;
-          nameDiv.style.flex = '1';
-          nameDiv.style.overflow = 'hidden';
-          nameDiv.style.textOverflow = 'ellipsis';
-          
-          const tControls = document.createElement('div');
-          tControls.style.display = 'flex';
-          tControls.style.gap = '4px';
-          
-          const muteBtn = document.createElement('button');
-          muteBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">${track.muted ? 'volume_off' : 'volume_up'}</span>`;
-          muteBtn.style.background = 'none';
-          muteBtn.style.border = 'none';
-          muteBtn.style.color = track.muted ? '#f87171' : '#94a3b8';
-          muteBtn.style.cursor = 'pointer';
-          muteBtn.title = track.muted ? "Unmute Track" : "Mute Track";
-          muteBtn.onclick = () => {
-              track.muted = !track.muted;
-              rebuildPlayback();
-              renderTimeline();
-          };
-          
-          const delBtn = document.createElement('button');
-          delBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">delete</span>`;
-          delBtn.style.background = 'none';
-          delBtn.style.border = 'none';
-          delBtn.style.color = '#94a3b8';
-          delBtn.style.cursor = 'pointer';
-          delBtn.title = "Delete Track";
-          delBtn.onclick = () => {
-              showDialog('Delete Track?', `Are you sure you want to completely delete "${track.name}" and all its clips?`, true, () => {
-                  project.tracks = project.tracks.filter(t => t.id !== track.id);
-                  selectedItems.tracks.delete(track.id);
-                  selectedItems.clips.forEach(cid => {
-                      if (!getClipById(cid)) selectedItems.clips.delete(cid);
-                  });
+      if (!timelineView) {
+          timelineView = new TimelineView(container.querySelector('#snd-timeline-wrapper'), {
+              pixelsPerSecond: pixelsPerSecond,
+              onPlayheadMove: (time) => {
+                  if (!isPlaying) Tone.Transport.seconds = time;
+                  updatePlayheadDOM();
+              },
+              onClipSelect: (clipId, trackId, e) => {
+                  if (e.shiftKey || e.metaKey) {
+                      if (selectedItems.clips.has(clipId)) selectedItems.clips.delete(clipId);
+                      else selectedItems.clips.add(clipId);
+                  } else {
+                      selectedItems.tracks.clear();
+                      selectedItems.clips.clear();
+                      selectedItems.clips.add(clipId);
+                  }
                   renderInspector();
+                  container.querySelectorAll('.snd-clip').forEach(el => {
+                      if (selectedItems.clips.has(el.dataset.id)) el.classList.add('selected');
+                      else el.classList.remove('selected');
+                  });
+              },
+              onAddTrack: () => {
+                  project.tracks.push({
+                      id: 'trk_' + Date.now(),
+                      name: `Track ${project.tracks.length + 1}`,
+                      color: '#10b981',
+                      clips: [],
+                      muted: false
+                  });
+                  renderTimeline();
+              },
+              onZoom: (val) => {
+                  pixelsPerSecond = val;
+                  container.querySelector('#zoom-slider').value = val;
+                  renderTimeline();
+              },
+              onSplitClip: () => {
+                  const time = Tone.Transport.seconds;
+                  let splitOccurred = false;
+                  project.tracks.forEach(t => {
+                      if (selectedItems.tracks.size > 0 && !selectedItems.tracks.has(t.id)) return;
+                      const newClips = [];
+                      t.clips.forEach(clip => {
+                          if (time > clip.timelineStart && time < clip.timelineStart + clip.duration) {
+                              if (selectedItems.clips.size > 0 && !selectedItems.clips.has(clip.id)) {
+                                  newClips.push(clip);
+                                  return;
+                              }
+                              const splitOffsetSec = time - clip.timelineStart;
+                              const sourceOffset = splitOffsetSec * (clip.rate || 1);
+                              
+                              const clip2 = {
+                                  id: 'clip_' + Date.now() + Math.random().toString(36).substr(2,5),
+                                  name: clip.name + " (2)",
+                                  buffer: null,
+                                  poolId: clip.poolId,
+                                  sourceStart: (clip.sourceStart || 0) + sourceOffset,
+                                  timelineStart: clip.timelineStart + splitOffsetSec,
+                                  duration: clip.duration - splitOffsetSec,
+                                  rate: clip.rate,
+                                  fx: cloneFx(clip.fx),
+                                  keyframes: JSON.parse(JSON.stringify(clip.keyframes || [])),
+                                  appliedActions: new Set(clip.appliedActions || [])
+                              };
+                              
+                              clip.duration = splitOffsetSec;
+                              
+                              recomputeClipBuffer(clip);
+                              recomputeClipBuffer(clip2);
+                              
+                              newClips.push(clip);
+                              newClips.push(clip2);
+                              splitOccurred = true;
+                          } else {
+                              newClips.push(clip);
+                          }
+                      });
+                      t.clips = newClips;
+                  });
+                  if (splitOccurred) {
+                      rebuildPlayback();
+                      renderTimeline();
+                  }
+              },
+              onDeleteSelected: () => {
+                  if (selectedItems.clips.size > 0) {
+                      showDialog('Delete Clip', 'Delete selected clip(s)?', true, () => {
+                          project.tracks.forEach(t => {
+                              t.clips = t.clips.filter(c => !selectedItems.clips.has(c.id));
+                          });
+                          selectedItems.clips.clear();
+                          rebuildPlayback();
+                          renderTimeline();
+                          renderInspector();
+                      });
+                  } else if (selectedItems.tracks.size > 0) {
+                      showDialog('Delete Track', 'Delete selected track(s)?', true, () => {
+                          project.tracks = project.tracks.filter(t => !selectedItems.tracks.has(t.id));
+                          selectedItems.tracks.clear();
+                          rebuildPlayback();
+                          renderTimeline();
+                          renderInspector();
+                      });
+                  }
+              },
+              onClipDrag: (clipId, newTimeSec) => {
+                  const clip = getClipById(clipId);
+                  if (clip) clip.timelineStart = newTimeSec;
+              },
+              onClipDrop: (clipId) => {
                   rebuildPlayback();
                   renderTimeline();
-              });
-          };
-          
-          tControls.appendChild(muteBtn);
-          tControls.appendChild(delBtn);
-          hdr.appendChild(nameDiv);
-          hdr.appendChild(tControls);
-          
-          const content = document.createElement('div');
-          content.className = 'snd-track-content';
-          if (track.muted) content.style.opacity = '0.3';
-          
-          track.clips.forEach(clip => {
-              const clipEl = document.createElement('div');
-              const isSelected = selectedItems.clips.has(clip.id) || selectedItems.tracks.has(track.id);
-              clipEl.className = `snd-clip ${isSelected ? 'selected' : ''}`;
-              clipEl.dataset.id = clip.id;
-              
-              const w = Math.max(1, (clip.duration / (clip.rate||1)) * pixelsPerSecond);
-              clipEl.style.left = `${clip.timelineStart * pixelsPerSecond}px`;
-              clipEl.style.width = `${w}px`;
-              if (!isSelected) clipEl.style.borderColor = track.color;
-              
-              const lbl = document.createElement('div');
-              lbl.className = 'snd-clip-name';
-              lbl.textContent = clip.name;
-              clipEl.appendChild(lbl);
-              
-              const cvs = document.createElement('canvas');
-              cvs.style.width = '100%';
-              cvs.style.height = '100%';
-              cvs.style.position = 'absolute';
-              cvs.style.inset = '0';
-              cvs.style.pointerEvents = 'none';
-              clipEl.appendChild(cvs);
-              
-              // We explicitly pass the pixel dimensions to draw the buffer!
-              drawWaveformToCanvas(cvs, clip.buffer, isSelected ? '#f472b6' : track.color, w, 80);
-              
-              if (clip.keyframes && clip.keyframes.length > 0) {
-                  clip.keyframes.forEach((kf, idx) => {
-                      const kfEl = document.createElement('div');
-                      kfEl.style.position = 'absolute';
-                      kfEl.style.left = `${kf.offset * pixelsPerSecond}px`;
-                      kfEl.style.top = '50%';
-                      kfEl.style.transform = 'translate(-50%, -50%) rotate(45deg)';
-                      kfEl.style.width = '10px';
-                      kfEl.style.height = '10px';
-                      kfEl.style.background = '#ffffff';
-                      kfEl.style.border = '2px solid #000000';
-                      kfEl.style.boxShadow = '0 0 5px rgba(0,0,0,1)';
-                      kfEl.style.zIndex = '10';
-                      kfEl.title = `Keyframe ${idx+1}`;
-                      kfEl.style.pointerEvents = 'none';
-                      clipEl.appendChild(kfEl);
-                  });
+              },
+              onClipContextMenu: (clip, e) => {
+                  e.preventDefault();
+                  
+                  if (!selectedItems.clips.has(clip.id)) {
+                      selectedItems.tracks.clear();
+                      selectedItems.clips.clear();
+                      selectedItems.clips.add(clip.id);
+                      
+                      renderInspector();
+                      container.querySelectorAll('.snd-clip').forEach(el => {
+                          if (selectedItems.clips.has(el.dataset.id)) el.classList.add('selected');
+                          else el.classList.remove('selected');
+                      });
+                  }
+                  
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = e.clientX - rect.left;
+                  const splitOffsetSec = clickX / pixelsPerSecond;
+                  
+                  showContextMenu(e.clientX, e.clientY, [
+                      { label: 'Add Keyframe Here', icon: 'key', action: () => {
+                          if (!clip.keyframes) clip.keyframes = [];
+                          const snapshot = getInterpolatedFxParams(clip, splitOffsetSec);
+                          clip.keyframes.push({ offset: splitOffsetSec, fxParams: snapshot });
+                          clip.keyframes.sort((a,b) => a.offset - b.offset);
+                          rebuildPlayback();
+                          renderTimeline();
+                          renderInspector();
+                      }},
+                      { label: 'Split Clip Here', icon: 'content_cut', action: () => {
+                          const sourceOffset = splitOffsetSec * (clip.rate || 1);
+                          if (sourceOffset <= 0.1 || sourceOffset >= clip.duration - 0.1) return;
+                          
+                          const track = project.tracks.find(t => t.clips.includes(clip));
+                          
+                          const clip2 = {
+                              id: 'clip_' + Date.now(),
+                              name: clip.name + ' (2)',
+                              buffer: null,
+                              poolId: clip.poolId,
+                              sourceStart: (clip.sourceStart || 0) + sourceOffset,
+                              appliedActions: new Set(clip.appliedActions || []),
+                              timelineStart: clip.timelineStart + splitOffsetSec,
+                              duration: clip.duration - sourceOffset,
+                              rate: clip.rate,
+                              fx: cloneFx(clip.fx), 
+                              keyframes: JSON.parse(JSON.stringify(clip.keyframes || []))
+                          };
+                          clip.duration = sourceOffset;
+                          clip.name = clip.name + ' (1)';
+                          
+                          recomputeClipBuffer(clip);
+                          recomputeClipBuffer(clip2);
+                          
+                          const idx = track.clips.indexOf(clip);
+                          track.clips.splice(idx + 1, 0, clip2);
+                          selectedItems.clips.clear();
+                          rebuildPlayback();
+                          renderTimeline();
+                          renderInspector();
+                      }}
+                  ]);
+              },
+              onRenderTrackHeader: (track, hdr) => {
+                  hdr.style.cursor = 'pointer';
+                  hdr.onclick = (e) => {
+                      if (e.target.closest('button')) return;
+                      if (e.shiftKey || e.metaKey) {
+                          if (selectedItems.tracks.has(track.id)) selectedItems.tracks.delete(track.id);
+                          else selectedItems.tracks.add(track.id);
+                      } else {
+                          selectedItems.tracks.clear();
+                          selectedItems.clips.clear();
+                          selectedItems.tracks.add(track.id);
+                      }
+                      renderInspector();
+                      renderTimeline();
+                  };
+                  
+                  const tControls = document.createElement('div');
+                  tControls.style.display = 'flex';
+                  tControls.style.gap = '4px';
+                  
+                  const muteBtn = document.createElement('button');
+                  muteBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">${track.muted ? 'volume_off' : 'volume_up'}</span>`;
+                  muteBtn.style.background = 'none';
+                  muteBtn.style.border = 'none';
+                  muteBtn.style.color = track.muted ? '#f87171' : '#94a3b8';
+                  muteBtn.style.cursor = 'pointer';
+                  muteBtn.title = track.muted ? "Unmute Track" : "Mute Track";
+                  muteBtn.onclick = () => {
+                      track.muted = !track.muted;
+                      rebuildPlayback();
+                      renderTimeline();
+                  };
+                  
+                  const delBtn = document.createElement('button');
+                  delBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">delete</span>`;
+                  delBtn.style.background = 'none';
+                  delBtn.style.border = 'none';
+                  delBtn.style.color = '#94a3b8';
+                  delBtn.style.cursor = 'pointer';
+                  delBtn.title = "Delete Track";
+                  delBtn.onclick = () => {
+                      showDialog('Delete Track?', `Are you sure you want to completely delete "${track.name}" and all its clips?`, true, () => {
+                          project.tracks = project.tracks.filter(t => t.id !== track.id);
+                          selectedItems.tracks.delete(track.id);
+                          selectedItems.clips.forEach(cid => {
+                              if (!getClipById(cid)) selectedItems.clips.delete(cid);
+                          });
+                          renderInspector();
+                          rebuildPlayback();
+                          renderTimeline();
+                      });
+                  };
+                  
+                  tControls.appendChild(muteBtn);
+                  tControls.appendChild(delBtn);
+                  hdr.appendChild(tControls);
+              },
+              onRenderClip: (clip, el) => {
+                  const track = project.tracks.find(t => t.clips.includes(clip));
+                  const isSelected = selectedItems.clips.has(clip.id) || (track && selectedItems.tracks.has(track.id));
+                  
+                  if (isSelected) {
+                      el.style.borderColor = '#f472b6';
+                      el.style.boxShadow = '0 0 0 2px #f472b6';
+                  }
+                  
+                  const w = Math.max(1, (clip.duration / (clip.rate||1)) * pixelsPerSecond);
+                  const cvs = document.createElement('canvas');
+                  cvs.style.width = '100%';
+                  cvs.style.height = '100%';
+                  cvs.style.position = 'absolute';
+                  cvs.style.inset = '0';
+                  cvs.style.pointerEvents = 'none';
+                  cvs.style.zIndex = '1';
+                  el.appendChild(cvs);
+                  
+                  const buffer = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
+                  const drawStart = clip.buffer ? 0 : (clip.sourceStart || 0);
+                  if (buffer) {
+                      drawWaveformToCanvas(cvs, buffer, isSelected ? '#f472b6' : (track ? track.color : '#10b981'), w, 80, drawStart, clip.duration);
+                  }
+                  
+                  if (clip.keyframes && clip.keyframes.length > 0) {
+                      clip.keyframes.forEach((kf, idx) => {
+                          const kfEl = document.createElement('div');
+                          kfEl.style.position = 'absolute';
+                          kfEl.style.left = `${kf.offset * pixelsPerSecond}px`;
+                          kfEl.style.top = '50%';
+                          kfEl.style.transform = 'translate(-50%, -50%) rotate(45deg)';
+                          kfEl.style.width = '10px';
+                          kfEl.style.height = '10px';
+                          kfEl.style.background = '#ffffff';
+                          kfEl.style.border = '2px solid #000000';
+                          kfEl.style.boxShadow = '0 0 5px rgba(0,0,0,1)';
+                          kfEl.style.zIndex = '10';
+                          kfEl.title = `Keyframe ${idx+1}`;
+                          kfEl.style.pointerEvents = 'none';
+                          el.appendChild(kfEl);
+                      });
+                  }
+                  if (clip.fx && clip.fx.length > 0) {
+                      const fxBadge = document.createElement('div');
+                      fxBadge.style.position = 'absolute';
+                      fxBadge.style.bottom = '4px';
+                      fxBadge.style.right = '4px';
+                      fxBadge.style.background = '#db2777';
+                      fxBadge.style.color = 'white';
+                      fxBadge.style.fontSize = '9px';
+                      fxBadge.style.fontWeight = 'bold';
+                      fxBadge.style.padding = '2px 6px';
+                      fxBadge.style.borderRadius = '4px';
+                      fxBadge.style.pointerEvents = 'none';
+                      fxBadge.style.zIndex = '10';
+                      fxBadge.textContent = `${clip.fx.length} FX`;
+                      el.appendChild(fxBadge);
+                  }
               }
-              if (clip.fx && clip.fx.length > 0) {
-                  const fxBadge = document.createElement('div');
-                  fxBadge.style.position = 'absolute';
-                  fxBadge.style.bottom = '4px';
-                  fxBadge.style.right = '4px';
-                  fxBadge.style.background = '#db2777';
-                  fxBadge.style.color = 'white';
-                  fxBadge.style.fontSize = '9px';
-                  fxBadge.style.fontWeight = 'bold';
-                  fxBadge.style.padding = '2px 6px';
-                  fxBadge.style.borderRadius = '4px';
-                  fxBadge.style.pointerEvents = 'none';
-                  fxBadge.textContent = `${clip.fx.length} FX`;
-                  clipEl.appendChild(fxBadge);
-              }
-              
-              content.appendChild(clipEl);
           });
-          
-          trkEl.appendChild(hdr);
-          trkEl.appendChild(content);
-          tracksContainer.appendChild(trkEl);
-      });
-      
-      const addTrk = document.createElement('button');
-      addTrk.className = 'snd-btn snd-btn-blue';
-      addTrk.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">add</span> Add Empty Track';
-      addTrk.style.margin = '16px';
-      addTrk.onclick = () => {
-          project.tracks.push({
-              id: 'trk_' + Date.now(),
-              name: `Track ${project.tracks.length + 1}`,
-              color: '#10b981',
-              clips: [],
-              muted: false
-          });
-          renderTimeline();
-      };
-      tracksContainer.appendChild(addTrk);
+      }
+      timelineView.selectedTracks = selectedItems.tracks;
+      timelineView.pixelsPerSecond = pixelsPerSecond;
+      timelineView.setData(project.tracks);
   };
 
   const updatePlayheadDOM = () => {
       const time = Tone.Transport.seconds;
-      playheadEl.style.left = `${(time * pixelsPerSecond) + 140}px`;
+      if (timelineView) timelineView.setPlayhead(time, false);
       timeDisplay.textContent = formatTime(time);
       
-      const phLeft = (time * pixelsPerSecond) + 140;
-      if (phLeft > timelineScroll.scrollLeft + timelineScroll.clientWidth - 50) {
-          timelineScroll.scrollLeft = phLeft - timelineScroll.clientWidth + 50;
+      if (timelineView) {
+          const phLeft = (time * pixelsPerSecond) + 140;
+          const scrollArea = timelineView.dom.scrollArea;
+          if (phLeft > scrollArea.scrollLeft + scrollArea.clientWidth - 50) {
+              scrollArea.scrollLeft = phLeft - scrollArea.clientWidth + 50;
+          }
       }
   };
 
@@ -1013,7 +1144,9 @@ export async function render(container) {
           if (track.muted) return; // Skip muted tracks
           
           track.clips.forEach(clip => {
-              const player = new Tone.Player(clip.buffer);
+              const buf = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
+              if (!buf) return;
+              const player = new Tone.Player(buf);
               player.playbackRate = clip.rate || 1;
               
               let lastNode = player;
@@ -1023,12 +1156,12 @@ export async function render(container) {
                   lastNode = node;
                   activeToneNodes.push(node);
                   fxDef._node = node; 
-                  // No native Web Audio scheduling here! Handled by loop().
               });
               
               lastNode.connect(masterIn);
               activeToneNodes.push(player);
-              player.sync().start(clip.timelineStart, 0, clip.duration / player.playbackRate);
+              const startOffset = clip.buffer ? 0 : (clip.sourceStart || 0);
+              player.sync().start(clip.timelineStart, startOffset, clip.duration / player.playbackRate);
           });
       });
       
@@ -1038,7 +1171,6 @@ export async function render(container) {
   const loadAudioFile = async (file) => {
       container.querySelector('#snd-intro').style.opacity = '0';
       container.querySelector('#snd-intro').style.pointerEvents = 'none';
-      playheadEl.style.display = 'block';
       
       if (isPlaying) container.querySelector('#btn-stop').click();
       
@@ -1055,6 +1187,8 @@ export async function render(container) {
               project.tracks = [];
               for(let i=0; i<decodedBuffer.numberOfChannels; i++) {
                   const monoBuf = extractChannel(decodedBuffer, i);
+                  const poolId = 'pool_' + Date.now() + '_' + i;
+                  project.mediaPool[poolId] = monoBuf;
                   project.tracks.push({
                       id: 'trk_' + i + '_' + Date.now(),
                       name: file.name + ` (Ch ${i+1})`,
@@ -1063,7 +1197,9 @@ export async function render(container) {
                       clips: [{
                           id: 'clip_' + i + '_' + Date.now(),
                           name: file.name,
-                          buffer: monoBuf,
+                          buffer: null,
+                          poolId: poolId,
+                          sourceStart: 0,
                           timelineStart: 0,
                           duration: monoBuf.duration,
                           rate: 1,
@@ -1072,6 +1208,8 @@ export async function render(container) {
                   });
               }
           } else {
+              const poolId = 'pool_' + Date.now();
+              project.mediaPool[poolId] = decodedBuffer;
               project.tracks = [
                   {
                       id: 'trk_1',
@@ -1081,7 +1219,9 @@ export async function render(container) {
                       clips: [{
                           id: 'clip_' + Date.now(),
                           name: file.name,
-                          buffer: decodedBuffer,
+                          buffer: null,
+                          poolId: poolId,
+                          sourceStart: 0,
                           timelineStart: 0,
                           duration: decodedBuffer.duration,
                           rate: 1,
@@ -1122,6 +1262,8 @@ export async function render(container) {
           if (decodedBuffer.numberOfChannels > 1) {
               for(let i=0; i<decodedBuffer.numberOfChannels; i++) {
                   const monoBuf = extractChannel(decodedBuffer, i);
+                  const poolId = 'pool_' + Date.now() + '_' + i;
+                  project.mediaPool[poolId] = monoBuf;
                   project.tracks.push({
                       id: 'trk_' + i + '_' + Date.now(),
                       name: file.name + ` (Ch ${i+1})`,
@@ -1130,7 +1272,9 @@ export async function render(container) {
                       clips: [{
                           id: 'clip_' + i + '_' + Date.now(),
                           name: file.name,
-                          buffer: monoBuf,
+                          buffer: null,
+                          poolId: poolId,
+                          sourceStart: 0,
                           timelineStart: Tone.Transport.seconds,
                           duration: monoBuf.duration,
                           rate: 1,
@@ -1139,6 +1283,8 @@ export async function render(container) {
                   });
               }
           } else {
+              const poolId = 'pool_' + Date.now();
+              project.mediaPool[poolId] = decodedBuffer;
               project.tracks.push({
                   id: 'trk_' + Date.now(),
                   name: file.name,
@@ -1147,7 +1293,9 @@ export async function render(container) {
                   clips: [{
                       id: 'clip_' + Date.now(),
                       name: file.name,
-                      buffer: decodedBuffer,
+                      buffer: null,
+                      poolId: poolId,
+                      sourceStart: 0,
                       timelineStart: Tone.Transport.seconds,
                       duration: decodedBuffer.duration,
                       rate: 1,
@@ -1165,14 +1313,15 @@ export async function render(container) {
   container.querySelector('#btn-close').addEventListener('click', () => {
       showDialog('Close Session', 'Are you sure you want to close this audio session? Unsaved changes will be lost.', true, () => {
           if (isPlaying) container.querySelector('#btn-stop').click();
-          project = { originalToneBuffer: null, tracks: [], masterFx: [] };
+          project = { originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
           activeToneNodes.forEach(n => n.dispose && n.dispose());
           activeToneNodes = [];
-          tracksContainer.innerHTML = '';
+          
           container.querySelector('#snd-intro').style.opacity = '1';
           container.querySelector('#snd-intro').style.pointerEvents = 'auto';
-          playheadEl.style.display = 'none';
+          
           selectedItems = { tracks: new Set(), clips: new Set() };
+          renderTimeline();
           renderInspector();
       });
   });
@@ -1246,35 +1395,35 @@ export async function render(container) {
           const zip = new JSZip();
           const buffers = new Map();
           
+          const poolMeta = {};
+          for (const [poolId, audioBuf] of Object.entries(project.mediaPool || {})) {
+              buffers.set(poolId + '.bin', audioBuf);
+              poolMeta[poolId] = {
+                  sampleRate: audioBuf.sampleRate,
+                  channels: audioBuf.numberOfChannels,
+                  length: audioBuf.length
+              };
+          }
+          
           const projClean = {
+              mediaPoolMeta: poolMeta,
               tracks: project.tracks.map(t => ({
                   id: t.id,
                   name: t.name,
                   muted: t.muted,
                   color: t.color,
                   clips: t.clips.map(c => {
-                      let bufId = null;
-                      if (c.originalBuffer || c.buffer) {
-                          const bufToSave = c.originalBuffer || c.buffer;
-                          bufId = 'buf_' + c.id + '.bin';
-                          buffers.set(bufId, bufToSave);
-                      }
-                      
                       return {
                           id: c.id,
                           name: c.name,
                           timelineStart: c.timelineStart,
                           duration: c.duration,
                           rate: c.rate,
+                          poolId: c.poolId,
+                          sourceStart: c.sourceStart,
                           fx: c.fx.map(f => ({ id: f.id, type: f.type, params: f.params })),
                           keyframes: c.keyframes,
-                          appliedActions: Array.from(c.appliedActions || []),
-                          bufferFile: bufId,
-                          bufferMeta: buffers.has(bufId) ? {
-                              sampleRate: buffers.get(bufId).sampleRate,
-                              channels: buffers.get(bufId).numberOfChannels,
-                              length: buffers.get(bufId).length
-                          } : null
+                          appliedActions: Array.from(c.appliedActions || [])
                       };
                   })
               }))
@@ -1327,14 +1476,15 @@ export async function render(container) {
   container.querySelector('#btn-new-proj').addEventListener('click', () => {
       showDialog('New Session', 'Create a new project? Unsaved changes will be lost.', true, () => {
           if (isPlaying) container.querySelector('#btn-stop').click();
-          project = { originalToneBuffer: null, tracks: [], masterFx: [] };
+          project = { originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
           activeToneNodes.forEach(n => n.dispose && n.dispose());
           activeToneNodes = [];
-          tracksContainer.innerHTML = '';
+          
           container.querySelector('#snd-intro').style.opacity = '1';
           container.querySelector('#snd-intro').style.pointerEvents = 'auto';
-          playheadEl.style.display = 'none';
+          
           selectedItems = { tracks: new Set(), clips: new Set() };
+          renderTimeline();
           renderInspector();
       });
   });
@@ -1352,6 +1502,27 @@ export async function render(container) {
           
           const metaText = await metaFile.async('string');
           const data = JSON.parse(metaText);
+          
+          project.mediaPool = {};
+          if (data.mediaPoolMeta) {
+              for (const [poolId, meta] of Object.entries(data.mediaPoolMeta)) {
+                  const binFile = zip.file(`assets/${poolId}.bin`);
+                  if (binFile) {
+                      const arrayBuf = await binFile.async('arraybuffer');
+                      const rawData = new Float32Array(arrayBuf);
+                      const ctx = getAudioCtx();
+                      const audioBuf = ctx.createBuffer(meta.channels, meta.length, meta.sampleRate);
+                      for (let ch = 0; ch < meta.channels; ch++) {
+                          const chData = audioBuf.getChannelData(ch);
+                          for (let i = 0; i < meta.length; i++) {
+                              chData[i] = rawData[i * meta.channels + ch];
+                          }
+                      }
+                      project.mediaPool[poolId] = audioBuf;
+                  }
+              }
+          }
+          
           project.tracks = data.tracks;
           
           for (const t of project.tracks) {
@@ -1383,7 +1554,6 @@ export async function render(container) {
           
           container.querySelector('#snd-intro').style.opacity = '0';
           container.querySelector('#snd-intro').style.pointerEvents = 'none';
-          playheadEl.style.display = 'block';
           selectedItems = { tracks: new Set(), clips: new Set() };
           renderTimeline();
           renderInspector();
@@ -1423,146 +1593,6 @@ export async function render(container) {
       container.querySelector('#btn-play').className = 'snd-btn snd-btn-primary';
   });
 
-  // Timeline Interactions
-  let isDragging = false;
-  let dragClipId = null;
-  let dragStartX = 0;
-  let dragStartTimeline = 0;
-
-  timelineScroll.addEventListener('mousedown', e => {
-      if (e.button === 2) return;
-      const clipEl = e.target.closest('.snd-clip');
-      const trackHeaderEl = e.target.closest('.snd-track-header');
-      
-      if (clipEl) {
-          const cid = clipEl.dataset.id;
-          if (e.shiftKey || e.metaKey) {
-              if (selectedItems.clips.has(cid)) selectedItems.clips.delete(cid);
-              else selectedItems.clips.add(cid);
-          } else {
-              if (!selectedItems.clips.has(cid)) {
-                  selectedItems.tracks.clear();
-                  selectedItems.clips.clear();
-                  selectedItems.clips.add(cid);
-              }
-          }
-          renderInspector();
-          renderTimeline();
-          
-          isDragging = true;
-          dragClipId = cid;
-          dragStartX = e.clientX;
-          dragStartTimeline = getClipById(dragClipId).timelineStart;
-      } else if (trackHeaderEl) {
-          // Track header is handled by its own onclick, but we can prevent timeline clear
-      } else {
-          if (selectedItems.clips.size > 0 || selectedItems.tracks.size > 0) {
-              selectedItems.clips.clear();
-              selectedItems.tracks.clear();
-              stagedMultiFx = null;
-              renderInspector();
-              renderTimeline();
-          }
-          const rect = tracksContainer.getBoundingClientRect();
-          const clickX = e.clientX - rect.left - 140; 
-          const targetSec = Math.max(0, clickX / pixelsPerSecond);
-          Tone.Transport.seconds = targetSec;
-          updatePlayheadDOM();
-          if (!isPlaying) {
-              isPlaying = true;
-              loop(); // Run loop once to update params
-              isPlaying = false;
-          }
-      }
-  });
-
-  window.addEventListener('mousemove', e => {
-      if (isDragging && dragClipId) {
-          const deltaX = e.clientX - dragStartX;
-          const deltaSec = deltaX / pixelsPerSecond;
-          const clip = getClipById(dragClipId);
-          clip.timelineStart = Math.max(0, dragStartTimeline + deltaSec);
-          
-          const clipEl = container.querySelector(`.snd-clip[data-id="${dragClipId}"]`);
-          if (clipEl) clipEl.style.left = `${clip.timelineStart * pixelsPerSecond}px`;
-      }
-  });
-
-  window.addEventListener('mouseup', () => {
-      if (isDragging) {
-          isDragging = false;
-          dragClipId = null;
-          rebuildPlayback();
-          renderTimeline(); 
-      }
-  });
-
-  timelineScroll.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      const clipEl = e.target.closest('.snd-clip');
-      if (!clipEl) return;
-      
-      const cid = clipEl.dataset.id;
-      const rect = clipEl.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const splitOffsetSec = clickX / pixelsPerSecond;
-      
-      if (!selectedItems.clips.has(cid)) {
-          selectedItems.tracks.clear();
-          selectedItems.clips.clear();
-          selectedItems.clips.add(cid);
-          renderTimeline();
-          renderInspector();
-      }
-      
-      const clip = getClipById(cid);
-      
-      showContextMenu(e.clientX, e.clientY, [
-          { label: 'Add Keyframe Here', icon: 'key', action: () => {
-              if (!clip.keyframes) clip.keyframes = [];
-              const snapshot = getInterpolatedFxParams(clip, splitOffsetSec);
-              clip.keyframes.push({ offset: splitOffsetSec, fxParams: snapshot });
-              clip.keyframes.sort((a,b) => a.offset - b.offset);
-              rebuildPlayback();
-              renderTimeline();
-              renderInspector();
-          }},
-          { label: 'Split Clip Here', icon: 'content_cut', action: () => {
-              const sourceOffset = splitOffsetSec * (clip.rate || 1);
-              if (sourceOffset <= 0.1 || sourceOffset >= clip.duration - 0.1) return;
-              
-              const track = project.tracks.find(t => t.clips.includes(clip));
-              const baseBuf = clip.originalBuffer || clip.buffer;
-              const sourceDur = baseBuf.duration;
-              const buf1 = sliceAudioBuffer(baseBuf, 0, sourceOffset);
-              const buf2 = sliceAudioBuffer(baseBuf, sourceOffset, sourceDur);
-              
-              const clip2 = {
-                  id: 'clip_' + Date.now(),
-                  name: clip.name + ' (2)',
-                  buffer: null,
-                  originalBuffer: buf2,
-                  appliedActions: new Set(clip.appliedActions || []),
-                  timelineStart: clip.timelineStart + splitOffsetSec,
-                  duration: clip.duration - sourceOffset,
-                  rate: clip.rate,
-                  fx: cloneFx(clip.fx), keyframes: JSON.parse(JSON.stringify(clip.keyframes || []))
-              };
-              
-              clip.originalBuffer = buf1;
-              clip.duration = sourceOffset;
-              clip.name = clip.name + ' (1)';
-              recomputeClipBuffer(clip);
-              recomputeClipBuffer(clip2);
-              
-              track.clips.push(clip2);
-              selectedItems.clips.clear();
-              rebuildPlayback();
-              renderTimeline();
-              renderInspector();
-          }}
-      ]);
-  });
 
   container.querySelector('#btn-kf-prev')?.addEventListener('click', () => {
       if (activeKeyframeIdx > -1) {
@@ -1708,21 +1738,10 @@ export async function render(container) {
       return snap;
   };
 
-  const recomputeClipBuffer = (clip) => {
-      let buf = clip.originalBuffer || clip.buffer;
-      const actions = clip.appliedActions || new Set();
-      if (actions.has('norm')) buf = normalizeAudioBuffer(buf);
-      if (actions.has('rev')) buf = reverseAudioBuffer(buf);
-      if (actions.has('inv')) buf = invertAudioBuffer(buf);
-      if (actions.has('fade-in')) buf = applyFade(buf, 'in', 1.0);
-      if (actions.has('fade-out')) buf = applyFade(buf, 'out', 1.0);
-      clip.buffer = buf;
-  };
 
   const toggleClipAction = (clips, actionId) => {
       clips.forEach(c => {
           if (!c.appliedActions) c.appliedActions = new Set();
-          if (!c.originalBuffer) c.originalBuffer = c.buffer;
           if (c.appliedActions.has(actionId)) c.appliedActions.delete(actionId);
           else c.appliedActions.add(actionId);
           recomputeClipBuffer(c);
@@ -1739,17 +1758,22 @@ export async function render(container) {
   };
 
   const autoSplitClip = (clip) => {
-      const buffer = clip.buffer.getChannelData(0);
-      const sr = clip.buffer.sampleRate;
+      const audioBuf = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
+      if (!audioBuf) return [clip];
+      
+      const startOffset = clip.buffer ? 0 : (clip.sourceStart || 0);
+      const slice = sliceAudioBuffer(audioBuf, startOffset, startOffset + clip.duration);
+      const bufferData = slice.getChannelData(0);
+      const sr = slice.sampleRate;
       const windowSize = Math.floor(sr * 0.05); 
       let segments = [];
       let currentStart = null;
       let silentFrames = 0;
       
-      for (let i = 0; i < buffer.length; i += windowSize) {
+      for (let i = 0; i < bufferData.length; i += windowSize) {
           let sum = 0;
-          const end = Math.min(i + windowSize, buffer.length);
-          for (let j = i; j < end; j++) sum += buffer[j] * buffer[j];
+          const end = Math.min(i + windowSize, bufferData.length);
+          for (let j = i; j < end; j++) sum += bufferData[j] * bufferData[j];
           const rms = Math.sqrt(sum / (end - i));
           
           if (rms < 0.015) {
@@ -1763,7 +1787,7 @@ export async function render(container) {
               if (currentStart === null) currentStart = Math.max(0, (i / sr) - 0.1); 
           }
       }
-      if (currentStart !== null) segments.push({ start: currentStart, end: buffer.length / sr });
+      if (currentStart !== null) segments.push({ start: currentStart, end: bufferData.length / sr });
       
       if (segments.length === 0 || (segments.length === 1 && segments[0].start <= 0.1 && segments[0].end >= clip.duration - 0.2)) {
           return [clip];
@@ -1774,7 +1798,8 @@ export async function render(container) {
               id: 'clip_' + Date.now() + '_' + Math.floor(Math.random() * 100000),
               name: clip.name + ` (Part ${i+1})`,
               buffer: null,
-              originalBuffer: sliceAudioBuffer(clip.originalBuffer || clip.buffer, seg.start, seg.end),
+              poolId: clip.poolId,
+              sourceStart: (clip.sourceStart || 0) + seg.start,
               appliedActions: new Set(clip.appliedActions || []),
               timelineStart: clip.timelineStart + seg.start,
               duration: seg.end - seg.start,

@@ -4,6 +4,7 @@ import { applyBehavior, getAllBehaviors } from '../engine/behaviors.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 import { WebGLCompositor, TRANSITIONS } from '../engine/stitcher.js';
 import { formatBytes } from '../utils/misc.js';
+import JSZip from 'jszip';
 
 let currentTimeline = null;
 let mediaPoolSelection = new Set();
@@ -2555,16 +2556,29 @@ export async function render(container) {
     btnSave.addEventListener('click', async () => {
       try {
         const fileHandle = await window.showSaveFilePicker({
-          suggestedName: `${currentTimeline.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.picmachina`,
-          types: [{ description: 'Pic-Machina Project', accept: { 'application/json': ['.picmachina'] } }]
+          suggestedName: `${currentTimeline.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.videoproject`,
+          types: [{ description: 'Pic-Machina Video Project', accept: { 'application/x-videoproject': ['.videoproject'] } }]
         });
         
-        // Save copy without dropping fileHandles explicitly here since stringify ignores them,
-        // but we ensure name is serialized.
         const saveState = JSON.parse(JSON.stringify(currentTimeline));
+        const zip = new JSZip();
+        zip.file('project.json', JSON.stringify(saveState, null, 2));
         
+        const assetsFolder = zip.folder('assets');
+        if (currentTimeline.mediaPool) {
+            for (const item of currentTimeline.mediaPool) {
+                if (item.fileHandle) {
+                    try {
+                        const file = await item.fileHandle.getFile();
+                        assetsFolder.file(item.id, file);
+                    } catch (e) { console.warn("Failed to read media pool item for saving", item); }
+                }
+            }
+        }
+        
+        const blob = await zip.generateAsync({ type: 'blob' });
         const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(saveState, null, 2));
+        await writable.write(blob);
         await writable.close();
         window.AuroraToast?.show({ variant: 'success', title: 'Project Saved' });
       } catch (err) { /* user cancelled */ }
@@ -2575,49 +2589,55 @@ export async function render(container) {
     btnOpen.addEventListener('click', async () => {
       try {
         const [fileHandle] = await window.showOpenFilePicker({
-          types: [{ description: 'Pic-Machina Project', accept: { 'application/json': ['.picmachina'] } }]
+          types: [{ description: 'Pic-Machina Video Project', accept: { 'application/x-videoproject': ['.videoproject'] } }]
         });
-        const file = await fileHandle.getFile();
-        const text = await file.text();
-        const loadedTimeline = JSON.parse(text);
         
-        // Relink media handles
-        const needsRelink = loadedTimeline.mediaPool?.length > 0;
-        if (needsRelink) {
-          const proceed = await window.confirm('Please select the root folder containing the media files used in this project.');
-          if (proceed) {
-            const dirHandle = await window.showDirectoryPicker();
-            
-            // Shallow search for reconnecting handles
-            const entries = [];
-            for await (const entry of dirHandle.values()) {
-              if (entry.kind === 'file') entries.push(entry);
+        const file = await fileHandle.getFile();
+        const zip = new JSZip();
+        await zip.loadAsync(file);
+        
+        const metaFile = zip.file('project.json');
+        if (!metaFile) throw new Error("Invalid project format: missing project.json");
+        
+        const metaText = await metaFile.async('string');
+        const loadedTimeline = JSON.parse(metaText);
+        
+        // Unzip and map assets
+        if (loadedTimeline.mediaPool) {
+            for (const item of loadedTimeline.mediaPool) {
+                const binFile = zip.file(`assets/${item.id}`);
+                if (binFile) {
+                    const blob = await binFile.async('blob');
+                    // Mock fileHandle for internal use
+                    item.fileHandle = {
+                        name: item.name,
+                        getFile: async () => new File([blob], item.name, { type: blob.type || 'video/mp4' })
+                    };
+                    item.thumbnail = URL.createObjectURL(blob);
+                }
             }
-            
-            loadedTimeline.mediaPool.forEach(poolItem => {
-               const matchingEntry = entries.find(e => e.name === poolItem.name);
-               if (matchingEntry) {
-                 poolItem.fileHandle = matchingEntry;
-                 // Note: we can't reconstruct image thumbnails here immediately unless we do it async
-                 if (poolItem.type === 'image') {
-                   matchingEntry.getFile().then(f => poolItem.thumbnail = URL.createObjectURL(f));
-                 } else if (poolItem.type === 'video') {
-                   matchingEntry.getFile().then(f => extractVideoThumbnail(f).then(t => poolItem.thumbnail = t));
-                 }
-               }
-            });
-          }
         }
         
         currentTimeline = loadedTimeline;
+        playheadTime = 0;
+        mediaPoolSelection.clear();
+        selectedItemId = null;
+        selectedItemType = null;
+        
+        if (projectNameEl) projectNameEl.textContent = currentTimeline.name;
+        
         await saveTimeline(currentTimeline);
         
-        // Re-render
         renderMediaPool();
         renderTimelineTracks();
+        renderPropertiesPanel();
         updatePlayheadUI();
         renderFrame();
-      } catch (err) { console.error(err); }
+        
+      } catch (err) {
+        console.error(err);
+        window.AuroraToast?.show({ variant: 'error', title: 'Failed to Open Project' });
+      }
     });
   }
 
