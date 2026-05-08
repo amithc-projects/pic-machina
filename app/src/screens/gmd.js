@@ -36,20 +36,25 @@ export async function render(container) {
   };
 
   container.innerHTML = `
+    <style>
+      .gmd-card .gmd-sel-indicator { position:absolute; top:8px; right:8px; width:22px; height:22px; border-radius:50%; background:#fff; color:var(--ps-blue, #3b82f6); display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 2px 4px rgba(0,0,0,0.5); opacity:0; transition:opacity 0.15s; pointer-events:none; z-index:2; }
+      .gmd-card.is-selected .gmd-sel-indicator { opacity:1; }
+      .gmd-card.is-selected { border-color:var(--ps-accent, #10b981) !important; }
+    </style>
     <div class="screen gmd-screen" style="padding:20px; display:flex; flex-direction:column; gap:14px; height:100%;">
       <header style="display:flex; flex-direction:column; gap:6px;">
         <h2 style="margin:0; display:flex; align-items:center; gap:8px;">
           <span class="material-symbols-outlined" style="color:#10b981;">image_search</span>
-          Get Media
+          Import Media
         </h2>
         <p style="margin:0; color:var(--ps-text-muted); font-size:13px;">
-          Search Pexels and Unsplash for free photos and videos. Preview, multi-select, and download to a folder.
+          Search Pexels, Unsplash and Pixabay for free photos and videos. Preview, multi-select, and download to a folder.
         </p>
       </header>
 
       <div id="gmd-banner"></div>
 
-      <section style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+      <section style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
         <label style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
           Source
           <select id="gmd-source" class="ic-input" style="width:auto;">
@@ -65,8 +70,11 @@ export async function render(container) {
           </select>
         </label>
 
-        <input id="gmd-q" type="search" class="ic-input" placeholder="Search query…"
-               style="flex:1; min-width:200px; align-self:flex-end;" />
+        <label style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted); flex:1; min-width:200px; position:relative;">
+          Query
+          <input id="gmd-q" type="search" class="ic-input" placeholder="Search query…" autocomplete="off" />
+          <div id="gmd-history-drop" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:6px; margin-top:2px; z-index:200; max-height:260px; overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
+        </label>
 
         <label id="gmd-kind-wrap" style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
           Kind
@@ -87,7 +95,7 @@ export async function render(container) {
           </select>
         </label>
 
-        <button id="gmd-go" class="btn-primary" style="align-self:flex-end;">
+        <button id="gmd-go" class="btn-primary" disabled>
           <span class="material-symbols-outlined" style="font-size:16px;">search</span>
           <span id="gmd-go-label">Search</span>
         </button>
@@ -131,15 +139,66 @@ export async function render(container) {
   const elSelAll   = $('#gmd-selall');
   const elClear    = $('#gmd-clear');
   const elDownload = $('#gmd-download');
-  const elRate     = $('#gmd-rate');
-  const elCredit   = $('#gmd-credit');
+  const elRate        = $('#gmd-rate');
+  const elCredit      = $('#gmd-credit');
+  const elHistoryDrop = $('#gmd-history-drop');
+
+  const HISTORY_KEY = 'pm-gmd-search-history';
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+  }
+  function saveHistory(query) {
+    const h = [query, ...loadHistory().filter(q => q !== query)].slice(0, 10);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+  }
+
+  let _historyBlurTimer = null;
+  function showHistoryDrop(filter) {
+    const all = loadHistory();
+    const items = filter
+      ? all.filter(q => q.toLowerCase().includes(filter.toLowerCase()))
+      : all;
+    if (!items.length) { hideHistoryDrop(); return; }
+    elHistoryDrop.innerHTML = items.map(q => `
+      <div class="gmd-hist-item" data-q="${escapeHtml(q)}"
+           style="padding:8px 12px; font-size:13px; cursor:pointer; color:var(--ps-text); display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--ps-border);">
+        <span class="material-symbols-outlined" style="font-size:14px; color:var(--ps-text-muted);">history</span>
+        ${escapeHtml(q)}
+      </div>`).join('');
+    elHistoryDrop.style.display = 'block';
+    elHistoryDrop.querySelectorAll('.gmd-hist-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault(); // prevent input blur before click registers
+        elQ.value = el.dataset.q;
+        hideHistoryDrop();
+        runSearch();
+      });
+      el.addEventListener('mouseover', () => { el.style.background = 'var(--ps-bg-hover, rgba(255,255,255,0.06))'; });
+      el.addEventListener('mouseout',  () => { el.style.background = ''; });
+    });
+  }
+  function hideHistoryDrop() {
+    elHistoryDrop.style.display = 'none';
+  }
+
+  elQ.addEventListener('focus', () => {
+    clearTimeout(_historyBlurTimer);
+    showHistoryDrop(elQ.value.trim() || null);
+  });
+  elQ.addEventListener('input', () => {
+    const v = elQ.value.trim();
+    if (v) showHistoryDrop(v); else showHistoryDrop(null);
+  });
+  elQ.addEventListener('blur', () => {
+    _historyBlurTimer = setTimeout(hideHistoryDrop, 150);
+  });
 
   function provider() { return getProvider(state.source); }
 
   function refreshControls() {
     const p = provider();
     // Hide kind selector when source has no videos
-    elKindWrap.style.display = p.supportsVideos ? '' : 'none';
+    elKindWrap.style.display = p.supportsVideos ? 'flex' : 'none';
     if (!p.supportsVideos) state.kind = 'photo';
     elKind.value = state.kind;
 
@@ -148,14 +207,17 @@ export async function render(container) {
       elGoLabel.textContent = 'Search';
       elQ.placeholder = `Search ${p.label}…`;
       elQ.disabled = false;
+      elGo.disabled = !elQ.value.trim();
     } else if (state.mode === 'collections') {
       elGoLabel.textContent = 'Browse';
       elQ.placeholder = `Browse ${p.label} collections (no query needed)`;
       elQ.disabled = true;
+      elGo.disabled = false;
     } else if (state.mode === 'collection-detail') {
       elGoLabel.textContent = 'Back to collections';
       elQ.placeholder = state.activeCollection?.title || '';
       elQ.disabled = true;
+      elGo.disabled = false;
     }
 
     elCredit.innerHTML = `Powered by <a href="${p.siteUrl}" target="_blank" rel="noopener" style="color:var(--ps-accent);">${p.label}</a>`;
@@ -201,12 +263,7 @@ export async function render(container) {
     if (on) state.selected.set(key, asset);
     else state.selected.delete(key);
     const card = elResults.querySelector(`[data-key="${CSS.escape(key)}"]`);
-    if (card) {
-      card.classList.toggle('gmd-card--selected', on);
-      card.style.borderColor = on ? 'var(--ps-accent, #10b981)' : 'var(--ps-border)';
-      const cb = card.querySelector('input[type=checkbox]');
-      if (cb) cb.checked = on;
-    }
+    if (card) card.classList.toggle('is-selected', on);
     updateSelectionUi();
   }
 
@@ -249,13 +306,11 @@ export async function render(container) {
           <span class="material-symbols-outlined" style="font-size:12px;">photo_camera</span>Photo</div>`;
     return `
       <div class="gmd-card${selected ? ' gmd-card--selected' : ''}" data-key="${escapeHtml(key)}"
-           style="background:var(--ps-bg-app); border:2px solid ${selected ? 'var(--ps-accent, #10b981)' : 'var(--ps-border)'}; border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color 0.15s;">
+           style="background:var(--ps-bg-app); border:2px solid var(--ps-border); border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color 0.15s;">
         <div style="position:relative; aspect-ratio:${ratio}; background:#111;">
           <img data-thumb-src="${escapeHtml(asset.thumb || '')}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;" />
           ${kindBadge}
-          <label class="gmd-cb" style="position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.7); border-radius:4px; padding:4px; cursor:pointer;">
-            <input type="checkbox" ${selected ? 'checked' : ''} />
-          </label>
+          <div class="gmd-sel-indicator"><span class="material-symbols-outlined" style="font-size:14px;">check</span></div>
         </div>
         <div style="padding:8px 10px; font-size:11px; color:var(--ps-text-muted); display:flex; justify-content:space-between; gap:6px;">
           <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(asset.photographer)}">${escapeHtml(asset.photographer || 'Unknown')}</span>
@@ -292,20 +347,20 @@ export async function render(container) {
     loadThumbsAsBlobs(assets);
 
     elResults.querySelectorAll('.gmd-card').forEach(card => {
+      let _clickTimer = null;
       card.addEventListener('click', e => {
-        if (e.target.closest('.gmd-cb')) return; // checkbox handled separately
         const key = card.dataset.key;
         const asset = assets.find(a => assetKey(a) === key);
-        if (asset) openPreview(asset);
+        if (!asset) return;
+        clearTimeout(_clickTimer);
+        _clickTimer = setTimeout(() => toggleSelected(asset), 220);
       });
-    });
-    elResults.querySelectorAll('.gmd-cb input').forEach(cb => {
-      cb.addEventListener('click', e => e.stopPropagation());
-      cb.addEventListener('change', e => {
-        const card = cb.closest('.gmd-card');
+      card.addEventListener('dblclick', e => {
         const key = card.dataset.key;
         const asset = assets.find(a => assetKey(a) === key);
-        if (asset) toggleSelected(asset, cb.checked);
+        if (!asset) return;
+        clearTimeout(_clickTimer); // cancel the pending single-click toggle
+        openPreview(asset);
       });
     });
   }
@@ -388,6 +443,7 @@ export async function render(container) {
     state.query = q;
     state.kind = elKind.value;
     state.orientation = elOrient.value;
+    saveHistory(q);
     state.loading = true;
     elStatus.textContent = `Searching ${p.label}…`;
     state.assets = [];
@@ -512,6 +568,9 @@ export async function render(container) {
 
   elGo.addEventListener('click', runSearch);
   elQ.addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+  elQ.addEventListener('input', () => {
+    elGo.disabled = state.mode === 'search' && !elQ.value.trim();
+  });
   elKind.addEventListener('change', () => { state.kind = elKind.value; });
 
   elSelAll.addEventListener('click', () => {
@@ -519,11 +578,7 @@ export async function render(container) {
   });
   elClear.addEventListener('click', () => {
     state.selected.clear();
-    elResults.querySelectorAll('.gmd-card--selected').forEach(c => {
-      c.classList.remove('gmd-card--selected');
-      c.style.borderColor = 'var(--ps-border)';
-    });
-    elResults.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    elResults.querySelectorAll('.gmd-card.is-selected').forEach(c => c.classList.remove('is-selected'));
     updateSelectionUi();
   });
   elDownload.addEventListener('click', downloadSelected);
@@ -531,6 +586,7 @@ export async function render(container) {
   // Initial render
   refreshControls();
   renderBanner();
+  requestAnimationFrame(() => elQ.focus());
   elStatus.textContent = provider().hasKey()
     ? 'Type a query and press Enter.'
     : `Add a ${provider().configHint} in Settings to get started.`;
