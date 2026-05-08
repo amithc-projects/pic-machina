@@ -9,6 +9,7 @@ import { registry } from '../registry.js';
 // ─── Export File ──────────────────────────────────────────
 registry.register({
   id: 'flow-export', name: 'Export File', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'file_download',
   description: 'Save a snapshot of the current canvas as an image file.',
   params: [
@@ -30,6 +31,7 @@ registry.register({
 // ─── Export Variable to File ──────────────────────────────
 registry.register({
   id: 'flow-export-variable', name: 'Export Variable', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'text_snippet',
   description: 'Saves the contents of an engine variable (like autoCaptions) directly to the root output folder alongside your images/videos.',
   params: [
@@ -42,6 +44,7 @@ registry.register({
 // ─── Save/Load State ──────────────────────────────────────
 registry.register({
   id: 'flow-save', name: 'Save State', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'save',
   description: 'Store the current canvas pixel state for later use.',
   params: [{ name: 'label', label: 'Label', type: 'text', defaultValue: 'state-1' }],
@@ -54,6 +57,7 @@ registry.register({
 
 registry.register({
   id: 'flow-load', name: 'Load State', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'restore',
   description: 'Restore a previously saved canvas state.',
   params: [{ name: 'label', label: 'Label', type: 'text', defaultValue: 'state-1' }],
@@ -71,6 +75,7 @@ registry.register({
 // ─── Create GIF ───────────────────────────────────────────
 registry.register({
   id: 'flow-create-gif', name: 'Create GIF', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'gif',
   description: 'Collect frames and render an animated GIF at the end of the batch.',
   params: [
@@ -84,6 +89,7 @@ registry.register({
 // ─── Create Video ─────────────────────────────────────────
 registry.register({
   id: 'flow-create-video', name: 'Create Video', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'movie',
   description: 'Render images as an MP4 slideshow.',
   params: [
@@ -99,6 +105,7 @@ registry.register({
 // ─── WebGL Video Stitcher ─────────────────────────────────
 registry.register({
   id: 'flow-video-stitcher', name: 'WebGL Video Stitcher', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'animation',
   description: 'Combine processed images/videos into an advanced timeline using GPU crossfades, wipes, and cinematic motion.',
   params: [
@@ -145,6 +152,7 @@ registry.register({
 // ─── Fast Video Stitcher ─────────────────────────────────
 registry.register({
   id: 'flow-video-fast-stitcher', name: 'Fast Video Stitcher', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'animation',
   description: 'Fast concatenation (transmuxing) of video blobs without re-encoding. Inputs must share identical codecs/dimensions.',
   params: [
@@ -155,6 +163,7 @@ registry.register({
 
 registry.register({
   id: 'flow-geo-timeline', name: 'Geotemporal Timeline', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'map',
   description: 'Assemble GPS-mapped images into a continuous scrolling video charting a geographical journey on a map canvas.',
   params: [
@@ -171,6 +180,7 @@ registry.register({
 // ─── Inject Title Slide ───────────────────────────────────
 registry.register({
   id: 'flow-title-slide', name: 'Inject Title Slide', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'title',
   description: 'Automatically injects a generated title slide into the aggregator stream when a structural variable (like City or Date) changes.',
   params: [
@@ -188,6 +198,7 @@ registry.register({
 // ─── Render Standalone Hyperframe ─────────────────────────
 registry.register({
   id: 'flow-render-hyperframe', name: 'Render Hyperframe', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'animation',
   description: 'Generates a standalone MP4 video purely from a Hyperframe HTML template. No input video required.',
   aggregation: true,
@@ -206,6 +217,7 @@ registry.register({
 // ─── Contact Sheet ────────────────────────────────────────
 registry.register({
   id: 'flow-contact-sheet', name: 'Contact Sheet', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'grid_view',
   description: 'Combine images into a single grid sheet. Can optionally group by metadata.',
   params: [
@@ -221,6 +233,7 @@ registry.register({
 // ─── Photo Stack Animation ────────────────────────────────
 registry.register({
   id: 'flow-photo-stack', name: 'Photo Stack Animation', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'photo_library',
   description: 'Collect all photos and compose an animated polaroid stack — each photo appears on a desk in sequence. Outputs GIF or MP4.',
   requires: [{ type: 'premium', id: 'pro', label: 'Pic-Machina Pro' }],
@@ -246,6 +259,7 @@ registry.register({
 // ─── Compose Grid ─────────────────────────────────────────
 registry.register({
   id: 'flow-compose-grid', name: 'Compose Grid', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'grid_on',
   description: 'Assemble saved canvas states into a grid. Works within a single image — not a batch aggregator.',
   params: [
@@ -304,6 +318,7 @@ registry.register({
 // ─── Video Extract Frame ──────────────────────────────────
 registry.register({
   id: 'video-extract-frame', name: 'Extract Video Frame', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'movie_filter',
   description: 'Seek the input video to a position and draw that frame onto the canvas. Use resize/crop steps after to shape the frame.',
   params: [
@@ -363,6 +378,7 @@ registry.register({
 // ─── GIF from States ──────────────────────────────────────
 registry.register({
   id: 'flow-gif-from-states', name: 'GIF from States', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'gif_box',
   description: 'Assemble saved canvas states into an animated GIF. Use after a series of Extract Frame → Process → Save State steps.',
   params: [
@@ -377,6 +393,7 @@ registry.register({
 // ─── Video Wall ───────────────────────────────────────────
 registry.register({
   id: 'flow-video-wall', name: 'Video Wall', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'view_comfy',
   description: 'Composite multiple input videos into a single grid-layout MP4 (security camera wall style). Inputs are sorted by filename.',
   params: [
@@ -411,6 +428,7 @@ registry.register({
 // ─── Video PiP ────────────────────────────────────────────
 registry.register({
   id: 'flow-video-pip', name: 'Video PiP', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'picture_in_picture',
   description: 'Composite a Picture-in-Picture overlay (e.g. talking head) onto a background video. Requires exactly 2 input videos (alphabetically sorted: 1st = background, 2nd = PiP).',
   params: [
@@ -434,6 +452,7 @@ registry.register({
 // ─── Template Aggregator ──────────────────────────────────
 registry.register({
   id: 'flow-template-aggregator', name: 'Template Render', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'wallpaper',
   description: 'Composite multiple input images into a pre-defined Perspective Template.',
   params: [
@@ -448,6 +467,7 @@ registry.register({
 // ─── Animate Stack ────────────────────────────────────────
 registry.register({
   id: 'flow-animate-stack', name: 'Animate Stack', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'layers',
   description: 'Collect frames and animate them appearing on a desk surface one by one. Add overlay-polaroid-frame upstream to get polaroid borders.',
   requires: [{ type: 'premium', id: 'pro', label: 'Pic-Machina Pro' }],
@@ -470,6 +490,7 @@ registry.register({
 // ─── Create PDF ───────────────────────────────────────────
 registry.register({
   id: 'flow-create-pdf', name: 'Create PDF', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'picture_as_pdf',
   description: 'Assemble all processed images into a multi-page PDF document at the end of the batch.',
   params: [
@@ -497,6 +518,7 @@ registry.register({
 // ─── Create PowerPoint ────────────────────────────────────
 registry.register({
   id: 'flow-create-pptx', name: 'Create PowerPoint', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'present_to_all',
   description: 'Assemble all processed images into a multi-slide PowerPoint presentation at the end of the batch.',
   params: [
@@ -515,6 +537,7 @@ registry.register({
 // ─── Background Swap ─────────────────────────────────────
 registry.register({
   id: 'flow-bg-swap', name: 'Composite onto Background', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'background_replace',
   description: 'Aggregation node. Image 1 is the foreground subject — place an ai-remove-bg step before this to cut it out. Images 2+ are used as backgrounds (original, unprocessed). The cutout subject is composited onto each background scene. One output file per background.',
   aggregation: true,
@@ -542,6 +565,7 @@ registry.register({
 // ─── Face Morph ───────────────────────────────────────────
 registry.register({
   id: 'flow-face-morph', name: 'Face Morph', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'animation',
   description: 'Morphs across two or more aligned faces using 478-point mesh warping. Place a Face Align step before this. Produces an MP4 video.',
   aggregation: true,
@@ -557,6 +581,7 @@ registry.register({
 // ─── Create ZIP Archive ───────────────────────────────────
 registry.register({
   id: 'flow-create-zip', name: 'Create ZIP', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'folder_zip',
   description: 'Assemble all processed images into a ZIP archive at the end of the batch.',
   params: [
@@ -568,6 +593,7 @@ registry.register({
 // ─── Video: Convert Format ────────────────────────────────
 registry.register({
   id: 'flow-video-convert', name: 'Video: Convert Format', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'video_settings',
   description: 'Re-encode a video file to a different container format and/or codec. Skips non-video files.',
   params: [
@@ -607,6 +633,7 @@ registry.register({
 // ─── Video: Trim ──────────────────────────────────────────
 registry.register({
   id: 'flow-video-trim', name: 'Video: Trim', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'content_cut',
   description: 'Cut a video to a specific time range (in seconds). Skips non-video files.',
   params: [
@@ -620,6 +647,7 @@ registry.register({
 // ─── Video: Compress ──────────────────────────────────────
 registry.register({
   id: 'flow-video-compress', name: 'Video: Compress', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'compress',
   description: 'Reduce video file size by lowering the output bitrate and optionally resizing the dimensions. Skips non-video files.',
   params: [
@@ -642,6 +670,7 @@ registry.register({
 // ─── Video: Change Speed ──────────────────────────────────
 registry.register({
   id: 'flow-video-speed', name: 'Video: Change Speed', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'slow_motion_video',
   description: 'Speed up or slow down a segment of a video. Audio in the segment is silenced; before/after play normally. Skips non-video files.',
   params: [
@@ -656,6 +685,7 @@ registry.register({
 // ─── Video: Change Frame Rate ─────────────────────────────
 registry.register({
   id: 'flow-video-change-fps', name: 'Video: Change Frame Rate', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'speed',
   description: 'Change the frame rate of a video. Skips non-video files.',
   params: [
@@ -676,6 +706,7 @@ registry.register({
 // ─── Video: Strip Audio ───────────────────────────────────
 registry.register({
   id: 'flow-video-strip-audio', name: 'Video: Strip Audio', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'volume_off',
   description: 'Remove all audio tracks from a video file. Skips non-video files.',
   params: [
@@ -687,6 +718,7 @@ registry.register({
 // ─── Video: Extract Audio ─────────────────────────────────
 registry.register({
   id: 'flow-video-extract-audio', name: 'Video: Extract Audio', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'audio_file',
   description: 'Export the audio track from a video as a standalone audio file. Skips non-video files.',
   params: [
@@ -707,6 +739,7 @@ registry.register({
 // ─── Video: Remix Audio ───────────────────────────────────
 registry.register({
   id: 'flow-video-remix-audio', name: 'Video: Remix Audio', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'tune',
   description: 'Adjust the audio channel layout and/or sample rate of a video. Skips non-video files.',
   params: [
@@ -733,6 +766,7 @@ registry.register({
 // ─── Video: Concatenate ───────────────────────────────────
 registry.register({
   id: 'flow-video-concat', name: 'Video: Concatenate', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'playlist_add',
   description: 'Join all selected video files end-to-end into a single output video. Input order follows file selection order.',
   requires: [{ type: 'premium', id: 'pro', label: 'Pic-Machina Pro' }],
@@ -771,6 +805,7 @@ registry.register({
 // ─── Video: Scroll Animation ──────────────────────────────
 registry.register({
   id: 'flow-video-scroll', name: 'Video: Scroll Animation', category: 'Flow Control', categoryKey: 'flow',
+  timeline: 'unsupported',
   icon: 'swap_vert',
   description: 'Animate a long/tall screenshot or panorama into a smooth scrolling video.',
   params: [

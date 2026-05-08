@@ -28,6 +28,7 @@ const INSPYRENET_REQ = {
 // ─── Face Privacy ─────────────────────────────────────────
 registry.register({
   id: 'ai-face-privacy', name: 'Face Privacy', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'hide_source',
   description: 'Detect and obscure faces (blur, pixelate, or black bar).',
   params: [
@@ -134,6 +135,7 @@ registry.register({
 // ─── Remove Background ────────────────────────────────────
 registry.register({
   id: 'ai-remove-bg', name: 'Remove BG', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'layers_clear',
   description: 'AI-powered background removal.',
   params: [
@@ -271,6 +273,7 @@ registry.register({
 // ─── Remove Background (High Quality / InSPyReNet) ───────
 registry.register({
   id: 'ai-remove-bg-hq', name: 'Remove BG (High Quality)', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'auto_awesome_motion',
   requires: [INSPYRENET_REQ],
   description: 'High-quality background removal using InSPyReNet (SwinB). Requires a one-time ~200 MB model download (see #mdl).',
@@ -361,6 +364,7 @@ registry.register({
 // ─── Portrait Bokeh (InSPyReNet + Photon) ─────────────────
 registry.register({
   id: 'ai-portrait-bokeh', name: 'Portrait Bokeh', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'blur_circular',
   requires: [INSPYRENET_REQ],
   description: 'Large-aperture lens simulation: keeps the subject sharp and blurs the background. Requires the InSPyReNet model (#mdl).',
@@ -457,6 +461,7 @@ registry.register({
 // ─── Subject Drop Shadow (InSPyReNet + Photon) ───────────
 registry.register({
   id: 'ai-drop-shadow', name: 'Subject Drop Shadow', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'filter_drama',
   requires: [INSPYRENET_REQ],
   description: 'Cast a soft shadow behind the detected subject. Works on both transparent cut-outs and photos (shadow darkens visible background). Requires the InSPyReNet model (#mdl).',
@@ -554,6 +559,7 @@ registry.register({
 // ─── Sticker Outline (InSPyReNet + Photon) ───────────────
 registry.register({
   id: 'ai-sticker-outline', name: 'Sticker Outline', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'filter_frames',
   requires: [INSPYRENET_REQ],
   description: 'Cut out the detected subject with a solid border, like a sticker. Optional second ring for a double-outline look. Requires the InSPyReNet model (#mdl).',
@@ -671,6 +677,7 @@ registry.register({
 // subject no matter where they sit in the composition.
 registry.register({
   id: 'ai-subject-vignette', name: 'Subject Vignette', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'vignette',
   requires: [INSPYRENET_REQ],
   description: 'Darken everything except the detected subject. Matte-driven vignette that stays locked to the subject. Requires the InSPyReNet model (#mdl).',
@@ -753,6 +760,7 @@ registry.register({
 // (or, inversely, only the background) is affected.
 registry.register({
   id: 'ai-subject-sharpen', name: 'Subject Sharpen', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'deblur',
   requires: [INSPYRENET_REQ],
   description: 'Sharpen (or denoise) only the detected subject, leaving the background untouched. Requires the InSPyReNet model (#mdl).',
@@ -846,6 +854,7 @@ registry.register({
 // ─── Silhouette ───────────────────────────────────────────
 registry.register({
   id: 'ai-silhouette', name: 'Silhouette', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'person_off',
   requires: [INSPYRENET_REQ],
   description: 'Black out subjects while keeping background.',
@@ -867,6 +876,7 @@ registry.register({
 // ─── Smart Redact ─────────────────────────────────────────
 registry.register({
   id: 'ai-smart-redact', name: 'Smart Redact', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'shield_lock',
   requires: [INSPYRENET_REQ],
   description: 'Detect and blur licence plates, text, or faces using OCR. Use Extract mode to store OCR text without modifying the image.',
@@ -951,6 +961,7 @@ registry.register({
 // ─── OCR Tag Extractor ────────────────────────────────────
 registry.register({
   id: 'ai-ocr-tag', name: 'OCR Tag Extractor', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'label',
   description: 'Extract tags from stored OCR text (dates, prices, proper nouns). Requires Smart Redact (Extract mode) to have run first.',
   params: [
@@ -1012,6 +1023,7 @@ registry.register({
 // ─── Analyse People ───────────────────────────────────────
 registry.register({
   id: 'ai-analyse-people', name: 'Analyse People', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'group',
   description: 'Detect and classify people using body pose landmarks and face detection. Stores results to asset metadata without modifying the image. Exposes {{sidecar.faceCount}}, {{sidecar.personCount}}, {{sidecar.poseLabel}}, {{sidecar.peopleLabel}}.',
   params: [
@@ -1150,6 +1162,7 @@ function avgLandmark(a, b) {
 // ─── Glowing Eyes ─────────────────────────────────────────
 registry.register({
   id: 'ai-glow-eyes', name: 'Glowing Eyes', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'compatible',
   icon: 'visibility',
   description: 'Detect faces and replace irises with supernatural glowing eyes. Uses FaceLandmarker iris landmarks (468/473) for pixel-accurate iris centre and radius.',
   params: [
@@ -1292,6 +1305,7 @@ registry.register({
 // ─── Subject Glow (InSPyReNet) ────────────────────────────
 registry.register({
   id: 'ai-subject-glow', name: 'Subject Glow', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'flare',
   requires: [INSPYRENET_REQ],
   description: 'Adds a soft colour bloom around the detected subject — neon halos, dreamy glows, or subtle edge lighting. Uses additive blending so the glow brightens without muddying the background. Requires the InSPyReNet model (#mdl).',
@@ -1375,6 +1389,7 @@ registry.register({
 // ─── Matte Export (InSPyReNet) ────────────────────────────
 registry.register({
   id: 'ai-export-matte', name: 'Export Matte', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'invert_colors',
   requires: [INSPYRENET_REQ],
   description: 'Replaces the canvas with the raw InSPyReNet saliency matte so you can export it as a PNG for use in Photoshop, After Effects, or other compositing tools. Pair with a Save File node (PNG format). Requires the InSPyReNet model (#mdl).',
@@ -1455,6 +1470,7 @@ registry.register({
 // ─── Clipping Mask ────────────────────────────────────────
 registry.register({
   id: 'ai-clipping-mask', name: 'Clipping Mask', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'crop_free',
   description: 'Apply a shape-based clipping mask.',
   params: [
@@ -1486,6 +1502,7 @@ registry.register({
   name: 'Chroma Key (Green Screen)',
   category: 'AI & Composition',
   categoryKey: 'ai',
+  timeline: 'compatible',
   icon: 'theater_comedy',
   description: 'Remove a solid-colour background (green/blue screen) via pixel-level hue matching, with optional AI edge refinement using InSPyReNet.',
   params: [

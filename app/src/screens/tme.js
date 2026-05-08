@@ -366,8 +366,8 @@ export async function render(container) {
     fxPoolContainer.innerHTML = '';
     const allDefs = registry.getAll();
     const fxDefs = allDefs.filter(d => 
-       !['sys', 'meta', 'flow'].includes(d.category) && 
-       (d.name.toLowerCase().includes(filterText) || d.category.toLowerCase().includes(filterText))
+       (d.timeline === 'native' || d.timeline === 'compatible') && 
+       (d.name.toLowerCase().includes(filterText) || (d.category || '').toLowerCase().includes(filterText))
     );
     
     fxDefs.forEach(def => {
@@ -578,19 +578,20 @@ export async function render(container) {
         }
       }
 
-      let kfHeaderHtml = '';
-      if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
-        kfHeaderHtml = `
-          <div style="display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--ps-border); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
-            <div style="display:flex; align-items:center; gap: 4px;">
-              <button class="btn-icon" id="tme-kf-prev" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === 0 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span></button>
-              <span class="text-xs" style="color:#22d3ee;">${activeKeyframeIdx === -1 ? 'Base Settings' : `Keyframe ${activeKeyframeIdx + 1}`}</span>
-              <button class="btn-icon" id="tme-kf-next" style="width:20px;height:20px;padding:0;" ${activeKeyframeIdx === fxBlock.keyframes.length - 1 ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
-            </div>
-            <button class="btn-icon" id="tme-kf-delete" style="width:20px;height:20px;padding:0; color:var(--ps-danger);" title="Delete Keyframe"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>
+      const hasKeyframes = Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0;
+      const disablePrev = activeKeyframeIdx <= 0;
+      const disableNext = !hasKeyframes || activeKeyframeIdx === fxBlock.keyframes.length - 1;
+
+      let kfHeaderHtml = `
+        <div style="display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--ps-border); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
+          <div style="display:flex; align-items:center; gap: 4px;">
+            <button class="btn-icon" id="tme-kf-prev" style="width:20px;height:20px;padding:0;" ${disablePrev ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span></button>
+            <span class="text-xs" style="color:#22d3ee;">${activeKeyframeIdx === -1 ? 'Base Settings' : `Keyframe ${activeKeyframeIdx + 1}`}</span>
+            <button class="btn-icon" id="tme-kf-next" style="width:20px;height:20px;padding:0;" ${disableNext ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
           </div>
-        `;
-      }
+          <button class="btn-icon" id="tme-kf-delete" style="width:20px;height:20px;padding:0; color:var(--ps-danger); ${activeKeyframeIdx === -1 ? 'display:none;' : ''}" title="Delete Keyframe"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>
+        </div>
+      `;
 
       paramsHtml = `
         ${kfHeaderHtml}
@@ -1561,204 +1562,261 @@ export async function render(container) {
         }
       }
 
-      const resStr = window.prompt("Export Resolution (Width x Height):", `${defaultW}x${defaultH}`);
-      if (!resStr) return; // cancelled
-      const [parsedW, parsedH] = resStr.toLowerCase().split('x').map(s => parseInt(s.trim(), 10));
-      if (!parsedW || !parsedH) return alert("Invalid resolution format. Please use WxH (e.g. 1920x1080).");
-      
-      // Update canvas and timeline with new dimensions
-      canvas.width = parsedW;
-      canvas.height = parsedH;
-      currentTimeline.width = parsedW;
-      currentTimeline.height = parsedH;
-      await saveTimeline(currentTimeline);
-      renderFrame();
-
-      // Pause playback if it's currently running
-      if (isPlaying) btnPlay.click();
-
-      const fps = 30;
-      const w = canvas.width % 2 === 0 ? canvas.width : canvas.width - 1;
-      const h = canvas.height % 2 === 0 ? canvas.height : canvas.height - 1;
-
-      let cancelExport = false;
-      // Show progress modal
-      const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:Inter, sans-serif;';
-      modal.innerHTML = `
-        <h2 style="margin-bottom:10px;">Exporting Video...</h2>
-        <div id="tme-export-progress" style="color:#a1a1aa; margin-bottom:20px;">Preparing Audio Mix...</div>
-        <button id="tme-btn-cancel-export" class="btn-secondary" style="border: 1px solid var(--ps-border);">Cancel Export</button>
+      // Show custom dialog for settings
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:#fff;font-family:Inter,sans-serif;';
+      dialog.innerHTML = `
+        <div style="background:var(--ps-bg-surface);border:1px solid var(--ps-border);border-radius:8px;padding:24px;width:320px;">
+          <h3 style="margin-bottom:16px;">Export Settings</h3>
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">Resolution (WxH)</label>
+            <input type="text" id="tme-export-res" class="ic-input" value="${defaultW}x${defaultH}" style="width:100%; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--ps-border); border-radius:4px; color:#fff;">
+          </div>
+          <div style="display:flex;gap:12px;margin-bottom:20px;">
+            <div style="flex:1;">
+              <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">Start Time (s)</label>
+              <input type="number" id="tme-export-start" class="ic-input" value="0" min="0" step="0.1" style="width:100%; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--ps-border); border-radius:4px; color:#fff;">
+            </div>
+            <div style="flex:1;">
+              <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">End Time (s)</label>
+              <input type="number" id="tme-export-end" class="ic-input" value="${maxTime.toFixed(1)}" min="0" step="0.1" style="width:100%; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--ps-border); border-radius:4px; color:#fff;">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button id="tme-export-cancel" class="btn-ghost" style="padding:8px 16px;">Cancel</button>
+            <button id="tme-export-confirm" class="btn-primary" style="padding:8px 16px;">Export</button>
+          </div>
+        </div>
       `;
-      document.body.appendChild(modal);
+      document.body.appendChild(dialog);
 
-      modal.querySelector('#tme-btn-cancel-export').addEventListener('click', () => {
-        cancelExport = true;
-        modal.innerHTML = `<h2>Cancelling...</h2>`;
-      });
+      dialog.querySelector('#tme-export-cancel').onclick = () => document.body.removeChild(dialog);
+      dialog.querySelector('#tme-export-confirm').onclick = async () => {
+        const resStr = dialog.querySelector('#tme-export-res').value;
+        const exportStart = parseFloat(dialog.querySelector('#tme-export-start').value) || 0;
+        const exportEnd = parseFloat(dialog.querySelector('#tme-export-end').value) || maxTime;
+        document.body.removeChild(dialog);
 
-      try {
-        const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
-        const { avcCodec } = await import('../engine/video-convert.js');
+        const [parsedW, parsedH] = resStr.toLowerCase().split('x').map(s => parseInt(s.trim(), 10));
+        if (!parsedW || !parsedH) return alert("Invalid resolution format. Please use WxH (e.g. 1920x1080).");
+        if (exportStart >= exportEnd) return alert("Start time must be before end time.");
+        
+        // Update canvas and timeline with new dimensions
+        canvas.width = parsedW;
+        canvas.height = parsedH;
+        currentTimeline.width = parsedW;
+        currentTimeline.height = parsedH;
+        await saveTimeline(currentTimeline);
+        renderFrame();
 
-        // Mix Audio
-        const sampleRate = 44100;
-        const offlineCtx = new window.OfflineAudioContext(2, Math.max(1, Math.ceil(sampleRate * maxTime)), sampleRate);
-        const allClips = [
-          ...currentTimeline.audioTracks.flatMap(t => t.blocks),
-          ...currentTimeline.videoTrack
-        ];
-        for (const clip of allClips) {
-          if (cancelExport) break;
-          const poolItem = currentTimeline.mediaPool.find(p => p.id === clip.poolId);
-          if (poolItem && poolItem.fileHandle) {
-             try {
-               const file = await poolItem.fileHandle.getFile();
-               const arrayBuffer = await file.arrayBuffer();
-               const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
-               const source = offlineCtx.createBufferSource();
-               source.buffer = audioBuffer;
-               source.connect(offlineCtx.destination);
-               source.start(clip.timelineStart, clip.sourceStart || 0, Math.min(clip.duration, audioBuffer.duration - (clip.sourceStart || 0)));
-             } catch(err) { /* Might be an image or silent video */ }
+        // Pause playback if it's currently running
+        if (isPlaying) btnPlay.click();
+
+        const fps = 30;
+        const w = canvas.width % 2 === 0 ? canvas.width : canvas.width - 1;
+        const h = canvas.height % 2 === 0 ? canvas.height : canvas.height - 1;
+
+        let cancelExport = false;
+        // Show progress modal
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:Inter, sans-serif;';
+        modal.innerHTML = `
+          <h2 style="margin-bottom:10px;">Exporting Video...</h2>
+          <div id="tme-export-progress" style="color:#a1a1aa; margin-bottom:20px;">Preparing Audio Mix...</div>
+          <button id="tme-btn-cancel-export" class="btn-secondary" style="border: 1px solid var(--ps-border); padding:8px 16px; border-radius:4px; background:rgba(0,0,0,0.3); color:#fff;">Cancel Export</button>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#tme-btn-cancel-export').addEventListener('click', () => {
+          cancelExport = true;
+          modal.innerHTML = `<h2>Cancelling...</h2>`;
+        });
+
+        try {
+          const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+          const { avcCodec } = await import('../engine/video-convert.js');
+
+          // Mix Audio
+          const sampleRate = 44100;
+          const exportDuration = exportEnd - exportStart;
+          const offlineCtx = new window.OfflineAudioContext(2, Math.max(1, Math.ceil(sampleRate * exportDuration)), sampleRate);
+          const allClips = [
+            ...currentTimeline.audioTracks.flatMap(t => t.blocks),
+            ...currentTimeline.videoTrack
+          ];
+          for (const clip of allClips) {
+            if (cancelExport) break;
+            
+            // Calculate overlap between clip and export window
+            const clipEnd = clip.timelineStart + clip.duration;
+            if (clipEnd <= exportStart || clip.timelineStart >= exportEnd) continue; // Outside export window
+
+            const poolItem = currentTimeline.mediaPool.find(p => p.id === clip.poolId);
+            if (poolItem && poolItem.fileHandle) {
+               try {
+                 const file = poolItem.fileHandle.getFile ? await poolItem.fileHandle.getFile() : poolItem.fileHandle;
+                 const arrayBuffer = await file.arrayBuffer();
+                 const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
+                 const source = offlineCtx.createBufferSource();
+                 source.buffer = audioBuffer;
+                 source.connect(offlineCtx.destination);
+                 
+                 // Determine start time relative to the export window
+                 const startOffsetInExport = Math.max(0, clip.timelineStart - exportStart);
+                 const startOffsetInClip = Math.max(0, exportStart - clip.timelineStart);
+                 const playDuration = Math.min(
+                   clip.duration - startOffsetInClip,
+                   exportEnd - Math.max(exportStart, clip.timelineStart)
+                 );
+                 
+                 source.start(
+                   startOffsetInExport, 
+                   (clip.sourceStart || 0) + startOffsetInClip, 
+                   Math.min(playDuration, audioBuffer.duration - ((clip.sourceStart || 0) + startOffsetInClip))
+                 );
+               } catch(err) { /* Might be an image or silent video */ }
+            }
+          }
+          
+          let renderedAudio = null;
+          if (!cancelExport) {
+            renderedAudio = await offlineCtx.startRendering();
+          }
+
+          const target = new ArrayBufferTarget();
+          const muxer  = new Muxer({ 
+            target, 
+            video: { codec: 'avc', width: w, height: h }, 
+            audio: { codec: 'aac', sampleRate: 44100, numberOfChannels: 2 },
+            fastStart: 'in-memory' 
+          });
+
+          await new Promise((resolve, reject) => {
+            if (cancelExport) return reject(new Error('Cancelled'));
+
+            const videoEncoder = new VideoEncoder({
+              output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+              error: err => reject(new Error(`VideoEncoder: ${err.message}`)),
+            });
+            videoEncoder.configure({ codec: avcCodec(w, h), width: w, height: h, bitrate: 6_000_000, framerate: fps });
+
+            const audioEncoder = new AudioEncoder({
+              output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+              error: err => reject(new Error(`AudioEncoder: ${err.message}`)),
+            });
+            audioEncoder.configure({ codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 2, bitrate: 128_000 });
+
+            const totalFrames = Math.ceil(exportDuration * fps);
+            
+            (async () => {
+              try {
+                // 1. Encode Audio
+                if (renderedAudio) {
+                  const channelData = [];
+                  for (let c=0; c<renderedAudio.numberOfChannels; c++) {
+                      channelData.push(renderedAudio.getChannelData(c));
+                  }
+                  const chunkSize = 44100; // 1 second chunks
+                  const totalSamples = renderedAudio.length;
+                  let currentSample = 0;
+
+                  while (currentSample < totalSamples && !cancelExport) {
+                     const size = Math.min(chunkSize, totalSamples - currentSample);
+                     const planarData = new Float32Array(size * 2);
+                     planarData.set(channelData[0].subarray(currentSample, currentSample + size), 0); // Ch 1
+                     if (renderedAudio.numberOfChannels > 1) {
+                       planarData.set(channelData[1].subarray(currentSample, currentSample + size), size); // Ch 2
+                     } else {
+                       planarData.set(channelData[0].subarray(currentSample, currentSample + size), size); // Duplicate Ch 1
+                     }
+
+                     const audioData = new AudioData({
+                        format: 'f32-planar',
+                        sampleRate: 44100,
+                        numberOfFrames: size,
+                        numberOfChannels: 2,
+                        timestamp: (currentSample / 44100) * 1_000_000,
+                        data: planarData
+                     });
+
+                     audioEncoder.encode(audioData);
+                     audioData.close();
+                     currentSample += size;
+                     
+                     modal.querySelector('#tme-export-progress').innerText = `Encoding Audio ${Math.round((currentSample/totalSamples)*100)}%`;
+                     await new Promise(r => setTimeout(r, 0));
+                  }
+                  await audioEncoder.flush();
+                  audioEncoder.close();
+                }
+
+                if (cancelExport) return reject(new Error('Cancelled'));
+
+                // 2. Encode Video
+                for (let fi = 0; fi < totalFrames; fi++) {
+                  if (cancelExport) {
+                    reject(new Error('Cancelled'));
+                    break;
+                  }
+                  // Advance playhead manually for export loop (relative to exportStart)
+                  playheadTime = exportStart + (fi / fps);
+                  await renderFrame(); 
+
+                  const vf = new VideoFrame(canvas, { timestamp: fi * (1_000_000 / fps) });
+                  videoEncoder.encode(vf, { keyFrame: fi % 30 === 0 });
+                  vf.close();
+
+                  // Yield to UI to show progress
+                  if (fi % 5 === 0) {
+                    modal.querySelector('#tme-export-progress').innerText = `Rendering Frame ${fi} / ${totalFrames} (${Math.round((fi/totalFrames)*100)}%)`;
+                    await new Promise(r => setTimeout(r, 0));
+                  }
+                }
+                if (!cancelExport) {
+                  await videoEncoder.flush();
+                  videoEncoder.close();
+                  resolve();
+                }
+              } catch (err) {
+                reject(err);
+              }
+            })();
+          });
+
+          muxer.finalize();
+          const blob = new Blob([target.buffer], { type: 'video/mp4' });
+          
+          // Trigger download
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `timeline-export-${Date.now()}.mp4`;
+          a.click();
+          URL.revokeObjectURL(url);
+          
+          modal.innerHTML = `
+            <div style="text-align:center;">
+              <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-green); margin-bottom:10px;">check_circle</span>
+              <h2>Export Complete</h2>
+              <button onclick="this.parentElement.parentElement.remove()" class="btn-secondary" style="margin-top:20px; padding:8px 16px; border-radius:4px; background:rgba(255,255,255,0.1); color:#fff; border:none; cursor:pointer;">Close</button>
+            </div>
+          `;
+        } catch (err) {
+          if (err.message === 'Cancelled') {
+            modal.remove();
+          } else {
+            modal.innerHTML = `
+              <div style="text-align:center; padding: 20px;">
+                <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-danger); margin-bottom:10px;">error</span>
+                <h2 style="color:var(--ps-danger); margin-bottom: 10px;">Export Failed</h2>
+                <p style="color:#a1a1aa; max-width:400px; text-align:center; margin-bottom:20px;">${err.message}</p>
+                <button onclick="this.parentElement.parentElement.remove()" style="padding:10px 24px; background:var(--ps-surface); border:1px solid #444; border-radius:6px; color:white; cursor:pointer;">Close</button>
+              </div>
+            `;
+            console.error(err);
           }
         }
-        
-        let renderedAudio = null;
-        if (!cancelExport) {
-          renderedAudio = await offlineCtx.startRendering();
-        }
-
-        const target = new ArrayBufferTarget();
-        const muxer  = new Muxer({ 
-          target, 
-          video: { codec: 'avc', width: w, height: h }, 
-          audio: { codec: 'aac', sampleRate: 44100, numberOfChannels: 2 },
-          fastStart: 'in-memory' 
-        });
-
-        await new Promise((resolve, reject) => {
-          if (cancelExport) return reject(new Error('Cancelled'));
-
-          const videoEncoder = new VideoEncoder({
-            output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-            error: err => reject(new Error(`VideoEncoder: ${err.message}`)),
-          });
-          videoEncoder.configure({ codec: avcCodec(w, h), width: w, height: h, bitrate: 6_000_000, framerate: fps });
-
-          const audioEncoder = new AudioEncoder({
-            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-            error: err => reject(new Error(`AudioEncoder: ${err.message}`)),
-          });
-          audioEncoder.configure({ codec: 'mp4a.40.2', sampleRate: 44100, numberOfChannels: 2, bitrate: 128_000 });
-
-          const totalFrames = Math.ceil(maxTime * fps);
-          
-          (async () => {
-            try {
-              // 1. Encode Audio
-              if (renderedAudio) {
-                const channelData = [];
-                for (let c=0; c<renderedAudio.numberOfChannels; c++) {
-                    channelData.push(renderedAudio.getChannelData(c));
-                }
-                const chunkSize = 44100; // 1 second chunks
-                const totalSamples = renderedAudio.length;
-                let currentSample = 0;
-
-                while (currentSample < totalSamples && !cancelExport) {
-                   const size = Math.min(chunkSize, totalSamples - currentSample);
-                   const planarData = new Float32Array(size * 2);
-                   planarData.set(channelData[0].subarray(currentSample, currentSample + size), 0); // Ch 1
-                   if (renderedAudio.numberOfChannels > 1) {
-                     planarData.set(channelData[1].subarray(currentSample, currentSample + size), size); // Ch 2
-                   } else {
-                     planarData.set(channelData[0].subarray(currentSample, currentSample + size), size); // Duplicate Ch 1
-                   }
-
-                   const audioData = new AudioData({
-                      format: 'f32-planar',
-                      sampleRate: 44100,
-                      numberOfFrames: size,
-                      numberOfChannels: 2,
-                      timestamp: (currentSample / 44100) * 1_000_000,
-                      data: planarData
-                   });
-
-                   audioEncoder.encode(audioData);
-                   audioData.close();
-                   currentSample += size;
-                   
-                   modal.querySelector('#tme-export-progress').innerText = `Encoding Audio ${Math.round((currentSample/totalSamples)*100)}%`;
-                   await new Promise(r => setTimeout(r, 0));
-                }
-                await audioEncoder.flush();
-                audioEncoder.close();
-              }
-
-              if (cancelExport) return reject(new Error('Cancelled'));
-
-              // 2. Encode Video
-              for (let fi = 0; fi < totalFrames; fi++) {
-                if (cancelExport) {
-                  reject(new Error('Cancelled'));
-                  break;
-                }
-                // Advance playhead manually for export loop
-                playheadTime = fi / fps;
-                await renderFrame(); 
-
-                const vf = new VideoFrame(canvas, { timestamp: fi * (1_000_000 / fps) });
-                videoEncoder.encode(vf, { keyFrame: fi % 30 === 0 });
-                vf.close();
-
-                // Yield to UI to show progress
-                if (fi % 5 === 0) {
-                  modal.querySelector('#tme-export-progress').innerText = `Rendering Frame ${fi} / ${totalFrames} (${Math.round((fi/totalFrames)*100)}%)`;
-                  await new Promise(r => setTimeout(r, 0));
-                }
-              }
-              if (!cancelExport) {
-                await videoEncoder.flush();
-                videoEncoder.close();
-                resolve();
-              }
-            } catch (err) {
-              reject(err);
-            }
-          })();
-        });
-
-        muxer.finalize();
-        const blob = new Blob([target.buffer], { type: 'video/mp4' });
-        
-        // Trigger download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `timeline-export-${Date.now()}.mp4`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        modal.innerHTML = `
-          <div style="text-align:center;">
-            <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-green); margin-bottom:10px;">check_circle</span>
-            <h2>Export Complete</h2>
-            <button onclick="this.parentElement.parentElement.remove()" class="btn-secondary" style="margin-top:20px;">Close</button>
-          </div>
-        `;
-      } catch (err) {
-        if (err.message === 'Cancelled') {
-          modal.remove();
-        } else {
-          modal.innerHTML = `
-            <h2 style="color:var(--ps-danger);">Export Failed</h2>
-            <p style="color:#a1a1aa; max-width:400px; text-align:center;">${err.message}</p>
-            <button onclick="this.parentElement.parentElement.remove()" style="margin-top:20px; padding:10px 24px; background:var(--ps-surface); border:1px solid #444; border-radius:6px; color:white; cursor:pointer;">Close</button>
-          `;
-          console.error(err);
-        }
-      }
+      };
     });
   }
 
@@ -2421,7 +2479,7 @@ export async function render(container) {
             for (const item of currentTimeline.mediaPool) {
                 if (item.fileHandle) {
                     try {
-                        const file = await item.fileHandle.getFile();
+                        const file = item.fileHandle.getFile ? await item.fileHandle.getFile() : item.fileHandle;
                         assetsFolder.file(item.id, file);
                     } catch (e) { console.warn("Failed to read media pool item for saving", item); }
                 }
@@ -2460,11 +2518,8 @@ export async function render(container) {
                 const binFile = zip.file(`assets/${item.id}`);
                 if (binFile) {
                     const blob = await binFile.async('blob');
-                    // Mock fileHandle for internal use
-                    item.fileHandle = {
-                        name: item.name,
-                        getFile: async () => new File([blob], item.name, { type: blob.type || 'video/mp4' })
-                    };
+                    // Store native File object so IndexedDB can clone it safely
+                    item.fileHandle = new File([blob], item.name || 'asset', { type: blob.type || 'video/mp4' });
                     item.thumbnail = URL.createObjectURL(blob);
                 }
             }

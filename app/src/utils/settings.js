@@ -28,6 +28,23 @@ const DEFAULT_SETTINGS = {
     // (with top-level keys: scene, subjects, composition, lighting, etc.).
     describerEndpoint: ''
   },
+  pexels: {
+    // Personal Pexels API key (https://www.pexels.com/api/). Used by the
+    // Get Media screen to search and download photos/videos. Stored
+    // locally only.
+    apiKey: ''
+  },
+  unsplash: {
+    // Unsplash Access Key (https://unsplash.com/developers). Used by the
+    // Get Media screen to search and download photos. Stored locally only.
+    accessKey: ''
+  },
+  pixabay: {
+    // Pixabay API key (https://pixabay.com/api/docs/). Used by the
+    // Get Media screen to search and download photos/videos. Stored
+    // locally only.
+    apiKey: ''
+  },
   masterFonts: [
     { id: 'font-inter', label: 'Inter', value: 'Inter' },
     { id: 'font-outfit', label: 'Outfit', value: 'Outfit' },

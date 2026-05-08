@@ -10,6 +10,7 @@ const _sharedSubtitleCache = new Map();
 // ─── Rich Text ────────────────────────────────────────────
 registry.register({
   id: 'overlay-rich-text', name: 'Rich Text', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'text_fields',
   description: 'Render styled text over the image. Supports {{variable}} injection.',
   params: [
@@ -250,6 +251,7 @@ registry.register({
 // ─── Watermark ────────────────────────────────────────────
 registry.register({
   id: 'overlay-watermark', name: 'Watermark', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'branding_watermark',
   description: 'Repeat a text watermark diagonally across the image.',
   params: [
@@ -336,6 +338,7 @@ registry.register({
 // ─── Ribbon / Badge ───────────────────────────────────────
 registry.register({
   id: 'overlay-ribbon', name: 'Ribbon/Badge', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'bookmark',
   description: 'Add a corner ribbon or badge.',
   params: [
@@ -371,6 +374,7 @@ registry.register({
 // ─── QR Code ─────────────────────────────────────────────
 registry.register({
   id: 'overlay-qrcode', name: 'QR Code', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'qr_code_2',
   description: 'Generate and stamp a QR code onto the image.',
   params: [
@@ -421,6 +425,7 @@ registry.register({
 // ─── Grid Overlay ─────────────────────────────────────────
 registry.register({
   id: 'overlay-grid', name: 'Grid Overlay', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'grid_4x4',
   description: 'Draw an evenly-spaced grid of lines over the image.',
   params: [
@@ -461,6 +466,7 @@ registry.register({
 // ─── Map View ─────────────────────────────────────────────
 registry.register({
   id: 'overlay-map', name: 'Map View', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'unsupported',
   icon: 'map',
   description: 'Render an OpenStreetMap tile from GPS EXIF data and overlay it on the image.',
   params: [
@@ -679,6 +685,7 @@ registry.register({
 // ─── Light Leak ───────────────────────────────────────────
 registry.register({
   id: 'overlay-light-leak', name: 'Light Leak', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'light_mode',
   description: 'Warm or cool light leak gradient from an edge — classic analog film effect.',
   params: [
@@ -732,6 +739,7 @@ registry.register({
 // ─── Canvas Texture ───────────────────────────────────────
 registry.register({
   id: 'overlay-canvas-texture', name: 'Canvas Texture', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'texture',
   description: 'Procedural woven-fiber texture overlay — adds the look of painting on canvas or linen.',
   params: [
@@ -789,6 +797,7 @@ registry.register({
 registry.register({
   id: 'overlay-polaroid-frame', name: 'Polaroid Frame',
   category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'photo_camera',
   description: 'Adds a polaroid-style white border with optional handwritten caption in the bottom margin.',
   params: [
@@ -858,6 +867,7 @@ registry.register({
 registry.register({
   id: 'overlay-scanlines', name: 'Scanlines',
   category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'horizontal_rule',
   description: 'Draw horizontal scanlines at regular intervals — CRT monitor / video effect.',
   params: [
@@ -883,6 +893,7 @@ registry.register({
 registry.register({
   id: 'overlay-template', name: 'Template Frame',
   category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'wallpaper',
   description: 'Draw a Template around the current image. The image is seamlessly warped to fit the primary slot.',
   params: [
@@ -949,6 +960,7 @@ registry.register({
 registry.register({
   id: 'overlay-device-mockup', name: 'Device Mockup',
   category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'devices',
   description: 'Wrap your image realistically inside a physical device frame with dynamic bezels and glare.',
   params: [
@@ -1055,6 +1067,7 @@ registry.register({
 // ─── Native HTML Timer (SVG ForeignObject) ────────────────
 registry.register({
   id: 'overlay-timer', name: 'Animated Timer (HTML)', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'timer',
   description: 'Render a buttery-smooth live countdown or countup timer using DOM-to-Canvas via SVG foreignObject.',
   requires: [{ type: 'html-in-canvas', id: 'wicg-drawhtml', label: 'HTML-in-Canvas Feature', actionHref: '#hlp?id=html-in-canvas' }],
@@ -1151,6 +1164,7 @@ registry.register({
 // ─── Native HTML Rich Block (SVG ForeignObject) ─────────────
 registry.register({
   id: 'overlay-html-block', name: 'Raw HTML & Styles', category: 'Overlays & Typography', categoryKey: 'video-effect',
+  timeline: 'compatible',
   icon: 'html',
   description: 'Inject direct HTML strings with inline CSS styling directly onto the visual canvas. Supports multiple paragraphs, layout tags, and absolute positioning constraints. Natively leverages timeRange to act as an insertable title card when Freeze logic is enabled.',
   params: [
@@ -1192,6 +1206,7 @@ registry.register({
 // ─── Native Hyperframe Template ─────────────────────────────
 registry.register({
   id: 'overlay-hyperframe', name: 'Hyperframe Template', category: 'Overlays & Typography', categoryKey: 'video-effect',
+  timeline: 'compatible',
   icon: 'animation',
   description: 'Native HTML+GSAP animation template. Evaluates Javascript timelines and draws deterministically.',
   requires: [{ type: 'html-in-canvas', id: 'wicg-drawhtml', label: 'HTML-in-Canvas Feature', actionHref: '#hlp?id=html-in-canvas' }],
@@ -1364,6 +1379,7 @@ registry.register({
 // ─── Native Subtitles (SRT/VTT to SVG) ───────────────────────
 registry.register({
   id: 'overlay-subtitles', name: 'Add Subtitles (.SRT)', category: 'Overlays & Typography', categoryKey: 'video-effect',
+  timeline: 'compatible',
   icon: 'subtitles',
   description: 'Dynamically parses external SRT or WEBVTT subtitle tracks and stamps active captions over the video at their specified timestamps.',
   params: [
@@ -1496,6 +1512,7 @@ registry.register({
 // thickness widens the ridge band; intensity is the overlay opacity.
 registry.register({
   id: 'overlay-craquelure', name: 'Craquelure', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
   icon: 'shatter',
   description: 'Procedural fine-crack network. Mimics the surface texture of an aged oil painting (cracked varnish / paint layer).',
   params: [

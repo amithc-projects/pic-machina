@@ -50,7 +50,7 @@ export class TimelineView {
                 </div>
                 
                 <!-- Main Scrollable Area -->
-                <div class="timeline-scroll-area" style="flex: 1; overflow: auto; position: relative; display: flex;">
+                <div class="timeline-scroll-area" style="flex: 1; min-height: 0; overflow: auto; position: relative; display: flex;">
                     
                     <!-- Track Headers -->
                     <div class="timeline-headers" style="width: ${this.options.trackHeaderWidth}px; flex-shrink: 0; position: sticky; left: 0; background: var(--ps-bg-surface, #1e1e1e); z-index: 10; border-right: 1px solid var(--ps-border, #333);">

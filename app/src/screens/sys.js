@@ -133,6 +133,62 @@ export async function render(container, hash) {
           </div>
         </section>
 
+        <!-- Stock Media Providers -->
+        <section id="cfg-stock-section" style="display:flex; flex-direction:column; gap:12px;">
+          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Stock Media Providers</h4>
+          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <label for="cfg-pexels-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Pexels API Key</label>
+              <input type="password" id="cfg-pexels-key" class="ic-input"
+                value="${current.pexels?.apiKey || ''}"
+                placeholder="Paste your Pexels API key"
+                autocomplete="off" spellcheck="false"
+                style="font-size:12px; font-family:var(--font-mono);"
+              />
+              <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                Get a free key at <a href="https://www.pexels.com/api/" target="_blank" rel="noopener" style="color:var(--ps-accent);">pexels.com/api</a>.
+                Supports photos and videos. Free tier: 200 requests/hour.
+              </p>
+            </div>
+          </div>
+          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <label for="cfg-unsplash-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Unsplash Access Key</label>
+              <input type="password" id="cfg-unsplash-key" class="ic-input"
+                value="${current.unsplash?.accessKey || ''}"
+                placeholder="Paste your Unsplash Access Key"
+                autocomplete="off" spellcheck="false"
+                style="font-size:12px; font-family:var(--font-mono);"
+              />
+              <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                Register an app at <a href="https://unsplash.com/developers" target="_blank" rel="noopener" style="color:var(--ps-accent);">unsplash.com/developers</a>.
+                Unsplash issues three credentials &mdash; <strong>only the Access Key</strong> is needed here.
+                The Secret Key (used for OAuth user actions) and Application ID are not required and should not be pasted in this field.
+                Photos only. Demo apps: 50 requests/hour.
+              </p>
+            </div>
+          </div>
+          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <label for="cfg-pixabay-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Pixabay API Key</label>
+              <input type="password" id="cfg-pixabay-key" class="ic-input"
+                value="${current.pixabay?.apiKey || ''}"
+                placeholder="Paste your Pixabay API key"
+                autocomplete="off" spellcheck="false"
+                style="font-size:12px; font-family:var(--font-mono);"
+              />
+              <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                Get a free key at <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener" style="color:var(--ps-accent);">pixabay.com/api/docs</a>
+                (sign in, scroll to the <em>Search Images</em> section, the key is shown in the example URL).
+                Supports photos and videos. Free tier: 100 requests/minute.
+              </p>
+            </div>
+          </div>
+          <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+            All keys are stored locally in your browser only. Used by the <a href="#gmd" style="color:var(--ps-accent);">Get Media</a> screen.
+          </p>
+        </section>
+
         <!-- Master Fonts -->
         <section style="display:flex; flex-direction:column; gap:12px;">
           <div style="display:flex; flex-direction:column;">
@@ -499,6 +555,15 @@ export async function render(container, hash) {
       },
       ai: {
         describerEndpoint: container.querySelector('#cfg-ai-endpoint').value.trim()
+      },
+      pexels: {
+        apiKey: container.querySelector('#cfg-pexels-key').value.trim()
+      },
+      unsplash: {
+        accessKey: container.querySelector('#cfg-unsplash-key').value.trim()
+      },
+      pixabay: {
+        apiKey: container.querySelector('#cfg-pixabay-key').value.trim()
       },
       palette: nextPalette,
       textStyles: textStyles,

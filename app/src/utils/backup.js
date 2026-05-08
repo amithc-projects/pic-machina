@@ -45,13 +45,20 @@ export async function shadowWrite(store) {
     // Encode blobs (e.g. templates.backgroundBlob) to base64 so they can be JSON serialized
     const serialisable = await Promise.all(toWrite.map(async r => {
       if (r.backgroundBlob) { 
-        const base64 = await new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(r.backgroundBlob);
-        });
+        let base64 = null;
+        if (r.backgroundBlob instanceof Blob) {
+          base64 = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(r.backgroundBlob);
+          });
+        } else if (typeof r.backgroundBlob === 'string') {
+          base64 = r.backgroundBlob;
+        }
+        
         const { backgroundBlob, ...rest } = r; 
-        return { ...rest, backgroundDataUrl: base64 }; 
+        if (base64) return { ...rest, backgroundDataUrl: base64 }; 
+        return rest;
       }
       return r;
     }));
@@ -114,13 +121,19 @@ export async function exportAll() {
       const records = await dbGetAll(store);
       snapshot.data[store] = await Promise.all(records.map(async r => {
         if (r.backgroundBlob) {
-          const base64 = await new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(r.backgroundBlob);
-          });
+          let base64 = null;
+          if (r.backgroundBlob instanceof Blob) {
+            base64 = await new Promise(resolve => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.readAsDataURL(r.backgroundBlob);
+            });
+          } else if (typeof r.backgroundBlob === 'string') {
+            base64 = r.backgroundBlob;
+          }
           const { backgroundBlob, ...rest } = r;
-          return { ...rest, backgroundDataUrl: base64 };
+          if (base64) return { ...rest, backgroundDataUrl: base64 };
+          return rest;
         }
         return r;
       }));

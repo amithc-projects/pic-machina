@@ -360,6 +360,23 @@ function updateFxNodeParam(fxDef, paramName, value) {
     }
 }
 
+// -------------- MODULE STATE --------------
+let project = {
+    originalToneBuffer: null,
+    tracks: [],
+    masterFx: [],
+    mediaPool: {}
+};
+let selectedItems = { tracks: new Set(), clips: new Set() };
+let stagedMultiFx = null;
+let activeKeyframeIdx = -1;
+let pixelsPerSecond = 50;
+let isPlaying = false;
+
+let activeToneNodes = [];
+let masterVolumeNode = null;
+let playLoopId = null;
+
 // -------------- MAIN RENDER --------------
 
 export async function render(container) {
@@ -432,10 +449,6 @@ export async function render(container) {
         <div style="display: flex; gap: 16px;">
           <button id="btn-new-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">add</span> New</button>
           <button id="btn-save-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">save</span> Save</button>
-          <label class="snd-btn snd-btn-blue" style="cursor: pointer; margin: 0;">
-             <span class="material-symbols-outlined" style="font-size: 18px;">audio_file</span> Import Clip
-             <input type="file" id="snd-import" accept="audio/*,video/*" style="display: none;">
-          </label>
           <button id="btn-export" class="snd-btn snd-btn-primary"><span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> Export</button>
           <button id="btn-close" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">eject</span> Close Audio</button>
         </div>
@@ -459,8 +472,50 @@ export async function render(container) {
             <p style="margin-top: 24px; color: #94a3b8;">Supports WAV, MP3, MP4, WebM or .audioproject files</p>
         </div>
 
-        <!-- Sidebar Inspector -->
-        <div class="snd-sidebar" style="width: 320px; background: rgba(18,18,26,0.8); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; z-index: 10;">
+        <!-- Audio Pool Sidebar -->
+        <div class="snd-sidebar" style="width: 280px; background: rgba(18,18,26,0.8); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; z-index: 10;">
+            <div style="padding: 20px 20px 0 20px; display:flex; justify-content:space-between; align-items:center;">
+               <div class="fx-title" style="margin:0; border:none; padding:0;">AUDIO POOL</div>
+               <label title="Import Audio" style="cursor:pointer; color:#06b6d4; display:flex; align-items:center;">
+                  <span class="material-symbols-outlined" style="font-size:20px;">add_circle</span>
+                  <input type="file" id="snd-import" accept="audio/*,video/*" multiple style="display:none;">
+               </label>
+            </div>
+            <div class="snd-scroll" id="snd-audio-pool" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+               <!-- Audio Pool Items Dynamically Rendered Here -->
+            </div>
+        </div>
+
+        <!-- Main Timeline -->
+        <div style="flex: 1; display: flex; flex-direction: column; position: relative; min-width: 0; min-height: 0;">
+            
+            <!-- Toolbar -->
+            <div style="height: 64px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; padding: 0 24px; gap: 16px; background: rgba(0,0,0,0.2); flex-shrink: 0;">
+                <button id="btn-play" class="snd-btn snd-btn-primary" style="width: 44px; height: 44px; border-radius: 50%; padding: 0; box-shadow: 0 0 15px rgba(8,145,178,0.4);"><span class="material-symbols-outlined">play_arrow</span></button>
+                <button id="btn-stop" class="snd-btn" style="width: 44px; height: 44px; border-radius: 50%; padding: 0;"><span class="material-symbols-outlined">stop</span></button>
+                <span id="time-display" class="snd-text-mono" style="font-size: 14px; color: #06b6d4; background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">00:00.00</span>
+                
+                <div style="width: 1px; height: 32px; background: rgba(255,255,255,0.1); margin: 0 8px;"></div>
+                
+                <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 6px 16px; border-radius: 20px;">
+                    <span class="material-symbols-outlined" style="font-size: 16px; color: #94a3b8;">zoom_out</span>
+                    <input type="range" id="zoom-slider" class="snd-slider" min="10" max="200" value="50" style="width: 100px;">
+                    <span class="material-symbols-outlined" style="font-size: 16px; color: #94a3b8;">zoom_in</span>
+                </div>
+            </div>
+
+            <!-- Scrollable Tracks -->
+            <div id="snd-timeline-wrapper" style="flex: 1; position: relative; background: #0b0b12;"></div>
+
+            <div id="diarize-overlay" style="display:none; position: absolute; inset:0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; flex-direction: column; color: #22d3ee;">
+               <span class="material-symbols-outlined" style="font-size: 48px; animation: spin 2s linear infinite;">sync</span>
+               <div id="diarize-status" style="margin-top: 16px; font-weight: 600;">Running AI Inference...</div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar Inspector (Right) -->
+        <div class="snd-sidebar" id="snd-inspector-panel" style="width: 320px; background: rgba(18,18,26,0.8); border-left: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; z-index: 10;">
           <div id="inspector-header" style="padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
              <!-- populated dynamically -->
           </div>
@@ -504,55 +559,12 @@ export async function render(container) {
           </div>
         </div>
 
-        <!-- Main Timeline -->
-        <div style="flex: 1; display: flex; flex-direction: column; position: relative; min-width: 0; min-height: 0;">
-            
-            <!-- Toolbar -->
-            <div style="height: 64px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; padding: 0 24px; gap: 16px; background: rgba(0,0,0,0.2); flex-shrink: 0;">
-                <button id="btn-play" class="snd-btn snd-btn-primary" style="width: 44px; height: 44px; border-radius: 50%; padding: 0; box-shadow: 0 0 15px rgba(8,145,178,0.4);"><span class="material-symbols-outlined">play_arrow</span></button>
-                <button id="btn-stop" class="snd-btn" style="width: 44px; height: 44px; border-radius: 50%; padding: 0;"><span class="material-symbols-outlined">stop</span></button>
-                <span id="time-display" class="snd-text-mono" style="font-size: 14px; color: #06b6d4; background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">00:00.00</span>
-                
-                <div style="width: 1px; height: 32px; background: rgba(255,255,255,0.1); margin: 0 8px;"></div>
-                
-
-                
-                
-                <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 6px 16px; border-radius: 20px;">
-                    <span class="material-symbols-outlined" style="font-size: 16px; color: #94a3b8;">zoom_out</span>
-                    <input type="range" id="zoom-slider" class="snd-slider" min="10" max="200" value="50" style="width: 100px;">
-                    <span class="material-symbols-outlined" style="font-size: 16px; color: #94a3b8;">zoom_in</span>
-                </div>
-            </div>
-
-            <!-- Scrollable Tracks -->
-            <div id="snd-timeline-wrapper" style="flex: 1; position: relative; background: #0b0b12;"></div>
-
-            <div id="diarize-overlay" style="display:none; position: absolute; inset:0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; flex-direction: column; color: #22d3ee;">
-               <span class="material-symbols-outlined" style="font-size: 48px; animation: spin 2s linear infinite;">sync</span>
-               <div id="diarize-status" style="margin-top: 16px; font-weight: 600;">Running AI Inference...</div>
-            </div>
-
         </div>
       </div>
     </div>
   `;
 
-  let project = {
-      originalToneBuffer: null,
-      tracks: [],
-      masterFx: [],
-      mediaPool: {}
-  };
-  let selectedItems = { tracks: new Set(), clips: new Set() };
-  let stagedMultiFx = null;
-  let activeKeyframeIdx = -1;
-  let pixelsPerSecond = 50;
-  let isPlaying = false;
-  
-  let activeToneNodes = [];
-  let masterVolumeNode = null;
-  let playLoopId = null;
+  // State was moved to module scope to retain it across navigations
 
   // DOM
   const timeDisplay = container.querySelector('#time-display');
@@ -600,6 +612,8 @@ export async function render(container) {
       if (clip.poolId && project.mediaPool[clip.poolId]) {
           const start = clip.sourceStart || 0;
           buf = sliceAudioBuffer(project.mediaPool[clip.poolId], start, start + clip.duration);
+      } else if (clip.originalBuffer) {
+          buf = clip.originalBuffer;
       } else {
           return;
       }
@@ -611,6 +625,42 @@ export async function render(container) {
       if (actions.has('fade-out')) buf = applyFade(buf, 'out', 1.0);
       
       clip.buffer = buf;
+  };
+
+  const renderAudioPool = () => {
+      const poolEl = container.querySelector('#snd-audio-pool');
+      if (!poolEl) return;
+      poolEl.innerHTML = '';
+      
+      if (Object.keys(project.mediaPool).length === 0) {
+          poolEl.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center; padding: 20px;">Pool is empty.<br>Import audio to get started.</div>';
+          return;
+      }
+      
+      Object.entries(project.mediaPool).forEach(([id, buf]) => {
+          const itemEl = document.createElement('div');
+          itemEl.style.padding = '8px 12px';
+          itemEl.style.background = 'rgba(255,255,255,0.05)';
+          itemEl.style.border = '1px solid rgba(255,255,255,0.1)';
+          itemEl.style.borderRadius = '6px';
+          itemEl.style.cursor = 'grab';
+          itemEl.style.fontSize = '12px';
+          itemEl.style.display = 'flex';
+          itemEl.style.alignItems = 'center';
+          itemEl.style.gap = '8px';
+          itemEl.draggable = true;
+          itemEl.innerHTML = `
+             <span class="material-symbols-outlined" style="font-size:16px; color:#22d3ee;">audio_file</span>
+             <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <div style="font-weight:600; color:#e2e8f0; overflow:hidden; text-overflow:ellipsis;">${buf._name || 'Audio Clip'}</div>
+                <div style="font-size:10px; color:#94a3b8;">${formatTime(buf.duration)}</div>
+             </div>
+          `;
+          itemEl.addEventListener('dragstart', e => {
+              e.dataTransfer.setData('application/json', JSON.stringify({ type: 'audio', poolId: id }));
+          });
+          poolEl.appendChild(itemEl);
+      });
   };
 
   // ---------------- RENDER UI ----------------
@@ -838,6 +888,34 @@ export async function render(container) {
                   pixelsPerSecond = val;
                   container.querySelector('#zoom-slider').value = val;
                   renderTimeline();
+              },
+              onTrackDrop: (track, offsetX, event) => {
+                  const jsonStr = event.dataTransfer.getData('application/json');
+                  if (jsonStr) {
+                      const payload = JSON.parse(jsonStr);
+                      if (payload.type === 'audio') {
+                          const buf = project.mediaPool[payload.poolId];
+                          if (buf) {
+                              const time = Math.max(0, offsetX / pixelsPerSecond);
+                              const t = project.tracks.find(x => x.id === track.id);
+                              if (t) {
+                                  t.clips.push({
+                                      id: 'clip_' + Date.now(),
+                                      name: buf._name || 'Audio Clip',
+                                      buffer: null,
+                                      poolId: payload.poolId,
+                                      sourceStart: 0,
+                                      timelineStart: time,
+                                      duration: buf.duration,
+                                      rate: 1,
+                                      fx: [], keyframes: []
+                                  });
+                                  rebuildPlayback();
+                                  renderTimeline();
+                              }
+                          }
+                      }
+                  }
               },
               onSplitClip: () => {
                   const time = Tone.Transport.seconds;
@@ -1187,6 +1265,7 @@ export async function render(container) {
               project.tracks = [];
               for(let i=0; i<decodedBuffer.numberOfChannels; i++) {
                   const monoBuf = extractChannel(decodedBuffer, i);
+                  monoBuf._name = file.name + ` (Ch ${i+1})`;
                   const poolId = 'pool_' + Date.now() + '_' + i;
                   project.mediaPool[poolId] = monoBuf;
                   project.tracks.push({
@@ -1209,6 +1288,7 @@ export async function render(container) {
               }
           } else {
               const poolId = 'pool_' + Date.now();
+              decodedBuffer._name = file.name;
               project.mediaPool[poolId] = decodedBuffer;
               project.tracks = [
                   {
@@ -1235,6 +1315,7 @@ export async function render(container) {
           rebuildPlayback();
           renderTimeline();
           renderInspector();
+          renderAudioPool();
       } catch (err) {
           console.error("Audio Load Error:", err);
           alert("Failed to load audio: " + err.message);
@@ -1262,49 +1343,16 @@ export async function render(container) {
           if (decodedBuffer.numberOfChannels > 1) {
               for(let i=0; i<decodedBuffer.numberOfChannels; i++) {
                   const monoBuf = extractChannel(decodedBuffer, i);
+                  monoBuf._name = file.name + ` (Ch ${i+1})`;
                   const poolId = 'pool_' + Date.now() + '_' + i;
                   project.mediaPool[poolId] = monoBuf;
-                  project.tracks.push({
-                      id: 'trk_' + i + '_' + Date.now(),
-                      name: file.name + ` (Ch ${i+1})`,
-                      color: '#10b981', // green for imported
-                      muted: false,
-                      clips: [{
-                          id: 'clip_' + i + '_' + Date.now(),
-                          name: file.name,
-                          buffer: null,
-                          poolId: poolId,
-                          sourceStart: 0,
-                          timelineStart: Tone.Transport.seconds,
-                          duration: monoBuf.duration,
-                          rate: 1,
-                          fx: [], keyframes: []
-                      }]
-                  });
               }
           } else {
+              decodedBuffer._name = file.name;
               const poolId = 'pool_' + Date.now();
               project.mediaPool[poolId] = decodedBuffer;
-              project.tracks.push({
-                  id: 'trk_' + Date.now(),
-                  name: file.name,
-                  color: '#10b981',
-                  muted: false,
-                  clips: [{
-                      id: 'clip_' + Date.now(),
-                      name: file.name,
-                      buffer: null,
-                      poolId: poolId,
-                      sourceStart: 0,
-                      timelineStart: Tone.Transport.seconds,
-                      duration: decodedBuffer.duration,
-                      rate: 1,
-                      fx: [], keyframes: []
-                  }]
-              });
           }
-          rebuildPlayback();
-          renderTimeline();
+          renderAudioPool();
       } catch (err) {
           alert("Import failed: " + err.message);
       }
@@ -1323,6 +1371,7 @@ export async function render(container) {
           selectedItems = { tracks: new Set(), clips: new Set() };
           renderTimeline();
           renderInspector();
+          renderAudioPool();
       });
   });
 
@@ -1399,6 +1448,7 @@ export async function render(container) {
           for (const [poolId, audioBuf] of Object.entries(project.mediaPool || {})) {
               buffers.set(poolId + '.bin', audioBuf);
               poolMeta[poolId] = {
+                  name: audioBuf._name || 'Audio Clip',
                   sampleRate: audioBuf.sampleRate,
                   channels: audioBuf.numberOfChannels,
                   length: audioBuf.length
@@ -1486,6 +1536,7 @@ export async function render(container) {
           selectedItems = { tracks: new Set(), clips: new Set() };
           renderTimeline();
           renderInspector();
+          renderAudioPool();
       });
   });
   
@@ -1518,6 +1569,7 @@ export async function render(container) {
                               chData[i] = rawData[i * meta.channels + ch];
                           }
                       }
+                      audioBuf._name = meta.name || 'Audio Clip';
                       project.mediaPool[poolId] = audioBuf;
                   }
               }
@@ -1549,7 +1601,7 @@ export async function render(container) {
           }
           
           project.tracks.forEach(t => t.clips.forEach(c => {
-              if (c.originalBuffer) recomputeClipBuffer(c);
+              recomputeClipBuffer(c);
           }));
           
           container.querySelector('#snd-intro').style.opacity = '0';
@@ -1557,6 +1609,7 @@ export async function render(container) {
           selectedItems = { tracks: new Set(), clips: new Set() };
           renderTimeline();
           renderInspector();
+          renderAudioPool();
           rebuildPlayback();
           
       } catch (err) {
@@ -2061,5 +2114,15 @@ export async function render(container) {
           btn.disabled = false;
       }
   });
+
+  // Check if project has state retained from previous render
+  if (project.tracks.length > 0 || Object.keys(project.mediaPool).length > 0) {
+      container.querySelector('#snd-intro').style.opacity = '0';
+      container.querySelector('#snd-intro').style.pointerEvents = 'none';
+      renderTimeline();
+      renderInspector();
+      renderAudioPool();
+      rebuildPlayback();
+  }
 
 }

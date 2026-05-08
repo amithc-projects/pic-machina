@@ -33,6 +33,7 @@ const SCREENS = {
   snd: () => import('./screens/snd.js'),
   sys: () => import('./screens/sys.js'),
   bup: () => import('./screens/bup.js'),
+  gmd: () => import('./screens/gmd.js'),
   lic: () => import('./screens/lic.js'),
 };
 

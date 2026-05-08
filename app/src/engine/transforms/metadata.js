@@ -11,6 +11,7 @@ import { getClosestColorName } from '../../utils/color-matcher.js';
 // This node sets a flag on the context.
 registry.register({
   id: 'meta-strip', name: 'Strip Metadata', category: 'Metadata', categoryKey: 'meta',
+  timeline: 'unsupported',
   icon: 'layers_clear',
   description: 'Remove EXIF/GPS metadata from output JPEG.',
   params: [
@@ -31,6 +32,7 @@ registry.register({
 // ─── Set EXIF Info ────────────────────────────────────────
 registry.register({
   id: 'meta-set-exif', name: 'Set EXIF Info', category: 'Metadata', categoryKey: 'meta',
+  timeline: 'unsupported',
   icon: 'database',
   description: 'Write custom EXIF fields to the output file.',
   params: [
@@ -55,6 +57,7 @@ registry.register({
 // ─── Geocode ──────────────────────────────────────────────
 registry.register({
   id: 'meta-geocode', name: 'Geocode', category: 'Metadata', categoryKey: 'meta',
+  timeline: 'unsupported',
   icon: 'location_on',
   description: 'Reverse-geocode GPS coords via Nominatim. Sets {{city}}, {{country}}, {{state}}, {{county}}, {{postcode}}, {{country_code}}, {{suburb}}, {{road}} — plus a combined {{location}} string.',
   params: [
@@ -155,6 +158,7 @@ registry.register({
 // ─── Extract Dominant Colors ──────────────────────────────
 registry.register({
   id: 'meta-dominant-color', name: 'Extract Dominant Color', category: 'Metadata', categoryKey: 'meta',
+  timeline: 'unsupported',
   icon: 'palette',
   description: 'Quickly analyses the image to extract the top 3 dominant colors. Can ignore near-transparent edges and solid black/white backgrounds.',
   params: [
@@ -259,6 +263,7 @@ registry.register({
   name: 'Detect Blur / Sharpness',
   category: 'Metadata',
   categoryKey: 'meta',
+  timeline: 'unsupported',
   icon: 'blur_on',
   description: [
     'Scores how sharp or blurry the image is using a Laplacian variance',
@@ -385,6 +390,7 @@ registry.register({
   name:        'Write Sidecar Field',
   category:    'Metadata',
   categoryKey: 'meta',
+  timeline: 'unsupported',
   icon:        'edit_note',
   description: 'Write a value into the sidecar JSON file\'s computed block. The sidecar is flushed to disk after each image is processed.',
   params: [

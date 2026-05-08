@@ -20,6 +20,7 @@ async function ensurePhoton() {
 // ─── Standard Tuning ─────────────────────────────────────
 registry.register({
   id: 'color-tuning', name: 'Standard Tuning', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'tune',
   description: 'Adjust contrast, saturation, vibrance and invert.',
   params: [
@@ -86,6 +87,7 @@ registry.register({
 // ─── Auto Levels ─────────────────────────────────────────
 registry.register({
   id: 'color-auto-levels', name: 'Auto Levels', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'brightness_auto',
   description: 'Normalise exposure by stretching the histogram.',
   params: [
@@ -117,6 +119,7 @@ registry.register({
 // ─── Opacity ──────────────────────────────────────────────
 registry.register({
   id: 'color-opacity', name: 'Opacity', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'opacity',
   description: 'Set global transparency.',
   params: [{ name: 'opacity', label: 'Opacity (%)', type: 'range', min: 0, max: 100, defaultValue: 100 }],
@@ -132,6 +135,7 @@ registry.register({
 // ─── Color Tint ───────────────────────────────────────────
 registry.register({
   id: 'color-tint', name: 'Color Tint', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'format_color_fill',
   description: 'Overlay a hue over the image.',
   params: [
@@ -160,6 +164,7 @@ registry.register({
 // ─── Duotone ──────────────────────────────────────────────
 registry.register({
   id: 'color-duotone', name: 'Duotone', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'tonality',
   description: 'Replace tones with two colours.',
   params: [
@@ -199,6 +204,7 @@ registry.register({
 // ─── Vignette ─────────────────────────────────────────────
 registry.register({
   id: 'color-vignette', name: 'Vignette', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'vignette',
   description: 'Darken or soften image edges.',
   params: [
@@ -225,6 +231,7 @@ registry.register({
 // ─── Advanced Effects ─────────────────────────────────────
 registry.register({
   id: 'filter-advanced', name: 'Advanced Effects', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'filter_vintage',
   description: 'Blur, sharpen, noise, and pixelation.',
   params: [
@@ -298,6 +305,7 @@ registry.register({
 // ─── Posterize ────────────────────────────────────────────
 registry.register({
   id: 'color-posterize', name: 'Posterize', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'gradient',
   description: 'Quantise each colour channel to a fixed number of levels for a flat, silkscreen look.',
   params: [
@@ -321,6 +329,7 @@ registry.register({
 // ─── Edge Detection ──────────────────────────────────────
 registry.register({
   id: 'filter-edge-detect', name: 'Edge Detection', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'filter_center_focus',
   description: 'Sobel edge detection — extracts outlines as white lines on a black background.',
   params: [
@@ -412,6 +421,7 @@ registry.register({
 // ─── Relight ──────────────────────────────────────────────
 registry.register({
   id: 'filter-relight', name: 'Relight', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'wb_incandescent',
   description: 'Simulate repositionable point lights. Darken ambient light then add up to 3 independent colour lights using screen compositing.',
   params: [
@@ -496,6 +506,7 @@ registry.register({
 // ─── Halftone ─────────────────────────────────────────────
 registry.register({
   id: 'filter-halftone', name: 'Halftone', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'blur_on',
   description: 'Overlay a halftone dot screen — dot size varies with image brightness.',
   params: [
@@ -555,6 +566,7 @@ registry.register({
 // recipe-level looks.
 registry.register({
   id: 'filter-blur', name: 'Gaussian Blur', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'blur_on',
   description: 'Whole-image Gaussian blur with a controllable radius. Subtle radii (1–3px) soften skin and edges (sfumato); larger radii produce dreamy / out-of-focus looks.',
   params: [
@@ -577,6 +589,7 @@ registry.register({
 // ─── Directional Blur ──────────────────────────────────────
 registry.register({
   id: 'filter-directional-blur', name: 'Directional Blur', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'motion_blur',
   description: 'Applies a linear motion blur along a specific angle.',
   params: [
@@ -611,6 +624,7 @@ registry.register({
 // ─── Radial Blur ──────────────────────────────────────
 registry.register({
   id: 'filter-radial-blur', name: 'Radial Blur', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'motion_blur',
   description: 'Zoom blur radiating from a center point.',
   params: [
@@ -649,6 +663,7 @@ registry.register({
 // ─── Gradient Ramp ──────────────────────────────────────
 registry.register({
   id: 'filter-gradient-ramp', name: 'Gradient Ramp', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'gradient',
   description: 'Overlay a linear or radial gradient over the image.',
   params: [
@@ -695,6 +710,7 @@ registry.register({
 // ─── Bloom / Glow ─────────────────────────────────────────
 registry.register({
   id: 'filter-bloom', name: 'Bloom / Glow', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'flare',
   description: 'Extracts bright highlights, blurs them, and screen-blends back for a glow effect.',
   params: [
@@ -741,6 +757,7 @@ registry.register({
 // ─── Chromatic Aberration ─────────────────────────────────
 registry.register({
   id: 'filter-chromatic-aberration', name: 'Chromatic Aberration', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'lens_blur',
   description: 'Splits R and B channels to simulate lens chromatic aberration.',
   params: [
@@ -786,6 +803,7 @@ registry.register({
 // ─── Color Grade ──────────────────────────────────────────
 registry.register({
   id: 'filter-color-grade', name: 'Color Grade', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'palette',
   description: 'Cinematic colour grading — lift (black point), shadow tint, and highlight tint.',
   params: [
@@ -839,6 +857,7 @@ registry.register({
 // ─── Kuwahara (Oil Paint) ─────────────────────────────────
 registry.register({
   id: 'filter-kuwahara', name: 'Kuwahara (Oil Paint)', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'brush',
   description: 'Kuwahara filter — non-linear edge-preserving smoothing that creates a painterly oil effect. Very intensive, optimized parameters applied.',
   params: [
@@ -868,6 +887,7 @@ registry.register({
 // ─── Tilt-Shift ───────────────────────────────────────────
 registry.register({
   id: 'filter-tilt-shift', name: 'Tilt-Shift', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'filter_center_focus',
   description: 'Miniature/tilt-shift effect — leaves a sharp horizontal band, blurs top and bottom.',
   params: [
@@ -922,6 +942,7 @@ registry.register({
 // ─── Channel Swap (Aerochrome / Infrared) ─────────────────
 registry.register({
   id: 'color-channel-swap', name: 'Channel Swap', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'swap_horiz',
   description: 'Reassign RGB channels. Swap R↔G to simulate Kodak Aerochrome infrared film.',
   params: [
@@ -969,6 +990,7 @@ registry.register({
 // ─── Pixel Sort ───────────────────────────────────────────
 registry.register({
   id: 'filter-pixel-sort', name: 'Pixel Sort', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'sort',
   description: 'Sorts pixels within horizontal strips by luminance — digital glitch aesthetic.',
   params: [
@@ -1054,6 +1076,7 @@ function _nearestColor(r, g, b, palette) {
 
 registry.register({
   id: 'filter-dither', name: 'Dither', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
   icon: 'grain',
   description: 'Palette reduction with Floyd-Steinberg dithering — retro 8-bit look.',
   params: [
@@ -1126,6 +1149,7 @@ registry.register({
 // Exposure uses adjust_brightness in the range [-127..127].
 registry.register({
   id: 'ai-selective-grade', name: 'Selective Color Grade', category: 'AI & Composition', categoryKey: 'ai',
+  timeline: 'unsupported',
   icon: 'palette',
   requires: [{ type: 'model', id: 'inspyrenet-swinb-fp16', label: 'InSPyReNet model (~200 MB)', actionHref: '#mdl' }],
   description: 'Grade the subject and background independently — saturation, temperature and exposure per scope. Requires the InSPyReNet model (#mdl).',
@@ -1229,6 +1253,7 @@ registry.register({
 // ─── Cinematic Grade (Lumetri) ─────────────────────────────
 registry.register({
   id: 'color-lumetri', name: 'Cinematic Grade', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'camera',
   description: 'Pro-level color grading engine. Adjust exposure, contrast, temperature, and shadows using a WebGL shader pipeline for maximum performance.',
   params: [
@@ -1418,6 +1443,7 @@ registry.register({
 // ─── Rain on Lens ─────────────────────────────────────────────
 registry.register({
   id: 'filter-rain', name: 'Rain on Lens', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'compatible',
   icon: 'water_drop',
   description: 'Procedural hardware-accelerated Rain on Lens effect. Includes physical refraction, trails, and clearing fog.',
   params: [

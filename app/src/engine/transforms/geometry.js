@@ -85,6 +85,7 @@ function tempCopy(canvas) {
 // ─── Resize ───────────────────────────────────────────────
 registry.register({
   id: 'geo-resize', name: 'Resize', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'aspect_ratio',
   description: 'Scale image to target dimensions.',
   params: [
@@ -114,6 +115,7 @@ registry.register({
 // ─── Crop ─────────────────────────────────────────────────
 registry.register({
   id: 'geo-crop', name: 'Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'crop',
   description: 'Trim to specified region.',
   params: [
@@ -138,6 +140,7 @@ registry.register({
 // ─── Smart Crop ───────────────────────────────────────────
 registry.register({
   id: 'geo-smart-crop', name: 'Smart Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'auto_fix_high',
   description: 'Content-aware crop to a target aspect ratio.',
   params: [
@@ -178,6 +181,7 @@ registry.register({
 // ─── Rotate / Flip ────────────────────────────────────────
 registry.register({
   id: 'geo-rotate', name: 'Rotate/Flip', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'rotate_right',
   description: 'Rotate 90/180/270° or flip the image.',
   params: [
@@ -209,6 +213,7 @@ registry.register({
 // ─── Round Corners ────────────────────────────────────────
 registry.register({
   id: 'geo-round', name: 'Round Corners', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'rounded_corner',
   description: 'Round image corners or make circular.',
   params: [
@@ -233,6 +238,7 @@ registry.register({
 // ─── Canvas Padding ───────────────────────────────────────
 registry.register({
   id: 'geo-padding', name: 'Canvas Padding', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'padding',
   description: 'Add coloured margins around the image.',
   params: [
@@ -260,6 +266,7 @@ registry.register({
 // ─── Trim ─────────────────────────────────────────────────
 registry.register({
   id: 'geo-trim', name: 'Trim', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'content_cut',
   description: 'Remove solid-colour edges.',
   params: [
@@ -309,6 +316,7 @@ registry.register({
 // ─── Face Crop ────────────────────────────────────────────
 registry.register({
   id: 'geo-face-crop', name: 'Face Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'face',
   description: 'Centre-crop around detected faces. Works best with portrait/close-up shots; lower confidence for group shots or full-body images.',
   params: [
@@ -383,6 +391,7 @@ registry.register({
 // ─── Body Crop ─────────────────────────────────────────────
 registry.register({
   id: 'geo-body-crop', name: 'Body Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'accessibility_new',
   description: 'Logic-based framing for full body or portraits using Pose detection.',
   params: [
@@ -444,6 +453,7 @@ registry.register({
 // ─── Face Align ────────────────────────────────────────────
 registry.register({
   id: 'geo-face-align', name: 'Face Align', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'face_retouching_natural',
   description: 'Normalize face position by leveling eyes and centering on nose.',
   params: [
@@ -530,6 +540,7 @@ registry.register({
 // ─── Subject-Aware Crop (InSPyReNet saliency) ─────────────
 registry.register({
   id: 'ai-subject-crop', name: 'Subject Crop', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'center_focus_strong',
   requires: [{ type: 'model', id: 'inspyrenet-swinb-fp16', label: 'InSPyReNet model (~200 MB)', actionHref: '#mdl' }],
   description: 'Crop to a target aspect ratio while keeping the detected subject composed correctly. Uses InSPyReNet saliency (requires the model — see #mdl). Falls back to centre-crop if the model is unavailable.',
@@ -658,6 +669,7 @@ registry.register({
 // ─── Pixelate ─────────────────────────────────────────────
 registry.register({
   id: 'geo-pixelate', name: 'Pixelate', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'compatible',
   icon: 'grid_3x3',
   description: 'Downsample then upsample with nearest-neighbour for a retro pixel-block effect.',
   params: [
@@ -684,6 +696,7 @@ registry.register({
 // ─── Checkerboard ─────────────────────────────────────────
 registry.register({
   id: 'gen-checkerboard', name: 'Checkerboard', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'grid_on',
   description: 'Generate a checkerboard pattern. Can be used as a background or overlay.',
   params: [
@@ -722,6 +735,7 @@ registry.register({
 // ─── Circle Generator ─────────────────────────────────────────
 registry.register({
   id: 'gen-circle', name: 'Circle', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
   icon: 'radio_button_unchecked',
   description: 'Generate a solid or stroked circle.',
   params: [
@@ -764,6 +778,7 @@ registry.register({
 // ─── Magnify ─────────────────────────────────────────
 registry.register({
   id: 'geo-magnify', name: 'Magnify', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'compatible',
   icon: 'zoom_in',
   description: 'Creates a flat magnifying glass effect.',
   params: [
@@ -800,6 +815,7 @@ registry.register({
 // ─── Lens Distortion (Sphere) ─────────────────────────────────────────
 registry.register({
   id: 'geo-lens', name: 'Lens Distortion', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'compatible',
   icon: 'lens',
   description: 'Spherical bulge/pinch distortion (CC Lens effect).',
   params: [
@@ -916,6 +932,7 @@ function noise2D(xin, yin) {
 
 registry.register({
   id: 'geo-turbulent-displace', name: 'Turbulent Displace', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'compatible',
   icon: 'waves',
   description: 'Organic displacement using Simplex noise. Great for water, heat distortion, or glitch effects.',
   params: [
@@ -977,6 +994,7 @@ registry.register({
 // ─── Liquify (Pinch/Bloat/Swirl) ──────────────────────────
 registry.register({
   id: 'geo-liquify', name: 'Liquify (Pinch/Swirl)', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'compatible',
   icon: 'waves',
   description: 'Apply pinch, bloat, or swirl distortions to an area.',
   params: [
