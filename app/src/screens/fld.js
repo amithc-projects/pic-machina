@@ -23,6 +23,7 @@ import { MetadataPanel }                             from '../components/metadat
 import { MediaBrowser }                              from '../components/media-browser.js';
 import { globalLightbox }                            from '../components/lightbox.js';
 import { readSidecar }                               from '../data/sidecar.js';
+import { migrateSidecarFiles }                       from '../data/sidecarMigrate.js';
 
 const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm','.avi','.mkv']);
@@ -396,6 +397,11 @@ export async function render(container, hash) {
   // ── Folder navigation ───────────────────────────────────────
   async function reloadContents() {
     activeSubHandle = currentHandle;
+    // One-time idempotent migration: rename legacy `filename.json` sidecars
+    // to the dot-prefix `.filename` format shared with ux-file-manager.
+    migrateSidecarFiles(currentHandle).catch(err =>
+      console.warn('[sidecarMigrate] migration failed:', err)
+    );
     // Only surface PicMachina-style archives (zip / pptx) when the
     // folder we're browsing was actually written to by PicMachina (the
     // engine drops a `.PicMachina/` marker dir in every output folder
