@@ -45,6 +45,7 @@ function injectTmeStyles() {
 }
 
 export async function render(container) {
+  timelineView = null;
   injectTmeStyles();
   // Load last timeline or create new
   const all = await getAllTimelines();
