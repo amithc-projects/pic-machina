@@ -22,8 +22,6 @@ import { showThreeWayConfirm }                      from '../utils/dialogs.js';
 import { registry }                                 from '../engine/index.js';
 import { computeStrength }                          from '../engine/video-convert.js';
 import { checkRecipeAvailability }                  from '../engine/capabilities.js';
-import { MediaBrowser }                             from '../components/media-browser.js';
-import { GlobalLightbox }                           from '../components/lightbox.js';
 
 export async function render(container, hash) {
   injectStyles();
@@ -35,20 +33,15 @@ export async function render(container, hash) {
   let currentHandle  = null;     // Currently navigated directory
   let outputHandle   = null;
   let selectedFiles  = [];       // File[] from input folder
-  let dirStack       = [];       // [{handle, name}]
-  let allFolders     = [];       // {name, handle}[]
   let setVideoPreviews = new Map(); // videoName → preview File
   let setFileMetadata = new Map(); // videoName → { width, height, duration }
   let selectedIds    = new Map();// Map<filename, sequenceInt>
   let currentRecipe  = null;
   let allRecipes     = [];
   let batchControl   = null;     // { cancel, runId }
-  let lastClickedIdx = -1;       // for shift+click range
 
-  let inputHistory   = [];
   let outputHistory  = [];
-  let gridSearchTerm = '';
-  let mediaBrowser   = null;
+  let sk             = null;  // sidekick-manager element
 
   // ── State declared early to avoid temporal dead zone (TDZ) ──
   const BUILTIN_SLOT_COUNTS = {
@@ -152,12 +145,8 @@ export async function render(container, hash) {
           </section>
         </div>
 
-        <!-- Right: image grid -->
+        <!-- Right: image grid (sidekick-manager) -->
         <div class="set-grid-area" style="display:flex; flex-direction:column; background:var(--ps-surface);">
-          <div id="set-filter-warning" style="display:none; background: rgba(227, 179, 65, 0.15); color: #e3b341; padding: 12px 16px; font-size: 13px; font-weight: 500; border-bottom: 1px solid rgba(227, 179, 65, 0.2); align-items:center; gap: 8px;">
-            <span class="material-symbols-outlined" style="font-size:18px;">warning</span>
-            <span id="set-filter-warning-text"></span>
-          </div>
           <div id="set-mb-host" style="flex: 1; display:flex; flex-direction:column; min-height: 0;"></div>
         </div>
       </div>
@@ -180,7 +169,6 @@ export async function render(container, hash) {
   outputHandle = await getFolder('output').catch(() => null);
   if (inputHandle) {
     currentHandle = inputHandle;
-    dirStack = [];
     await refreshImageGrid();
   } else {
     renderEmptyState();
@@ -278,7 +266,16 @@ export async function render(container, hash) {
     
     if (!effOutputHandle) return;
 
-    let files = selectedFiles.filter(f => selectedIds.has(f.name));
+    // Re-enumerate current directory to get File objects for selected filenames
+    const batchDirHandle = sk?.getDirectoryHandle?.() || currentHandle;
+    if (!batchDirHandle) return;
+    const rawFiles = [];
+    for await (const [name, entry] of batchDirHandle.entries()) {
+      if (selectedIds.has(name) && entry.kind === 'file') {
+        rawFiles.push(await entry.getFile());
+      }
+    }
+    let files = rawFiles;
     if (currentRecipe?.isOrdered) {
         files = files.sort((a,b) => selectedIds.get(a.name) - selectedIds.get(b.name));
     }
@@ -313,7 +310,7 @@ export async function render(container, hash) {
         batchControl = await startBatch({
           recipe: currentRecipe,
           files,
-          inputHandle: currentHandle,
+          inputHandle: batchDirHandle,
           outputHandle: effOutputHandle,
           subfolder,
           runParams,
@@ -400,10 +397,6 @@ export async function render(container, hash) {
         await writeVideoPreview(dirHandle, file.name, blob);
         const previewFile = new File([blob], `.${file.name}.preview.jpg`, { type: 'image/jpeg' });
         setVideoPreviews.set(file.name, previewFile);
-        if (mediaBrowser) {
-           const ent = mediaBrowser.entries.find(e => e.name === file.name);
-           if (ent) ent.preview = previewFile;
-        }
       } catch { /* silently skip this video */ }
     }
   }
@@ -412,6 +405,7 @@ export async function render(container, hash) {
   function renderEmptyState() {
     const host = container.querySelector('#set-mb-host');
     if (!host) return;
+    sk = null; // reset so next refreshImageGrid will remount sidekick
     host.innerHTML = `
       <div class="empty-state" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
         <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-text-faint);">folder_open</span>
@@ -425,26 +419,22 @@ export async function render(container, hash) {
       try {
         inputHandle = await pickFolder('input');
         currentHandle = inputHandle;
-        dirStack = [];
         await refreshImageGrid();
       } catch(e) {}
     });
   }
 
-  async function refreshImageGrid() {
+  async function refreshImageGrid({ skipSetRoot = false } = {}) {
     if (!currentHandle) return;
     try {
       const { includeVideo, onlyVideo } = fileFilterForRecipe(currentRecipe);
 
       const files = [];
-      allFolders = [];
       let skippedMediaCount = 0;
 
       for await (const [name, entry] of currentHandle.entries()) {
         if (name.startsWith('.')) continue;
-        if (entry.kind === 'directory') {
-          allFolders.push({ name, handle: entry });
-        } else if (entry.kind === 'file') {
+        if (entry.kind === 'file') {
           const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
           const isImg = IMAGE_EXTS.has(ext);
           const isVid = VIDEO_EXTS.has(ext);
@@ -467,7 +457,6 @@ export async function render(container, hash) {
         }
       }
       files.sort((a, b) => a.file.name.localeCompare(b.file.name));
-      allFolders.sort((a, b) => a.name.localeCompare(b.name));
 
       selectedFiles = files.map(f => f.file);
       setVideoPreviews = await loadVideoPreviews(currentHandle);
@@ -481,125 +470,61 @@ export async function render(container, hash) {
         });
       }
       
-      const mbEntries = [];
-      allFolders.forEach(folder => {
-        mbEntries.push({ name: folder.name, file: null, isFolder: true, _folder: folder });
-      });
-      selectedFiles.forEach(f => {
-        mbEntries.push({ name: f.name, file: f, isFolder: false, sidecar: null, preview: setVideoPreviews.get(f.name) });
-      });
-      if (dirStack.length > 0) {
-        mbEntries.push({ name: '..', file: null, isFolder: true, _up: true });
-      }
+      // ── Mount or update sidekick-manager ──────────────────
+      const hiddenMsg = onlyVideo
+        ? 'because this recipe only accepts Videos.'
+        : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.');
 
-      if (!mediaBrowser) {
-        container.querySelector('#set-mb-host').innerHTML = ''; // Clear empty state
-        mediaBrowser = new MediaBrowser(container.querySelector('#set-mb-host'), {
-          mode: 'grid',
-          entries: mbEntries,
-          breadcrumbs: dirStack.map(d => d.name),
-          currentFolderName: currentHandle.name,
-          canGoUp: dirStack.length > 0,
-          childFolders: allFolders.map(f => f.name),
-          hiddenFilesCount: skippedMediaCount,
-          hiddenFilesMessage: onlyVideo ? 'because this recipe only accepts Videos.' : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.'),
-          isOrderedSelection: !!currentRecipe?.isOrdered,
-          onChangeFolderClick: async () => {
-            try {
-              inputHandle = await pickFolder('input');
-              currentHandle = inputHandle;
-              dirStack = [];
-              await refreshImageGrid();
-            } catch (e) { if (e.name !== 'AbortError') console.error(e); }
-          },
-          onChildFolderSelect: async (name) => {
-            const folder = allFolders.find(f => f.name === name);
-            if (folder) {
-              dirStack.push({ handle: currentHandle, name: currentHandle.name });
-              currentHandle = folder.handle;
-              await refreshImageGrid();
+      if (!sk) {
+        const host = container.querySelector('#set-mb-host');
+        host.innerHTML = `<sidekick-manager id="set-sk-manager" no-hash-routing style="display:block;width:100%;height:100%"></sidekick-manager>`;
+        sk = host.querySelector('#set-sk-manager');
+
+        // Wire selection changes from sidekick back to set.js state
+        sk.addEventListener('sidekick:selection', (e) => {
+          const items = e.detail?.items || [];
+          selectedIds.clear();
+          items.forEach((name, i) => selectedIds.set(name, i + 1));
+          updateSelCount();
+          updateRunButton();
+          renderSlotAssignment();
+        });
+
+        // When sidekick navigates to a new folder, re-enumerate for hidden-file counts
+        sk.addEventListener('sidekick:workspace', async (e) => {
+          const dirHandle = sk.getDirectoryHandle?.();
+          if (dirHandle && dirHandle !== currentHandle) {
+            currentHandle = dirHandle;
+            // If the workspace moved to a new root (user opened a different folder), track as inputHandle too
+            if (e.detail?.pathLength === 1) {
+              inputHandle = dirHandle;
             }
-          },
-          onNavigateUp: async () => {
-            if (dirStack.length === 0) return;
-            const up = dirStack.pop();
-            currentHandle = up.handle;
-            await refreshImageGrid();
-          },
-          onNavigateTo: async (idx) => {
-            if (idx < 0 || idx >= dirStack.length) return;
-            currentHandle = dirStack[idx].handle;
-            dirStack = dirStack.slice(0, idx);
-            await refreshImageGrid();
-          },
-          onSelectionChange: (sel) => {
-             selectedIds.clear();
-             sel.forEach((s, i) => selectedIds.set(s, i + 1));
-             updateSelCount();
-             updateRunButton();
-             renderSlotAssignment();
-          },
-          onDoubleClick: (ent) => {
-             if (ent.isFolder) {
-               if (ent.name === '..') {
-                 if (dirStack.length > 0) {
-                   const up = dirStack.pop();
-                   currentHandle = up.handle;
-                   refreshImageGrid();
-                 }
-               } else {
-                 const folder = allFolders.find(f => f.name === ent.name);
-                 if (folder) {
-                   dirStack.push({ handle: currentHandle, name: currentHandle.name });
-                   currentHandle = folder.handle;
-                   refreshImageGrid();
-                 }
-               }
-               return;
-             }
-             if (ent.file) {
-               const lb = new GlobalLightbox();
-               lb.show([ent], 0);
-             }
+            await refreshImageGrid({ skipSetRoot: true });
           }
         });
-        
-        const selArray = Array.from(selectedIds.entries()).sort((a,b) => a[1] - b[1]).map(x => x[0]);
-        selArray.forEach(s => mediaBrowser.selectedIds.add(s));
-        mediaBrowser._syncSelectionUI();
-        
-      } else {
-        mediaBrowser.options.isOrderedSelection = !!currentRecipe?.isOrdered;
-        mediaBrowser.options.breadcrumbs = dirStack.map(d => d.name);
-        mediaBrowser.options.currentFolderName = currentHandle.name;
-        mediaBrowser.options.canGoUp = dirStack.length > 0;
-        mediaBrowser.options.childFolders = allFolders.map(f => f.name);
-        mediaBrowser.options.hiddenFilesCount = skippedMediaCount;
-        mediaBrowser.options.hiddenFilesMessage = onlyVideo ? 'because this recipe only accepts Videos.' : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.');
-        mediaBrowser.entries = mbEntries;
-        mediaBrowser.applyFilters();
-        
-        const selArray = Array.from(selectedIds.entries()).sort((a,b) => a[1] - b[1]).map(x => x[0]);
-        mediaBrowser.selectedIds.clear();
-        selArray.forEach(s => mediaBrowser.selectedIds.add(s));
-        mediaBrowser._syncSelectionUI();
-        mediaBrowser.renderHeader(); // Re-render breadcrumbs
+
+        // Push root once sidekick is ready
+        sk.addEventListener('sidekick:ready', () => {
+          sk._setReady = true;
+          if (currentHandle) sk._pushRoot(currentHandle);
+        });
+
+        sk._pushRoot = (handle, attempt = 0) => {
+          try {
+            sk.setRoot(handle);
+          } catch (err) {
+            if (attempt < 20) setTimeout(() => sk._pushRoot(handle, attempt + 1), 50);
+          }
+        };
       }
 
-      const warningEl = container.querySelector('#set-filter-warning');
-      const warningText = container.querySelector('#set-filter-warning-text');
-      if (warningEl && warningText) {
-        if (skippedMediaCount > 0) {
-           const typeStr = onlyVideo ? 'Videos' : 'Images';
-           warningText.innerHTML = `<b>${skippedMediaCount} file(s) hidden</b> because this recipe only accepts ${typeStr}.`;
-           warningEl.style.display = 'flex';
-        } else if (files.length === 0 && (allFolders.length > 0 || dirStack.length > 0)) {
-           const typeStr = onlyVideo ? 'Videos' : (includeVideo ? 'media files' : 'Images');
-           warningText.innerHTML = `No <b>${typeStr}</b> found in this folder.`;
-           warningEl.style.display = 'flex';
-        } else {
-           warningEl.style.display = 'none';
-        }
+      // Update hidden files warning attributes
+      sk.setAttribute('hidden-files-count', String(skippedMediaCount));
+      sk.setAttribute('hidden-files-message', hiddenMsg);
+
+      // Push the new directory root into sidekick (skip when triggered by sidekick:workspace)
+      if (!skipSetRoot && sk._setReady) {
+        sk._pushRoot(currentHandle);
       }
 
       renderSlotAssignment();
