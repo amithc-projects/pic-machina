@@ -145,25 +145,19 @@ export async function render(container, hash) {
 
   container.innerHTML = `
     <div class="screen fld-screen">
-      <div class="fld-toolbar" style="padding: 8px 16px; display: flex; gap: 8px; align-items: center; background: var(--ps-bg); border-bottom: 1px solid var(--ps-border);">
+      ${runId ? `<div class="fld-toolbar" style="padding: 8px 16px; display: flex; gap: 8px; align-items: center; background: var(--ps-bg); border-bottom: 1px solid var(--ps-border);">
         <button class="btn-icon" id="fld-back" title="Back">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
         <div style="flex:1"></div>
-        ${runId ? `<button class="btn-secondary btn-sm" id="fld-btn-showcase" style="margin-right:8px">
+        <button class="btn-secondary btn-sm" id="fld-btn-showcase" style="margin-right:8px">
           <span class="material-symbols-outlined" style="font-size:16px">star</span> Add to ShowCase
-        </button>` : ''}
-        <button class="btn-secondary btn-sm" id="fld-btn-slideshow" title="Play Slideshow" style="margin-left:8px">
-          <span class="material-symbols-outlined" style="font-size:18px">play_circle</span>
-          Slideshow
         </button>
-        </button>
-        ${runId ? `
         <button class="fld-chip fld-chip--run is-active" id="fld-run-filter-btn" title="Toggle run results">
           <span class="material-symbols-outlined" style="font-size:12px">filter_alt</span>
           Run results
-        </button>` : ''}
-      </div>
+        </button>
+      </div>` : ''}
 
       <div class="fld-body" id="fld-body">
         <div class="fld-main" id="fld-main">
@@ -552,85 +546,88 @@ export async function render(container, hash) {
       return;
     }
 
-    if (!main.querySelector('#ic-mb-container')) {
-      main.innerHTML = `<div id="ic-mb-container" style="height:100%"></div>`;
-    }
-    const mbContainer = main.querySelector('#ic-mb-container');
-    
-    // Combine folders and files into the new format
-    const mbEntries = [];
-    filteredFolders.forEach(folder => {
-      mbEntries.push({ name: folder.name, file: null, isFolder: true, _folder: folder });
-    });
-    filtered.forEach(ent => {
-      const preview = fileType(ent.file.name) === 'video' ? videoPreviews.get(ent.file.name) : null;
-      mbEntries.push({ name: ent.file.name, file: ent.file, preview, _ent: ent, sidecar: ent.sidecar });
-    });
+    if (!main.querySelector('#ic-sk-manager')) {
+      // no-hash-routing: pic-machina uses the URL hash for its own router
+      // (e.g. `#fld`). Without this attribute, sidekick would treat the
+      // route name as a sub-folder deep link, fail to find it, then clear
+      // the hash — which fires pic-machina's router and navigates away.
+      main.innerHTML = `<sidekick-manager id="ic-sk-manager" no-hash-routing style="display:block; width:100%; height:100%"></sidekick-manager>`;
+      const sk = main.querySelector('#ic-sk-manager');
+      sk._fldReady = false;
 
-    if (dirStack.length > 0) {
-      mbEntries.push({ name: '..', file: null, isFolder: true, _up: true });
-    }
-
-    if (!mediaBrowser) {
-      mediaBrowser = new MediaBrowser(mbContainer, {
-        mode: viewMode,
-        entries: mbEntries,
-        breadcrumbs: dirStack.map(d => d.name),
-        currentFolderName: currentHandle ? currentHandle.name : 'Current Folder',
-        canGoUp: dirStack.length > 0,
-        childFolders: allFolders.map(f => f.name),
-        onChildFolderSelect: async (name) => {
-          const folder = allFolders.find(f => f.name === name);
-          if (folder) enterFolder(folder);
-        },
-        onChangeFolderClick: async () => {
-          try {
-            await pickFolder('browse');
-            navigate('#fld');
-          } catch (e) { if (e.name !== 'AbortError') console.error(e); }
-        },
-        onNavigateUp: () => navigateTo(dirStack.length - 1),
-        onNavigateTo: (idx) => navigateTo(idx),
-        onDeleteSelected: deleteSelected,
-        onDownloadSelected: downloadSelected,
-        onSelectionChange: async (selectedNames) => {
-          selectedSet.clear();
-          selectedNames.forEach(name => selectedSet.add(name));
-          
-          if (selectedNames.length === 1) {
-             const ent = allEntries.find(e => e.file.name === selectedNames[0]);
-             if (ent) {
-               selected = ent;
-               metaPanel.setDirHandle(currentHandle);
-               await metaPanel.setFile(ent.file);
-             }
+      // Helper: push pic-machina's folder into sidekick. We retry briefly
+      // because setRoot silently no-ops if React inside the shadow DOM
+      // hasn't mounted its App ref yet.
+      sk._fldPushRoot = (handle, attempt = 0) => {
+        if (!handle || typeof sk.setRoot !== 'function') return;
+        try {
+          sk.setRoot(handle);
+          console.log('[fld] setRoot pushed (attempt', attempt, ')');
+        } catch (err) {
+          if (attempt < 20) {
+            setTimeout(() => sk._fldPushRoot(handle, attempt + 1), 50);
           } else {
-             selected = null;
-             metaPanel.clear();
-          }
-        },
-        onDoubleClick: (ent, index, all) => {
-          if (ent._up) {
-            navigateTo(dirStack.length - 1);
-          } else if (ent._folder) {
-            enterFolder(ent._folder);
-          } else {
-            // Strip folders before passing to lightbox
-            const filesOnly = all.filter(e => !e.isFolder);
-            const fileIdx = filesOnly.findIndex(e => e.name === ent.name);
-            globalLightbox.show(filesOnly, fileIdx);
+            console.warn('[fld] setRoot gave up after retries:', err);
           }
         }
+      };
+
+      sk.addEventListener('sidekick:ready', (e) => {
+        console.log('[fld] sidekick-manager ready:', e.detail);
+        sk._fldReady = true;
+        if (currentHandle) sk._fldPushRoot(currentHandle);
       });
-    } else {
-      mediaBrowser.options.breadcrumbs = dirStack.map(d => d.name);
-      mediaBrowser.options.currentFolderName = currentHandle ? currentHandle.name : 'Current Folder';
-      mediaBrowser.options.canGoUp = dirStack.length > 0;
-      mediaBrowser.options.childFolders = allFolders.map(f => f.name);
-      mediaBrowser.setEntries(mbEntries);
+
+      // Keep pic-machina's currentHandle / dirStack in sync with sidekick's
+      // own folder navigation so legacy code (deleteSelected, sidecar
+      // migration, etc.) keeps working.
+      sk.addEventListener('sidekick:workspace', (e) => {
+        // Detail shape: { folderName, pathLength } — sidekick owns the handle
+        // itself. We refresh metaPanel.dirHandle via file-focus below.
+        console.log('[fld] workspace changed:', e.detail);
+      });
+
+      // Single-file focus → drive the existing pic-machina sidecar / EXIF
+      // panel. Detail: { filename, handle, metadata, size, lastModified } or null.
+      sk.addEventListener('sidekick:file-focus', async (e) => {
+        const detail = e.detail;
+        if (!detail || !detail.handle) {
+          metaPanel.clear();
+          selected = null;
+          return;
+        }
+        try {
+          const file = await detail.handle.getFile();
+          // Best-effort: find the parent dir handle from the file handle is
+          // not directly available; reuse currentHandle (root) for now —
+          // sidecar reads/writes use the handle inside metaPanel itself.
+          metaPanel.setDirHandle(currentHandle);
+          await metaPanel.setFile(file);
+          selected = { file };
+        } catch (err) {
+          console.warn('[fld] file-focus → metaPanel failed:', err);
+        }
+      });
+
+      // Multi-select / clear → mirror into selectedSet so any remaining
+      // host code that reads it (legacy paths) still works.
+      sk.addEventListener('sidekick:selection', (e) => {
+        const items = e.detail?.items || [];
+        selectedSet.clear();
+        items.forEach(name => selectedSet.add(name));
+      });
+
+      sk.addEventListener('sidekick:error', (e) =>
+        console.warn('[fld] sidekick error:', e.detail)
+      );
     }
 
-    schedulePreviewGeneration();
+    // Push the current folder into sidekick. If the component isn't ready
+    // yet the helper retries automatically.
+    const sk = main.querySelector('#ic-sk-manager');
+    if (sk && currentHandle && typeof sk._fldPushRoot === 'function') {
+      sk._fldPushRoot(currentHandle);
+    }
   }
 
   // ── Background preview generation ───────────────────────────
