@@ -1,8 +1,9 @@
 /**
  * ImageChef — Sidecar metadata module
  *
- * Reads and writes `.json` sidecar files stored alongside images
- * (e.g. `photo.jpg` → `photo.jpg.json`) using the File System Access API.
+ * Reads and writes sidecar files stored alongside images.
+ * New format: dot-prefix  `photo.jpg` → `.photo.jpg`  (matches ux-file-manager)
+ * Legacy format (read-only fallback): `photo.jpg` → `photo.jpg.json`
  *
  * Schema v1:
  *   $version  — always 1
@@ -14,7 +15,22 @@
  *   processing — append-only log of batch runs
  */
 
-const SIDECAR_EXT = '.json';
+// Sidecar files use the dot-prefix format: `.photo.jpg`
+// This matches the ux-file-manager (sidekick-manager) convention so both tools
+// share the same on-disk files. Legacy `photo.jpg.json` suffix files are still
+// readable (fallback) but all new writes use the dot-prefix.
+const SIDECAR_PREFIX = '.';
+const LEGACY_SIDECAR_EXT = '.json';
+
+/** Return the dot-prefix sidecar name for a given media filename. */
+function sidecarName(filename) {
+  return `${SIDECAR_PREFIX}${filename}`;
+}
+
+/** Return the legacy suffix sidecar name (read-only fallback). */
+function legacySidecarName(filename) {
+  return `${filename}${LEGACY_SIDECAR_EXT}`;
+}
 
 // Nominatim reverse-geocode — free, no key, 1 req/s limit
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/reverse';
@@ -131,15 +147,21 @@ export function migrateSidecar(data) {
  */
 export async function readSidecar(dirHandle, filename) {
   if (!dirHandle) return null;
-  try {
-    const fh   = await dirHandle.getFileHandle(`${filename}${SIDECAR_EXT}`);
-    const file  = await fh.getFile();
-    const text  = await file.text();
-    const parsed = JSON.parse(text);
-    return migrateSidecar(parsed);
-  } catch {
-    return null;
+
+  // Try dot-prefix format first (.photo.jpg), then fall back to legacy suffix (photo.jpg.json).
+  const candidates = [sidecarName(filename), legacySidecarName(filename)];
+  for (const name of candidates) {
+    try {
+      const fh    = await dirHandle.getFileHandle(name);
+      const file  = await fh.getFile();
+      const text  = await file.text();
+      const parsed = JSON.parse(text);
+      return migrateSidecar(parsed);
+    } catch {
+      // Try next candidate.
+    }
   }
+  return null;
 }
 
 /**
@@ -150,7 +172,7 @@ export async function readSidecar(dirHandle, filename) {
 export async function writeSidecar(dirHandle, filename, data) {
   if (!dirHandle) throw new Error('No directory handle');
   const migrated = migrateSidecar(data);
-  const fh       = await dirHandle.getFileHandle(`${filename}${SIDECAR_EXT}`, { create: true });
+  const fh       = await dirHandle.getFileHandle(sidecarName(filename), { create: true });
   const writable  = await fh.createWritable();
   await writable.write(JSON.stringify(migrated, null, 2));
   await writable.close();
@@ -167,7 +189,11 @@ export async function listSidecarTags(dirHandle) {
   const tags = new Set();
   try {
     for await (const [name, handle] of dirHandle.entries()) {
-      if (handle.kind !== 'file' || !name.endsWith(SIDECAR_EXT)) continue;
+      if (handle.kind !== 'file') continue;
+      // Accept dot-prefix sidecars (.photo.jpg) and legacy suffix sidecars (photo.jpg.json).
+      const isDotPrefix = name.startsWith(SIDECAR_PREFIX) && name.length > 1;
+      const isLegacy    = name.endsWith(LEGACY_SIDECAR_EXT);
+      if (!isDotPrefix && !isLegacy) continue;
       try {
         const file = await handle.getFile();
         const data = JSON.parse(await file.text());
