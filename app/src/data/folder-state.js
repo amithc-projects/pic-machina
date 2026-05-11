@@ -74,8 +74,20 @@ let _selectedFilename = null;
  * Call from a sidekick:workspace listener to keep the path in sync.
  *   folderName = e.detail.folderName
  *   pathLength = e.detail.pathLength
+ *   pathNames  = e.detail.pathNames  (optional — full names array from sidekick,
+ *                                     index 0 is the root, rest are sub-path segments)
+ *
+ * When pathNames is provided (sidekick v2+) we can set _subPath directly and
+ * accurately, even when the sidekick jumps multiple levels at once (e.g. during
+ * a navigate('a/b/c') call that fires a single workspace event at depth 4).
  */
-export function trackWorkspaceChange(folderName, pathLength) {
+export function trackWorkspaceChange(folderName, pathLength, pathNames) {
+  if (Array.isArray(pathNames)) {
+    // Full path available — derive sub-path by dropping the root entry (index 0)
+    _subPath = pathNames.slice(1);
+    return;
+  }
+  // Fallback: incremental tracking (for older sidekick builds without pathNames)
   if (pathLength === 1) {
     // At root — clear sub-path
     _subPath = [];
@@ -145,7 +157,7 @@ export function wireFolderState(sk, getHandle, {
 } = {}) {
   // ── Ongoing navigation tracking ──────────────────────────
   sk.addEventListener('sidekick:workspace', (e) => {
-    if (!skipTracking) trackWorkspaceChange(e.detail.folderName, e.detail.pathLength);
+    if (!skipTracking) trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames);
     onWorkspace?.(e);
   });
 

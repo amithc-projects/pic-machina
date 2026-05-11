@@ -502,7 +502,7 @@ export async function render(container, hash) {
 
         // When sidekick navigates to a new folder, track path + re-enumerate
         sk.addEventListener('sidekick:workspace', async (e) => {
-          trackWorkspaceChange(e.detail.folderName, e.detail.pathLength);
+          trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames);
           const dirHandle = sk.getDirectoryHandle?.();
           if (dirHandle && dirHandle !== currentHandle) {
             currentHandle = dirHandle;
