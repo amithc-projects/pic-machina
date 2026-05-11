@@ -170,19 +170,6 @@ async function runBatch({ recipe, files, outputConfig, runId, inputHandle }) {
         }
       }
 
-      // Write sidecar JSON — re-read asset so any enrichment (geocode etc.) is captured
-      if (dbReady && context.assetHash) {
-        try {
-          const { getAsset } = await import('../data/assets.js');
-          const latest = await getAsset(context.assetHash);
-          if (latest) {
-            const json = JSON.stringify(latest, null, 2);
-            const blob = new Blob([json], { type: 'application/json' });
-            self.postMessage({ type: 'FILE_DONE', payload: { runId, filename: `${file.name}.json`, blob, subfolder: '.PicMachina' } });
-          }
-        } catch { /* non-fatal */ }
-      }
-
       successCount++;
     } catch (err) {
       log(runId, 'error', `FAILED: ${file.name} — ${err.message}`);

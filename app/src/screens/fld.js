@@ -273,9 +273,19 @@ export async function render(container, hash) {
   let filterType = 'all';
   let sortKey    = 'name';
   // Run-scoped filter: when navigating from que/out with a runId, show only files
-  // whose lastModified falls within the run's execution window (±buffer).
+  // recorded in run.outputFiles (the manifest captured at batch completion).
   let runFilter  = !!runId;
-  const RUN_FILTER_BUF_MS = 15_000; // 15 s buffer around run window
+  const RUN_FILTER_BUF_MS = 15_000; // 15 s buffer around run window (legacy fallback)
+  const runManifest = Array.isArray(run?.outputFiles) && run.outputFiles.length
+    ? run.outputFiles
+    : null;
+
+  /** Push the current run-filter state onto the sidekick element (if mounted). */
+  function applyRunFilterToSidekick() {
+    const sk = container.querySelector('#ic-sk-manager');
+    if (!sk) return;
+    sk.allowedFiles = (runFilter && runManifest) ? runManifest : null;
+  }
   let selected   = null; // MediaEntry | null
   let selectedSet = new Set(); // Set<string> filenames (primary selection)
   let lastIdx    = -1;   // for shift-select
@@ -324,6 +334,7 @@ export async function render(container, hash) {
       btn.classList.toggle('is-active', runFilter);
       btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px">${runFilter ? 'filter_alt' : 'filter_alt_off'}</span> ${runFilter ? 'Run results' : 'All files'}`;
     }
+    applyRunFilterToSidekick();
     applyFilter();
   });
 
@@ -561,6 +572,8 @@ export async function render(container, hash) {
         onReady: () => {
           console.log('[fld] sidekick-manager ready, restoring folder state');
           sk._fldReady = true;
+          // Apply run-output manifest filter once sidekick is mounted.
+          applyRunFilterToSidekick();
         },
         onWorkspace: (e) => {
           console.log('[fld] workspace changed:', e.detail);

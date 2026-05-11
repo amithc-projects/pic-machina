@@ -275,20 +275,6 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
         }
       }
 
-      // Write internal .PicMachina sidecar to output folder (asset record snapshot)
-      if (context.assetHash) {
-        try {
-          const { getAsset } = await import('../data/assets.js');
-          const latest = await getAsset(context.assetHash);
-          if (latest) {
-            const json = JSON.stringify(latest, null, 2);
-            const blob = new Blob([json], { type: 'application/json' });
-            const sidecarFolder = await getOrCreateOutputSubfolder(subHandle, '.PicMachina');
-            await writeFile(sidecarFolder, `${file.name}.json`, blob);
-          }
-        } catch { /* non-fatal */ }
-      }
-
       successCount++;
     } catch (err) {
       onLog('error', `FAILED: ${file.name} — ${err.message}`);
