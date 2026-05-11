@@ -41,6 +41,29 @@
  *   }, { once: true });
  */
 
+/**
+ * Map a pic-machina recipe's `inputType` field to the comma-separated
+ * `allowed-types` attribute string consumed by <sidekick-manager>.
+ *
+ *   recipe.inputType  | allowed-types
+ *   ──────────────────┼─────────────────────
+ *   'image'           | 'images'
+ *   'video'           | 'video'
+ *   'any' / undefined | 'images,video,audio'
+ *
+ * @param {object|null} recipe    Recipe object (may be null).
+ * @param {object}      [override] Optional { videoOnly: boolean } to force video-only
+ *                                 (used by ned.js when a node is video-specific).
+ * @returns {string|null}         Comma-separated types, or null if no constraint.
+ */
+export function allowedTypesAttrForRecipe(recipe, override) {
+  if (override?.videoOnly) return 'video';
+  if (!recipe) return null;
+  if (recipe.inputType === 'image') return 'images';
+  if (recipe.inputType === 'video') return 'video';
+  return 'images,video,audio';
+}
+
 /** Current sub-path segments below the persisted root, e.g. ['events', '2024'] */
 let _subPath = [];
 

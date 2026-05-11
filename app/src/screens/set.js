@@ -7,7 +7,7 @@
 
 import { pickFolder, getFolder, setCurrentFolder, fileFilterForRecipe,
          listImages, loadVideoPreviews, writeVideoPreview, IMAGE_EXTS, VIDEO_EXTS } from '../data/folders.js';
-import { trackWorkspaceChange, setSelectedFile, getFolderState, setFolderPath } from '../data/folder-state.js';
+import { trackWorkspaceChange, setSelectedFile, getFolderState, setFolderPath, allowedTypesAttrForRecipe } from '../data/folder-state.js';
 import { isVideoFile, extractVideoFrame, getVideoDuration } from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { getRunsForRecipe }                          from '../data/runs.js';
@@ -485,7 +485,9 @@ export async function render(container, hash) {
 
       if (!sk) {
         const host = container.querySelector('#set-mb-host');
-        host.innerHTML = `<sidekick-manager id="set-sk-manager" no-hash-routing style="display:block;width:100%;height:100%"></sidekick-manager>`;
+        const allowedTypes = allowedTypesAttrForRecipe(currentRecipe);
+        const allowedAttr = allowedTypes ? ` allowed-types="${allowedTypes}"` : '';
+        host.innerHTML = `<sidekick-manager id="set-sk-manager" no-hash-routing${allowedAttr} style="display:block;width:100%;height:100%"></sidekick-manager>`;
         sk = host.querySelector('#set-sk-manager');
 
         // Wire selection changes from sidekick back to set.js state

@@ -20,7 +20,7 @@ import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../utils/video-scrubber.js';
 import { fileFilterForRecipe, getFolder } from '../data/folders.js';
 import { renderTimeRangeSection, bindTimeRangeControls, injectTimeRangeStyles } from '../utils/time-range-strip.js';
-import { wireFolderState } from '../data/folder-state.js';
+import { wireFolderState, allowedTypesAttrForRecipe } from '../data/folder-state.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -259,6 +259,8 @@ export async function render(container, hash) {
   const skEl = document.createElement('sidekick-manager');
   skEl.setAttribute('compare-mode', 'transform');
   skEl.setAttribute('no-hash-routing', '');
+  const nedAllowedTypes = allowedTypesAttrForRecipe(recipe, { videoOnly: stepIsVideoOnly });
+  if (nedAllowedTypes) skEl.setAttribute('allowed-types', nedAllowedTypes);
   skEl.style.cssText = 'display:block;width:100%;height:100%';
   wsContainer.appendChild(skEl);
   sk = skEl;

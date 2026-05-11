@@ -19,7 +19,7 @@ import { renderParamField } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../utils/video-scrubber.js';
 import { fileFilterForRecipe, getFolder } from '../data/folders.js';
-import { wireFolderState } from '../data/folder-state.js';
+import { wireFolderState, allowedTypesAttrForRecipe } from '../data/folder-state.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -497,6 +497,8 @@ export async function render(container, hash) {
   const skEl = document.createElement('sidekick-manager');
   skEl.setAttribute('compare-mode', 'transform');
   skEl.setAttribute('no-hash-routing', '');
+  const bldAllowedTypes = allowedTypesAttrForRecipe(recipe);
+  if (bldAllowedTypes) skEl.setAttribute('allowed-types', bldAllowedTypes);
   skEl.style.cssText = 'display:block;width:100%;height:100%';
   wsContainer.appendChild(skEl);
   bldSk = skEl;
