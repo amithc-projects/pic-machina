@@ -471,9 +471,12 @@ export async function render(container, hash) {
       }
       
       // ── Mount or update sidekick-manager ──────────────────
-      const hiddenMsg = onlyVideo
-        ? 'because this recipe only accepts Videos.'
-        : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.');
+      const typeStr = onlyVideo ? 'Videos' : (includeVideo ? 'Images and Videos' : 'Images');
+      const hiddenMsg = skippedMediaCount > 0
+        ? `${skippedMediaCount} file${skippedMediaCount !== 1 ? 's' : ''} hidden — this recipe only accepts ${typeStr}.`
+        : (selectedFiles.length === 0
+          ? `No ${typeStr} found in this folder.`
+          : '');
 
       if (!sk) {
         const host = container.querySelector('#set-mb-host');
@@ -518,8 +521,9 @@ export async function render(container, hash) {
         };
       }
 
-      // Update hidden files warning attributes
-      sk.setAttribute('hidden-files-count', String(skippedMediaCount));
+      // Update hidden files warning attributes (count > 0 controls visibility in HiddenFilesWarning)
+      const warningCount = skippedMediaCount > 0 ? skippedMediaCount : (selectedFiles.length === 0 && hiddenMsg ? 1 : 0);
+      sk.setAttribute('hidden-files-count', String(warningCount));
       sk.setAttribute('hidden-files-message', hiddenMsg);
 
       // Push the new directory root into sidekick (skip when triggered by sidekick:workspace)

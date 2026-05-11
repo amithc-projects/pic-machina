@@ -1,8 +1,13 @@
 # Plan: Image Sidecar Metadata System
 
+> **Format update (implemented):** Sidecars now use dot-prefix naming to align with
+> ux-file-manager: `photo.jpg` → `.photo.jpg` (not `photo.jpg.json`).
+> Existing v1 `filename.json` sidecars are migrated on folder open via a one-time
+> idempotent rename in `fld.js`.
+
 ## Overview
 
-A `.json` sidecar file stored alongside each image (e.g. `photo.jpg` → `photo.jpg.json`)
+A sidecar file stored alongside each image (e.g. `photo.jpg` → `.photo.jpg`)
 that persists everything the app knows or the user has annotated about that image. Sidecars
 survive re-processing, are human-readable, and integrate with the recipe/transform variable
 system so recipe steps can branch or label based on sidecar values.
