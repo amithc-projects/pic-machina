@@ -569,6 +569,9 @@ export async function render(container, hash) {
       // Wire shared folder-state tracking + restoration (retains folder/file
       // across screen switches) and also drive pic-machina's metadata panel.
       wireFolderState(sk, () => Promise.resolve(currentHandle), {
+        // When browsing a specific run's output, don't restore the shared
+        // subPath — that path belonged to the input folder, not this output.
+        skipSubPathRestore: !!runId,
         onReady: () => {
           console.log('[fld] sidekick-manager ready, restoring folder state');
           sk._fldReady = true;
