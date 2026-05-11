@@ -551,7 +551,7 @@ export async function render(container, hash) {
       // (e.g. `#fld`). Without this attribute, sidekick would treat the
       // route name as a sub-folder deep link, fail to find it, then clear
       // the hash — which fires pic-machina's router and navigates away.
-      main.innerHTML = `<sidekick-manager id="ic-sk-manager" no-hash-routing style="display:block; width:100%; height:100%"></sidekick-manager>`;
+      main.innerHTML = `<sidekick-manager id="ic-sk-manager" no-hash-routing hide-inspector style="display:block; width:100%; height:100%"></sidekick-manager>`;
       const sk = main.querySelector('#ic-sk-manager');
       sk._fldReady = false;
 
