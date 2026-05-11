@@ -7,6 +7,7 @@
 
 import { pickFolder, getFolder, setCurrentFolder, fileFilterForRecipe,
          listImages, loadVideoPreviews, writeVideoPreview, IMAGE_EXTS, VIDEO_EXTS } from '../data/folders.js';
+import { trackWorkspaceChange, setSelectedFile, getFolderState, setFolderPath } from '../data/folder-state.js';
 import { isVideoFile, extractVideoFrame, getVideoDuration } from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { getRunsForRecipe }                          from '../data/runs.js';
@@ -493,8 +494,9 @@ export async function render(container, hash) {
           renderSlotAssignment();
         });
 
-        // When sidekick navigates to a new folder, re-enumerate for hidden-file counts
+        // When sidekick navigates to a new folder, track path + re-enumerate
         sk.addEventListener('sidekick:workspace', async (e) => {
+          trackWorkspaceChange(e.detail.folderName, e.detail.pathLength);
           const dirHandle = sk.getDirectoryHandle?.();
           if (dirHandle && dirHandle !== currentHandle) {
             currentHandle = dirHandle;
@@ -506,10 +508,27 @@ export async function render(container, hash) {
           }
         });
 
-        // Push root once sidekick is ready
+        // Track single-file focus for cross-screen selection restoration
+        sk.addEventListener('sidekick:file-focus', (e) => {
+          setSelectedFile(e.detail?.filename || null);
+        });
+
+        // Push root once sidekick is ready, then restore sub-folder if any
         sk.addEventListener('sidekick:ready', () => {
           sk._setReady = true;
-          if (currentHandle) sk._pushRoot(currentHandle);
+          if (!currentHandle) return;
+          sk._pushRoot(currentHandle);
+          const { subPath, selectedFilename } = getFolderState();
+          if (subPath.length > 0 || selectedFilename) {
+            setFolderPath(subPath);
+            const onRoot = (e) => {
+              if (e.detail?.pathLength !== 1) return;
+              sk.removeEventListener('sidekick:workspace', onRoot);
+              sk.navigate(subPath.join('/') || '', selectedFilename ? { filename: selectedFilename } : undefined)
+                .catch(() => {});
+            };
+            sk.addEventListener('sidekick:workspace', onRoot);
+          }
         });
 
         sk._pushRoot = (handle, attempt = 0) => {

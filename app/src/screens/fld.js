@@ -24,6 +24,7 @@ import { MediaBrowser }                              from '../components/media-b
 import { globalLightbox }                            from '../components/lightbox.js';
 import { readSidecar }                               from '../data/sidecar.js';
 import { migrateSidecarFiles }                       from '../data/sidecarMigrate.js';
+import { wireFolderState }                           from '../data/folder-state.js';
 
 const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm','.avi','.mkv']);
@@ -553,60 +554,36 @@ export async function render(container, hash) {
       // the hash — which fires pic-machina's router and navigates away.
       main.innerHTML = `<sidekick-manager id="ic-sk-manager" no-hash-routing hide-inspector style="display:block; width:100%; height:100%"></sidekick-manager>`;
       const sk = main.querySelector('#ic-sk-manager');
-      sk._fldReady = false;
 
-      // Helper: push pic-machina's folder into sidekick. We retry briefly
-      // because setRoot silently no-ops if React inside the shadow DOM
-      // hasn't mounted its App ref yet.
-      sk._fldPushRoot = (handle, attempt = 0) => {
-        if (!handle || typeof sk.setRoot !== 'function') return;
-        try {
-          sk.setRoot(handle);
-          console.log('[fld] setRoot pushed (attempt', attempt, ')');
-        } catch (err) {
-          if (attempt < 20) {
-            setTimeout(() => sk._fldPushRoot(handle, attempt + 1), 50);
-          } else {
-            console.warn('[fld] setRoot gave up after retries:', err);
+      // Wire shared folder-state tracking + restoration (retains folder/file
+      // across screen switches) and also drive pic-machina's metadata panel.
+      wireFolderState(sk, () => Promise.resolve(currentHandle), {
+        onReady: () => {
+          console.log('[fld] sidekick-manager ready, restoring folder state');
+          sk._fldReady = true;
+        },
+        onWorkspace: (e) => {
+          console.log('[fld] workspace changed:', e.detail);
+          // Keep currentHandle in sync with sidekick's active directory
+          const h = sk.getDirectoryHandle?.();
+          if (h) currentHandle = h;
+        },
+        onFileFocus: async (e) => {
+          const detail = e.detail;
+          if (!detail || !detail.handle) {
+            metaPanel.clear();
+            selected = null;
+            return;
           }
-        }
-      };
-
-      sk.addEventListener('sidekick:ready', (e) => {
-        console.log('[fld] sidekick-manager ready:', e.detail);
-        sk._fldReady = true;
-        if (currentHandle) sk._fldPushRoot(currentHandle);
-      });
-
-      // Keep pic-machina's currentHandle / dirStack in sync with sidekick's
-      // own folder navigation so legacy code (deleteSelected, sidecar
-      // migration, etc.) keeps working.
-      sk.addEventListener('sidekick:workspace', (e) => {
-        // Detail shape: { folderName, pathLength } — sidekick owns the handle
-        // itself. We refresh metaPanel.dirHandle via file-focus below.
-        console.log('[fld] workspace changed:', e.detail);
-      });
-
-      // Single-file focus → drive the existing pic-machina sidecar / EXIF
-      // panel. Detail: { filename, handle, metadata, size, lastModified } or null.
-      sk.addEventListener('sidekick:file-focus', async (e) => {
-        const detail = e.detail;
-        if (!detail || !detail.handle) {
-          metaPanel.clear();
-          selected = null;
-          return;
-        }
-        try {
-          const file = await detail.handle.getFile();
-          // Best-effort: find the parent dir handle from the file handle is
-          // not directly available; reuse currentHandle (root) for now —
-          // sidecar reads/writes use the handle inside metaPanel itself.
-          metaPanel.setDirHandle(currentHandle);
-          await metaPanel.setFile(file);
-          selected = { file };
-        } catch (err) {
-          console.warn('[fld] file-focus → metaPanel failed:', err);
-        }
+          try {
+            const file = await detail.handle.getFile();
+            metaPanel.setDirHandle(currentHandle);
+            await metaPanel.setFile(file);
+            selected = { file };
+          } catch (err) {
+            console.warn('[fld] file-focus → metaPanel failed:', err);
+          }
+        },
       });
 
       // Multi-select / clear → mirror into selectedSet so any remaining
@@ -622,12 +599,6 @@ export async function render(container, hash) {
       );
     }
 
-    // Push the current folder into sidekick. If the component isn't ready
-    // yet the helper retries automatically.
-    const sk = main.querySelector('#ic-sk-manager');
-    if (sk && currentHandle && typeof sk._fldPushRoot === 'function') {
-      sk._fldPushRoot(currentHandle);
-    }
   }
 
   // ── Background preview generation ───────────────────────────

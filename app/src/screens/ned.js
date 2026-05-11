@@ -18,8 +18,9 @@ import { getImageInfo, renderImageInfoPanel,
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../utils/video-scrubber.js';
-import { fileFilterForRecipe } from '../data/folders.js';
+import { fileFilterForRecipe, getFolder } from '../data/folders.js';
 import { renderTimeRangeSection, bindTimeRangeControls, injectTimeRangeStyles } from '../utils/time-range-strip.js';
+import { wireFolderState } from '../data/folder-state.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -381,52 +382,44 @@ export async function render(container, hash) {
     };
   };
 
-  // ── Track active file → scrubber + info panel ────────────
-  sk.addEventListener('sidekick:file-focus', async (e) => {
-    if (!e.detail) {
-      testFile = null;
-      window._icTestImage = { file: null };
+  // ── Track active file → scrubber + info panel; restore folder state ──
+  wireFolderState(sk, () => getFolder('input'), {
+    onFileFocus: async (e) => {
+      if (!e.detail) {
+        testFile = null;
+        window._icTestImage = { file: null };
+        if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
+        scrubberMount.innerHTML = '';
+        return;
+      }
+      const file = await e.detail.handle.getFile();
+      testFile = file;
+      window._icTestImage = { file };
+
+      if (_infoPanel && file) {
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) _infoPanel.setDirHandle(inputHandle);
+        _infoPanel.setFile(file);
+      }
+      if (trControls && file && isVideoFile(file)) {
+        trControls.loadFilmstrip(file);
+      }
+
       if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
-      scrubberMount.innerHTML = '';
-      return;
-    }
-    const file = await e.detail.handle.getFile();
-    testFile = file;
-    window._icTestImage = { file };
-
-    if (_infoPanel && file) {
-      const { getFolder } = await import('../data/folders.js');
-      const inputHandle = await getFolder('input').catch(() => null);
-      if (inputHandle) _infoPanel.setDirHandle(inputHandle);
-      _infoPanel.setFile(file);
-    }
-    if (trControls && file && isVideoFile(file)) {
-      trControls.loadFilmstrip(file);
-    }
-
-    if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
-    scrubberMount.style.pointerEvents = 'auto';
-    if (file && isVideoFile(file)) {
-      _nedScrubber = await mountVideoScrubber(scrubberMount, file, {
-        initialTime: getStoredSeekTime(file.name),
-        onSeek: (t) => {
-          setStoredSeekTime(file.name, t);
-          schedulePreview();
-        },
-      });
-    } else {
-      scrubberMount.innerHTML = '';
-    }
+      scrubberMount.style.pointerEvents = 'auto';
+      if (file && isVideoFile(file)) {
+        _nedScrubber = await mountVideoScrubber(scrubberMount, file, {
+          initialTime: getStoredSeekTime(file.name),
+          onSeek: (t) => {
+            setStoredSeekTime(file.name, t);
+            schedulePreview();
+          },
+        });
+      } else {
+        scrubberMount.innerHTML = '';
+      }
+    },
   });
-
-  // ── Open input folder on ready ───────────────────────────
-  {
-    const { getFolder } = await import('../data/folders.js');
-    const initHandle = await getFolder('input').catch(() => null);
-    if (initHandle) {
-      sk.addEventListener('sidekick:ready', () => sk.setRoot(initHandle), { once: true });
-    }
-  }
 
   // ── Toolbar (i) button — toggle the same shared panel ────────────────
   container.querySelector('#ned-btn-info')?.addEventListener('click', async () => {

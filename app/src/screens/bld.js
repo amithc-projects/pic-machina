@@ -18,7 +18,8 @@ import { extractExif } from '../engine/exif-reader.js';
 import { renderParamField } from '../utils/param-fields.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../utils/video-scrubber.js';
-import { fileFilterForRecipe } from '../data/folders.js';
+import { fileFilterForRecipe, getFolder } from '../data/folders.js';
+import { wireFolderState } from '../data/folder-state.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -631,49 +632,41 @@ export async function render(container, hash) {
     };
   };
 
-  // ── Track active file → scrubber + info panel ────────────
-  bldSk.addEventListener('sidekick:file-focus', async (e) => {
-    if (!e.detail) {
-      _bldActiveVideoFile = null;
-      window._icTestImage = { file: null };
+  // ── Track active file → scrubber + info panel; restore folder state ──
+  wireFolderState(bldSk, () => getFolder('input'), {
+    onFileFocus: async (e) => {
+      if (!e.detail) {
+        _bldActiveVideoFile = null;
+        window._icTestImage = { file: null };
+        if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
+        bldScrubberMount.innerHTML = '';
+        return;
+      }
+      const file = await e.detail.handle.getFile();
+      window._icTestImage = { file };
+      _bldActiveVideoFile = file;
+
+      if (_bldInfoPanel && file) {
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
+        if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(file);
+      }
+
       if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
-      bldScrubberMount.innerHTML = '';
-      return;
-    }
-    const file = await e.detail.handle.getFile();
-    window._icTestImage = { file };
-    _bldActiveVideoFile = file;
-
-    if (_bldInfoPanel && file) {
-      const { getFolder } = await import('../data/folders.js');
-      const inputHandle = await getFolder('input').catch(() => null);
-      if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
-      if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(file);
-    }
-
-    if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
-    bldScrubberMount.style.pointerEvents = 'auto';
-    if (file && isVideoFile(file)) {
-      _bldScrubber = await mountVideoScrubber(bldScrubberMount, file, {
-        initialTime: getStoredSeekTime(file.name),
-        onSeek: (t) => {
-          setStoredSeekTime(file.name, t);
-          if (bldSk) bldSk.triggerProcess();
-        },
-      });
-    } else {
-      bldScrubberMount.innerHTML = '';
-    }
+      bldScrubberMount.style.pointerEvents = 'auto';
+      if (file && isVideoFile(file)) {
+        _bldScrubber = await mountVideoScrubber(bldScrubberMount, file, {
+          initialTime: getStoredSeekTime(file.name),
+          onSeek: (t) => {
+            setStoredSeekTime(file.name, t);
+            if (bldSk) bldSk.triggerProcess();
+          },
+        });
+      } else {
+        bldScrubberMount.innerHTML = '';
+      }
+    },
   });
-
-  // ── Open input folder on ready ───────────────────────────
-  {
-    const { getFolder } = await import('../data/folders.js');
-    const initHandle = await getFolder('input').catch(() => null);
-    if (initHandle) {
-      bldSk.addEventListener('sidekick:ready', () => bldSk.setRoot(initHandle), { once: true });
-    }
-  }
 
   function getPrevNodeId() {
     const nodes = flattenNodes(draft.nodes).filter(i => !i.isBranchHeader);
