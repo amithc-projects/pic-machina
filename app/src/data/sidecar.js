@@ -2,11 +2,11 @@
  * ImageChef — Sidecar metadata module
  *
  * Reads and writes sidecar files stored alongside images.
- * New format: dot-prefix  `photo.jpg` → `.photo.jpg`  (matches ux-file-manager)
- * Legacy format (read-only fallback): `photo.jpg` → `photo.jpg.json`
+ * Format: dot-prefix + .json extension  `photo.jpg` → `.photo.jpg.json`
+ * Legacy format (read-only fallback): `photo.jpg` → `.photo.jpg` (old dot-prefix without .json)
  *
- * Schema v1:
- *   $version  — always 1
+ * Schema v2:
+ *   $version  — always 2
  *   source    — filename, sizeBytes (set on first write, read-only)
  *   exif      — mirror of EXIF fields (read-only, from image file)
  *   geo       — city/country derived from GPS, user-editable
@@ -15,21 +15,20 @@
  *   processing — append-only log of batch runs
  */
 
-// Sidecar files use the dot-prefix format: `.photo.jpg`
-// This matches the ux-file-manager (sidekick-manager) convention so both tools
-// share the same on-disk files. Legacy `photo.jpg.json` suffix files are still
-// readable (fallback) but all new writes use the dot-prefix.
+// Sidecar files use dot-prefix + .json extension: `.photo.jpg.json`
+// This makes the JSON nature of the file explicit in the filename and matches
+// the ux-file-manager (sidekick-manager) scanner which looks for .{name}.json.
 const SIDECAR_PREFIX = '.';
-const LEGACY_SIDECAR_EXT = '.json';
+const SIDECAR_EXT = '.json';
 
-/** Return the dot-prefix sidecar name for a given media filename. */
+/** Return the sidecar filename for a given media filename: `.photo.jpg.json` */
 function sidecarName(filename) {
-  return `${SIDECAR_PREFIX}${filename}`;
+  return `${SIDECAR_PREFIX}${filename}${SIDECAR_EXT}`;
 }
 
-/** Return the legacy suffix sidecar name (read-only fallback). */
+/** Return the legacy dot-prefix sidecar name (read-only fallback): `.photo.jpg` */
 function legacySidecarName(filename) {
-  return `${filename}${LEGACY_SIDECAR_EXT}`;
+  return `${SIDECAR_PREFIX}${filename}`;
 }
 
 // Nominatim reverse-geocode — free, no key, 1 req/s limit
@@ -148,7 +147,7 @@ export function migrateSidecar(data) {
 export async function readSidecar(dirHandle, filename) {
   if (!dirHandle) return null;
 
-  // Try dot-prefix format first (.photo.jpg), then fall back to legacy suffix (photo.jpg.json).
+  // Try new format first (.photo.jpg.json), then fall back to legacy dot-prefix (.photo.jpg).
   const candidates = [sidecarName(filename), legacySidecarName(filename)];
   for (const name of candidates) {
     try {

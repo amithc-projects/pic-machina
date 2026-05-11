@@ -30,7 +30,7 @@ The file browser / media library is powered by the **`<sidekick-manager>` web co
 
 Sidecars use **dot-prefix naming** (aligned with ux-file-manager): `.{filename}`
 
-Example: `photo.jpg` → `.photo.jpg`
+Example: `photo.jpg` → `.photo.jpg.json`
 
 The sidecar JSON schema:
 
