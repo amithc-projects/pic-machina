@@ -160,22 +160,22 @@ export function wireFolderState(sk, getHandle, {
     if (!handle) return;
 
     const { subPath, selectedFilename } = getFolderState();
-    sk.setRoot(handle);
-    onReady?.(handle);
 
     // After setRoot the sidekick fires a workspace event for the root (pathLength=1).
     // Use that event as the signal to issue any pending navigate call.
     const pendingPath = skipSubPathRestore ? (navigateTo || null) : null;
     const pendingRestore = !skipSubPathRestore && (subPath.length > 0 || selectedFilename);
 
+    // Pre-commit + register onRoot BEFORE calling setRoot so the listener
+    // is guaranteed to be in place when the workspace event fires.
+    if (!skipTracking && pendingRestore) {
+      // Pre-commit so workspace tracking stays correct during navigation
+      setFolderPath(subPath);
+    }
+
     if (pendingPath || pendingRestore) {
       const pathStr = pendingPath ?? subPath.join('/');
       const selFile = pendingRestore ? selectedFilename : null;
-
-      if (!skipTracking && pendingRestore) {
-        // Pre-commit so workspace tracking stays correct during navigation
-        setFolderPath(subPath);
-      }
 
       const onRoot = (e) => {
         if (e.detail?.pathLength !== 1) return;
@@ -186,5 +186,8 @@ export function wireFolderState(sk, getHandle, {
       };
       sk.addEventListener('sidekick:workspace', onRoot);
     }
+
+    sk.setRoot(handle);
+    onReady?.(handle);
   }, { once: true });
 }

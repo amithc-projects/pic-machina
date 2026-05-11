@@ -635,7 +635,7 @@ export async function render(container, hash) {
   };
 
   // ── Track active file → scrubber + info panel; restore folder state ──
-  wireFolderState(bldSk, () => getFolder('input'), {
+  wireFolderState(bldSk, () => getFolder('input').catch(() => getFolder('browse')), {
     onFileFocus: async (e) => {
       if (!e.detail) {
         _bldActiveVideoFile = null;

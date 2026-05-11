@@ -385,7 +385,7 @@ export async function render(container, hash) {
   };
 
   // ── Track active file → scrubber + info panel; restore folder state ──
-  wireFolderState(sk, () => getFolder('input'), {
+  wireFolderState(sk, () => getFolder('input').catch(() => getFolder('browse')), {
     onFileFocus: async (e) => {
       if (!e.detail) {
         testFile = null;
