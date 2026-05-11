@@ -251,12 +251,19 @@ export async function render(container, hash) {
 
     if (!currentRecipe || !inputHandle) return;
     
-    let effOutputHandle = outputHandle;
     const settings = getSettings();
+
+    // Re-enumerate current directory to get File objects for selected filenames
+    // (must be computed before effOutputHandle so "output to input" can use it)
+    const batchDirHandle = sk?.getDirectoryHandle?.() || currentHandle;
+
+    let effOutputHandle = outputHandle;
     if (settings.batch?.useInputForOutput) {
-      effOutputHandle = inputHandle;
-      
-      // Ensure we have read/write access to input folder if using it as output natively
+      // Use the CURRENT browsed folder (not the root inputHandle) so that
+      // e.g. browsing ../ai-images/sports → output goes to ../ai-images/sports/<recipe>
+      effOutputHandle = batchDirHandle || inputHandle;
+
+      // Ensure we have read/write access to the target folder
       if ((await effOutputHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
           if ((await effOutputHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
               window.AuroraToast?.show({ variant: 'danger', title: 'Permission Denied', description: 'Cannot write output to the input directory without your permission.' });
@@ -264,11 +271,8 @@ export async function render(container, hash) {
           }
       }
     }
-    
-    if (!effOutputHandle) return;
 
-    // Re-enumerate current directory to get File objects for selected filenames
-    const batchDirHandle = sk?.getDirectoryHandle?.() || currentHandle;
+    if (!effOutputHandle) return;
     if (!batchDirHandle) return;
     const rawFiles = [];
     for await (const [name, entry] of batchDirHandle.entries()) {
