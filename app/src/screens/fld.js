@@ -356,24 +356,37 @@ export async function render(container, hash) {
 
 
   // ── Load files ──────────────────────────────────────────────
+  // For run context: the sidekick root is set to outputHandle (parent), then
+  // sidekick navigates into outputFolder — so the breadcrumb shows both levels.
+  // For browse mode: treat 'input' as the primary key (shared with set/bld/ned)
+  // so folder/selection state is preserved across screen switches.
+  let runOutputHandle = null;   // non-null in run context: the parent output dir
+  let runSubfolder = null;      // non-null in run context: the recipe subfolder name
   try {
     let rootHandle;
     if (browseMode) {
       rootHandle = browseHandle;
     } else {
-      let outputHandle = run?.outputHandleObj || await getFolder('output');
+      const outputHandle = run?.outputHandleObj || await getFolder('output');
       if (!outputHandle) {
         showEmpty('Output folder not accessible. Grant permission in Batch Setup.');
         return;
       }
 
       const subfolder = run?.outputFolder || 'output';
+      // Verify the subfolder exists before committing
       try {
-        rootHandle = await outputHandle.getDirectoryHandle(subfolder);
+        await outputHandle.getDirectoryHandle(subfolder, { create: false });
       } catch {
         showEmpty(`Subfolder "${subfolder}" not found.`);
         return;
       }
+
+      // Set root at outputHandle so sidekick shows 2-level breadcrumb:
+      //   outputHandle.name / subfolder
+      rootHandle = outputHandle;
+      runOutputHandle = outputHandle;
+      runSubfolder = subfolder;
     }
 
     currentHandle = rootHandle;
@@ -568,10 +581,18 @@ export async function render(container, hash) {
 
       // Wire shared folder-state tracking + restoration (retains folder/file
       // across screen switches) and also drive pic-machina's metadata panel.
-      wireFolderState(sk, () => Promise.resolve(currentHandle), {
-        // When browsing a specific run's output, don't restore the shared
-        // subPath — that path belonged to the input folder, not this output.
+      // In browse mode, use 'input' as the primary folder key so that state
+      // (subfolder navigation, selection) is shared with bld/ned/set.
+      // In run context, root is the output parent; navigate into the subfolder;
+      // don't touch shared state so it doesn't corrupt the input browse position.
+      const fldGetHandle = runId
+        ? () => Promise.resolve(runOutputHandle)
+        : () => getFolder('input').catch(() => getFolder('browse'));
+
+      wireFolderState(sk, fldGetHandle, {
         skipSubPathRestore: !!runId,
+        skipTracking: !!runId,
+        navigateTo: runSubfolder || null,
         onReady: () => {
           console.log('[fld] sidekick-manager ready, restoring folder state');
           sk._fldReady = true;
@@ -579,10 +600,12 @@ export async function render(container, hash) {
           applyRunFilterToSidekick();
         },
         onWorkspace: (e) => {
-          console.log('[fld] workspace changed:', e.detail);
           // Keep currentHandle in sync with sidekick's active directory
           const h = sk.getDirectoryHandle?.();
           if (h) currentHandle = h;
+          // In run context, re-apply the manifest filter once sidekick has
+          // navigated into the output subfolder (breadcrumb depth = 2).
+          if (runId && e.detail?.pathLength === 2) applyRunFilterToSidekick();
         },
         onFileFocus: async (e) => {
           const detail = e.detail;

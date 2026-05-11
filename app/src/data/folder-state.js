@@ -124,15 +124,33 @@ export function getFolderState() {
  * @param {Function}    [opts.onFileFocus]    Extra callback after setSelectedFile.
  * @param {Function}    [opts.onReady]        Extra callback after setRoot (before restore navigate).
  */
-export function wireFolderState(sk, getHandle, { onWorkspace, onFileFocus, onReady, skipSubPathRestore = false } = {}) {
+/**
+ * @param {Object}      [opts]
+ * @param {Function}    [opts.onWorkspace]       Extra callback after trackWorkspaceChange.
+ * @param {Function}    [opts.onFileFocus]        Extra callback after setSelectedFile.
+ * @param {Function}    [opts.onReady]            Extra callback after setRoot (before restore navigate).
+ * @param {boolean}     [opts.skipSubPathRestore] When true, don't restore the shared subPath on ready.
+ * @param {boolean}     [opts.skipTracking]       When true, don't update shared _subPath / _selectedFilename
+ *                                                on workspace/file-focus events. Use for read-only contexts
+ *                                                (e.g. browsing a run's output folder) that should not
+ *                                                interfere with the user's input-folder navigation state.
+ * @param {string}      [opts.navigateTo]         Path to navigate into immediately after setRoot fires
+ *                                                (used for history context to land inside output subfolder).
+ */
+export function wireFolderState(sk, getHandle, {
+  onWorkspace, onFileFocus, onReady,
+  skipSubPathRestore = false,
+  skipTracking = false,
+  navigateTo = null,
+} = {}) {
   // ── Ongoing navigation tracking ──────────────────────────
   sk.addEventListener('sidekick:workspace', (e) => {
-    trackWorkspaceChange(e.detail.folderName, e.detail.pathLength);
+    if (!skipTracking) trackWorkspaceChange(e.detail.folderName, e.detail.pathLength);
     onWorkspace?.(e);
   });
 
   sk.addEventListener('sidekick:file-focus', (e) => {
-    setSelectedFile(e.detail?.filename || null);
+    if (!skipTracking) setSelectedFile(e.detail?.filename || null);
     onFileFocus?.(e);
   });
 
@@ -145,15 +163,26 @@ export function wireFolderState(sk, getHandle, { onWorkspace, onFileFocus, onRea
     sk.setRoot(handle);
     onReady?.(handle);
 
-    if (!skipSubPathRestore && (subPath.length > 0 || selectedFilename)) {
-      // Pre-commit so workspace tracking stays correct during navigation
-      setFolderPath(subPath);
+    // After setRoot the sidekick fires a workspace event for the root (pathLength=1).
+    // Use that event as the signal to issue any pending navigate call.
+    const pendingPath = skipSubPathRestore ? (navigateTo || null) : null;
+    const pendingRestore = !skipSubPathRestore && (subPath.length > 0 || selectedFilename);
+
+    if (pendingPath || pendingRestore) {
+      const pathStr = pendingPath ?? subPath.join('/');
+      const selFile = pendingRestore ? selectedFilename : null;
+
+      if (!skipTracking && pendingRestore) {
+        // Pre-commit so workspace tracking stays correct during navigation
+        setFolderPath(subPath);
+      }
+
       const onRoot = (e) => {
         if (e.detail?.pathLength !== 1) return;
         sk.removeEventListener('sidekick:workspace', onRoot);
-        const pathStr = subPath.join('/');
-        sk.navigate(pathStr || '', selectedFilename ? { filename: selectedFilename } : undefined)
-          .catch(() => {});
+        if (pathStr) {
+          sk.navigate(pathStr, selFile ? { filename: selFile } : undefined).catch(() => {});
+        }
       };
       sk.addEventListener('sidekick:workspace', onRoot);
     }
