@@ -480,7 +480,7 @@ export async function render(container, hash) {
 
   const saveStatus = container.querySelector('#bld-save-status');
 
-  // ── Unified Image Workspace ───────────────────────────────
+  // ── Sidekick-manager workspace (compare-mode="transform") ────
   let bldPreviewNodeId = null;
   let bldCompareRef = 'original';
 
@@ -488,274 +488,191 @@ export async function render(container, hash) {
   let _bldScrubber = null;
   let _bldActiveVideoFile = null;
 
-  const { MediaBrowser } = await import('../components/media-browser.js');
   const wsContainer = container.querySelector('#bld-workspace-container');
+  wsContainer.style.position = 'relative';
 
-  let mbDirStack = [];
-  let mbCurrentHandle = null;
-  let workspace = null; // MediaBrowser instance
+  // Create sidekick-manager element
+  let bldSk = null;
+  const skEl = document.createElement('sidekick-manager');
+  skEl.setAttribute('compare-mode', 'transform');
+  skEl.setAttribute('no-hash-routing', '');
+  skEl.style.cssText = 'display:block;width:100%;height:100%';
+  wsContainer.appendChild(skEl);
+  bldSk = skEl;
 
-  async function loadBldFolder(handle) {
-    if (!handle) return;
-    mbCurrentHandle = handle;
-    const { fileFilterForRecipe, IMAGE_EXTS, VIDEO_EXTS } = await import('../data/folders.js');
-    const { includeVideo, onlyVideo } = fileFilterForRecipe(draft);
-    
-    const files = [];
-    const allFolders = [];
-    
-    let skippedMediaCount = 0;
-    
-    for await (const [name, entry] of handle.entries()) {
-      if (name.startsWith('.')) continue;
-      if (entry.kind === 'directory') allFolders.push({ name, handle: entry });
-      else if (entry.kind === 'file') {
-        const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
-        const isImg = IMAGE_EXTS.has(ext);
-        const isVid = VIDEO_EXTS.has(ext);
-        const isMedia = isImg || isVid;
-        let match = false;
-        if (onlyVideo) match = isVid;
-        else if (includeVideo) match = isImg || isVid;
-        else match = isImg;
-        if (match) files.push({ file: await entry.getFile(), handle: entry });
-        else if (isMedia) skippedMediaCount++;
-      }
-    }
-    files.sort((a,b) => a.file.name.localeCompare(b.file.name));
-    allFolders.sort((a,b) => a.name.localeCompare(b.name));
-    
-    const mbEntries = [];
-    if (mbDirStack.length > 0) mbEntries.push({ name: '..', isFolder: true, handle: null });
-    allFolders.forEach(f => mbEntries.push({ name: f.name, isFolder: true, handle: f.handle }));
-    files.forEach(f => mbEntries.push({ name: f.file.name, file: f.file, isFolder: false, handle: f.handle }));
+  // Scrubber overlay
+  const bldScrubberMount = document.createElement('div');
+  bldScrubberMount.id = 'bld-scrubber-mount';
+  bldScrubberMount.style.cssText = 'position:absolute;bottom:110px;left:0;right:0;z-index:100;pointer-events:none;';
+  wsContainer.appendChild(bldScrubberMount);
 
-    if (!workspace) {
-      workspace = new MediaBrowser(wsContainer, {
-        mode: 'compare',
-        enableCompare: true,
-        entries: mbEntries,
-        breadcrumbs: mbDirStack.map(d => d.name),
-        currentFolderName: handle.name,
-        canGoUp: mbDirStack.length > 0,
-        hiddenFilesCount: skippedMediaCount,
-        hiddenFilesMessage: onlyVideo ? 'because this recipe only accepts Videos.' : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.'),
-        onChangeFolderClick: async () => {
-          const { pickFolder } = await import('../data/folders.js');
-          const h = await pickFolder('input');
-          if (h) { mbDirStack = []; await loadBldFolder(h); }
-        },
-        onNavigateUp: async () => {
-          if (mbDirStack.length === 0) return;
-          const parent = mbDirStack.pop();
-          await loadBldFolder(parent.handle);
-        },
-        onDoubleClick: async (ent) => {
-          if (ent.isFolder && ent.name !== '..') {
-            mbDirStack.push({ name: handle.name, handle: handle });
-            await loadBldFolder(ent.handle);
-          } else if (ent.file && workspace.mode !== 'compare') {
-             const { GlobalLightbox } = await import('../components/lightbox.js');
-             const lb = new GlobalLightbox();
-             lb.show([ent], 0);
-          }
-        },
-        customControlsHtml: `
-          <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:flex;gap:4px">
-            <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
-            <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
-          </div>
-        `,
-        onBindCustomControls: (cnt) => {
-          cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-              cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(b => b.classList.remove('is-active'));
-              e.currentTarget.classList.add('is-active');
-              bldCompareRef = e.currentTarget.dataset.ref;
-              if (workspace && workspace.compareWorkspace) workspace.compareWorkspace.triggerProcess();
-            });
-          });
-        },
-        onSelectionChange: async (selectedIds, entries) => {
-           let activeFile = null;
-           if (selectedIds.length > 0) {
-             const activeEnt = entries.find(e => e.name === selectedIds[0]);
-             if (activeEnt) activeFile = activeEnt.file;
-           }
-           const filesList = entries.filter(e => !e.isFolder).map(e => e.file);
-           
-           window._icTestFolderFiles = filesList;
-           window._icTestImage = { file: activeFile };
-           if (_bldInfoPanel && activeFile) {
-             const { getFolder } = await import('../data/folders.js');
-             const inputHandle = await getFolder('input').catch(() => null);
-             if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
-             if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(activeFile);
-           }
-           _bldActiveVideoFile = activeFile;
-           if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
-           const scrubberMount = wsContainer.querySelector('#bld-scrubber-mount');
-           if (activeFile && isVideoFile(activeFile) && scrubberMount) {
-             _bldScrubber = await mountVideoScrubber(scrubberMount, activeFile, {
-               initialTime: getStoredSeekTime(activeFile.name),
-               onSeek: (t) => {
-                 setStoredSeekTime(activeFile.name, t);
-                 if (workspace && workspace.compareWorkspace) workspace.compareWorkspace.triggerProcess();
-               },
-             });
-           } else if (scrubberMount) {
-             scrubberMount.innerHTML = '';
-           }
-        },
-        onCompareInfo: async (file) => {
-          const panel = await getBldInfoPanel();
-          await panel.setFile(file);
-          panel.show();
-        },
-        onCompareRender: async (file) => {
-          const url = URL.createObjectURL(file);
-          const isVideo = isVideoFile(file);
-
-          let imageSource;
-          if (isVideo) {
-            const seekTime = getStoredSeekTime(file.name);
-            const frameCanvas = await extractVideoFrame(url, seekTime);
-            imageSource = frameCanvas;
-          } else {
-            const img = new Image();
-            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
-            imageSource = img;
-          }
-
-          const exif = await extractExif(file);
-
-          let sidecar = null;
-          try {
-            const { getFolder }   = await import('../data/folders.js');
-            const { readSidecar } = await import('../data/sidecar.js');
-            const inputHandle = await getFolder('input').catch(() => null);
-            if (inputHandle) sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
-          } catch { /* best-effort */ }
-
-          const context = {
-            filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
-            originalFile: file,
-            _previewMode: true,
-          };
-
-          window._icBldTargetExif = exif;
-          window._icBldTargetContext = context;
-
-          const proc = new ImageProcessor();
-          const afterUrl = await proc.previewDataUrl(imageSource, draft.nodes, context, bldPreviewNodeId);
-          window._icBldAfterUrl = afterUrl;
-
-          const flat = flattenNodes(draft.nodes);
-          const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
-          const afterTitle = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
-
-          let overlayWarning = null;
-          if (nodeEnt) {
-            if (nodeEnt.node.type !== 'transform') {
-              overlayWarning = '(Not all steps are previewable)';
-            } else {
-              const NO_PREVIEW_IDS = new Set([
-                'flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx',
-                'flow-create-zip', 'flow-video-wall', 'flow-video-stitcher', 'flow-geo-timeline',
-                'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack',
-                'flow-template-aggregator', 'flow-face-swap', 'flow-gif-from-states',
-                'flow-video-concat',
-                'flow-video-convert', 'flow-video-trim', 'flow-video-compress',
-                'flow-video-change-fps', 'flow-video-speed',
-                'flow-video-strip-audio', 'flow-video-extract-audio',
-                'flow-video-remix-audio',
-              ]);
-              const tid = nodeEnt.node.transformId;
-              const def = registry.get(tid);
-              const isVideoStep = def?.sourceTransformId || def?.categoryKey === 'video-effect';
-
-              if (NO_PREVIEW_IDS.has(tid) || (!isVideo && isVideoStep)) {
-                 overlayWarning = '(Not all steps are previewable)';
-              }
-            }
-          }
-
-          let beforeUrl = isVideo && imageSource
-            ? (() => { const c = imageSource; const b = document.createElement('canvas'); b.width = c.width; b.height = c.height; b.getContext('2d').drawImage(c, 0, 0); return new Promise(r => b.toBlob(bl => r(URL.createObjectURL(bl)), 'image/jpeg', 0.9)); })()
-            : Promise.resolve(URL.createObjectURL(file));
-          beforeUrl = await beforeUrl;
-          let beforeTitle = 'Original';
-
-          if (bldCompareRef === 'prev') {
-            const prevId = getPrevNodeId();
-            if (prevId) {
-              const proc2 = new ImageProcessor();
-              const ctx2 = {
-                filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
-                originalFile: file, _previewMode: true,
-              };
-              beforeUrl = await proc2.previewDataUrl(imageSource, draft.nodes, ctx2, prevId);
-              const prevEnt = flat.find(f => f.node.id === prevId);
-              beforeTitle = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : 'Prev Step';
-            }
-          }
-
-          URL.revokeObjectURL(url);
-          return {
-            beforeUrl,
-            afterUrl,
-            beforeLabel: beforeTitle,
-            afterLabel: afterTitle,
-            overlayWarning,
-            context
-          };
-        }
+  // ── Custom toolbar: Original / Prev Step ─────────────────
+  bldSk.compareControls = `
+    <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:flex;gap:4px">
+      <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
+      <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
+    </div>
+  `;
+  bldSk.compareBindControls = (cnt) => {
+    cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(b => b.classList.remove('is-active'));
+        e.currentTarget.classList.add('is-active');
+        bldCompareRef = e.currentTarget.dataset.ref;
+        if (bldSk) bldSk.triggerProcess();
       });
-      
-      const firstFile = files[0];
-      if (firstFile && window._icTestImage?.file) {
-         workspace.selectedIds.add(window._icTestImage.file.name);
-         workspace.lastSelectedIdx = mbEntries.findIndex(e => e.name === window._icTestImage.file.name);
-         workspace._syncSelectionUI();
-      } else if (firstFile) {
-         workspace.selectedIds.add(firstFile.file.name);
-         workspace.lastSelectedIdx = mbEntries.findIndex(e => e.name === firstFile.file.name);
-         workspace._syncSelectionUI();
-      }
+    });
+  };
+
+  // ── compareInfo callback ─────────────────────────────────
+  bldSk.compareInfo = async (file) => {
+    const panel = await getBldInfoPanel();
+    await panel.setFile(file);
+    panel.show();
+  };
+
+  // ── compareRender callback ───────────────────────────────
+  bldSk.compareRender = async (file) => {
+    const url = URL.createObjectURL(file);
+    const isVideo = isVideoFile(file);
+
+    let imageSource;
+    if (isVideo) {
+      const seekTime = getStoredSeekTime(file.name);
+      const frameCanvas = await extractVideoFrame(url, seekTime);
+      imageSource = frameCanvas;
     } else {
-      workspace.options.breadcrumbs = mbDirStack.map(d => d.name);
-      workspace.options.currentFolderName = handle.name;
-      workspace.options.canGoUp = mbDirStack.length > 0;
-      workspace.options.hiddenFilesCount = skippedMediaCount;
-      workspace.options.hiddenFilesMessage = onlyVideo ? 'because this recipe only accepts Videos.' : (includeVideo ? 'because this recipe only accepts Images and Videos.' : 'because this recipe only accepts Images.');
-      workspace.entries = mbEntries;
-      workspace.applyFilters();
-      workspace.renderHeader();
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      imageSource = img;
     }
-  }
 
-  // Inject scrubber mount point
+    const exif = await extractExif(file);
+
+    let sidecar = null;
+    try {
+      const { getFolder }   = await import('../data/folders.js');
+      const { readSidecar } = await import('../data/sidecar.js');
+      const inputHandle = await getFolder('input').catch(() => null);
+      if (inputHandle) sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
+    } catch { /* best-effort */ }
+
+    const context = {
+      filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
+      originalFile: file,
+      _previewMode: true,
+    };
+
+    window._icBldTargetExif = exif;
+    window._icBldTargetContext = context;
+
+    const proc = new ImageProcessor();
+    const afterUrl = await proc.previewDataUrl(imageSource, draft.nodes, context, bldPreviewNodeId);
+    window._icBldAfterUrl = afterUrl;
+
+    const flat = flattenNodes(draft.nodes);
+    const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
+    const afterTitle = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
+
+    let overlayWarning = null;
+    if (nodeEnt) {
+      if (nodeEnt.node.type !== 'transform') {
+        overlayWarning = '(Not all steps are previewable)';
+      } else {
+        const NO_PREVIEW_IDS = new Set([
+          'flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx',
+          'flow-create-zip', 'flow-video-wall', 'flow-video-stitcher', 'flow-geo-timeline',
+          'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack',
+          'flow-template-aggregator', 'flow-face-swap', 'flow-gif-from-states',
+          'flow-video-concat',
+          'flow-video-convert', 'flow-video-trim', 'flow-video-compress',
+          'flow-video-change-fps', 'flow-video-speed',
+          'flow-video-strip-audio', 'flow-video-extract-audio',
+          'flow-video-remix-audio',
+        ]);
+        const tid = nodeEnt.node.transformId;
+        const def = registry.get(tid);
+        const isVideoStep = def?.sourceTransformId || def?.categoryKey === 'video-effect';
+
+        if (NO_PREVIEW_IDS.has(tid) || (!isVideo && isVideoStep)) {
+          overlayWarning = '(Not all steps are previewable)';
+        }
+      }
+    }
+
+    let beforeUrl = isVideo && imageSource
+      ? (() => { const c = imageSource; const b = document.createElement('canvas'); b.width = c.width; b.height = c.height; b.getContext('2d').drawImage(c, 0, 0); return new Promise(r => b.toBlob(bl => r(URL.createObjectURL(bl)), 'image/jpeg', 0.9)); })()
+      : Promise.resolve(URL.createObjectURL(file));
+    beforeUrl = await beforeUrl;
+    let beforeTitle = 'Original';
+
+    if (bldCompareRef === 'prev') {
+      const prevId = getPrevNodeId();
+      if (prevId) {
+        const proc2 = new ImageProcessor();
+        const ctx2 = {
+          filename: file.name, exif, meta: {}, sidecar, variables: new Map(),
+          originalFile: file, _previewMode: true,
+        };
+        beforeUrl = await proc2.previewDataUrl(imageSource, draft.nodes, ctx2, prevId);
+        const prevEnt = flat.find(f => f.node.id === prevId);
+        beforeTitle = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : 'Prev Step';
+      }
+    }
+
+    URL.revokeObjectURL(url);
+    return {
+      beforeUrl,
+      afterUrl,
+      beforeLabel: beforeTitle,
+      afterLabel: afterTitle,
+      overlayWarning,
+      context
+    };
+  };
+
+  // ── Track active file → scrubber + info panel ────────────
+  bldSk.addEventListener('sidekick:file-focus', async (e) => {
+    if (!e.detail) {
+      _bldActiveVideoFile = null;
+      window._icTestImage = { file: null };
+      if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
+      bldScrubberMount.innerHTML = '';
+      return;
+    }
+    const file = await e.detail.handle.getFile();
+    window._icTestImage = { file };
+    _bldActiveVideoFile = file;
+
+    if (_bldInfoPanel && file) {
+      const { getFolder } = await import('../data/folders.js');
+      const inputHandle = await getFolder('input').catch(() => null);
+      if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
+      if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(file);
+    }
+
+    if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
+    bldScrubberMount.style.pointerEvents = 'auto';
+    if (file && isVideoFile(file)) {
+      _bldScrubber = await mountVideoScrubber(bldScrubberMount, file, {
+        initialTime: getStoredSeekTime(file.name),
+        onSeek: (t) => {
+          setStoredSeekTime(file.name, t);
+          if (bldSk) bldSk.triggerProcess();
+        },
+      });
+    } else {
+      bldScrubberMount.innerHTML = '';
+    }
+  });
+
+  // ── Open input folder on ready ───────────────────────────
   {
-    const mount = document.createElement('div');
-    mount.id = 'bld-scrubber-mount';
-    mount.style.position = 'absolute';
-    mount.style.bottom = '110px';
-    mount.style.left = '0';
-    mount.style.right = '0';
-    mount.style.zIndex = '100';
-    wsContainer.style.position = 'relative';
-    wsContainer.appendChild(mount);
-  }
-
-  if (window._icTestFolderFiles && window._icTestFolderFiles.length > 0) {
-    // Initial folder load
     const { getFolder } = await import('../data/folders.js');
-    const initHandle = await getFolder('input').catch(()=>null);
-    await loadBldFolder(initHandle);
-  } else {
-    const { getFolder } = await import('../data/folders.js');
-    const initHandle = await getFolder('input').catch(()=>null);
-    await loadBldFolder(initHandle);
+    const initHandle = await getFolder('input').catch(() => null);
+    if (initHandle) {
+      bldSk.addEventListener('sidekick:ready', () => bldSk.setRoot(initHandle), { once: true });
+    }
   }
 
   function getPrevNodeId() {
@@ -768,7 +685,7 @@ export async function render(container, hash) {
   function scheduleBldPreview(delay = 400) {
     clearTimeout(window._icBldTimer);
     window._icBldTimer = setTimeout(() => {
-       if (workspace && workspace.compareWorkspace) workspace.compareWorkspace.triggerProcess();
+      if (bldSk) bldSk.triggerProcess();
     }, delay);
   }
 
@@ -904,7 +821,6 @@ export async function render(container, hash) {
   container.querySelector('#bld-input-type')?.addEventListener('change', async e => {
     draft.inputType = e.target.value;
     markDirty();
-    if (mbCurrentHandle) await loadBldFolder(mbCurrentHandle);
   });
 
   // ── Cover colour swatches ─────────────────────────────────

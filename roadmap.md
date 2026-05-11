@@ -14,8 +14,8 @@ The file browser / media library is powered by the **`<sidekick-manager>` web co
 |------|--------|--------|
 | FLD | Folder / Library view | ✅ migrated to sidekick-manager |
 | SET | Batch Setup | ✅ migrated to sidekick-manager |
-| NED | Node Editor (transform compare) | 🔲 pending sidekick migration |
-| BLD | Recipe Builder (transform compare + custom toolbar) | 🔲 pending sidekick migration |
+| NED | Node Editor (transform compare) | ✅ migrated to sidekick-manager |
+| BLD | Recipe Builder (transform compare + custom toolbar) | ✅ migrated to sidekick-manager |
 | LIB | Recipe Library | ✅ stable |
 | BKB | Block Builder | ✅ stable |
 | INS | Block Inspector | ✅ stable |
@@ -59,23 +59,6 @@ The sidecar JSON schema:
 **Migration**: Existing `filename.json` sidecars (v1 format) are renamed to `.filename` on folder open via a one-time idempotent migration in `fld.js`.
 
 ---
-
-## Remaining Work: Phase 3 — Sidekick Migration
-
-### Phase 3C — ned.js (transform compare + video scrubber)
-
-- Set `compare-mode="transform"` on `<sidekick-manager>`
-- Pass `compareRender` async callback: `async (file) => { beforeUrl, afterUrl }`
-- Pass `compareInfo` callback for the info button
-- Mount video scrubber UI in ned.js host
-- Call `sk.triggerProcess()` when scrub position changes
-
-### Phase 3D — bld.js (transform compare + custom toolbar)
-
-- Set `compare-mode="transform"`
-- Pass `compareControls` HTML string ("Original / Prev Step" buttons)
-- Pass `compareBindControls` to wire button click → state update + `triggerProcess()`
-- Pass `compareRender` and `compareInfo` callbacks
 
 ---
 
