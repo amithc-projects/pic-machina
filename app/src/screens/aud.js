@@ -203,6 +203,61 @@ export async function render(container, hash) {
     { label: 'bm_george (British Male)', value: 'bm_george' },
   ];
 
+  /**
+   * Built-in reference voices for Pocket TTS, sourced from kyutai/tts-voices.
+   * Prefixed pp_ (pocket preset) in the voiceId scheme.
+   *
+   * Licensing:
+   *   CC0 (voice-zero) — public domain, no attribution required.
+   *   CC BY 4.0 (alba-mackenna) — attribution: "Alba Mackenna / Kyutai".
+   */
+  const HF_VOICES = 'https://huggingface.co/kyutai/tts-voices/resolve/main';
+  const POCKET_TTS_PRESETS = [
+    // ── CC0 — voice-zero (LibriVox sourced) ─────────────────────
+    { id: 'bill_boerst',    label: 'Bill (Male)',       url: `${HF_VOICES}/voice-zero/bill_boerst.wav`,    license: 'CC0' },
+    { id: 'caro_davy',     label: 'Caro (Female)',     url: `${HF_VOICES}/voice-zero/caro_davy.wav`,     license: 'CC0' },
+    { id: 'peter_yearsley',label: 'Peter (Male)',      url: `${HF_VOICES}/voice-zero/peter_yearsley.wav`,license: 'CC0' },
+    { id: 'stuart_bell',   label: 'Stuart (Male)',     url: `${HF_VOICES}/voice-zero/stuart_bell.wav`,   license: 'CC0' },
+    // ── CC BY 4.0 — alba-mackenna character styles ───────────────
+    { id: 'alba_casual',    label: 'Alba — Casual',     url: `${HF_VOICES}/alba-mackenna/casual.wav`,     license: 'CC BY 4.0' },
+    { id: 'alba_merchant',  label: 'Alba — Merchant',   url: `${HF_VOICES}/alba-mackenna/merchant.wav`,   license: 'CC BY 4.0' },
+    { id: 'alba_announcer', label: 'Alba — Announcer',  url: `${HF_VOICES}/alba-mackenna/announcer.wav`,  license: 'CC BY 4.0' },
+  ];
+
+  /** In-memory cache of decoded Float32 reference clips (keyed by preset id). */
+  const _ptPresetCache = new Map();
+
+  /**
+   * Fetch a preset voice WAV, decode to Float32 at 24 kHz, and cache it.
+   * The raw WAV bytes are stored in the browser's Cache API so repeat visits
+   * don't re-download.
+   */
+  async function getPocketTtsPreset(presetId) {
+    if (_ptPresetCache.has(presetId)) return _ptPresetCache.get(presetId);
+
+    const preset = POCKET_TTS_PRESETS.find(p => p.id === presetId);
+    if (!preset) throw new Error(`Unknown Pocket TTS preset: ${presetId}`);
+
+    // Check browser Cache API first; fall back to network
+    const cacheName = 'pocket-tts-voices-v1';
+    const cache = await caches.open(cacheName);
+    let response = await cache.match(preset.url);
+    if (!response) {
+      response = await fetch(preset.url);
+      if (!response.ok) throw new Error(`Failed to fetch voice "${preset.label}": HTTP ${response.status}`);
+      await cache.put(preset.url, response.clone());
+    }
+
+    const arrayBuf = await response.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+    const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+    const float32 = audioBuf.getChannelData(0);
+    await audioCtx.close();
+
+    _ptPresetCache.set(presetId, float32);
+    return float32;
+  }
+
   tabDialogue.addEventListener('click', () => {
     tabDialogue.className = 'btn btn-primary';
     tabVoicecraft.className = 'btn btn-secondary';
@@ -444,6 +499,7 @@ export async function render(container, hash) {
       else if (autoMatchedKk) defaultSelection = `kk_${autoMatchedKk.value}`;
       else if (checkKokoro.checked) defaultSelection = `kk_${KOKORO_OPTIONS[i % KOKORO_OPTIONS.length].value}`;
       else if (checkCb.checked && customVoices.length > 0) defaultSelection = `cb_${customVoices[0].id}`;
+      else if (checkPt.checked) defaultSelection = `pp_${POCKET_TTS_PRESETS[i % POCKET_TTS_PRESETS.length].id}`;
 
       let customOptionsHtml = '';
       if (checkCb.checked && customVoices.length > 0) {
@@ -452,7 +508,10 @@ export async function render(container, hash) {
       if (checkPt.checked && customVoices.length > 0) {
         customOptionsHtml += `<optgroup label="Custom (Pocket TTS)">${customVoices.map(v => `<option value="pt_${v.id}" ${defaultSelection === `pt_${v.id}` ? 'selected' : ''}>${v.name}</option>`).join('')}</optgroup>`;
       }
-        
+      if (checkPt.checked) {
+        customOptionsHtml += `<optgroup label="Preset (Pocket TTS)">${POCKET_TTS_PRESETS.map(p => `<option value="pp_${p.id}" ${defaultSelection === `pp_${p.id}` ? 'selected' : ''}>${p.label}${p.license !== 'CC0' ? ' ★' : ''}</option>`).join('')}</optgroup>`;
+      }
+
       let kokoroOptionsHtml = '';
       if (checkKokoro.checked) {
         kokoroOptionsHtml = `<optgroup label="Standard (Kokoro)">${KOKORO_OPTIONS.map(opt => `<option value="kk_${opt.value}" ${defaultSelection === `kk_${opt.value}` ? 'selected' : ''}>${opt.label}</option>`).join('')}</optgroup>`;
@@ -620,6 +679,23 @@ export async function render(container, hash) {
             text: seg.text,
             refFloat32Array: refFloat32,
             speakerId: dbId,
+            sampleRate: 24000,
+          }, genStatusEl, genProgressEl);
+
+          audioData = new Float32Array(waveform);
+        } else if (voiceId.startsWith('pp_')) {
+          if (!ptReady) throw new Error('Pocket TTS engine is not ready.');
+          const presetId = voiceId.substring(3);
+
+          genStatusEl.textContent = `Loading preset voice "${presetId}"...`;
+          const refFloat32 = await getPocketTtsPreset(presetId);
+
+          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Pocket TTS preset)...`;
+
+          const { waveform } = await executeWorkerTask(ptWorker, 'generate', {
+            text: seg.text,
+            refFloat32Array: refFloat32,
+            speakerId: `preset_${presetId}`,
             sampleRate: 24000,
           }, genStatusEl, genProgressEl);
 
