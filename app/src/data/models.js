@@ -54,6 +54,16 @@ export const MODEL_REGISTRY = [
     url: 'onnx-community/chatterbox-ONNX',
     sizeBytes: 1_500_000_000,
     backend: 'transformers',
+  },
+  {
+    id: 'pocket-tts',
+    name: 'Pocket TTS (Kyutai)',
+    description: 'Lightweight, fast zero-shot voice cloning by Kyutai. Runs entirely in the browser via ONNX (~100 MB). Clones any voice from a short reference clip. MIT licensed; CC-BY 4.0 model weights (attribution required).',
+    // ONNX export by KevinAHM: https://github.com/KevinAHM/pocket-tts-onnx-export
+    // TODO: confirm final HuggingFace repo ID once the export stabilises
+    url: 'KevinAHM/pocket-tts-onnx-export',
+    sizeBytes: 110_000_000,   // ~110 MB quantised (3 ONNX files + tokenizer)
+    backend: 'onnx-direct',   // loaded by pocket-tts.worker.js, not transformers.js
   }
 ];
 
@@ -184,6 +194,45 @@ export async function downloadModel(id, onProgress, signal) {
             downloadedAt: Date.now(),
             sizeBytes: meta.sizeBytes,
             bytes: new ArrayBuffer(1)
+          };
+          await dbPut('models', record);
+          return record;
+      }
+
+      // pocket-tts: pre-fetch the three ONNX files + tokenizer into browser Cache API
+      // so the worker can load them instantly at runtime.
+      if (meta.id === 'pocket-tts') {
+          const HF_BASE = 'https://huggingface.co/KevinAHM/pocket-tts-onnx-export/resolve/main/onnx';
+          const files = [
+            `${HF_BASE}/text_encoder_quantized.onnx`,
+            `${HF_BASE}/voice_encoder_quantized.onnx`,
+            `${HF_BASE}/flow_decoder_quantized.onnx`,
+            `${HF_BASE}/tokenizer.json`,
+          ];
+          const cache = await caches.open('pocket-tts-v1');
+          let loaded = 0;
+          for (const url of files) {
+              const existing = await cache.match(url);
+              if (!existing) {
+                  const resp = await fetch(url, { signal });
+                  if (!resp.ok) throw new Error(`Failed to fetch ${url}: HTTP ${resp.status}`);
+                  const clone = resp.clone();
+                  const buf = await clone.arrayBuffer();
+                  loaded += buf.byteLength;
+                  await cache.put(url, resp);
+              } else {
+                  const buf = await existing.clone().arrayBuffer();
+                  loaded += buf.byteLength;
+              }
+              if (onProgress) onProgress({ loaded, total: meta.sizeBytes });
+          }
+          if (onProgress) onProgress({ loaded: meta.sizeBytes, total: meta.sizeBytes });
+          const record = {
+              id,
+              name: meta.name,
+              downloadedAt: Date.now(),
+              sizeBytes: meta.sizeBytes,
+              bytes: new ArrayBuffer(1),   // placeholder
           };
           await dbPut('models', record);
           return record;

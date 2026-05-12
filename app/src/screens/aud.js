@@ -52,6 +52,10 @@ export async function render(container, hash) {
                   <input type="checkbox" id="aud-check-cb" class="accent-[var(--ps-blue)]">
                   <span class="text-sm">Chatterbox VoiceCraft (Zero-shot cloning)</span>
                 </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" id="aud-check-pt" class="accent-[var(--ps-blue)]">
+                  <span class="text-sm">Pocket TTS (Fast voice cloning, ~100 MB)</span>
+                </label>
               </div>
               <div id="aud-engine-status" class="text-xs text-[var(--ps-blue)] mt-2 h-4"></div>
               <progress id="aud-engine-progress" class="w-full hidden mt-1 h-1.5 rounded overflow-hidden" value="0" max="100"></progress>
@@ -121,6 +125,7 @@ export async function render(container, hash) {
   const inputTitleEl = container.querySelector('#aud-input-title');
   const checkKokoro = container.querySelector('#aud-check-kokoro');
   const checkCb = container.querySelector('#aud-check-cb');
+  const checkPt = container.querySelector('#aud-check-pt');
   const engineStatusEl = container.querySelector('#aud-engine-status');
   const engineProgressEl = container.querySelector('#aud-engine-progress');
 
@@ -150,6 +155,8 @@ export async function render(container, hash) {
   let kokoroReady = false;
   let cbWorker = null;
   let cbReady = false;
+  let ptWorker = null;
+  let ptReady = false;
 
   let audioHistory = [];
 
@@ -320,8 +327,9 @@ export async function render(container, hash) {
   function updateGenerateButtonState() {
     const isKokoroChecked = checkKokoro.checked;
     const isCbChecked = checkCb.checked;
+    const isPtChecked = checkPt.checked;
 
-    if (!isKokoroChecked && !isCbChecked) {
+    if (!isKokoroChecked && !isCbChecked && !isPtChecked) {
       generateBtn.disabled = true;
       generateBtn.title = "Select at least one engine above.";
       return;
@@ -335,6 +343,7 @@ export async function render(container, hash) {
     let isWaiting = false;
     if (isKokoroChecked && !kokoroReady) isWaiting = true;
     if (isCbChecked && !cbReady) isWaiting = true;
+    if (isPtChecked && !ptReady) isWaiting = true;
 
     if (isWaiting) {
       generateBtn.disabled = true;
@@ -351,7 +360,7 @@ export async function render(container, hash) {
     try {
       engineProgressEl.classList.remove('hidden');
       engineStatusEl.textContent = `Initializing ${type}...`;
-      
+
       if (type === 'kokoro') {
         if (!(await isModelDownloaded('kokoro-82m'))) throw new Error('Kokoro TTS model not downloaded.');
         const { KokoroTTS } = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm');
@@ -369,6 +378,18 @@ export async function render(container, hash) {
             cbWorker.modelLoaded = true;
         }
         cbReady = true;
+      } else if (type === 'pt') {
+        if (!(await isModelDownloaded('pocket-tts'))) throw new Error('Pocket TTS model not downloaded. Go to Models to download it (~110 MB).');
+        if (!ptWorker) {
+          ptWorker = new Worker(new URL('../workers/pocket-tts.worker.js', import.meta.url), { type: 'module' });
+          ptWorker.modelLoaded = false;
+        }
+        if (!ptWorker.modelLoaded) {
+          const hasWebGPU = await checkWebGPU();
+          await executeWorkerTask(ptWorker, 'load', { useWebGPU: hasWebGPU }, engineStatusEl, engineProgressEl);
+          ptWorker.modelLoaded = true;
+        }
+        ptReady = true;
       }
 
       engineStatusEl.textContent = '';
@@ -378,6 +399,7 @@ export async function render(container, hash) {
       engineProgressEl.classList.add('hidden');
       if (type === 'kokoro') checkKokoro.checked = false;
       if (type === 'cb') checkCb.checked = false;
+      if (type === 'pt') checkPt.checked = false;
     }
     updateGenerateButtonState();
     renderSpeakerList();
@@ -390,6 +412,11 @@ export async function render(container, hash) {
 
   checkCb.addEventListener('change', () => {
     if (checkCb.checked && !cbReady) loadEngine('cb');
+    else { updateGenerateButtonState(); renderSpeakerList(); }
+  });
+
+  checkPt.addEventListener('change', () => {
+    if (checkPt.checked && !ptReady) loadEngine('pt');
     else { updateGenerateButtonState(); renderSpeakerList(); }
   });
 
@@ -420,7 +447,10 @@ export async function render(container, hash) {
 
       let customOptionsHtml = '';
       if (checkCb.checked && customVoices.length > 0) {
-        customOptionsHtml = `<optgroup label="Custom (Chatterbox)">${customVoices.map(v => `<option value="cb_${v.id}" ${defaultSelection === `cb_${v.id}` ? 'selected' : ''}>${v.name}</option>`).join('')}</optgroup>`;
+        customOptionsHtml += `<optgroup label="Custom (Chatterbox)">${customVoices.map(v => `<option value="cb_${v.id}" ${defaultSelection === `cb_${v.id}` ? 'selected' : ''}>${v.name}</option>`).join('')}</optgroup>`;
+      }
+      if (checkPt.checked && customVoices.length > 0) {
+        customOptionsHtml += `<optgroup label="Custom (Pocket TTS)">${customVoices.map(v => `<option value="pt_${v.id}" ${defaultSelection === `pt_${v.id}` ? 'selected' : ''}>${v.name}</option>`).join('')}</optgroup>`;
       }
         
       let kokoroOptionsHtml = '';
@@ -572,6 +602,28 @@ export async function render(container, hash) {
           if (CB_RATE !== SAMPLE_RATE) {
              audioData = await resampleFloat32(audioData, CB_RATE, SAMPLE_RATE);
           }
+        } else if (voiceId.startsWith('pt_')) {
+          if (!ptReady) throw new Error('Pocket TTS engine is not ready.');
+          const dbId = voiceId.substring(3);
+          const customRec = customVoices.find(c => c.id === dbId);
+          if (!customRec) throw new Error('Custom voice missing for Pocket TTS');
+
+          // Decode reference audio at 24 kHz (same store as Chatterbox custom voices)
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+          const refAudioBuffer = await audioCtx.decodeAudioData(customRec.bytes.slice(0));
+          const refFloat32 = refAudioBuffer.getChannelData(0);
+          await audioCtx.close();
+
+          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Pocket TTS)...`;
+
+          const { waveform } = await executeWorkerTask(ptWorker, 'generate', {
+            text: seg.text,
+            refFloat32Array: refFloat32,
+            speakerId: dbId,
+            sampleRate: 24000,
+          }, genStatusEl, genProgressEl);
+
+          audioData = new Float32Array(waveform);
         }
 
         if (audioData) {
@@ -716,7 +768,7 @@ export async function render(container, hash) {
 
   // --- Navigation Protection ---
   const handleBeforeUnload = (e) => {
-    if (checkKokoro.checked || checkCb.checked || kokoroReady || cbReady) {
+    if (checkKokoro.checked || checkCb.checked || checkPt.checked || kokoroReady || cbReady || ptReady) {
       e.preventDefault();
       e.returnValue = '';
     }
@@ -724,7 +776,7 @@ export async function render(container, hash) {
   window.addEventListener('beforeunload', handleBeforeUnload);
 
   const handleNavClick = (e) => {
-    if (checkKokoro.checked || checkCb.checked || kokoroReady || cbReady) {
+    if (checkKokoro.checked || checkCb.checked || checkPt.checked || kokoroReady || cbReady || ptReady) {
       if (!confirm("Warning: You have loaded TTS engines. If you leave this page, you will need to re-compile them again later (which can take 60+ seconds). Are you sure you want to leave?")) {
         e.preventDefault();
         e.stopPropagation();
