@@ -24,7 +24,7 @@ import { MediaBrowser }                              from '../components/media-b
 import { globalLightbox }                            from '../components/lightbox.js';
 import { readSidecar }                               from '../data/sidecar.js';
 import { migrateSidecarFiles }                       from '../data/sidecarMigrate.js';
-import { wireFolderState }                           from '../data/folder-state.js';
+import { wireFolderState, resetFolderState }          from '../data/folder-state.js';
 
 const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm','.avi','.mkv']);
@@ -137,6 +137,7 @@ export async function render(container, hash) {
       container.querySelector('#fld-browse-folder')?.addEventListener('click', async () => {
         try {
           await pickFolder('browse');
+          resetFolderState();
           navigate('#fld');
         } catch (e) { if (e.name !== 'AbortError') console.error(e); }
       });
@@ -590,6 +591,7 @@ export async function render(container, hash) {
         : () => getFolder('input').catch(() => getFolder('browse'));
 
       wireFolderState(sk, fldGetHandle, {
+        label: 'fld',
         skipSubPathRestore: !!runId,
         skipTracking: !!runId,
         navigateTo: runSubfolder || null,

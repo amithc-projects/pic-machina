@@ -67,6 +67,15 @@ export function allowedTypesAttrForRecipe(recipe, override) {
 /** Current sub-path segments below the persisted root, e.g. ['events', '2024'] */
 let _subPath = [];
 
+/**
+ * Stable snapshot of _subPath taken just before each screen swap (in main.js doSwap).
+ * The sidekick's React app resets its path stack to [] when unmounting, firing a
+ * workspace event that corrupts _subPath WHILE the element is still connected — so
+ * isConnected guards can't help. _committedSubPath is written before teardown and
+ * is therefore immune to the unmount event.
+ */
+let _committedSubPath = [];
+
 /** Last focused filename, or null */
 let _selectedFilename = null;
 
@@ -81,24 +90,20 @@ let _selectedFilename = null;
  * accurately, even when the sidekick jumps multiple levels at once (e.g. during
  * a navigate('a/b/c') call that fires a single workspace event at depth 4).
  */
-export function trackWorkspaceChange(folderName, pathLength, pathNames) {
+export function trackWorkspaceChange(folderName, pathLength, pathNames, label = '?') {
+  const before = [..._subPath];
   if (Array.isArray(pathNames)) {
-    // Full path available — derive sub-path by dropping the root entry (index 0)
     _subPath = pathNames.slice(1);
-    return;
-  }
-  // Fallback: incremental tracking (for older sidekick builds without pathNames)
-  if (pathLength === 1) {
-    // At root — clear sub-path
+  } else if (pathLength === 1) {
     _subPath = [];
   } else if (pathLength > _subPath.length + 1) {
-    // Navigated one level deeper (double-click on a subfolder)
     _subPath.push(folderName);
   } else if (pathLength <= _subPath.length) {
-    // Navigated up (breadcrumb click or back) — truncate
     _subPath = _subPath.slice(0, pathLength - 1);
   }
-  // pathLength === _subPath.length + 1 → no-op (same location, folder refreshed)
+  if (JSON.stringify(before) !== JSON.stringify(_subPath)) {
+    console.log(`[folder-state] WRITE [${label}] subPath: [${before.join('/')}] → [${_subPath.join('/')}]`);
+  }
 }
 
 /**
@@ -106,6 +111,7 @@ export function trackWorkspaceChange(folderName, pathLength, pathNames) {
  * so that subsequent workspace tracking events stay in sync.
  */
 export function setFolderPath(pathArray) {
+  console.log(`[folder-state] SET PATH → [${pathArray.join('/')}]`);
   _subPath = [...pathArray];
 }
 
@@ -117,11 +123,33 @@ export function setSelectedFile(filename) {
 }
 
 /**
+ * Clear all tracked folder state — call after picking a new root folder so
+ * other screens don't try to restore a stale subfolder path.
+ */
+export function resetFolderState() {
+  console.log(`[folder-state] RESET (was [${_subPath.join('/')}])`);
+  _subPath = [];
+  _committedSubPath = [];
+  _selectedFilename = null;
+}
+
+/**
+ * Snapshot _subPath into _committedSubPath. Call this from main.js immediately
+ * before clearing the old screen's DOM, so the stable snapshot is captured
+ * before the outgoing sidekick's React unmount can corrupt _subPath.
+ */
+export function commitFolderState() {
+  _committedSubPath = [..._subPath];
+  console.log(`[folder-state] COMMIT [${_committedSubPath.join('/')}]`);
+}
+
+/**
  * Returns a snapshot of the current folder state.
  */
-export function getFolderState() {
+export function getFolderState(label = '?') {
+  console.log(`[folder-state] READ [${label}] committed=[${_committedSubPath.join('/')}] live=[${_subPath.join('/')}] file=${_selectedFilename}`);
   return {
-    subPath: [..._subPath],
+    subPath: [..._committedSubPath],
     selectedFilename: _selectedFilename,
   };
 }
@@ -154,10 +182,14 @@ export function wireFolderState(sk, getHandle, {
   skipSubPathRestore = false,
   skipTracking = false,
   navigateTo = null,
+  label = '?',
 } = {}) {
   // ── Ongoing navigation tracking ──────────────────────────
   sk.addEventListener('sidekick:workspace', (e) => {
-    if (!skipTracking) trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames);
+    // Ignore workspace events from a sidekick that is being torn down — the
+    // React app inside resets its path stack to [] on unmount, which would
+    // corrupt the shared state right before the next screen reads it.
+    if (!skipTracking && sk.isConnected) trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames, label);
     onWorkspace?.(e);
   });
 
@@ -168,38 +200,37 @@ export function wireFolderState(sk, getHandle, {
 
   // ── Restore on ready ─────────────────────────────────────
   sk.addEventListener('sidekick:ready', async () => {
+    console.log(`[folder-state] READY [${label}]`);
     const handle = await getHandle().catch(() => null);
-    if (!handle) return;
+    if (!handle) { console.log(`[folder-state] READY [${label}] — no handle, skipping restore`); return; }
 
-    const { subPath, selectedFilename } = getFolderState();
+    const { subPath, selectedFilename } = getFolderState(label);
+    const targetPath = skipSubPathRestore
+      ? (navigateTo || null)
+      : (subPath.length > 0 ? subPath.join('/') : null);
+    const targetFile = skipSubPathRestore ? null : selectedFilename;
 
-    // After setRoot the sidekick fires a workspace event for the root (pathLength=1).
-    // Use that event as the signal to issue any pending navigate call.
-    const pendingPath = skipSubPathRestore ? (navigateTo || null) : null;
-    const pendingRestore = !skipSubPathRestore && (subPath.length > 0 || selectedFilename);
+    console.log(`[folder-state] RESTORE [${label}] targetPath="${targetPath}" file="${targetFile}"`);
 
-    // Pre-commit + register onRoot BEFORE calling setRoot so the listener
-    // is guaranteed to be in place when the workspace event fires.
-    if (!skipTracking && pendingRestore) {
-      // Pre-commit so workspace tracking stays correct during navigation
-      setFolderPath(subPath);
-    }
-
-    if (pendingPath || pendingRestore) {
-      const pathStr = pendingPath ?? subPath.join('/');
-      const selFile = pendingRestore ? selectedFilename : null;
-
+    await new Promise(resolve => {
+      if (!targetPath) {
+        sk.setRoot(handle);
+        resolve();
+        return;
+      }
       const onRoot = (e) => {
         if (e.detail?.pathLength !== 1) return;
         sk.removeEventListener('sidekick:workspace', onRoot);
-        if (pathStr) {
-          sk.navigate(pathStr, selFile ? { filename: selFile } : undefined).catch(() => {});
-        }
+        console.log(`[folder-state] RESTORE [${label}] root confirmed, navigating to "${targetPath}"`);
+        sk.navigate(targetPath, targetFile ? { filename: targetFile } : undefined)
+          .catch(err => console.warn(`[folder-state] RESTORE [${label}] navigate failed`, err))
+          .finally(resolve);
       };
       sk.addEventListener('sidekick:workspace', onRoot);
-    }
+      sk.setRoot(handle);
+    });
 
-    sk.setRoot(handle);
+    console.log(`[folder-state] RESTORE [${label}] done`);
     onReady?.(handle);
   }, { once: true });
 }

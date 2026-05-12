@@ -509,6 +509,45 @@ export async function render(container, hash) {
   bldScrubberMount.style.cssText = 'position:absolute;bottom:110px;left:0;right:0;z-index:100;pointer-events:none;';
   wsContainer.appendChild(bldScrubberMount);
 
+  // ── Track active file → scrubber + info panel; restore folder state ──
+  // Attach BEFORE compareInfo/compareRender so the sidekick:ready listener
+  // is registered before the element fires it.
+  wireFolderState(bldSk, () => getFolder('input').catch(() => getFolder('browse')), {
+    label: 'bld',
+    onFileFocus: async (e) => {
+      if (!e.detail) {
+        _bldActiveVideoFile = null;
+        window._icTestImage = { file: null };
+        if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
+        bldScrubberMount.innerHTML = '';
+        return;
+      }
+      const file = await e.detail.handle.getFile();
+      window._icTestImage = { file };
+      _bldActiveVideoFile = file;
+
+      if (_bldInfoPanel && file) {
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
+        if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(file);
+      }
+
+      if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
+      bldScrubberMount.style.pointerEvents = 'auto';
+      if (file && isVideoFile(file)) {
+        _bldScrubber = await mountVideoScrubber(bldScrubberMount, file, {
+          initialTime: getStoredSeekTime(file.name),
+          onSeek: (t) => {
+            setStoredSeekTime(file.name, t);
+            if (bldSk) bldSk.triggerProcess();
+          },
+        });
+      } else {
+        bldScrubberMount.innerHTML = '';
+      }
+    },
+  });
+
   // ── Custom toolbar: Original / Prev Step ─────────────────
   bldSk.compareControls = `
     <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:flex;gap:4px">
@@ -633,42 +672,6 @@ export async function render(container, hash) {
       context
     };
   };
-
-  // ── Track active file → scrubber + info panel; restore folder state ──
-  wireFolderState(bldSk, () => getFolder('input').catch(() => getFolder('browse')), {
-    onFileFocus: async (e) => {
-      if (!e.detail) {
-        _bldActiveVideoFile = null;
-        window._icTestImage = { file: null };
-        if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
-        bldScrubberMount.innerHTML = '';
-        return;
-      }
-      const file = await e.detail.handle.getFile();
-      window._icTestImage = { file };
-      _bldActiveVideoFile = file;
-
-      if (_bldInfoPanel && file) {
-        const inputHandle = await getFolder('input').catch(() => null);
-        if (inputHandle) _bldInfoPanel.setDirHandle(inputHandle);
-        if (_bldInfoPanel.isVisible()) _bldInfoPanel.setFile(file);
-      }
-
-      if (_bldScrubber) { _bldScrubber.destroy(); _bldScrubber = null; }
-      bldScrubberMount.style.pointerEvents = 'auto';
-      if (file && isVideoFile(file)) {
-        _bldScrubber = await mountVideoScrubber(bldScrubberMount, file, {
-          initialTime: getStoredSeekTime(file.name),
-          onSeek: (t) => {
-            setStoredSeekTime(file.name, t);
-            if (bldSk) bldSk.triggerProcess();
-          },
-        });
-      } else {
-        bldScrubberMount.innerHTML = '';
-      }
-    },
-  });
 
   function getPrevNodeId() {
     const nodes = flattenNodes(draft.nodes).filter(i => !i.isBranchHeader);

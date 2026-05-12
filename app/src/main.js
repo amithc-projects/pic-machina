@@ -7,6 +7,11 @@ import { initDrawers } from './aurora/drawer.js';
 import { showToast }   from './aurora/toast.js';
 import { initDB }      from './data/db.js';
 import { applyThemeColors } from './utils/settings.js';
+import { commitFolderState } from './data/folder-state.js';
+
+// Monotonically-increasing counter — incremented on every navigate call so that
+// if two navigations race (e.g. double hashchange), only the latest doSwap runs.
+let _navVersion = 0;
 
 // Screen module map — lazy loaded on demand
 const SCREENS = {
@@ -47,13 +52,21 @@ let currentCleanup = null;
 async function navigate(hash) {
   // Normalize missing hash
   if (!hash) hash = `#${DEFAULT_SCREEN}`;
-  
+
   // If we are programmatically navigating to a new hash, update the URL
   // and let the window 'hashchange' event trigger the actual render pass.
   if (location.hash !== hash) {
     location.hash = hash;
     return;
   }
+
+  // Snapshot folder state NOW — synchronously, before any awaits and before
+  // the old screen's sidekick can unmount and corrupt _subPath.
+  commitFolderState();
+
+  // Stamp this navigation so we can detect if a newer one starts while we
+  // are awaiting async work (settings load, cleanup, module load).
+  const myNavVersion = ++_navVersion;
 
   const screenId = (hash.replace('#', '') || DEFAULT_SCREEN).split('/')[0].split('?')[0];
   
@@ -108,6 +121,9 @@ async function navigate(hash) {
   }
 
   const doSwap = async () => {
+    // If a newer navigation started while we were awaiting async work above,
+    // this doSwap is stale — abort so only the latest navigation renders.
+    if (_navVersion !== myNavVersion) return;
     container.innerHTML = '';
     if (typeof mod.render === 'function') {
       const wrapper = document.createElement('div');

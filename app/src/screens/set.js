@@ -7,7 +7,7 @@
 
 import { pickFolder, getFolder, setCurrentFolder, fileFilterForRecipe,
          listImages, loadVideoPreviews, writeVideoPreview, IMAGE_EXTS, VIDEO_EXTS } from '../data/folders.js';
-import { trackWorkspaceChange, setSelectedFile, getFolderState, setFolderPath, allowedTypesAttrForRecipe } from '../data/folder-state.js';
+import { trackWorkspaceChange, setSelectedFile, getFolderState, resetFolderState, allowedTypesAttrForRecipe } from '../data/folder-state.js';
 import { isVideoFile, extractVideoFrame, getVideoDuration } from '../utils/video-frame.js';
 import { getAllRecipes, getRecipe }                  from '../data/recipes.js';
 import { getRunsForRecipe }                          from '../data/runs.js';
@@ -424,6 +424,7 @@ export async function render(container, hash) {
       try {
         inputHandle = await pickFolder('input');
         currentHandle = inputHandle;
+        resetFolderState();
         await refreshImageGrid();
       } catch(e) {}
     });
@@ -502,7 +503,9 @@ export async function render(container, hash) {
 
         // When sidekick navigates to a new folder, track path + re-enumerate
         sk.addEventListener('sidekick:workspace', async (e) => {
-          trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames);
+          // Guard: ignore events fired during sidekick unmount (React resets path to [] on teardown)
+          if (!sk.isConnected) return;
+          trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames, 'set');
           const dirHandle = sk.getDirectoryHandle?.();
           if (dirHandle && dirHandle !== currentHandle) {
             currentHandle = dirHandle;
@@ -519,23 +522,38 @@ export async function render(container, hash) {
           setSelectedFile(e.detail?.filename || null);
         });
 
-        // Push root once sidekick is ready, then restore sub-folder if any
-        sk.addEventListener('sidekick:ready', () => {
+        // Push root once sidekick is ready, then restore sub-folder if any.
+        // navigate() silently exits when the sidekick's internal path stack is
+        // empty, even after awaiting setRoot — because setRoot only queues a
+        // React state update and the stack isn't populated until React commits
+        // (signalled by the workspace event). So we wait for pathLength===1
+        // before calling navigate.
+        sk.addEventListener('sidekick:ready', async () => {
           sk._setReady = true;
-          if (!currentHandle) return;
-          sk._pushRoot(currentHandle);
-          const { subPath, selectedFilename } = getFolderState();
-          if (subPath.length > 0 || selectedFilename) {
-            setFolderPath(subPath);
+          console.log('[folder-state] READY [set]');
+          if (!currentHandle) { console.log('[folder-state] READY [set] — no handle, skipping restore'); return; }
+          const { subPath, selectedFilename } = getFolderState('set');
+          const targetPath = subPath.length > 0 ? subPath.join('/') : null;
+          console.log(`[folder-state] RESTORE [set] targetPath="${targetPath}"`);
+          await new Promise(resolve => {
+            if (!targetPath) {
+              sk.setRoot(currentHandle);
+              resolve();
+              return;
+            }
             const onRoot = (e) => {
               if (e.detail?.pathLength !== 1) return;
               sk.removeEventListener('sidekick:workspace', onRoot);
-              sk.navigate(subPath.join('/') || '', selectedFilename ? { filename: selectedFilename } : undefined)
-                .catch(() => {});
+              console.log(`[folder-state] RESTORE [set] root confirmed, navigating to "${targetPath}"`);
+              sk.navigate(targetPath, selectedFilename ? { filename: selectedFilename } : undefined)
+                .catch(err => console.warn('[folder-state] RESTORE [set] navigate failed', err))
+                .finally(resolve);
             };
             sk.addEventListener('sidekick:workspace', onRoot);
-          }
-        });
+            sk.setRoot(currentHandle);
+          });
+          console.log('[folder-state] RESTORE [set] done');
+        }, { once: true });
 
         sk._pushRoot = (handle, attempt = 0) => {
           try {
@@ -551,9 +569,10 @@ export async function render(container, hash) {
       sk.setAttribute('hidden-files-count', String(warningCount));
       sk.setAttribute('hidden-files-message', hiddenMsg);
 
-      // Push the new directory root into sidekick (skip when triggered by sidekick:workspace)
+      // Push the ROOT folder into sidekick (skip when triggered by sidekick:workspace).
+      // Always use inputHandle (the root), not currentHandle (which may be a subfolder).
       if (!skipSetRoot && sk._setReady) {
-        sk._pushRoot(currentHandle);
+        sk._pushRoot(inputHandle);
       }
 
       renderSlotAssignment();
@@ -657,7 +676,7 @@ export async function render(container, hash) {
     loadSlotTemplate().then(renderSlotAssignment);
     renderEffectTimeline();
     updateRunButton();
-    refreshImageGrid();
+    refreshImageGrid({ skipSetRoot: true });
     refreshHistoryLink();
   }
 

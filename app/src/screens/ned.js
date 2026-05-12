@@ -271,6 +271,48 @@ export async function render(container, hash) {
   scrubberMount.style.cssText = 'position:absolute;bottom:110px;left:0;right:0;z-index:100;pointer-events:none;';
   wsContainer.appendChild(scrubberMount);
 
+  // ── Track active file → scrubber + info panel; restore folder state ──
+  // Attach BEFORE compareInfo/compareRender so the sidekick:ready listener
+  // is registered before the element fires it.
+  wireFolderState(sk, () => getFolder('input').catch(() => getFolder('browse')), {
+    label: 'ned',
+    onFileFocus: async (e) => {
+      if (!e.detail) {
+        testFile = null;
+        window._icTestImage = { file: null };
+        if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
+        scrubberMount.innerHTML = '';
+        return;
+      }
+      const file = await e.detail.handle.getFile();
+      testFile = file;
+      window._icTestImage = { file };
+
+      if (_infoPanel && file) {
+        const inputHandle = await getFolder('input').catch(() => null);
+        if (inputHandle) _infoPanel.setDirHandle(inputHandle);
+        _infoPanel.setFile(file);
+      }
+      if (trControls && file && isVideoFile(file)) {
+        trControls.loadFilmstrip(file);
+      }
+
+      if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
+      scrubberMount.style.pointerEvents = 'auto';
+      if (file && isVideoFile(file)) {
+        _nedScrubber = await mountVideoScrubber(scrubberMount, file, {
+          initialTime: getStoredSeekTime(file.name),
+          onSeek: (t) => {
+            setStoredSeekTime(file.name, t);
+            schedulePreview();
+          },
+        });
+      } else {
+        scrubberMount.innerHTML = '';
+      }
+    },
+  });
+
   // ── compareInfo callback ─────────────────────────────────
   sk.compareInfo = async (file) => {
     const panel = await getOrCreateInfoPanel();
@@ -383,45 +425,6 @@ export async function render(container, hash) {
       context
     };
   };
-
-  // ── Track active file → scrubber + info panel; restore folder state ──
-  wireFolderState(sk, () => getFolder('input').catch(() => getFolder('browse')), {
-    onFileFocus: async (e) => {
-      if (!e.detail) {
-        testFile = null;
-        window._icTestImage = { file: null };
-        if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
-        scrubberMount.innerHTML = '';
-        return;
-      }
-      const file = await e.detail.handle.getFile();
-      testFile = file;
-      window._icTestImage = { file };
-
-      if (_infoPanel && file) {
-        const inputHandle = await getFolder('input').catch(() => null);
-        if (inputHandle) _infoPanel.setDirHandle(inputHandle);
-        _infoPanel.setFile(file);
-      }
-      if (trControls && file && isVideoFile(file)) {
-        trControls.loadFilmstrip(file);
-      }
-
-      if (_nedScrubber) { _nedScrubber.destroy(); _nedScrubber = null; }
-      scrubberMount.style.pointerEvents = 'auto';
-      if (file && isVideoFile(file)) {
-        _nedScrubber = await mountVideoScrubber(scrubberMount, file, {
-          initialTime: getStoredSeekTime(file.name),
-          onSeek: (t) => {
-            setStoredSeekTime(file.name, t);
-            schedulePreview();
-          },
-        });
-      } else {
-        scrubberMount.innerHTML = '';
-      }
-    },
-  });
 
   // ── Toolbar (i) button — toggle the same shared panel ────────────────
   container.querySelector('#ned-btn-info')?.addEventListener('click', async () => {
