@@ -18,12 +18,15 @@ function generateId() {
 
 export async function render(container, hash) {
   container.innerHTML = `
-    <div class="h-full flex flex-col bg-[var(--ps-bg)]">
-      <div class="border-b border-[var(--ps-border)] p-4 flex items-center shrink-0">
-        <h1 class="text-xl font-bold flex-1">Speech Studio</h1>
+    <div class="screen aud-screen">
+      <div class="screen-header shrink-0">
+        <div class="screen-title">
+          <span class="material-symbols-outlined">record_voice_over</span>
+          Speech Studio
+        </div>
         <div class="flex gap-2">
-          <button id="aud-tab-dialogue" class="btn btn-primary">Dialogue Studio</button>
-          <button id="aud-tab-voicecraft" class="btn btn-secondary">VoiceCraft (Custom Voices)</button>
+          <button id="aud-tab-dialogue" class="btn-primary">Dialogue Studio</button>
+          <button id="aud-tab-voicecraft" class="btn-secondary">VoiceCraft (Custom Voices)</button>
         </div>
       </div>
       
@@ -37,24 +40,24 @@ export async function render(container, hash) {
             <h2 class="text-lg font-bold mb-4">1. Script & Engine</h2>
             
             <div class="mb-4">
-              <label class="text-sm font-bold text-muted mb-1 block">Project Title</label>
-              <input type="text" id="aud-input-title" class="w-full bg-[var(--ps-bg)] text-[var(--ps-text)] border border-[var(--ps-border)] rounded p-2 text-sm focus:outline-none focus:border-[var(--ps-blue)]" placeholder="e.g. Explainer Video Voiceover">
+              <label class="ic-label">Project Title</label>
+              <input type="text" id="aud-input-title" class="ic-input" placeholder="e.g. Explainer Video Voiceover">
             </div>
 
             <div class="mb-4">
-              <label class="text-sm font-bold text-muted mb-1 block">Engines</label>
-              <div class="flex gap-4">
-                <label class="flex items-center gap-2 cursor-pointer">
+              <label class="ic-label">Engines</label>
+              <div class="flex flex-col gap-2 mt-1">
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-kokoro" class="accent-[var(--ps-blue)]">
-                  <span class="text-sm">Kokoro TTS (Fast, standard voices)</span>
+                  <span>Kokoro TTS (Fast, standard voices)</span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-cb" class="accent-[var(--ps-blue)]">
-                  <span class="text-sm">Chatterbox VoiceCraft (Zero-shot cloning)</span>
+                  <span>Chatterbox VoiceCraft (Zero-shot cloning)</span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-pt" class="accent-[var(--ps-blue)]">
-                  <span class="text-sm">Pocket TTS (Fast voice cloning, ~100 MB)</span>
+                  <span>Pocket TTS (Fast voice cloning, ~100 MB)</span>
                 </label>
               </div>
               <div id="aud-engine-status" class="text-xs text-[var(--ps-blue)] mt-2 h-4"></div>
@@ -63,19 +66,22 @@ export async function render(container, hash) {
 
             <div class="flex-1 flex flex-col min-h-0">
               <div class="flex justify-between items-end mb-1 shrink-0">
-                <label class="text-sm font-bold text-muted block">Script (Text or SRT/VTT)</label>
-                <button id="aud-btn-upload-script" class="btn btn-secondary text-xs py-1 px-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">upload_file</span> Load File</button>
-                <input type="file" id="aud-input-upload-script" class="hidden" accept=".txt,.srt,.vtt,.md">
+                <label class="ic-label">Script (Text or SRT/VTT)</label>
+                <div class="flex gap-2">
+                  <button id="aud-btn-load-sample" class="btn-ghost" style="padding: 2px 6px; font-size: 12px;">Load Sample</button>
+                  <button id="aud-btn-upload-script" class="btn-secondary" style="padding: 2px 6px; font-size: 12px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span> Import Captions</button>
+                </div>
+                <input type="file" id="aud-input-upload-script" style="display: none" accept=".txt,.srt,.vtt,.md">
               </div>
-              <textarea id="aud-input" class="w-full flex-1 bg-[var(--ps-bg)] text-[var(--ps-text)] border border-[var(--ps-border)] rounded p-3 font-mono text-sm resize-none focus:outline-none focus:border-[var(--ps-blue)]" placeholder="[Narrator]: Welcome to Speech Studio.&#10;[Dwight]: You can paste multiple speakers here!"></textarea>
+              <textarea id="aud-input" class="ic-input" style="flex: 1; resize: none; font-family: monospace; padding: 12px;" placeholder="[Narrator]: Welcome to Speech Studio.&#10;[Dwight]: You can paste multiple speakers here!"></textarea>
             </div>
             
-            <button id="aud-btn-parse" class="btn btn-primary mt-4 w-full justify-center shrink-0">Parse Speakers</button>
+            <button id="aud-btn-parse" class="btn-primary mt-4 w-full" style="justify-content: center;">Parse Speakers</button>
             </div>
           </div>
 
           <!-- Section 2: Speaker Mapping & Generate -->
-          <div style="flex: 1; background-color: var(--ps-bg-surface, #1e1e1e); border: 1px solid var(--ps-border, #333); border-radius: 0.5rem; padding: 1.5rem; display: flex; flex-direction: column; min-height: 0;">
+          <div id="aud-section-mapping" class="opacity-50 pointer-events-none transition-opacity duration-300" style="flex: 1; background-color: var(--ps-bg-surface, #1e1e1e); border: 1px solid var(--ps-border, #333); border-radius: 0.5rem; padding: 1.5rem; display: flex; flex-direction: column; min-height: 0;">
             <h2 class="text-lg font-bold mb-4 shrink-0">2. Speaker Mapping</h2>
             
             <div id="aud-speaker-list" class="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto min-h-[50px]" style="padding-right: 0.5rem;">
@@ -83,14 +89,14 @@ export async function render(container, hash) {
             </div>
 
             <div class="shrink-0 pt-4 border-t border-[var(--ps-border)]">
-              <button id="aud-btn-generate" class="btn btn-primary w-full justify-center" disabled title="Waiting for models...">Generate Audio</button>
+              <button id="aud-btn-generate" class="btn-primary w-full" style="justify-content: center;" disabled title="Waiting for models...">Generate Audio</button>
               <div id="aud-generate-status" class="text-xs text-muted mt-2 text-center h-4"></div>
               <progress id="aud-generate-progress" class="w-full hidden mt-2 h-1.5 rounded overflow-hidden" value="0" max="100"></progress>
             </div>
           </div>
 
           <!-- Section 3: Output History -->
-          <div id="aud-section-output" class="transition-opacity" style="flex: 1; background-color: var(--ps-bg-surface, #1e1e1e); border: 1px solid var(--ps-border, #333); border-radius: 0.5rem; padding: 1.5rem; display: flex; flex-direction: column; min-height: 0;">
+          <div id="aud-section-output" class="opacity-50 pointer-events-none transition-opacity duration-300" style="flex: 1; background-color: var(--ps-bg-surface, #1e1e1e); border: 1px solid var(--ps-border, #333); border-radius: 0.5rem; padding: 1.5rem; display: flex; flex-direction: column; min-height: 0;">
             <h2 class="text-lg font-bold mb-4 shrink-0">3. Output History</h2>
             <div id="aud-history-list" class="flex-1 flex flex-col gap-4 overflow-y-auto min-h-0" style="padding-right: 0.5rem;">
               <div class="text-sm text-muted" id="aud-history-empty">No audio generated in this session yet.</div>
@@ -106,7 +112,7 @@ export async function render(container, hash) {
             <h2 class="text-xl font-bold mb-1">VoiceCraft</h2>
             <div class="text-sm text-muted">Create custom zero-shot voices for the Chatterbox TTS engine. Upload clean, 10-15s samples (.wav or .mp3).</div>
           </div>
-          <button id="aud-btn-add-voice" class="btn btn-primary"><span class="material-symbols-outlined text-sm mr-2">add</span>Add Character</button>
+          <button id="aud-btn-add-voice" class="btn-primary"><span class="material-symbols-outlined text-sm mr-2">add</span>Add Character</button>
         </div>
         
         <div id="aud-custom-voices-grid" class="grid grid-cols-2 gap-4">
@@ -130,6 +136,7 @@ export async function render(container, hash) {
   const engineProgressEl = container.querySelector('#aud-engine-progress');
 
   const inputEl = container.querySelector('#aud-input');
+  const btnLoadSample = container.querySelector('#aud-btn-load-sample');
   const btnUploadScript = container.querySelector('#aud-btn-upload-script');
   const inputUploadScript = container.querySelector('#aud-input-upload-script');
   const parseBtn = container.querySelector('#aud-btn-parse');
@@ -138,6 +145,7 @@ export async function render(container, hash) {
   const genStatusEl = container.querySelector('#aud-generate-status');
   const genProgressEl = container.querySelector('#aud-generate-progress');
   
+  const sectionMappingEl = container.querySelector('#aud-section-mapping');
   const sectionOutputEl = container.querySelector('#aud-section-output');
   const historyListEl = container.querySelector('#aud-history-list');
   const historyEmptyEl = container.querySelector('#aud-history-empty');
@@ -259,16 +267,16 @@ export async function render(container, hash) {
   }
 
   tabDialogue.addEventListener('click', () => {
-    tabDialogue.className = 'btn btn-primary';
-    tabVoicecraft.className = 'btn btn-secondary';
+    tabDialogue.className = 'btn-primary';
+    tabVoicecraft.className = 'btn-secondary';
     viewDialogue.style.display = 'flex';
     viewVoicecraft.style.display = 'none';
     renderSpeakerList(); // Refresh dropdowns in case voices changed
   });
 
   tabVoicecraft.addEventListener('click', () => {
-    tabVoicecraft.className = 'btn btn-primary';
-    tabDialogue.className = 'btn btn-secondary';
+    tabVoicecraft.className = 'btn-primary';
+    tabDialogue.className = 'btn-secondary';
     viewVoicecraft.style.display = 'flex';
     viewDialogue.style.display = 'none';
     loadCustomVoices();
@@ -374,8 +382,24 @@ export async function render(container, hash) {
 
       inputEl.value = content;
       inputUploadScript.value = ''; // Reset for next upload
+      
+      // Trigger input event to re-evaluate sections
+      inputEl.dispatchEvent(new Event('input'));
     };
     reader.readAsText(file);
+  });
+  
+  btnLoadSample.addEventListener('click', () => {
+    inputEl.value = `[Interviewer]: Thank you for joining us today! Can you tell us a bit about your new project?
+[Guest]: Of course! It's an AI-powered voice generation tool that makes creating dialogue incredibly easy.
+[Interviewer]: That sounds amazing. How fast is it?
+[Guest]: It generates high-quality speech in real-time.`;
+    inputEl.dispatchEvent(new Event('input'));
+  });
+
+  inputEl.addEventListener('input', () => {
+    sectionMappingEl.classList.add('opacity-50', 'pointer-events-none');
+    generateBtn.disabled = true;
   });
 
   // --- Dialogue Studio Logic ---
@@ -579,6 +603,7 @@ export async function render(container, hash) {
        return;
     }
 
+    sectionMappingEl.classList.remove('opacity-50', 'pointer-events-none');
     renderSpeakerList();
     updateGenerateButtonState();
   });
@@ -589,7 +614,9 @@ export async function render(container, hash) {
       generateBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm mr-2">refresh</span> Generating...';
       genProgressEl.classList.add('hidden');
       genStatusEl.textContent = 'Preparing generation...';
-      sectionOutputEl.classList.add('opacity-50', 'pointer-events-none');
+      
+      // Un-gray section 3
+      sectionOutputEl.classList.remove('opacity-50', 'pointer-events-none');
 
       const speakerVoiceMap = {};
       const speakerEmotionMap = {};
@@ -764,7 +791,6 @@ export async function render(container, hash) {
         }
       }
     } finally {
-      sectionOutputEl.classList.remove('opacity-50', 'pointer-events-none');
       updateGenerateButtonState();
     }
   });
