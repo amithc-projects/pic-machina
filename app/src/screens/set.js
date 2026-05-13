@@ -505,7 +505,7 @@ export async function render(container, hash) {
         sk.addEventListener('sidekick:workspace', async (e) => {
           // Guard: ignore events fired during sidekick unmount (React resets path to [] on teardown)
           if (!sk.isConnected) return;
-          trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames, 'set');
+          trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames, 'set', e.detail.rootHandle);
           const dirHandle = sk.getDirectoryHandle?.();
           if (dirHandle && dirHandle !== currentHandle) {
             currentHandle = dirHandle;

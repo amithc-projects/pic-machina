@@ -66,6 +66,10 @@ export function allowedTypesAttrForRecipe(recipe, override) {
 
 /** Current sub-path segments below the persisted root, e.g. ['events', '2024'] */
 let _subPath = [];
+try {
+  const saved = localStorage.getItem('ic-folder-subpath');
+  if (saved) _subPath = JSON.parse(saved);
+} catch (e) {}
 
 /**
  * Stable snapshot of _subPath taken just before each screen swap (in main.js doSwap).
@@ -74,10 +78,13 @@ let _subPath = [];
  * isConnected guards can't help. _committedSubPath is written before teardown and
  * is therefore immune to the unmount event.
  */
-let _committedSubPath = [];
+let _committedSubPath = [..._subPath];
 
 /** Last focused filename, or null */
 let _selectedFilename = null;
+try {
+  _selectedFilename = localStorage.getItem('ic-folder-selectedFile');
+} catch (e) {}
 
 /**
  * Call from a sidekick:workspace listener to keep the path in sync.
@@ -90,7 +97,7 @@ let _selectedFilename = null;
  * accurately, even when the sidekick jumps multiple levels at once (e.g. during
  * a navigate('a/b/c') call that fires a single workspace event at depth 4).
  */
-export function trackWorkspaceChange(folderName, pathLength, pathNames, label = '?') {
+export function trackWorkspaceChange(folderName, pathLength, pathNames, label = '?', rootHandle = null) {
   const before = [..._subPath];
   if (Array.isArray(pathNames)) {
     _subPath = pathNames.slice(1);
@@ -101,8 +108,17 @@ export function trackWorkspaceChange(folderName, pathLength, pathNames, label = 
   } else if (pathLength <= _subPath.length) {
     _subPath = _subPath.slice(0, pathLength - 1);
   }
+  
+  if (rootHandle) {
+    if (pathLength === 1) {
+      console.log(`[folder-state] SET ROOT [${label}] → [${rootHandle.name}]`);
+    }
+    import('./folders.js').then(m => m.setCurrentFolder(rootHandle)).catch(() => {});
+  }
+
   if (JSON.stringify(before) !== JSON.stringify(_subPath)) {
     console.log(`[folder-state] WRITE [${label}] subPath: [${before.join('/')}] → [${_subPath.join('/')}]`);
+    try { localStorage.setItem('ic-folder-subpath', JSON.stringify(_subPath)); } catch (e) {}
   }
 }
 
@@ -120,6 +136,10 @@ export function setFolderPath(pathArray) {
  */
 export function setSelectedFile(filename) {
   _selectedFilename = filename || null;
+  try {
+    if (filename) localStorage.setItem('ic-folder-selectedFile', filename);
+    else localStorage.removeItem('ic-folder-selectedFile');
+  } catch (e) {}
 }
 
 /**
@@ -131,6 +151,10 @@ export function resetFolderState() {
   _subPath = [];
   _committedSubPath = [];
   _selectedFilename = null;
+  try {
+    localStorage.removeItem('ic-folder-subpath');
+    localStorage.removeItem('ic-folder-selectedFile');
+  } catch (e) {}
 }
 
 /**
@@ -189,7 +213,9 @@ export function wireFolderState(sk, getHandle, {
     // Ignore workspace events from a sidekick that is being torn down — the
     // React app inside resets its path stack to [] on unmount, which would
     // corrupt the shared state right before the next screen reads it.
-    if (!skipTracking && sk.isConnected) trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames, label);
+    if (!skipTracking && sk.isConnected) {
+      trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames, label, e.detail.rootHandle);
+    }
     onWorkspace?.(e);
   });
 
@@ -210,7 +236,7 @@ export function wireFolderState(sk, getHandle, {
       : (subPath.length > 0 ? subPath.join('/') : null);
     const targetFile = skipSubPathRestore ? null : selectedFilename;
 
-    console.log(`[folder-state] RESTORE [${label}] targetPath="${targetPath}" file="${targetFile}"`);
+    console.log(`[folder-state] RESTORE [${label}] root="${handle.name}" targetPath="${targetPath}" file="${targetFile}"`);
 
     await new Promise(resolve => {
       if (!targetPath) {
