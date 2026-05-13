@@ -1656,11 +1656,11 @@ export function injectBldStyles() {
     .bld-param-row { display:flex; align-items:center; gap:6px; padding:5px 6px; border-radius:6px; background:var(--ps-bg-raised); }
 
     /* Inline preview panel */
-    .bld-inline-preview { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+    .bld-inline-preview { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; min-height:0; }
     .bld-inline-preview-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--ps-border); flex-shrink:0; }
     .bld-upload-label { font-size:12px; padding:4px 10px; display:inline-flex; align-items:center; gap:5px; }
     .bld-preview-area {
-      flex:1; overflow:auto; display:flex; align-items:center; justify-content:center;
+      flex:1; overflow:auto; display:flex; align-items:center; justify-content:center; min-height:0;
       background:repeating-conic-gradient(var(--ps-bg-surface) 0% 25%, var(--ps-bg-app) 0% 50%) 0 0/24px 24px;
     }
     .bld-preview-area.bld-preview-dragover { outline:2px dashed var(--ps-blue); outline-offset:-4px; }

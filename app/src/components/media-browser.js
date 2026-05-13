@@ -138,7 +138,7 @@ export class MediaBrowser {
         .ic-mb-fs { display: flex; flex-direction: column; height: 100%; overflow: hidden; min-width: 0; width: 100%; }
         .ic-mb-fs-viewer { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; position: relative; min-height: 0; min-width: 0; overflow: hidden; width: 100%; }
         .ic-mb-fs-viewer img, .ic-mb-fs-viewer video { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .ic-mb-fs-strip { height: 140px; background: var(--ps-surface); border-top: 1px solid var(--ps-border); display: flex; gap: 8px; padding: 12px; overflow-x: auto; white-space: nowrap; align-items: flex-start; min-width: 0; width: 100%; }
+        .ic-mb-fs-strip { height: 160px; background: var(--ps-surface); border-top: 1px solid var(--ps-border); display: flex; gap: 8px; padding: 12px 12px 24px 12px; overflow-x: auto; white-space: nowrap; align-items: flex-start; min-width: 0; width: 100%; }
         .ic-mb-fs-item { display: flex; flex-direction: column; gap: 4px; width: 100px; flex-shrink: 0; cursor: pointer; user-select: none; position: relative; }
         .ic-mb-fs-thumb { width: 100px; height: 100px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; opacity: 0.6; transition: 0.2s; background: #111; display: flex; align-items: center; justify-content: center; }
         .ic-mb-fs-item:hover .ic-mb-fs-thumb { opacity: 1; }
