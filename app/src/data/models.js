@@ -22,6 +22,7 @@ export const MODEL_REGISTRY = [
     backend: 'onnx',
     precision: 'fp16',
     inputSize: 1024,
+    category: 'Imaging',
   },
   {
     id: 'whisper-tiny-en',
@@ -30,6 +31,7 @@ export const MODEL_REGISTRY = [
     url: 'Xenova/whisper-tiny.en',
     sizeBytes: 42_000_000,
     backend: 'transformers',
+    category: 'Audio',
   },
   {
     id: 'kokoro-82m',
@@ -38,6 +40,7 @@ export const MODEL_REGISTRY = [
     url: 'onnx-community/Kokoro-82M-v1.0-ONNX',
     sizeBytes: 85_000_000,
     backend: 'transformers',
+    category: 'Audio',
   },
   {
     id: 'pyannote-segmentation',
@@ -46,6 +49,7 @@ export const MODEL_REGISTRY = [
     url: 'onnx-community/pyannote-segmentation-3.0',
     sizeBytes: 15_000_000,
     backend: 'transformers',
+    category: 'Audio',
   },
   {
     id: 'chatterbox-tts',
@@ -54,6 +58,7 @@ export const MODEL_REGISTRY = [
     url: 'onnx-community/chatterbox-ONNX',
     sizeBytes: 1_500_000_000,
     backend: 'transformers',
+    category: 'Audio',
   },
   {
     id: 'pocket-tts',
@@ -63,6 +68,25 @@ export const MODEL_REGISTRY = [
     url: 'KevinAHM/pocket-tts-onnx',
     sizeBytes: 147_000_000,   // ~147 MB int8 (5 ONNX files + tokenizer + config)
     backend: 'onnx-direct',   // loaded by pocket-tts.worker.js, not transformers.js
+    category: 'Audio',
+  },
+  {
+    id: 'sam2-hiera-tiny',
+    name: 'Segment Anything 2 (Tiny)',
+    description: 'Fast, high-quality object segmentation for images and video tracking. Used for auto-selecting objects for removal.',
+    url: 'https://huggingface.co/SharpAI/sam2-hiera-tiny-onnx/resolve/main/encoder.onnx',
+    sizeBytes: 150_000_000,
+    backend: 'onnx',
+    category: 'Imaging',
+  },
+  {
+    id: 'lama-fp32',
+    name: 'LaMa Image Inpainting',
+    description: 'Large Mask Inpainting for "Magic Eraser" object removal.',
+    url: 'https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx', // Placeholder URL
+    sizeBytes: 200_000_000,
+    backend: 'onnx',
+    category: 'Imaging',
   }
 ];
 

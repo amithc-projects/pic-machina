@@ -79,17 +79,38 @@ export async function render(container) {
     } catch { /* ignore */ }
   }
 
-  // Body — one card per registry entry
+  // Body — group by category
   const body = container.querySelector('#mdl-body');
   const cards = new Map(); // id -> { wrapper, inflight: AbortController | null }
 
+  const categories = {};
   for (const meta of MODEL_REGISTRY) {
-    const card = document.createElement('div');
-    card.className = 'mdl-card';
-    card.dataset.id = meta.id;
-    body.appendChild(card);
-    cards.set(meta.id, { card, abort: null });
-    await refreshCard(meta);
+    const cat = meta.category || 'Other';
+    if (!categories[cat]) categories[cat] = [];
+    categories[cat].push(meta);
+  }
+
+  for (const cat of Object.keys(categories).sort()) {
+    const catHeader = document.createElement('div');
+    catHeader.className = 'mdl-category-header';
+    catHeader.style.gridColumn = '1 / -1';
+    catHeader.style.marginTop = '12px';
+    catHeader.style.fontSize = '18px';
+    catHeader.style.fontWeight = '600';
+    catHeader.style.color = 'var(--ps-text)';
+    catHeader.style.borderBottom = '1px solid var(--ps-border)';
+    catHeader.style.paddingBottom = '8px';
+    catHeader.textContent = cat;
+    body.appendChild(catHeader);
+
+    for (const meta of categories[cat]) {
+      const card = document.createElement('div');
+      card.className = 'mdl-card';
+      card.dataset.id = meta.id;
+      body.appendChild(card);
+      cards.set(meta.id, { card, abort: null });
+      await refreshCard(meta);
+    }
   }
 
   async function refreshCard(meta) {

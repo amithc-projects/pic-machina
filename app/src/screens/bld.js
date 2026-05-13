@@ -334,6 +334,9 @@ export async function render(container, hash) {
               <button class="btn-ghost" id="bld-thumb-clear" style="font-size:12px;color:var(--ps-red);${draft.thumbnail ? '' : 'display:none'}">
                 <span class="material-symbols-outlined" style="font-size:14px">delete</span>
               </button>
+              <button class="btn-ghost" id="bld-thumb-prompt" style="font-size:12px;color:var(--ps-blue);" title="Copy AI Prompt to Clipboard">
+                <span class="material-symbols-outlined" style="font-size:14px">smart_toy</span>
+              </button>
             </div>
             <div class="text-xs text-muted" style="margin-top:4px">
               <span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">content_paste</span>
@@ -873,6 +876,57 @@ export async function render(container, hash) {
     }
     const clearBtn = container.querySelector('#bld-thumb-clear');
     if (clearBtn) clearBtn.style.display = 'none';
+  });
+
+  container.querySelector('#bld-thumb-prompt')?.addEventListener('click', async () => {
+    const promptText = `I need you generate an ICON for a recipe within PicMachina.
+
+
+# README: Studio Recipe Icon Style Definition
+
+## Overview
+This document defines the exact visual language and prompting structure required to generate consistent thumbnail icons for the Studio application recipe library. 
+
+## Base Aesthetic Rules
+* **Theme:** Minimalist, dark-mode, technical UI iconography.
+* **Background:** Solid, flat, very dark gray/near-black (e.g., \`#151515\`). No gradients or textures in the background.
+* **Foreground Elements:** Clean, monoline vector-style line art. No filled shapes, only outlines.
+* **Color Palette:** The line art must feature a smooth, vibrant gradient transitioning from deep blue to bright cyan/teal.
+* **Effects:** A very subtle, understated neon glow on the lines. 
+* **Aspect Ratio:** Exactly 2:1.
+
+## Strict Negative Constraints
+* **NO TEXT:** Absolutely no words, letters, or numbers (unless explicitly requested for a specific file format icon like "GIF").
+* **NO UI CHROME:** Do not include play buttons, settings gears, progress bars, sliders, or app window borders.
+* **NO 3D/REALISM:** Keep everything flat and symbolic.
+
+## The Standard Layout (Process Flow)
+The standard recipe icon should depict a transformation process:
+\`[Input Concept]  -->  [Output Concept]\`
+* The arrow should be a simple, right-pointing line-art arrow in the center.
+
+---
+
+
+**Prompt:**
+Generate a UI thumbnail icon in a 2:1 aspect ratio. The style is minimalist, dark-mode vector line-art. The background is a solid very dark gray. The foreground features simple, monoline icons drawn with a smooth color gradient from deep blue to cyan/teal, with a subtle neon glow. 
+
+
+
+Strictly enforce: No text, no words, no letters. No user interface elements like buttons, settings wheels, or sliders. Purely abstract, flat, and symbolic line art.
+
+
+The recipe is ${draft.name || ''}
+
+${draft.description || ''}`;
+
+    try {
+      await navigator.clipboard.writeText(promptText);
+      window.AuroraToast?.show({ variant: 'success', title: 'AI Prompt copied to clipboard!' });
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      window.AuroraToast?.show({ variant: 'danger', title: 'Failed to copy prompt to clipboard.' });
+    }
   });
 
   // ── Add node modal ────────────────────────────────────────
