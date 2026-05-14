@@ -48,6 +48,7 @@ const MAIN_THREAD_TRANSFORMS = new Set([
   'ai-face-privacy',
   'ai-silhouette',
   'ai-smart-redact',
+  'ai-magic-eraser',
   // gif.js requires HTMLCanvasElement (not OffscreenCanvas) so must run on main thread
   'flow-photo-stack',
   'flow-animate-stack',
@@ -157,7 +158,7 @@ function getWorker() {
 }
 
 // ─── Main-thread batch runner ─────────────────────────────
-async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, subfolder, blocksById, runParams, run, onProgress, onLog, onComplete }) {
+async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, subfolder, blocksById, runParams, run, onProgress, onLog, onComplete, onInteractiveYield }) {
   const subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
   const processor = new ImageProcessor();
   const total = files.length;
@@ -235,6 +236,7 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
         runState,
         sidecarWrites: {},   // meta-sidecar-write transform accumulates here
         log: (level, msg) => onLog(level, msg),
+        onInteractiveYield,
       };
 
       const results = await processor.process(image, resolvedNodes, context);
@@ -798,9 +800,10 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
  * @param {function} opts.onLog          — (level, msg) => void
  * @param {function} opts.onComplete     — (run) => void
  * @param {function} opts.onError        — (msg) => void
+ * @param {function} [opts.onInteractiveYield] — (nodeId, snapshotCanvas) => Promise<HTMLCanvasElement>
  * @returns {{ cancel: function, runId: string }}
  */
-export async function startBatch({ recipe, files, inputHandle, outputHandle, subfolder = 'output', runParams = {}, onProgress, onLog, onComplete, onError }) {
+export async function startBatch({ recipe, files, inputHandle, outputHandle, subfolder = 'output', runParams = {}, onProgress, onLog, onComplete, onError, onInteractiveYield }) {
   const allBlocks  = await getAllBlocks();
   const blocksById = Object.fromEntries(allBlocks.map(b => [b.id, b]));
 
@@ -831,6 +834,7 @@ export async function startBatch({ recipe, files, inputHandle, outputHandle, sub
       onProgress: wrappedProgress,
       onLog:      wrappedLog,
       onComplete: wrappedComplete,
+      onInteractiveYield,
     }).catch(err => {
       console.error('[batch] Main-thread batch crashed:', err);
       onError?.(err.message);

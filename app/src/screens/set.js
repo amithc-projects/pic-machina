@@ -323,6 +323,12 @@ export async function render(container, hash) {
           onLog:      (lvl, msg) => window._queLog?.(lvl, msg),
           onComplete: (run)      => window._queComplete?.(run),
           onError:    (msg)      => window._queError?.(msg),
+          onInteractiveYield: async (nodeId, snapshot) => {
+            if (window._queInteractiveYield) {
+              return await window._queInteractiveYield(nodeId, snapshot);
+            }
+            throw new Error('Interactive yield not supported by current screen.');
+          },
         });
         window._queRunControl = batchControl;
       } catch (err) {

@@ -231,7 +231,7 @@ export async function render(container, hash) {
 
   // Auto-expand config panel for brand-new recipes
   const isNew = (!draft.name || draft.name === 'Untitled Recipe') && !draft.description && !draft.nodes?.length;
-  let configOpen = isNew;
+  let configOpen = true;
 
   // ── Name checking and masking logic ───────────────────────
   const allRecipes = await getAllRecipes();

@@ -1655,3 +1655,62 @@ registry.register({
     ctx.drawImage(subjectCanvas, 0, 0);
   }
 });
+
+// ─── Magic Eraser (LaMa) ──────────────────────────────────
+registry.register({
+  id: 'ai-magic-eraser',
+  name: 'Magic Eraser (LaMa)',
+  category: 'AI & Composition',
+  categoryKey: 'ai',
+  timeline: 'unsupported',
+  icon: 'ink_eraser',
+  interactive: true,
+  description: 'Interactively select and remove unwanted objects from an image using the LaMa AI inpainting model.',
+  params: [],
+  async apply(ctx, p, context) {
+    if (typeof WorkerGlobalScope !== 'undefined') {
+      console.warn('[ai-magic-eraser] Skipping — requires main thread.');
+      return;
+    }
+    
+    if (!context.onInteractiveYield) {
+      context.log?.('warn', '[ai-magic-eraser] Engine does not support interactive yielding.');
+      return;
+    }
+
+    try {
+      const { isModelReady, runLama } = await import('../ai/lama.js');
+      const ready = await isModelReady();
+      if (!ready) {
+        const msg = 'LaMa model not downloaded. Open the Models screen (#mdl) to download it.';
+        context.log?.('warn', `[ai-magic-eraser] ${msg}`);
+        console.warn(`[ai-magic-eraser] ${msg}`);
+        return;
+      }
+
+      context.log?.('info', '[ai-magic-eraser] Yielding to user for object mask...');
+      
+      // 1) Ask the UI to get a mask from the user
+      // We pass the current canvas state so the UI can display it
+      const maskCanvas = await context.onInteractiveYield('ai-magic-eraser', ctx.canvas);
+      
+      if (!maskCanvas) {
+        context.log?.('info', '[ai-magic-eraser] User cancelled mask selection or returned empty mask.');
+        return;
+      }
+      
+      // 2) Run the LaMa model
+      context.log?.('info', '[ai-magic-eraser] Mask received! Running LaMa inpainting...');
+      
+      const resultCanvas = await runLama(ctx.canvas, maskCanvas, { log: context.log });
+      
+      // Draw the final inpainted image back to the main processing context
+      ctx.drawImage(resultCanvas, 0, 0);
+      
+      context.log?.('ok', '[ai-magic-eraser] Magic Eraser complete!');
+
+    } catch (err) {
+      context.log?.('error', `[ai-magic-eraser] failed: ${err.message}`);
+    }
+  }
+});

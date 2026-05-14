@@ -192,6 +192,156 @@ export function render(container) {
     appendLog('error', 'FATAL: ' + msg);
   };
 
+  window._queInteractiveYield = (nodeId, snapshotCanvas) => {
+    return new Promise((resolve) => {
+      appendLog('warn', `Recipe paused. Waiting for user interaction...`);
+      statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;animation:pulse 2s infinite">pan_tool</span> Yielded';
+      statusBadge.className = 'ic-badge ic-badge--amber';
+
+      const modal = document.createElement('dialog');
+      modal.className = 'modal';
+      modal.style.display = 'flex';
+      modal.style.flexDirection = 'column';
+      modal.style.maxWidth = '90vw';
+      modal.style.maxHeight = '90vh';
+      modal.style.width = '800px';
+
+      modal.innerHTML = `
+        <div class="modal__header">
+          <h2 class="modal__title">Interactive Eraser</h2>
+        </div>
+        <div class="modal__body" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:16px; background:#1e1e1e;">
+          <p style="color:var(--ps-text-muted); font-size:13px; margin:0;">Draw over the object you want to erase, then click Confirm.</p>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="color:var(--ps-text-muted); font-size:12px;">Brush Size:</label>
+            <input type="range" id="yield-brush-size" min="5" max="100" value="30" style="width:150px;">
+          </div>
+          <div style="position:relative; border:1px solid var(--ps-border); border-radius:4px; overflow:hidden;">
+            <canvas id="yield-bg-canvas" style="display:block; max-width:100%; max-height:55vh;"></canvas>
+            <canvas id="yield-draw-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; cursor:crosshair;"></canvas>
+          </div>
+        </div>
+        <div class="modal__footer" style="justify-content:flex-end;">
+          <button class="btn-primary" id="btn-yield-confirm">Confirm Mask</button>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      modal.showModal();
+
+      const bgCanvas = modal.querySelector('#yield-bg-canvas');
+      const drawCanvas = modal.querySelector('#yield-draw-canvas');
+      const brushSlider = modal.querySelector('#yield-brush-size');
+      
+      // Calculate aspect-correct display size
+      const maxW = window.innerWidth * 0.8;
+      const maxH = window.innerHeight * 0.55;
+      let w = snapshotCanvas.width;
+      let h = snapshotCanvas.height;
+      if (w > maxW) { h = h * (maxW / w); w = maxW; }
+      if (h > maxH) { w = w * (maxH / h); h = maxH; }
+      
+      bgCanvas.width = snapshotCanvas.width;
+      bgCanvas.height = snapshotCanvas.height;
+      bgCanvas.style.width = `${w}px`;
+      bgCanvas.style.height = `${h}px`;
+      bgCanvas.getContext('2d').drawImage(snapshotCanvas, 0, 0);
+
+      drawCanvas.width = snapshotCanvas.width;
+      drawCanvas.height = snapshotCanvas.height;
+      drawCanvas.style.width = `${w}px`;
+      drawCanvas.style.height = `${h}px`;
+
+      const ctx = drawCanvas.getContext('2d');
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+      
+      const updateBrushSize = () => {
+        // Scale the brush size relative to the actual canvas resolution vs screen display size
+        const scale = drawCanvas.width / w;
+        ctx.lineWidth = parseInt(brushSlider.value, 10) * scale;
+      };
+      brushSlider.addEventListener('input', updateBrushSize);
+      updateBrushSize();
+
+      let isDrawing = false;
+      let lastX = 0, lastY = 0;
+
+      const getCoords = (e) => {
+        const rect = drawCanvas.getBoundingClientRect();
+        const scaleX = drawCanvas.width / rect.width;
+        const scaleY = drawCanvas.height / rect.height;
+        return {
+          x: (e.clientX - rect.left) * scaleX,
+          y: (e.clientY - rect.top) * scaleY
+        };
+      };
+
+      drawCanvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        const { x, y } = getCoords(e);
+        lastX = x; lastY = y;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+      });
+
+      drawCanvas.addEventListener('mousemove', (e) => {
+        if (!isDrawing) return;
+        const { x, y } = getCoords(e);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+      });
+
+      drawCanvas.addEventListener('mouseup', () => {
+        isDrawing = false;
+      });
+      drawCanvas.addEventListener('mouseleave', () => {
+        isDrawing = false;
+      });
+
+      modal.querySelector('#btn-yield-confirm').addEventListener('click', (e) => {
+        const btn = e.target;
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+        btn.style.opacity = '0.7';
+        
+        // Give the browser a moment to repaint the button state before blocking the main thread
+        setTimeout(() => {
+          // Create a binary mask (white on black)
+          const maskCanvas = document.createElement('canvas');
+          maskCanvas.width = snapshotCanvas.width;
+          maskCanvas.height = snapshotCanvas.height;
+          const mCtx = maskCanvas.getContext('2d');
+          mCtx.fillStyle = '#000';
+          mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+          
+          // Draw the user's strokes in solid white
+          mCtx.drawImage(drawCanvas, 0, 0);
+          const imgData = mCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+          for (let i = 0; i < imgData.data.length; i += 4) {
+            if (imgData.data[i] > 50) { // If there's any red drawn
+              imgData.data[i] = 255;
+              imgData.data[i+1] = 255;
+              imgData.data[i+2] = 255;
+              imgData.data[i+3] = 255;
+            }
+          }
+          mCtx.putImageData(imgData, 0, 0);
+
+          modal.remove();
+          
+          // Reset status
+          statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;animation:spin 1s linear infinite">refresh</span> Processing';
+          statusBadge.className = 'ic-badge ic-badge--blue';
+          appendLog('ok', `Mask received, resuming recipe...`);
+          
+          resolve(maskCanvas);
+        }, 50);
+      });
+    });
+  };
+
   container.querySelector('#btn-cancel-batch')?.addEventListener('click', async () => {
     const ctrl = window._queRunControl;
     if (ctrl) {
