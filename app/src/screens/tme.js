@@ -96,9 +96,10 @@ export async function render(container) {
             <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
               <span class="panel-header-title">Media Pool</span>
               <div style="display: flex; gap: 4px;">
-                <button class="btn-ghost" id="tme-btn-remove-media" title="Remove Selected Media" style="display:none; color: var(--ps-danger); padding: 4px;">
+                <button class="btn-ghost" id="tme-btn-remove-media" title="Remove Selected Media" style="color: var(--ps-danger); padding: 4px; opacity: 0.3; cursor: not-allowed;" disabled>
                   <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
                 </button>
+
                 <button class="btn-ghost" id="tme-btn-add-media" title="Import Media" style="padding: 4px;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
                 </button>
@@ -159,6 +160,13 @@ export async function render(container) {
   const handleGlobalKeyDown = async (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
     
+    // Command+F or Ctrl+F toggles playback
+    if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        btnPlay.click();
+        return;
+    }
+
     if ((e.key === 'Backspace' || e.key === 'Delete') && timelineView && timelineView.selectedClips.size > 0) {
         if (!confirm('Are you sure you want to delete the selected items?')) return;
         
@@ -212,7 +220,7 @@ export async function render(container) {
       if (isSelected && isUsed) anySelectedIsUsed = true;
       
       const el = document.createElement('div');
-      el.className = 'tme-pool-item';
+      el.className = 'tme-pool-item' + (isSelected ? ' is-selected' : '');
       // Basic inline styling for now, we can move to css later
       el.style.width = '72px';
       el.style.height = '72px';
@@ -280,10 +288,16 @@ export async function render(container) {
 
       // Double-click to insert at end of respective track
       el.addEventListener('dblclick', async () => {
+        const duration = item.meta?.duration || 4.0;
         if (item.type === 'video' || item.type === 'image') {
-          const maxT = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+          let maxT = 0;
+          if (timelineView && timelineView.isMagnetic) {
+             maxT = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+          } else {
+             maxT = playheadTime;
+          }
           currentTimeline.videoTrack.push({
-            id: generateId(), poolId: item.id, timelineStart: maxT, duration: 4.0, sourceStart: 0, transitionOut: null
+            id: generateId(), poolId: item.id, timelineStart: maxT, duration: duration, sourceStart: 0, transitionOut: null
           });
         } else if (item.type === 'audio') {
           if (currentTimeline.audioTracks.length === 0) {
@@ -291,8 +305,14 @@ export async function render(container) {
           }
           let targetTrack = currentTimeline.audioTracks.find(t => timelineView && timelineView.selectedTracks.has(t.id));
           if (!targetTrack) targetTrack = currentTimeline.audioTracks[0];
-          const maxT = targetTrack.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
-          targetTrack.blocks.push({ id: generateId(), poolId: item.id, timelineStart: maxT, duration: 4.0, sourceStart: 0 });
+          
+          let maxT = 0;
+          if (timelineView && timelineView.isMagnetic) {
+             maxT = targetTrack.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+          } else {
+             maxT = playheadTime;
+          }
+          targetTrack.blocks.push({ id: generateId(), poolId: item.id, timelineStart: maxT, duration: duration, sourceStart: 0 });
         }
         await saveTimeline(currentTimeline);
         renderTimelineTracks();
@@ -303,9 +323,19 @@ export async function render(container) {
 
     if (btnRemoveMedia) {
       if (mediaPoolSelection.size > 0 && !anySelectedIsUsed) {
-        btnRemoveMedia.style.display = 'block';
+        btnRemoveMedia.disabled = false;
+        btnRemoveMedia.style.opacity = '1';
+        btnRemoveMedia.style.cursor = 'pointer';
+        btnRemoveMedia.title = "Remove Selected Media";
       } else {
-        btnRemoveMedia.style.display = 'none';
+        btnRemoveMedia.disabled = true;
+        btnRemoveMedia.style.opacity = '0.3';
+        btnRemoveMedia.style.cursor = 'not-allowed';
+        if (anySelectedIsUsed) {
+           btnRemoveMedia.title = "Cannot delete media currently used in timeline";
+        } else {
+           btnRemoveMedia.title = "Remove Selected Media";
+        }
       }
     }
   }
@@ -482,9 +512,19 @@ export async function render(container) {
       };
       
       if (tInStyle) {
-        tInStyle.addEventListener('change', updateTransitions);
+        tInStyle.addEventListener('change', () => {
+            if (tInStyle.value !== 'none' && (!tInDur.value || parseFloat(tInDur.value) === 0)) {
+                tInDur.value = '1.0';
+            }
+            updateTransitions();
+        });
         tInDur.addEventListener('change', updateTransitions);
-        tOutStyle.addEventListener('change', updateTransitions);
+        tOutStyle.addEventListener('change', () => {
+            if (tOutStyle.value !== 'none' && (!tOutDur.value || parseFloat(tOutDur.value) === 0)) {
+                tOutDur.value = '1.0';
+            }
+            updateTransitions();
+        });
         tOutDur.addEventListener('change', updateTransitions);
       }
     }
@@ -903,6 +943,10 @@ export async function render(container) {
     if (!timelineView) {
       timelineView = new TimelineView(container.querySelector('#tme-timeline-wrapper'), {
         pixelsPerSecond: PIXELS_PER_SECOND,
+        onTogglePlay: () => {
+            const btnPlay = container.querySelector('#tme-btn-play');
+            if (btnPlay) btnPlay.click();
+        },
         onPlayheadMove: (time) => {
           playheadTime = time;
           updatePlayheadUI();
@@ -917,6 +961,23 @@ export async function render(container) {
             timelineView.selectedClips.clear();
             timelineView.selectedClips.add(clipId);
           }
+          selectedItemId = timelineView.selectedClips.size === 1 ? [...timelineView.selectedClips][0] : null;
+          selectedItemType = trackId === 'v1' ? 'video' : (trackId.startsWith('audio_') || trackId.startsWith('A') ? 'audio' : 'fx');
+          renderPropertiesPanel();
+          renderTimelineTracks();
+        },
+        onTrackSelect: (trackId, event) => {
+          timelineView.selectedClips.clear();
+          let trackClips = [];
+          if (trackId === 'v1') trackClips = currentTimeline.videoTrack;
+          else if (trackId.startsWith('A')) {
+            const t = currentTimeline.audioTracks.find(x => x.id === trackId);
+            if (t) trackClips = t.blocks;
+          } else {
+            const t = currentTimeline.effectTracks.find(x => x.id === trackId);
+            if (t) trackClips = t.blocks;
+          }
+          trackClips.forEach(c => timelineView.selectedClips.add(c.id));
           selectedItemId = timelineView.selectedClips.size === 1 ? [...timelineView.selectedClips][0] : null;
           selectedItemType = trackId === 'v1' ? 'video' : (trackId.startsWith('audio_') || trackId.startsWith('A') ? 'audio' : 'fx');
           renderPropertiesPanel();
@@ -978,17 +1039,29 @@ export async function render(container) {
             menu.style.position = 'fixed';
             menu.style.left = `${e.clientX}px`;
             menu.style.top = `${e.clientY}px`;
-            menu.style.background = 'var(--ps-bg-surface)';
-            menu.style.border = '1px solid var(--ps-border)';
-            menu.style.borderRadius = '4px';
-            menu.style.padding = '4px 0';
+            menu.style.background = '#1e1e1e';
+            menu.style.border = '1px solid #333';
+            menu.style.borderRadius = '8px';
+            menu.style.padding = '8px 0';
             menu.style.zIndex = '9999';
-            menu.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
+            menu.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
+            menu.style.minWidth = '160px';
 
             const addMenuItem = (label, icon, onClick) => {
                 const item = document.createElement('div');
-                item.className = 'flex items-center gap-2 p-2 hover:bg-[var(--ps-bg-hover)] cursor-pointer text-sm text-white';
-                item.innerHTML = `<span class="material-symbols-outlined text-sm text-muted">${icon}</span> ${label}`;
+                item.style.display = 'flex';
+                item.style.alignItems = 'center';
+                item.style.gap = '8px';
+                item.style.padding = '8px 16px';
+                item.style.cursor = 'pointer';
+                item.style.fontSize = '14px';
+                item.style.color = '#fff';
+                item.style.transition = 'background 0.2s';
+                
+                item.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;color:#aaa;">${icon}</span> ${label}`;
+                item.onmouseenter = () => item.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                item.onmouseleave = () => item.style.backgroundColor = 'transparent';
+                
                 item.onclick = (evt) => { 
                     evt.stopPropagation();
                     onClick(); 
@@ -1130,14 +1203,26 @@ export async function render(container) {
                        const poolItem = currentTimeline.mediaPool.find(p => p.id === id);
                        if (poolItem) {
                          if (track.type === 'video' && (poolItem.type === 'video' || poolItem.type === 'image')) {
-                           currentTimeline.videoTrack.push({ id: generateId(), poolId: id, timelineStart: currentTime, duration: 4.0, sourceStart: 0, transitionOut: null });
-                           currentTime += 4.0;
+                           const duration = poolItem.meta?.duration || 4.0;
+                            let dropTime = currentTime;
+                            if (typeof timelineView !== 'undefined' && timelineView.isMagnetic) {
+                               dropTime = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+                            }
+                            currentTimeline.videoTrack.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0, transitionOut: null });
+                            currentTime = dropTime;
+                           currentTime += (typeof duration !== 'undefined' ? duration : 4.0);
                            dropped = true;
                          } else if (track.type === 'audio' && poolItem.type === 'audio') {
                            const t = currentTimeline.audioTracks.find(at => at.id === track.id);
                            if (t) {
-                               t.blocks.push({ id: generateId(), poolId: id, timelineStart: currentTime, duration: 4.0, sourceStart: 0 });
-                               currentTime += 4.0;
+                               const duration = poolItem.meta?.duration || 4.0;
+                                let dropTime = currentTime;
+                                if (typeof timelineView !== 'undefined' && timelineView.isMagnetic) {
+                                   dropTime = t.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+                                }
+                                t.blocks.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0 });
+                                currentTime = dropTime;
+                               currentTime += (typeof duration !== 'undefined' ? duration : 4.0);
                                dropped = true;
                            }
                          }
@@ -1336,15 +1421,24 @@ export async function render(container) {
                     const poolItem = currentTimeline.mediaPool.find(p => p.id === id);
                     if (!poolItem) return;
                     
+                    const duration = poolItem.meta?.duration || 4.0;
                     if (track.type === 'video' && (poolItem.type === 'video' || poolItem.type === 'image')) {
-                      currentTimeline.videoTrack.push({ id: generateId(), poolId: id, timelineStart: currentTime, duration: 4.0, sourceStart: 0, transitionOut: null });
-                      currentTime += 4.0;
+                      let dropTime = currentTime;
+                      if (timelineView && timelineView.isMagnetic) {
+                         dropTime = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+                      }
+                      currentTimeline.videoTrack.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0, transitionOut: null });
+                      currentTime = dropTime + duration;
                       dropped = true;
                     } else if (track.type === 'audio' && poolItem.type === 'audio') {
                       const t = currentTimeline.audioTracks.find(at => at.id === track.id);
                       if (t) {
-                          t.blocks.push({ id: generateId(), poolId: id, timelineStart: currentTime, duration: 4.0, sourceStart: 0 });
-                          currentTime += 4.0;
+                          let dropTime = currentTime;
+                          if (timelineView && timelineView.isMagnetic) {
+                             dropTime = t.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+                          }
+                          t.blocks.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0 });
+                          currentTime = dropTime + duration;
                           dropped = true;
                       }
                     }
@@ -2400,12 +2494,15 @@ export async function render(container) {
 
   btnPlay.addEventListener('click', () => {
     isPlaying = !isPlaying;
+    const btnPlayTimeline = container.querySelector('#tme-btn-play-timeline');
     if (isPlaying) {
       btnPlay.innerHTML = '<span class="material-symbols-outlined">pause</span>';
+      if (btnPlayTimeline) btnPlayTimeline.innerHTML = '<span class="material-symbols-outlined" style="font-size: 22px;">pause</span>';
       lastFrameTime = 0;
       animFrameId = requestAnimationFrame(loop);
     } else {
       btnPlay.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
+      if (btnPlayTimeline) btnPlayTimeline.innerHTML = '<span class="material-symbols-outlined" style="font-size: 22px;">play_arrow</span>';
       if (animFrameId) cancelAnimationFrame(animFrameId);
       syncAudioPlayback();
     }
@@ -2448,6 +2545,7 @@ export async function render(container) {
         renderTimelineTracks();
         renderPropertiesPanel();
         updatePlayheadUI();
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the video preview
         renderFrame();
       }
     });

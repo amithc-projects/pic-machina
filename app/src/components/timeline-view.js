@@ -43,6 +43,10 @@ export class TimelineView {
                     <button class="btn-ghost tl-btn-delete" title="Delete Selected">
                         <span class="material-symbols-outlined">delete</span>
                     </button>
+                    <div style="width: 8px;"></div>
+                    <button class="btn-ghost" id="tme-btn-play-timeline" title="Play/Pause (Cmd+F)" style="color: var(--ps-accent); background: rgba(0,255,100,0.1); border-radius: 4px;">
+                        <span class="material-symbols-outlined" style="font-size: 22px;">play_arrow</span>
+                    </button>
                     <div style="flex: 1;"></div>
                     <span class="material-symbols-outlined" style="font-size: 16px; color: #888;">zoom_out</span>
                     <input type="range" class="tl-zoom-slider" min="1" max="100" value="50" style="width: 100px;">
@@ -85,9 +89,11 @@ export class TimelineView {
             zoomSlider: this.container.querySelector('.tl-zoom-slider'),
             btnAddTrack: this.container.querySelector('.tl-btn-add-track'),
             btnSplit: this.container.querySelector('.tl-btn-split'),
-            btnDelete: this.container.querySelector('.tl-btn-delete')
+            btnDelete: this.container.querySelector('.tl-btn-delete'),
+            btnMagnet: this.container.querySelector('.tl-btn-magnet')
         };
 
+        this.isMagnetic = true;
         this.bindEvents();
     }
 
@@ -105,11 +111,29 @@ export class TimelineView {
         this.dom.btnSplit.addEventListener('click', () => this.options.onSplitClip());
         this.dom.btnDelete.addEventListener('click', () => this.options.onDeleteSelected());
         
+        const btnPlayTimeline = this.container.querySelector('#tme-btn-play-timeline');
+        if (btnPlayTimeline) {
+            btnPlayTimeline.addEventListener('click', () => {
+                if (this.options.onTogglePlay) this.options.onTogglePlay();
+            });
+        }
+        
         this.dom.zoomSlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
             this.pixelsPerSecond = Math.max(1, val);
             this.options.onZoom(this.pixelsPerSecond);
             this.render();
+        });
+
+        this.dom.btnMagnet.addEventListener('click', () => {
+            this.isMagnetic = !this.isMagnetic;
+            if (this.isMagnetic) {
+                this.dom.btnMagnet.classList.add('is-active');
+                this.dom.btnMagnet.style.color = 'var(--ps-blue, #3b82f6)';
+            } else {
+                this.dom.btnMagnet.classList.remove('is-active');
+                this.dom.btnMagnet.style.color = '#888';
+            }
         });
     }
 
@@ -181,6 +205,11 @@ export class TimelineView {
             nameDiv.style.whiteSpace = 'nowrap';
             nameDiv.textContent = track.name;
             hdr.appendChild(nameDiv);
+            
+            hdr.style.cursor = 'pointer';
+            hdr.addEventListener('click', (e) => {
+                this.options.onTrackSelect(track.id, e);
+            });
             
             this.options.onRenderTrackHeader(track, hdr);
             this.dom.headerList.appendChild(hdr);
