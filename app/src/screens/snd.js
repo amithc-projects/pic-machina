@@ -1,6 +1,8 @@
 import * as Tone from 'https://cdn.jsdelivr.net/npm/tone@14.7.77/+esm';
 import JSZip from 'jszip';
 import { TimelineView } from '../components/timeline-view.js';
+import { FsaBrowser } from '../components/fsa-browser.js';
+import { getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
 
 // -------------- AUDIO HELPERS --------------
 function audioBufferToWav(buffer, opt_channel) {
@@ -51,6 +53,77 @@ function audioBufferToWav(buffer, opt_channel) {
     }
   }
   return new Blob([view], { type: 'audio/wav' });
+}
+
+async function encodeMp3(audioBuffer) {
+  if (!window.lamejs) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+  const Mp3Encoder = window.lamejs.Mp3Encoder;
+  if (!Mp3Encoder) throw new Error('Failed to load MP3 encoder');
+
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const mp3encoder = new Mp3Encoder(numChannels, sampleRate, 128);
+  const sampleBlockSize = 1152;
+
+  const toInt16 = f32 => {
+    const out = new Int16Array(f32.length);
+    for (let i = 0; i < f32.length; i++) {
+      const s = Math.max(-1, Math.min(1, f32[i]));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return out;
+  };
+
+  const left = toInt16(audioBuffer.getChannelData(0));
+  const right = numChannels > 1 ? toInt16(audioBuffer.getChannelData(1)) : left;
+
+  const mp3Data = [];
+  for (let i = 0; i < left.length; i += sampleBlockSize) {
+    const l = left.subarray(i, i + sampleBlockSize);
+    const r = right.subarray(i, i + sampleBlockSize);
+    const chunk = numChannels > 1 ? mp3encoder.encodeBuffer(l, r) : mp3encoder.encodeBuffer(l);
+    if (chunk.length > 0) mp3Data.push(chunk);
+  }
+  const flush = mp3encoder.flush();
+  if (flush.length > 0) mp3Data.push(flush);
+
+  return new Blob(mp3Data, { type: 'audio/mp3' });
+}
+
+function promptExportFormat() {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `
+      <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:28px 32px;min-width:280px;text-align:center;font-family:inherit">
+        <div style="font-size:16px;font-weight:600;color:#f1f5f9;margin-bottom:6px">Export Format</div>
+        <div style="font-size:13px;color:#94a3b8;margin-bottom:22px">Choose the output format for your mix</div>
+        <div style="display:flex;gap:12px;justify-content:center">
+          <button data-fmt="wav" style="flex:1;padding:12px 20px;border-radius:8px;border:1.5px solid #3b82f6;background:#1e40af22;color:#93c5fd;font-size:14px;font-weight:600;cursor:pointer">
+            <div style="font-size:22px;margin-bottom:4px">🎚️</div>WAV<div style="font-size:11px;font-weight:400;color:#64748b;margin-top:2px">Lossless</div>
+          </button>
+          <button data-fmt="mp3" style="flex:1;padding:12px 20px;border-radius:8px;border:1.5px solid #8b5cf6;background:#4c1d9522;color:#c4b5fd;font-size:14px;font-weight:600;cursor:pointer">
+            <div style="font-size:22px;margin-bottom:4px">🎵</div>MP3<div style="font-size:11px;font-weight:400;color:#64748b;margin-top:2px">128 kbps</div>
+          </button>
+        </div>
+        <button data-fmt="cancel" style="margin-top:16px;background:none;border:none;color:#64748b;font-size:13px;cursor:pointer">Cancel</button>
+      </div>`;
+    overlay.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(btn.dataset.fmt === 'cancel' ? null : btn.dataset.fmt);
+      });
+    });
+    document.body.appendChild(overlay);
+  });
 }
 
 const getAudioCtx = () => {
@@ -228,6 +301,43 @@ function showDialog(title, message, isDestructive, onConfirm) {
     };
 }
 
+function showPrompt(title) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.8)';
+        overlay.style.backdropFilter = 'blur(5px)';
+        overlay.style.zIndex = '99999';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        
+        overlay.innerHTML = `
+            <div style="background: rgba(20,20,30,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 24px; width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); display: flex; flex-direction: column; gap: 16px;">
+               <h3 style="margin: 0; font-size: 16px; color: #e2e8f0; font-family: system-ui, sans-serif;">${title}</h3>
+               <input type="text" id="dlg-input" class="ic-input" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white;">
+               <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+                  <button class="snd-btn" id="dlg-cancel">Cancel</button>
+                  <button class="snd-btn snd-btn-primary" id="dlg-confirm">Confirm</button>
+               </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        const input = overlay.querySelector('#dlg-input');
+        input.focus();
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') overlay.querySelector('#dlg-confirm').click();
+            if (e.key === 'Escape') overlay.querySelector('#dlg-cancel').click();
+        });
+        
+        overlay.querySelector('#dlg-cancel').onclick = () => { document.body.removeChild(overlay); resolve(null); };
+        overlay.querySelector('#dlg-confirm').onclick = () => { document.body.removeChild(overlay); resolve(input.value); };
+    });
+}
+
 let activeCtxMenu = null;
 function showContextMenu(x, y, items) {
     if (activeCtxMenu) document.body.removeChild(activeCtxMenu);
@@ -376,10 +486,172 @@ let isPlaying = false;
 let activeToneNodes = [];
 let masterVolumeNode = null;
 let playLoopId = null;
+let currentProjectDirHandle = null;
+let timelineView = null;
 
 // -------------- MAIN RENDER --------------
 
 export async function render(container) {
+  timelineView = null;
+  if (!currentProjectDirHandle) {
+    container.innerHTML = `
+      <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%; background:var(--ps-bg-surface);">
+        <div style="text-align:center;">
+           <h2 style="font-size:24px; margin-bottom:8px;">Audio Studio</h2>
+           <p class="text-muted" style="font-size:14px;">Select or create a project to get started.</p>
+        </div>
+        <div id="snd-workspace-root" style="width:100%; max-width:800px; display:flex; flex-direction:column; gap:16px;"></div>
+      </div>
+    `;
+
+    const renderWorkspace = async () => {
+       const rootEl = container.querySelector('#snd-workspace-root');
+       let workspaceHandle = await getWorkspaceRoot();
+       
+       if (!workspaceHandle) {
+          rootEl.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; padding:48px; border:2px dashed var(--ps-border); border-radius:12px; background:var(--ps-surface);">
+               <span class="material-symbols-outlined text-muted" style="font-size:48px; margin-bottom:16px;">folder_open</span>
+               <h3 style="margin-bottom:8px;">No Workspace Selected</h3>
+               <p class="text-muted" style="margin-bottom:24px; text-align:center;">A workspace is a local folder on your computer where all your projects will be stored.</p>
+               <button class="btn-primary" id="snd-btn-set-workspace">Select Workspace Folder</button>
+            </div>
+          `;
+          rootEl.querySelector('#snd-btn-set-workspace').onclick = async () => {
+             try {
+                workspaceHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                await setWorkspaceRoot(workspaceHandle);
+                renderWorkspace();
+             } catch(e) { if(e.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+          };
+          return;
+       }
+       
+       if (!(await verifyPermission(workspaceHandle, true))) {
+          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">Permission required to access Workspace.</p><button class="btn-primary" id="snd-btn-grant">Grant Permission</button></div>`;
+          rootEl.querySelector('#snd-btn-grant').onclick = async () => {
+             if (await verifyPermission(workspaceHandle, true)) renderWorkspace();
+          };
+          return;
+       }
+       
+       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> Scanning workspace...</div>`;
+       const projects = await scanWorkspaceProjects(workspaceHandle);
+       
+       projects.sort((a,b) => (b.projectData.title || b.projectData.name || '').localeCompare(a.projectData.title || a.projectData.name || ''));
+       
+       let gridHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> Workspace: <b>${workspaceHandle.name}</b></div>
+         <button class="btn-ghost btn-sm" id="snd-btn-change-workspace" title="Change Workspace"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+       </div>`;
+       
+       gridHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">`;
+       
+       // New Project Card
+       gridHtml += `
+         <button id="snd-btn-new-project" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:rgba(255,255,255,0.02); border:2px dashed var(--ps-border); border-radius:12px; cursor:pointer; color:var(--ps-text-muted); transition:0.2s;" onmouseover="this.style.color='var(--ps-blue)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.color='var(--ps-text-muted)'; this.style.borderColor='var(--ps-border)';">
+           <span class="material-symbols-outlined" style="font-size:32px; margin-bottom:8px;">add_circle</span>
+           <span style="font-size:14px; font-weight:600;">New Audio Project</span>
+         </button>
+       `;
+       
+       // Project Cards
+       projects.forEach((p, i) => {
+         // Filter to audio projects, assume it's audio studio if it has mediaPoolMeta or masterFx (or if it's totally empty but titled for audio)
+         const isAudioStudio = p.projectData.mediaPoolMeta || p.projectData.masterFx || (p.projectData.tracks && p.projectData.tracks.length > 0 && !p.projectData.videoTrack);
+         if (!isAudioStudio) return; // Skip video/speech projects
+
+         const title = p.projectData.name || p.projectData.title || 'Untitled';
+         const thumb = `<div style="width:100%; height:120px; background:var(--ps-surface); border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;"><span class="material-symbols-outlined text-muted text-[32px]">graphic_eq</span></div>`;
+         
+         gridHtml += `
+           <div class="snd-project-card" data-index="${i}" style="display:flex; flex-direction:column; padding:12px; background:var(--ps-surface); border:1px solid var(--ps-border); border-radius:12px; cursor:pointer; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.background='var(--ps-surface)'; this.style.borderColor='var(--ps-border)';">
+              ${thumb}
+              <span style="font-size:14px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${title}</span>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${Object.keys(p.projectData.mediaPoolMeta || {}).length} items</span>
+           </div>
+         `;
+       });
+       
+       gridHtml += `</div>`;
+       rootEl.innerHTML = gridHtml;
+       
+       rootEl.querySelector('#snd-btn-change-workspace').onclick = async () => {
+          try {
+             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+             await setWorkspaceRoot(handle);
+             renderWorkspace();
+          } catch(e) {}
+       };
+       
+       rootEl.querySelector('#snd-btn-new-project').onclick = async () => {
+          const name = await showPrompt('Project Name:');
+          if (!name) return;
+          try {
+             const initialData = { name: name, mediaPoolMeta: {}, tracks: [], masterFx: [] };
+             const dirHandle = await createProjectInWorkspace(workspaceHandle, name, initialData);
+             project = { name: name, originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
+             currentProjectDirHandle = dirHandle;
+             render(container);
+          } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+       };
+       
+       rootEl.querySelectorAll('.snd-project-card').forEach(card => {
+          card.onclick = async () => {
+             const p = projects[card.dataset.index];
+             try {
+                // Initialize audio context
+                await Tone.start();
+                const ctx = getAudioCtx();
+
+                const data = p.projectData;
+                project = {
+                   name: data.name || 'Untitled',
+                   originalToneBuffer: null,
+                   tracks: data.tracks || [],
+                   masterFx: data.masterFx || [],
+                   mediaPool: {}
+                };
+
+                if (data.mediaPoolMeta) {
+                   const assetsDir = await p.dirHandle.getDirectoryHandle('assets', { create: true });
+                   for (const [poolId, meta] of Object.entries(data.mediaPoolMeta)) {
+                       try {
+                           const binHandle = await assetsDir.getFileHandle(`${poolId}.bin`);
+                           const binFile = await binHandle.getFile();
+                           const arrayBuf = await binFile.arrayBuffer();
+                           const rawData = new Float32Array(arrayBuf);
+                           const audioBuf = ctx.createBuffer(meta.channels, meta.length, meta.sampleRate);
+                           for (let ch = 0; ch < meta.channels; ch++) {
+                               const chData = audioBuf.getChannelData(ch);
+                               for (let i = 0; i < meta.length; i++) {
+                                   chData[i] = rawData[i * meta.channels + ch];
+                               }
+                           }
+                           audioBuf._name = meta.name || 'Audio Clip';
+                           project.mediaPool[poolId] = audioBuf;
+                       } catch(e) { console.error('Failed to load asset', poolId, e); }
+                   }
+                }
+                
+                project.tracks.forEach(t => t.clips.forEach(c => {
+                    if (c.poolId && project.mediaPool[c.poolId]) {
+                        c.originalBuffer = project.mediaPool[c.poolId];
+                        // recomputeClipBuffer uses project.mediaPool if no originalBuffer, so it's fine.
+                    }
+                }));
+
+                currentProjectDirHandle = p.dirHandle;
+                render(container);
+             } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: 'Could not open project. Error: ' + e.message }); }
+          };
+       });
+    };
+    
+    renderWorkspace();
+    return;
+  }
+
   container.innerHTML = `
     <style>
       .snd-root {
@@ -444,7 +716,8 @@ export async function render(container) {
           <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #22d3ee, #a855f7); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(34,211,238,0.4);">
             <span class="material-symbols-outlined" style="color: white; font-size: 18px;">graphic_eq</span>
           </div>
-          ZumiLabs <span style="opacity: 0.6; font-weight: 300;">Audio Studio</span>
+          Audio Studio — 
+          <span contenteditable="true" id="snd-project-name" style="font-weight: 400; color: #94a3b8; margin-left: 4px; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,255,255,0.1)'" onblur="this.style.borderColor='transparent'">${project.name || 'Untitled'}</span>
         </div>
         <div style="display: flex; gap: 16px;">
           <button id="btn-new-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">add</span> New</button>
@@ -458,28 +731,26 @@ export async function render(container) {
       <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
         
         <!-- Intro Overlay -->
-        <div id="snd-intro" style="position: absolute; inset: 0; z-index: 50; background: #0d0d14; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s;">
+        <div id="snd-intro" style="position: absolute; inset: 0; z-index: 50; background: #0d0d14; display: none; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s;">
             <div style="display: flex; gap: 24px;">
                 <label class="snd-btn snd-btn-primary" style="padding: 24px 48px; font-size: 18px; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 12px;">
                    <span class="material-symbols-outlined" style="font-size: 32px;">audio_file</span> Import Audio
                    <input type="file" id="snd-upload" accept="audio/*,video/*" style="display: none;">
                 </label>
-                <label class="snd-btn snd-btn-purple" style="padding: 24px 48px; font-size: 18px; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                   <span class="material-symbols-outlined" style="font-size: 32px;">folder_open</span> Import Project
-                   <input type="file" id="snd-upload-proj" accept=".audioproject,.json,.zip" style="display: none;">
-                </label>
             </div>
-            <p style="margin-top: 24px; color: #94a3b8;">Supports WAV, MP3, MP4, WebM or .audioproject files</p>
+            <p style="margin-top: 24px; color: #94a3b8;">Supports WAV, MP3, MP4, WebM</p>
         </div>
 
-        <!-- Audio Pool Sidebar -->
-        <div class="snd-sidebar" style="width: 280px; background: rgba(18,18,26,0.8); border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; z-index: 10;">
+        <!-- Left Sidebar -->
+        <div class="snd-sidebar" style="width: 320px; background: #151521; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; z-index: 10;">
+            
+            <div id="snd-fsa-browser-panel" style="flex: 2; min-height: 400px; display: none; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.05);"></div>
+
             <div style="padding: 20px 20px 0 20px; display:flex; justify-content:space-between; align-items:center;">
                <div class="fx-title" style="margin:0; border:none; padding:0;">AUDIO POOL</div>
-               <label title="Import Audio" style="cursor:pointer; color:#06b6d4; display:flex; align-items:center;">
-                  <span class="material-symbols-outlined" style="font-size:20px;">add_circle</span>
-                  <input type="file" id="snd-import" accept="audio/*,video/*" multiple style="display:none;">
-               </label>
+               <button class="btn-ghost" id="snd-btn-import-folder" title="Asset Browser" style="padding: 4px; color: #06b6d4; cursor:pointer; background: transparent; border: none;">
+                  <span class="material-symbols-outlined" style="font-size:20px;">folder_special</span>
+               </button>
             </div>
             <div class="snd-scroll" id="snd-audio-pool" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
                <!-- Audio Pool Items Dynamically Rendered Here -->
@@ -627,6 +898,9 @@ export async function render(container) {
       clip.buffer = buf;
   };
 
+  let audioPoolSelection = new Set();
+  let lastSelectedPoolIndex = -1;
+
   const renderAudioPool = () => {
       const poolEl = container.querySelector('#snd-audio-pool');
       if (!poolEl) return;
@@ -637,11 +911,13 @@ export async function render(container) {
           return;
       }
       
-      Object.entries(project.mediaPool).forEach(([id, buf]) => {
+      const entries = Object.entries(project.mediaPool);
+      entries.forEach(([id, buf], idx) => {
+          const isSelected = audioPoolSelection.has(id);
           const itemEl = document.createElement('div');
           itemEl.style.padding = '8px 12px';
-          itemEl.style.background = 'rgba(255,255,255,0.05)';
-          itemEl.style.border = '1px solid rgba(255,255,255,0.1)';
+          itemEl.style.background = isSelected ? 'rgba(244,114,182,0.15)' : 'rgba(255,255,255,0.05)';
+          itemEl.style.border = `1px solid ${isSelected ? '#f472b6' : 'rgba(255,255,255,0.1)'}`;
           itemEl.style.borderRadius = '6px';
           itemEl.style.cursor = 'grab';
           itemEl.style.fontSize = '12px';
@@ -656,8 +932,32 @@ export async function render(container) {
                 <div style="font-size:10px; color:#94a3b8;">${formatTime(buf.duration)}</div>
              </div>
           `;
+          
+          itemEl.addEventListener('click', (e) => {
+              if (e.shiftKey && lastSelectedPoolIndex !== -1) {
+                  const start = Math.min(lastSelectedPoolIndex, idx);
+                  const end = Math.max(lastSelectedPoolIndex, idx);
+                  if (!e.metaKey && !e.ctrlKey) audioPoolSelection.clear();
+                  for (let i = start; i <= end; i++) audioPoolSelection.add(entries[i][0]);
+                  lastSelectedPoolIndex = idx;
+              } else if (e.metaKey || e.ctrlKey) {
+                  if (isSelected) audioPoolSelection.delete(id);
+                  else { audioPoolSelection.add(id); lastSelectedPoolIndex = idx; }
+              } else {
+                  audioPoolSelection.clear();
+                  audioPoolSelection.add(id);
+                  lastSelectedPoolIndex = idx;
+              }
+              renderAudioPool();
+          });
+
           itemEl.addEventListener('dragstart', e => {
-              e.dataTransfer.setData('application/json', JSON.stringify({ type: 'audio', poolId: id }));
+              if (!audioPoolSelection.has(id)) {
+                  audioPoolSelection.clear();
+                  audioPoolSelection.add(id);
+                  renderAudioPool();
+              }
+              e.dataTransfer.setData('application/json', JSON.stringify({ type: 'audio', poolIds: Array.from(audioPoolSelection) }));
           });
           poolEl.appendChild(itemEl);
       });
@@ -850,7 +1150,6 @@ export async function render(container) {
           bindFxSliders(project.masterFx);
       }
   };
-  let timelineView = null;
   const renderTimeline = () => {
       if (!timelineView) {
           timelineView = new TimelineView(container.querySelector('#snd-timeline-wrapper'), {
@@ -894,25 +1193,29 @@ export async function render(container) {
                   if (jsonStr) {
                       const payload = JSON.parse(jsonStr);
                       if (payload.type === 'audio') {
-                          const buf = project.mediaPool[payload.poolId];
-                          if (buf) {
-                              const time = Math.max(0, offsetX / pixelsPerSecond);
-                              const t = project.tracks.find(x => x.id === track.id);
-                              if (t) {
-                                  t.clips.push({
-                                      id: 'clip_' + Date.now(),
-                                      name: buf._name || 'Audio Clip',
-                                      buffer: null,
-                                      poolId: payload.poolId,
-                                      sourceStart: 0,
-                                      timelineStart: time,
-                                      duration: buf.duration,
-                                      rate: 1,
-                                      fx: [], keyframes: []
-                                  });
-                                  rebuildPlayback();
-                                  renderTimeline();
-                              }
+                          const poolIds = payload.poolIds || [payload.poolId];
+                          let dropTime = Math.max(0, offsetX / pixelsPerSecond);
+                          const t = project.tracks.find(x => x.id === track.id);
+                          if (t) {
+                              poolIds.forEach(pid => {
+                                  const buf = project.mediaPool[pid];
+                                  if (buf) {
+                                      t.clips.push({
+                                          id: 'clip_' + Date.now() + Math.random().toString(36).substr(2,5),
+                                          name: buf._name || 'Audio Clip',
+                                          buffer: null,
+                                          poolId: pid,
+                                          sourceStart: 0,
+                                          timelineStart: dropTime,
+                                          duration: buf.duration,
+                                          rate: 1,
+                                          fx: [], keyframes: []
+                                      });
+                                      dropTime += buf.duration;
+                                  }
+                              });
+                              rebuildPlayback();
+                              renderTimeline();
                           }
                       }
                   }
@@ -1318,7 +1621,7 @@ export async function render(container) {
           renderAudioPool();
       } catch (err) {
           console.error("Audio Load Error:", err);
-          alert("Failed to load audio: " + err.message);
+          window.AuroraToast?.show({ variant: 'error', title: 'Import Failed', description: "Failed to load audio: " + err.message });
           container.querySelector('#snd-intro').style.opacity = '1';
           container.querySelector('#snd-intro').style.pointerEvents = 'auto';
       }
@@ -1329,12 +1632,7 @@ export async function render(container) {
   container.querySelector('#snd-upload').addEventListener('change', e => {
       if (e.target.files[0]) loadAudioFile(e.target.files[0]);
   });
-  
-  container.querySelector('#snd-import').addEventListener('change', async e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      e.target.value = ''; // reset input
-      
+  const importAudioFile = async (file) => {
       try {
           const ctx = getAudioCtx();
           const arrayBuffer = await file.arrayBuffer();
@@ -1344,20 +1642,46 @@ export async function render(container) {
               for(let i=0; i<decodedBuffer.numberOfChannels; i++) {
                   const monoBuf = extractChannel(decodedBuffer, i);
                   monoBuf._name = file.name + ` (Ch ${i+1})`;
-                  const poolId = 'pool_' + Date.now() + '_' + i;
+                  const poolId = 'pool_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 5);
                   project.mediaPool[poolId] = monoBuf;
               }
           } else {
               decodedBuffer._name = file.name;
-              const poolId = 'pool_' + Date.now();
+              const poolId = 'pool_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
               project.mediaPool[poolId] = decodedBuffer;
           }
           renderAudioPool();
+          window.AuroraToast?.show({ variant: 'success', title: 'Audio Imported', description: file.name });
       } catch (err) {
-          alert("Import failed: " + err.message);
+          console.error("Import failed:", err);
+          window.AuroraToast?.show({ variant: 'error', title: 'Import Failed', description: "Import failed: " + err.message });
       }
-  });
+  };
+
+  const fsaPanelEl = container.querySelector('#snd-fsa-browser-panel');
+  let fsaBrowserInstance = null;
+  const btnImportFolder = container.querySelector('#snd-btn-import-folder');
   
+  if (btnImportFolder) {
+      btnImportFolder.addEventListener('click', () => {
+          fsaPanelEl.style.display = fsaPanelEl.style.display === 'none' ? 'flex' : 'none';
+          if (!fsaBrowserInstance && fsaPanelEl.style.display === 'flex') {
+             fsaBrowserInstance = new FsaBrowser(fsaPanelEl, {
+                onClose: () => { fsaPanelEl.style.display = 'none'; },
+                onImportMedia: async (fileHandle) => {
+                   const file = await fileHandle.getFile();
+                   await importAudioFile(file);
+                },
+                onImportMediaBatch: async (fileHandles) => {
+                   for (const fileHandle of fileHandles) {
+                      const file = await fileHandle.getFile();
+                      await importAudioFile(file);
+                   }
+                }
+             });
+          }
+      });
+  }
   container.querySelector('#btn-close').addEventListener('click', () => {
       showDialog('Close Session', 'Are you sure you want to close this audio session? Unsaved changes will be lost.', true, () => {
           if (isPlaying) container.querySelector('#btn-stop').click();
@@ -1365,13 +1689,8 @@ export async function render(container) {
           activeToneNodes.forEach(n => n.dispose && n.dispose());
           activeToneNodes = [];
           
-          container.querySelector('#snd-intro').style.opacity = '1';
-          container.querySelector('#snd-intro').style.pointerEvents = 'auto';
-          
-          selectedItems = { tracks: new Set(), clips: new Set() };
-          renderTimeline();
-          renderInspector();
-          renderAudioPool();
+          currentProjectDirHandle = null;
+          render(container);
       });
   });
 
@@ -1439,12 +1758,17 @@ export async function render(container) {
       playLoopId = requestAnimationFrame(loop);
   };
   
+  const nameEl = container.querySelector('#snd-project-name');
+  if (nameEl) {
+      nameEl.addEventListener('input', () => { project.name = nameEl.innerText.trim() || 'Untitled'; });
+  }
+
   container.querySelector('#btn-save-proj').addEventListener('click', async () => {
       try {
-          const zip = new JSZip();
-          const buffers = new Map();
+          if (!currentProjectDirHandle) return;
           
           const poolMeta = {};
+          const buffers = new Map();
           for (const [poolId, audioBuf] of Object.entries(project.mediaPool || {})) {
               buffers.set(poolId + '.bin', audioBuf);
               poolMeta[poolId] = {
@@ -1456,6 +1780,7 @@ export async function render(container) {
           }
           
           const projClean = {
+              name: project.name || 'Untitled',
               mediaPoolMeta: poolMeta,
               tracks: project.tracks.map(t => ({
                   id: t.id,
@@ -1479,9 +1804,13 @@ export async function render(container) {
               }))
           };
           
-          zip.file('project.json', JSON.stringify(projClean, null, 2));
-          const assetsFolder = zip.folder('assets');
+          const projFile = await currentProjectDirHandle.getFileHandle('project.json', { create: true });
+          const w = await projFile.createWritable();
+          await w.write(JSON.stringify(projClean, null, 2));
+          await w.close();
+          window.AuroraToast?.show({ variant: 'success', title: 'Saved', description: 'Project saved successfully' });
           
+          const assetsDir = await currentProjectDirHandle.getDirectoryHandle('assets', { create: true });
           for (const [bufId, audioBuf] of buffers.entries()) {
               const numChannels = audioBuf.numberOfChannels;
               const len = audioBuf.length;
@@ -1492,131 +1821,22 @@ export async function render(container) {
                       rawData[i * numChannels + ch] = chData[i];
                   }
               }
-              assetsFolder.file(bufId, rawData.buffer);
+              const f = await assetsDir.getFileHandle(bufId, { create: true });
+              const fw = await f.createWritable();
+              await fw.write(rawData.buffer);
+              await fw.close();
           }
           
-          const blob = await zip.generateAsync({ type: 'blob' });
-          
-          if (window.showSaveFilePicker) {
-              const fileHandle = await window.showSaveFilePicker({
-                  suggestedName: 'MyAudioProject.audioproject',
-                  types: [{
-                      description: 'Audio Studio Project',
-                      accept: {'application/x-audioproject': ['.audioproject']}
-                  }]
-              });
-              const writable = await fileHandle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-          } else {
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'MyAudioProject.audioproject';
-              a.click();
-              URL.revokeObjectURL(url);
-          }
-          
+          // Optionally show a save toast if you had a toast utility
+          // alert('Project saved to workspace!');
       } catch (err) {
           console.error(err);
-          if (err.name !== 'AbortError') alert("Failed to save project: " + err.message);
+          if (err.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: 'Save Failed', description: "Failed to save project: " + err.message });
       }
   });
   
   container.querySelector('#btn-new-proj').addEventListener('click', () => {
-      showDialog('New Session', 'Create a new project? Unsaved changes will be lost.', true, () => {
-          if (isPlaying) container.querySelector('#btn-stop').click();
-          project = { originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
-          activeToneNodes.forEach(n => n.dispose && n.dispose());
-          activeToneNodes = [];
-          
-          container.querySelector('#snd-intro').style.opacity = '1';
-          container.querySelector('#snd-intro').style.pointerEvents = 'auto';
-          
-          selectedItems = { tracks: new Set(), clips: new Set() };
-          renderTimeline();
-          renderInspector();
-          renderAudioPool();
-      });
-  });
-  
-  container.querySelector('#snd-upload-proj').addEventListener('change', async e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      try {
-          const zip = new JSZip();
-          await zip.loadAsync(file);
-          
-          const metaFile = zip.file('project.json');
-          if (!metaFile) throw new Error("Invalid project format: missing project.json");
-          
-          const metaText = await metaFile.async('string');
-          const data = JSON.parse(metaText);
-          
-          project.mediaPool = {};
-          if (data.mediaPoolMeta) {
-              for (const [poolId, meta] of Object.entries(data.mediaPoolMeta)) {
-                  const binFile = zip.file(`assets/${poolId}.bin`);
-                  if (binFile) {
-                      const arrayBuf = await binFile.async('arraybuffer');
-                      const rawData = new Float32Array(arrayBuf);
-                      const ctx = getAudioCtx();
-                      const audioBuf = ctx.createBuffer(meta.channels, meta.length, meta.sampleRate);
-                      for (let ch = 0; ch < meta.channels; ch++) {
-                          const chData = audioBuf.getChannelData(ch);
-                          for (let i = 0; i < meta.length; i++) {
-                              chData[i] = rawData[i * meta.channels + ch];
-                          }
-                      }
-                      audioBuf._name = meta.name || 'Audio Clip';
-                      project.mediaPool[poolId] = audioBuf;
-                  }
-              }
-          }
-          
-          project.tracks = data.tracks;
-          
-          for (const t of project.tracks) {
-              for (const c of t.clips) {
-                  c.appliedActions = new Set(c.appliedActions || []);
-                  if (c.bufferFile && c.bufferMeta) {
-                      const binFile = zip.file(`assets/${c.bufferFile}`);
-                      if (binFile) {
-                          const arrayBuf = await binFile.async('arraybuffer');
-                          const rawData = new Float32Array(arrayBuf);
-                          
-                          const ctx = getAudioCtx();
-                          const audioBuf = ctx.createBuffer(c.bufferMeta.channels, c.bufferMeta.length, c.bufferMeta.sampleRate);
-                          for (let ch = 0; ch < c.bufferMeta.channels; ch++) {
-                              const chData = audioBuf.getChannelData(ch);
-                              for (let i = 0; i < c.bufferMeta.length; i++) {
-                                  chData[i] = rawData[i * c.bufferMeta.channels + ch];
-                              }
-                          }
-                          c.originalBuffer = audioBuf;
-                      }
-                  }
-              }
-          }
-          
-          project.tracks.forEach(t => t.clips.forEach(c => {
-              recomputeClipBuffer(c);
-          }));
-          
-          container.querySelector('#snd-intro').style.opacity = '0';
-          container.querySelector('#snd-intro').style.pointerEvents = 'none';
-          selectedItems = { tracks: new Set(), clips: new Set() };
-          renderTimeline();
-          renderInspector();
-          renderAudioPool();
-          rebuildPlayback();
-          
-      } catch (err) {
-          console.error(err);
-          alert("Failed to load project: " + err.message);
-      }
-      e.target.value = '';
+      container.querySelector('#btn-close').click(); // Re-use close logic to go back to workspace
   });
 
   container.querySelector('#btn-play').addEventListener('click', async () => {
@@ -1952,7 +2172,7 @@ export async function render(container) {
       if (id === 'btn-diarize') {
           let targetTrack = project.tracks.find(t => selectedItems.tracks.has(t.id));
           if (!targetTrack || targetTrack.clips.length !== 1) {
-              alert('Diarization requires selecting a single track containing exactly one continuous clip.');
+              window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: 'Diarization requires selecting a single track containing exactly one continuous clip.' });
               return;
           }
           
@@ -1992,7 +2212,7 @@ export async function render(container) {
                   mdl.style.display = 'none';
                   
                   if (!result || result.length === 0) {
-                      alert('No speech segments detected.');
+                      window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: 'No speech segments detected.' });
                       return;
                   }
                   
@@ -2038,7 +2258,7 @@ export async function render(container) {
                   renderInspector();
               } catch (err) {
                   mdl.style.display = 'none';
-                  alert('Diarization failed: ' + err.message);
+                  window.AuroraToast?.show({ variant: 'error', title: 'Diarization Failed', description: err.message });
               }
           });
       }
@@ -2068,11 +2288,14 @@ export async function render(container) {
           });
       });
       if (maxTime === 0) return;
-      
+
+      const format = await promptExportFormat();
+      if (!format) return;
+
       const btn = container.querySelector('#btn-export');
       btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> Rendering...';
       btn.disabled = true;
-      
+
       try {
           const offlineBuffer = await Tone.Offline(({ transport }) => {
               const mVol = new Tone.Volume().toDestination();
@@ -2086,9 +2309,11 @@ export async function render(container) {
               project.tracks.forEach(track => {
                   if (track.muted) return;
                   track.clips.forEach(clip => {
-                      const player = new Tone.Player(clip.buffer);
+                      const buf = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
+                      if (!buf) return;
+                      const player = new Tone.Player(buf);
                       player.playbackRate = clip.rate || 1;
-                      
+
                       let lastNode = player;
                       clip.fx.forEach(fx => {
                           const node = createFxNode(fx);
@@ -2096,32 +2321,34 @@ export async function render(container) {
                           lastNode = node;
                       });
                       lastNode.connect(mNode);
-                      player.sync().start(clip.timelineStart, 0, clip.duration / player.playbackRate);
+                      const startOffset = clip.buffer ? 0 : (clip.sourceStart || 0);
+                      player.sync().start(clip.timelineStart, startOffset, clip.duration / player.playbackRate);
                   });
               });
               transport.start(0);
           }, maxTime + 2);
           
-          const wavBlob = audioBufferToWav(offlineBuffer.get());
+          const rendered = offlineBuffer.get();
+          const blob = format === 'mp3' ? await encodeMp3(rendered) : audioBufferToWav(rendered);
           const a = document.createElement('a');
-          a.href = URL.createObjectURL(wavBlob);
-          a.download = 'zumi_export_' + Date.now() + '.wav';
+          a.href = URL.createObjectURL(blob);
+          const projectNameSafe = (project.name || 'audio_export').replace(/[^a-z0-9_\- ]/gi, '').trim().replace(/ +/g, '_').toLowerCase();
+          a.download = projectNameSafe + '_' + Date.now() + '.' + format;
           a.click();
       } catch (err) {
-          alert('Export failed: ' + err.message);
+          window.AuroraToast?.show({ variant: 'error', title: 'Export Failed', description: err.message });
       } finally {
           btn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> Export Final';
           btn.disabled = false;
       }
   });
 
-  // Check if project has state retained from previous render
+  container.querySelector('#snd-intro').style.opacity = '0';
+  container.querySelector('#snd-intro').style.pointerEvents = 'none';
+  renderTimeline();
+  renderInspector();
+  renderAudioPool();
   if (project.tracks.length > 0 || Object.keys(project.mediaPool).length > 0) {
-      container.querySelector('#snd-intro').style.opacity = '0';
-      container.querySelector('#snd-intro').style.pointerEvents = 'none';
-      renderTimeline();
-      renderInspector();
-      renderAudioPool();
       rebuildPlayback();
   }
 

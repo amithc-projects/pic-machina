@@ -75,6 +75,8 @@
       </div>
 
       <ul class="app-nav__items" role="list">
+
+        <!-- Discover -->
         <li>
           <a href="#gsd" class="app-nav__item" data-screen="gsd" title="Get Started">
             <span class="material-symbols-outlined">rocket_launch</span>
@@ -87,73 +89,90 @@
             <span class="app-nav__label">Showcase</span>
           </a>
         </li>
-        <li class="app-nav__divider"></li>
-        <li>
-          <a href="#lib" class="app-nav__item" data-screen="lib" title="Recipe Library">
-            <span class="material-symbols-outlined">library_books</span>
-            <span class="app-nav__label">Library</span>
-          </a>
-        </li>
-        <li>
-          <a href="#bkb" class="app-nav__item" data-screen="bkb" title="Block Builder">
-            <span class="material-symbols-outlined">widgets</span>
-            <span class="app-nav__label">Block Builder</span>
-          </a>
-        </li>
-        <li>
-          <a href="#tpl" class="app-nav__item" data-screen="tpl" title="Template Editor">
-            <span class="material-symbols-outlined">wallpaper</span>
-            <span class="app-nav__label">Templates</span>
-          </a>
-        </li>
+
         <li class="app-nav__divider"></li>
 
-        <!-- Tools Section -->
-        <li class="app-nav__subheader">Tools</li>
+        <!-- Create -->
+        <li class="app-nav__subheader">Create</li>
         <li>
-          <a href="#tme" class="app-nav__item" data-screen="tme" title="Timeline Editor">
-            <span class="material-symbols-outlined">view_timeline</span>
-            <span class="app-nav__label">Timeline</span>
+          <a href="#ime" class="app-nav__item" data-screen="ime" title="Image Editor — apply transforms to a single image">
+            <span class="material-symbols-outlined app-nav__icon">photo_filter</span>
+            <span class="app-nav__label">Image Editor</span>
           </a>
         </li>
         <li>
-          <a href="#aud" class="app-nav__item" data-screen="aud" title="Speech Studio">
+          <a href="#tme" class="app-nav__item" data-screen="tme" title="Video Timeline Editor">
+            <span class="material-symbols-outlined">view_timeline</span>
+            <span class="app-nav__label">Video Timeline</span>
+          </a>
+        </li>
+        <li>
+          <a href="#aud" class="app-nav__item" data-screen="aud" title="Speech Studio — AI voice narration">
             <span class="material-symbols-outlined app-nav__icon">record_voice_over</span>
             <span class="app-nav__label">Speech Studio</span>
           </a>
         </li>
         <li>
-          <a href="#snd" class="app-nav__item" data-screen="snd" title="Audio Studio">
+          <a href="#snd" class="app-nav__item" data-screen="snd" title="Audio Studio — mix and edit audio tracks">
             <span class="material-symbols-outlined app-nav__icon">graphic_eq</span>
             <span class="app-nav__label">Audio Studio</span>
           </a>
         </li>
+
+        <li class="app-nav__divider"></li>
+
+        <!-- Batch Processing -->
+        <li class="app-nav__subheader">Batch Processing</li>
+        <li>
+          <a href="#lib" class="app-nav__item" data-screen="lib" title="Recipe Library — saved batch processing recipes">
+            <span class="material-symbols-outlined">library_books</span>
+            <span class="app-nav__label">Recipe Library</span>
+          </a>
+        </li>
+        <li>
+          <a href="#bkb" class="app-nav__item" data-screen="bkb" title="Block Builder — create reusable transform blocks">
+            <span class="material-symbols-outlined">widgets</span>
+            <span class="app-nav__label">Block Builder</span>
+          </a>
+        </li>
+        <li>
+          <a href="#tpl" class="app-nav__item" data-screen="tpl" title="Template Editor — design output templates">
+            <span class="material-symbols-outlined">wallpaper</span>
+            <span class="app-nav__label">Templates</span>
+          </a>
+        </li>
+
+        <li class="app-nav__divider"></li>
+
+        <!-- Media -->
+        <li class="app-nav__subheader">Media</li>
         <li>
           <a href="#gmd" class="app-nav__item" data-screen="gmd" title="Import Media — search & download free photos and videos">
-            <span class="material-symbols-outlined">image_search</span>
+            <span class="material-symbols-outlined">cloud_download</span>
             <span class="app-nav__label">Import Media</span>
           </a>
         </li>
-        <li class="app-nav__divider"></li>
-
         <li>
-          <a href="#out" class="app-nav__item" data-screen="out" title="Output History">
+          <a href="#fld" class="app-nav__item" data-screen="fld" title="Media Browser — browse local folders">
+            <span class="material-symbols-outlined">photo_library</span>
+            <span class="app-nav__label">Media Browser</span>
+          </a>
+        </li>
+        <li>
+          <a href="#out" class="app-nav__item" data-screen="out" title="Output History — previously processed files">
             <span class="material-symbols-outlined">history</span>
-            <span class="app-nav__label">History</span>
-          </a>
-        </li>
-        <li>
-          <a href="#fld" class="app-nav__item" data-screen="fld" title="Folder Viewer">
-            <span class="material-symbols-outlined">folder_open</span>
-            <span class="app-nav__label">Folder</span>
+            <span class="app-nav__label">Output History</span>
           </a>
         </li>
 
         <li class="app-nav__divider"></li>
+
+        <!-- System -->
+        <li class="app-nav__subheader">System</li>
         <li>
-          <a href="#mdl" class="app-nav__item" data-screen="mdl" title="Model Manager">
-            <span class="material-symbols-outlined">neurology</span>
-            <span class="app-nav__label">Models</span>
+          <a href="#mdl" class="app-nav__item" data-screen="mdl" title="AI Models — manage local AI model files">
+            <span class="material-symbols-outlined">smart_toy</span>
+            <span class="app-nav__label">AI Models</span>
           </a>
         </li>
         <li>
@@ -166,18 +185,12 @@
           </a>
         </li>
         <li>
-          <a href="#bup" class="app-nav__item" data-screen="bup" id="nav-db-backup" title="Backup/Restore Database"
+          <a href="#bup" class="app-nav__item" data-screen="bup" id="nav-db-backup" title="Config Sync — backup & restore settings"
             style="padding-right:12px;">
             <span class="material-symbols-outlined">settings_backup_restore</span>
             <span class="app-nav__label">Config Sync</span>
             <span class="ic-badge ic-badge--amber nav-premium-badge"
               style="font-size:9px; margin-left:auto; padding:1px 4px; box-shadow:0 0 0 1px var(--ps-border)">PRO</span>
-          </a>
-        </li>
-        <li>
-          <a href="#hlp" class="app-nav__item" data-screen="hlp" id="nav-help" title="Tutorial & Documentation">
-            <span class="material-symbols-outlined">help</span>
-            <span class="app-nav__label">Help</span>
           </a>
         </li>
         <li>
@@ -192,6 +205,13 @@
             <span class="app-nav__label">License</span>
           </a>
         </li>
+        <li>
+          <a href="#hlp" class="app-nav__item" data-screen="hlp" id="nav-help" title="Tutorial & Documentation">
+            <span class="material-symbols-outlined">help</span>
+            <span class="app-nav__label">Help</span>
+          </a>
+        </li>
+
       </ul>
 
       <div class="app-nav__footer">

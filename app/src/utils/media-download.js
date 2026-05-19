@@ -75,10 +75,11 @@ export async function downloadMany(assets, dirHandle, onProgress) {
         const url = asset.downloadUrl;
         if (!url) throw new Error('No downloadable URL');
         try { getProvider(asset.provider).registerDownload(asset); } catch {}
-        const blob = await fetchBlob(url);
         const filename = buildFilename(asset);
+        const blob = await fetchBlob(url);
         await writeBlob(dirHandle, filename, blob);
-        try { await writeAssetSidecar(dirHandle, filename, asset, blob.size); } catch (e) { console.warn('[media-download] sidecar write failed', e); }
+        const sizeBytes = blob.size;
+        try { await writeAssetSidecar(dirHandle, filename, asset, sizeBytes); } catch (e) { console.warn('[media-download] sidecar write failed', e); }
         ok.push({ asset, filename });
         done++;
         onProgress?.({ done, total, asset });

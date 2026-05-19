@@ -62,7 +62,7 @@ export async function render(container) {
           </select>
         </label>
 
-        <label style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
+        <label id="gmd-mode-wrap" style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
           Mode
           <select id="gmd-mode" class="ic-input" style="width:auto;">
             <option value="search">Search</option>
@@ -70,7 +70,7 @@ export async function render(container) {
           </select>
         </label>
 
-        <label style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted); flex:1; min-width:200px; position:relative;">
+        <label id="gmd-q-wrap" style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted); flex:1; min-width:200px; position:relative;">
           Query
           <input id="gmd-q" type="search" class="ic-input" placeholder="Search query…" autocomplete="off" />
           <div id="gmd-history-drop" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:6px; margin-top:2px; z-index:200; max-height:260px; overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
@@ -124,21 +124,23 @@ export async function render(container) {
   `;
 
   const $ = sel => container.querySelector(sel);
-  const elBanner   = $('#gmd-banner');
-  const elSource   = $('#gmd-source');
-  const elMode     = $('#gmd-mode');
-  const elQ        = $('#gmd-q');
-  const elKindWrap = $('#gmd-kind-wrap');
-  const elKind     = $('#gmd-kind');
-  const elOrient   = $('#gmd-orient');
-  const elGo       = $('#gmd-go');
-  const elGoLabel  = $('#gmd-go-label');
-  const elResults  = $('#gmd-results');
-  const elStatus   = $('#gmd-status');
-  const elSelCount = $('#gmd-selcount');
-  const elSelAll   = $('#gmd-selall');
-  const elClear    = $('#gmd-clear');
-  const elDownload = $('#gmd-download');
+  const elBanner      = $('#gmd-banner');
+  const elSource      = $('#gmd-source');
+  const elModeWrap    = $('#gmd-mode-wrap');
+  const elMode        = $('#gmd-mode');
+  const elQWrap       = $('#gmd-q-wrap');
+  const elQ           = $('#gmd-q');
+  const elKindWrap    = $('#gmd-kind-wrap');
+  const elKind        = $('#gmd-kind');
+  const elOrient      = $('#gmd-orient');
+  const elGo          = $('#gmd-go');
+  const elGoLabel     = $('#gmd-go-label');
+  const elResults     = $('#gmd-results');
+  const elStatus      = $('#gmd-status');
+  const elSelCount    = $('#gmd-selcount');
+  const elSelAll      = $('#gmd-selall');
+  const elClear       = $('#gmd-clear');
+  const elDownload    = $('#gmd-download');
   const elRate        = $('#gmd-rate');
   const elCredit      = $('#gmd-credit');
   const elHistoryDrop = $('#gmd-history-drop');
@@ -197,6 +199,7 @@ export async function render(container) {
 
   function refreshControls() {
     const p = provider();
+
     // Hide kind selector when source has no videos
     elKindWrap.style.display = p.supportsVideos ? 'flex' : 'none';
     if (!p.supportsVideos) state.kind = 'photo';
@@ -420,6 +423,8 @@ export async function render(container) {
   }
 
   async function runSearch() {
+    const p = provider();
+
     if (state.mode === 'collection-detail') {
       // "Back" button
       state.mode = 'collections';
@@ -433,7 +438,6 @@ export async function render(container) {
       return;
     }
     // Search mode
-    const p = provider();
     if (!p.hasKey()) {
       showToast({ variant: 'warning', title: `${p.label} not configured`, description: 'Add an API key in Settings.' });
       return;

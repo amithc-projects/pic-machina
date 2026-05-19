@@ -580,6 +580,24 @@ export async function render(container, hash) {
       main.innerHTML = `<sidekick-manager id="ic-sk-manager" no-hash-routing hide-inspector style="display:block; width:100%; height:100%"></sidekick-manager>`;
       const sk = main.querySelector('#ic-sk-manager');
 
+      // Image Editor context-menu action
+      sk.selectionActions = [{
+        label: 'Edit in Image Editor',
+        icon: '🎨',
+        onClick: async (selectedIds) => {
+          const { getAllRecipes, saveRecipe } = await import('../data/recipes.js');
+          const { uuid, now } = await import('../utils/misc.js');
+          const all = await getAllRecipes();
+          let transient = all.find(r => r._transient);
+          if (!transient) {
+            const ts = now();
+            transient = { id: uuid(), name: 'Image Editor', nodes: [], _transient: true, createdAt: ts, updatedAt: ts };
+            await saveRecipe(transient);
+          }
+          navigate(`#bld?id=${transient.id}&transient=1`);
+        },
+      }];
+
       // Wire shared folder-state tracking + restoration (retains folder/file
       // across screen switches) and also drive pic-machina's metadata panel.
       // In browse mode, use 'input' as the primary folder key so that state

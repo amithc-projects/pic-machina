@@ -217,10 +217,11 @@ export async function render(container, hash) {
   }
 
   if (recipe.isSystem) {
-    // Redirect system recipes to preview
     navigate(`#pvw?id=${recipe.id}`);
     return;
   }
+
+  const isTransient = params.get('transient') === '1' || !!recipe._transient;
 
   // Make a working copy
   let draft = deepClone(recipe);
@@ -268,39 +269,50 @@ export async function render(container, hash) {
   });
 
   container.innerHTML = `
-    <div class="screen bld-screen">
+    <div class="screen bld-screen${isTransient ? ' bld-screen--transient' : ''}">
       <div class="screen-header bld-header-3col">
         <div class="bld-header-left flex items-center gap-2">
           <button class="btn-icon" id="bld-back">
             <span class="material-symbols-outlined">arrow_back</span>
           </button>
           <div class="screen-title">
-            <span class="material-symbols-outlined">format_list_numbered</span>
-            Recipe Builder
+            <span class="material-symbols-outlined">${isTransient ? 'photo_filter' : 'format_list_numbered'}</span>
+            ${isTransient ? 'Image Editor' : 'Recipe Builder'}
           </div>
-          <span id="bld-save-status" class="text-sm text-muted" style="margin-left:4px"></span>
+          ${isTransient ? '' : '<span id="bld-save-status" class="text-sm text-muted" style="margin-left:4px"></span>'}
         </div>
         <div class="bld-header-center">
-          <span id="bld-header-name" class="bld-header-name">${escHtml(draft.name)}</span>
-          <button class="btn-icon bld-config-toggle" id="bld-config-toggle" title="Edit recipe details" style="margin-left:4px">
-            <span class="material-symbols-outlined" style="font-size:15px">edit</span>
-          </button>
+          ${isTransient
+            ? ''
+            : `<span id="bld-header-name" class="bld-header-name">${escHtml(draft.name)}</span>
+               <button class="btn-icon bld-config-toggle" id="bld-config-toggle" title="Edit recipe details" style="margin-left:4px">
+                 <span class="material-symbols-outlined" style="font-size:15px">edit</span>
+               </button>`}
         </div>
         <div class="bld-header-right flex items-center gap-2">
-          <button class="btn-secondary" id="bld-btn-preview">
-            <span class="material-symbols-outlined">preview</span>
-            Preview
-          </button>
-          <button class="btn-primary" id="bld-btn-use">
-            <span class="material-symbols-outlined">play_arrow</span>
-            Use
-          </button>
+          ${isTransient
+            ? `<button class="btn-secondary" id="bld-btn-save-recipe">
+                 <span class="material-symbols-outlined">bookmark_add</span>
+                 Save as Recipe
+               </button>
+               <button class="btn-primary" id="bld-btn-download">
+                 <span class="material-symbols-outlined">save</span>
+                 Save Image
+               </button>`
+            : `<button class="btn-secondary" id="bld-btn-preview">
+                 <span class="material-symbols-outlined">preview</span>
+                 Preview
+               </button>
+               <button class="btn-primary" id="bld-btn-use">
+                 <span class="material-symbols-outlined">play_arrow</span>
+                 Use
+               </button>`}
         </div>
       </div>
 
       <div class="bld-body">
         <!-- Left: recipe meta -->
-        <div class="bld-config">
+        <div class="bld-config${isTransient ? ' bld-config--hidden' : ''}">
           <div class="bld-cover-preview" id="bld-cover-preview" style="${getCoverGradient(draft.coverColor) ? `background:${getCoverGradient(draft.coverColor)}` : ''}">
             <span class="bld-cover-name" id="bld-cover-name">${draft.name}</span>
           </div>
@@ -432,6 +444,12 @@ export async function render(container, hash) {
   injectBldStyles();
   checkNamingState();
 
+  if (isTransient) {
+    document.querySelectorAll('.app-nav__item').forEach(el => {
+      el.classList.toggle('is-active', el.dataset.screen === 'ime');
+    });
+  }
+
   if (isNew) {
     setTimeout(() => {
       container.querySelector('#bld-name')?.focus();
@@ -486,7 +504,8 @@ export async function render(container, hash) {
 
   // ── Sidekick-manager workspace (compare-mode="transform") ────
   let bldPreviewNodeId = null;
-  let bldCompareRef = 'original';
+  let bldCompareRef = isTransient ? 'prev' : 'original';
+  let bldResultRef   = 'step'; // 'step' = result of selected step; 'final' = all steps
 
   // ── Video scrubber state ─────────────────────────────────────
   let _bldScrubber = null;
@@ -551,19 +570,59 @@ export async function render(container, hash) {
     },
   });
 
-  // ── Custom toolbar: Original / Prev Step ─────────────────
-  bldSk.compareControls = `
-    <div id="bld-cmp-ref-row" class="bld-cmp-ref-row" style="display:flex;gap:4px">
-      <button class="bld-cmp-ref-btn is-active" data-ref="original">Original</button>
-      <button class="bld-cmp-ref-btn" data-ref="prev">Prev Step</button>
-    </div>
-  `;
+  // ── Custom toolbar: left-side (Original / Prev Step) + right-side (This Step / Final Result) ──
+  const _btnBase = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #374151;border-radius:5px;background:#1e293b;color:#94a3b8;font-size:11px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s';
+  const _btnActive = 'background:#0077ff;color:#fff;border-color:#0077ff';
+  const _btnInactive = 'background:#1e293b;color:#94a3b8;border-color:#374151';
+  const _check = '<span style="font-size:12px;line-height:1">✓</span>';
+  const _lbl = 'font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;flex-shrink:0';
+  const _row = 'display:flex;gap:4px';
+
+  function _cmpBtn(cls, attr, val, isActive, title, text) {
+    const style = `${_btnBase};${isActive ? _btnActive : _btnInactive}`;
+    return `<button class="${cls}" data-${attr}="${val}" title="${title}" style="${style}">${isActive ? _check + ' ' : ''}${text}</button>`;
+  }
+
+  function buildCompareControls() {
+    return `
+      <div style="display:flex;align-items:center;justify-content:center;width:100%;gap:12px">
+        <span style="${_lbl}">Before</span>
+        <div style="${_row}">
+          ${_cmpBtn('bld-cmp-ref-btn', 'ref', 'original', bldCompareRef === 'original', 'Compare against the original unedited image', 'Original')}
+          ${_cmpBtn('bld-cmp-ref-btn', 'ref', 'prev', bldCompareRef === 'prev', 'Compare against the output of the previous step', 'Prev Step')}
+        </div>
+        <div style="width:1px;height:22px;background:#374151;flex-shrink:0"></div>
+        <span style="${_lbl}">After</span>
+        <div style="${_row}">
+          ${_cmpBtn('bld-cmp-result-btn', 'result', 'step', bldResultRef === 'step', 'Show the result of this step only', 'This Step')}
+          ${_cmpBtn('bld-cmp-result-btn', 'result', 'final', bldResultRef === 'final', 'Show the final result after all steps are applied', 'Final Result')}
+        </div>
+      </div>`;
+  }
+
+  function _updateCmpBtn(btn, isActive) {
+    btn.style.cssText = `${_btnBase};${isActive ? _btnActive : _btnInactive}`;
+    const hasCheck = btn.querySelector('span');
+    if (isActive && !hasCheck) {
+      btn.insertAdjacentHTML('afterbegin', _check + ' ');
+    } else if (!isActive && hasCheck) {
+      hasCheck.remove();
+    }
+  }
+
+  bldSk.compareControls = buildCompareControls();
   bldSk.compareBindControls = (cnt) => {
     cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(b => b.classList.remove('is-active'));
-        e.currentTarget.classList.add('is-active');
         bldCompareRef = e.currentTarget.dataset.ref;
+        cnt.querySelectorAll('.bld-cmp-ref-btn').forEach(b => _updateCmpBtn(b, b.dataset.ref === bldCompareRef));
+        if (bldSk) bldSk.triggerProcess();
+      });
+    });
+    cnt.querySelectorAll('.bld-cmp-result-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        bldResultRef = e.currentTarget.dataset.result;
+        cnt.querySelectorAll('.bld-cmp-result-btn').forEach(b => _updateCmpBtn(b, b.dataset.result === bldResultRef));
         if (bldSk) bldSk.triggerProcess();
       });
     });
@@ -612,12 +671,15 @@ export async function render(container, hash) {
     window._icBldTargetContext = context;
 
     const proc = new ImageProcessor();
-    const afterUrl = await proc.previewDataUrl(imageSource, draft.nodes, context, bldPreviewNodeId);
+    const effectiveNodeId = bldResultRef === 'final' ? undefined : bldPreviewNodeId;
+    const afterUrl = await proc.previewDataUrl(imageSource, draft.nodes, context, effectiveNodeId);
     window._icBldAfterUrl = afterUrl;
 
     const flat = flattenNodes(draft.nodes);
     const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
-    const afterTitle = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
+    const afterTitle = bldResultRef === 'final'
+      ? 'Final Result'
+      : nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
 
     let overlayWarning = null;
     if (nodeEnt) {
@@ -691,6 +753,10 @@ export async function render(container, hash) {
   }
 
   function markDirty() {
+    if (isTransient) {
+      scheduleBldPreview();
+      return;
+    }
     if (saveStatus) saveStatus.textContent = 'Unsaved…';
     scheduleAutosave(draft, () => { if (saveStatus) saveStatus.textContent = 'Saved'; });
     scheduleBldPreview();
@@ -743,6 +809,12 @@ export async function render(container, hash) {
 
   // ── Back ──────────────────────────────────────────────────
   container.querySelector('#bld-back')?.addEventListener('click', async () => {
+    if (isTransient) {
+      cancelAutosave();
+      try { await deleteRecipe(draft.id); } catch { /* non-fatal */ }
+      navigate('#lib');
+      return;
+    }
     // If the user clicked "New Recipe" in the library and immediately
     // backed out without naming anything or adding a step, the empty
     // recipe is junk — discard it instead of leaving a "Untitled Recipe"
@@ -776,6 +848,64 @@ export async function render(container, hash) {
   // ── Use / Preview ─────────────────────────────────────────
   container.querySelector('#bld-btn-use')?.addEventListener('click', () => navigate(`#set?recipe=${draft.id}`));
   container.querySelector('#bld-btn-preview')?.addEventListener('click', () => navigate(`#pvw?id=${draft.id}`));
+
+  // ── Transient: Download & Save as Recipe ──────────────────
+  container.querySelector('#bld-btn-download')?.addEventListener('click', async () => {
+    const file = window._icTestImage?.file;
+    if (!file) { window.AuroraToast?.show({ variant: 'warning', title: 'Select an image first' }); return; }
+    const btn = container.querySelector('#bld-btn-download');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="animation:spin 1s linear infinite">progress_activity</span> Saving…';
+    try {
+      const { ImageProcessor } = await import('../engine/index.js');
+      const { extractExif }    = await import('../engine/exif-reader.js');
+      const { isVideoFile, extractVideoFrame } = await import('../utils/video-frame.js');
+      const { getStoredSeekTime } = await import('../utils/video-scrubber.js');
+      const exif = await extractExif(file);
+      let imageSource;
+      if (isVideoFile(file)) {
+        const url = URL.createObjectURL(file);
+        imageSource = await extractVideoFrame(url, getStoredSeekTime(file.name));
+        URL.revokeObjectURL(url);
+      } else {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+        imageSource = img;
+        URL.revokeObjectURL(url);
+      }
+      const proc    = new ImageProcessor();
+      const results = await proc.process(imageSource, draft.nodes, {
+        filename: file.name, exif, meta: {}, variables: new Map(), originalFile: file,
+      });
+      for (const { blob, filename } of results) {
+        const objUrl = URL.createObjectURL(blob);
+        const a = Object.assign(document.createElement('a'), { href: objUrl, download: filename });
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
+      }
+      window.AuroraToast?.show({ variant: 'success', title: 'Image saved' });
+    } catch (err) {
+      console.error('[ime] download failed', err);
+      window.AuroraToast?.show({ variant: 'error', title: 'Download failed', body: err.message });
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  });
+
+  container.querySelector('#bld-btn-save-recipe')?.addEventListener('click', async () => {
+    const name = prompt('Recipe name:', 'My Recipe');
+    if (!name) return;
+    draft.name = name;
+    draft._transient = false;
+    await saveRecipe(draft);
+    window.AuroraToast?.show({ variant: 'success', title: 'Recipe saved', body: name });
+    navigate(`#bld?id=${draft.id}`);
+  });
 
   // ── Name input ────────────────────────────────────────────
   container.querySelector('#bld-name')?.addEventListener('input', e => {
@@ -1010,7 +1140,7 @@ ${draft.description || ''}`;
       markDirty();
       addModal.style.display = 'none';
       // Open NED to configure
-      navigate(`#ned?recipe=${draft.id}&node=${node.id}`);
+      navigate(`#ned?recipe=${draft.id}&node=${node.id}${isTransient ? "&transient=1" : ""}`);
     });
   });
 
@@ -1205,10 +1335,10 @@ ${draft.description || ''}`;
 
       menu.appendChild(createItem('Edit', 'edit', () => {
         if (info.node.type === 'block-ref') navigate(`#bkb?id=${info.node.blockId}`);
-        else navigate(`#ned?recipe=${draft.id}&node=${id}`);
+        else navigate(`#ned?recipe=${draft.id}&node=${id}${isTransient ? '&transient=1' : ''}`);
       }));
 
-      menu.appendChild(createItem(info.node.disabled ? 'Enable' : 'Hide', info.node.disabled ? 'visibility' : 'visibility_off', () => {
+      menu.appendChild(createItem(info.node.disabled ? 'Enable' : 'Disable', info.node.disabled ? 'visibility' : 'visibility_off', () => {
         info.node.disabled = !info.node.disabled;
         refreshNodeList();
         markDirty();
@@ -1327,7 +1457,7 @@ ${draft.description || ''}`;
         if (info?.node.type === 'block-ref') {
           navigate(`#bkb?id=${info.node.blockId}`);
         } else if (info?.node.type === 'transform') {
-          navigate(`#ned?recipe=${draft.id}&node=${id}`);
+          navigate(`#ned?recipe=${draft.id}&node=${id}${isTransient ? '&transient=1' : ''}`);
         }
       });
     });
@@ -1393,14 +1523,6 @@ ${draft.description || ''}`;
       bldCompareLayout = btn.dataset.layout;
       localStorage.setItem('ic-bld-cmp-mode', bldCompareLayout);
       container.querySelectorAll('.bld-cmp-mode-btn').forEach(b => b.classList.toggle('is-active', b === btn));
-      if (bldCompareMode) scheduleBldPreview(0);
-    });
-  });
-
-  container.querySelectorAll('.bld-cmp-ref-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      bldCompareRef = btn.dataset.ref;
-      container.querySelectorAll('.bld-cmp-ref-btn').forEach(b => b.classList.toggle('is-active', b.dataset.ref === bldCompareRef));
       if (bldCompareMode) scheduleBldPreview(0);
     });
   });
@@ -1667,6 +1789,12 @@ export function injectBldStyles() {
     }
     .bld-cmp-ref-btn.is-active { background:var(--ps-blue); color:#fff; }
     .bld-cmp-ref-btn:not(.is-active):hover { background:var(--ps-bg-hover); }
+    .bld-cmp-result-btn {
+      padding:4px 10px; font-size:11px; color:var(--ps-text-muted); border:none;
+      background:transparent; cursor:pointer; font-family:var(--font-primary); transition:color 100ms, background 100ms;
+    }
+    .bld-cmp-result-btn.is-active { background:var(--ps-blue); color:#fff; }
+    .bld-cmp-result-btn:not(.is-active):hover { background:var(--ps-bg-hover); }
 
     /* Side by side view */
     .bld-cmp-side-view { display:flex; width:100%; height:100%; background:var(--ps-bg-app); }
@@ -1687,6 +1815,7 @@ export function injectBldStyles() {
       min-width:0;
     }
     .bld-config.is-collapsed { width:0; border-right-color:transparent; overflow:hidden; }
+    .bld-config--hidden { display:none !important; }
     .bld-config-toggle.is-active { background:var(--ps-blue-10); color:var(--ps-blue); }
     .bld-cover-preview {
       height:90px; display:flex; align-items:flex-end; padding:10px 12px; flex-shrink:0;

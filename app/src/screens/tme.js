@@ -1,15 +1,19 @@
-import { createEmptyTimeline, saveTimeline, getTimeline, getAllTimelines } from '../data/timeline-store.js';
+import { createEmptyTimeline, saveTimeline } from '../data/timeline-store.js';
+import { createProject, openProject, importMediaToProject, resolveMediaUrl, revokeMediaUrl, addRecentProject, getRecentProjects, openProjectFromHandle, getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
 import { registry } from '../engine/index.js';
 import { applyBehavior, getAllBehaviors } from '../engine/behaviors.js';
 import { renderParamField, collectParams, bindParamFieldEvents } from '../utils/param-fields.js';
+import { FsaBrowser } from '../components/fsa-browser.js';
 import { WebGLCompositor, TRANSITIONS } from '../engine/stitcher.js';
 import { formatBytes } from '../utils/misc.js';
 import { TimelineView } from '../components/timeline-view.js';
 import JSZip from 'jszip';
 
 let currentTimeline = null;
+let currentProjectDirHandle = null;
 let timelineView = null;
 let mediaPoolSelection = new Set();
+let lastSelectedPoolIndex = -1;
 let selectedItemId = null;
 let selectedItemType = null;
 let isMagneticSnapping = true;
@@ -44,24 +48,193 @@ function injectTmeStyles() {
   document.head.appendChild(s);
 }
 
+  function showDialog(options) {
+    return new Promise((resolve) => {
+      const { title, message, type = 'confirm', defaultValue = '' } = options;
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:#fff;backdrop-filter:blur(4px);';
+      
+      let inputHtml = '';
+      if (type === 'prompt') {
+        inputHtml = `<input type="text" id="tme-dialog-input" class="ic-input" value="${defaultValue}" style="width:100%;margin-bottom:16px;">`;
+      }
+      
+      dialog.innerHTML = `
+        <div style="background:var(--ps-bg-surface);border:1px solid var(--ps-border);border-radius:8px;padding:20px;width:320px;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+          <h3 style="margin-top:0;margin-bottom:8px;color:var(--ps-text);font-size:16px;">${title}</h3>
+          <p style="margin-bottom:16px;color:var(--ps-text-muted);font-size:13px;line-height:1.4;">${message}</p>
+          ${inputHtml}
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button id="tme-btn-dialog-cancel" class="btn-ghost">Cancel</button>
+            <button id="tme-btn-dialog-confirm" class="${type === 'confirm' ? 'btn-danger' : 'btn-primary'}">OK</button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(dialog);
+      
+      const btnCancel = dialog.querySelector('#tme-btn-dialog-cancel');
+      const btnConfirm = dialog.querySelector('#tme-btn-dialog-confirm');
+      const inputEl = dialog.querySelector('#tme-dialog-input');
+      
+      if (inputEl) {
+         inputEl.focus();
+         inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') btnConfirm.click();
+            if (e.key === 'Escape') btnCancel.click();
+         });
+      }
+      
+      const close = () => { document.body.removeChild(dialog); };
+      
+      btnCancel.addEventListener('click', () => { close(); resolve(false); });
+      btnConfirm.addEventListener('click', () => { close(); resolve(type === 'prompt' ? (inputEl.value || null) : true); });
+    });
+  }
+
 export async function render(container) {
   timelineView = null;
   injectTmeStyles();
-  // Load last timeline or create new
-  const all = await getAllTimelines();
-  if (all.length > 0) {
-    all.sort((a, b) => b.updatedAt - a.updatedAt);
-    currentTimeline = all[0];
+  
+  
+  if (!currentTimeline || !currentProjectDirHandle) {
+    container.innerHTML = `
+      <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%;">
+        <div style="text-align:center;">
+           <h2 style="font-size:24px; margin-bottom:8px;">Timeline Editor</h2>
+           <p class="text-muted" style="font-size:14px;">Select or create a project to get started.</p>
+        </div>
+        <div id="tme-workspace-root" style="width:100%; max-width:800px; display:flex; flex-direction:column; gap:16px;"></div>
+      </div>
+    `;
+
+    const renderWorkspace = async () => {
+       const rootEl = container.querySelector('#tme-workspace-root');
+       let workspaceHandle = await getWorkspaceRoot();
+       
+       if (!workspaceHandle) {
+          rootEl.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; padding:48px; border:2px dashed var(--ps-border); border-radius:12px; background:var(--ps-surface);">
+               <span class="material-symbols-outlined text-muted" style="font-size:48px; margin-bottom:16px;">folder_open</span>
+               <h3 style="margin-bottom:8px;">No Workspace Selected</h3>
+               <p class="text-muted" style="margin-bottom:24px; text-align:center;">A workspace is a local folder on your computer where all your video projects will be stored.</p>
+               <button class="btn-primary" id="tme-btn-set-workspace">Select Workspace Folder</button>
+            </div>
+          `;
+          rootEl.querySelector('#tme-btn-set-workspace').onclick = async () => {
+             try {
+                workspaceHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                await setWorkspaceRoot(workspaceHandle);
+                renderWorkspace();
+             } catch(e) { if(e.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+          };
+          return;
+       }
+       
+       if (!(await verifyPermission(workspaceHandle, true))) {
+          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">Permission required to access Workspace.</p><button class="btn-primary" id="tme-btn-grant">Grant Permission</button></div>`;
+          rootEl.querySelector('#tme-btn-grant').onclick = async () => {
+             if (await verifyPermission(workspaceHandle, true)) renderWorkspace();
+          };
+          return;
+       }
+       
+       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> Scanning workspace...</div>`;
+       const projects = await scanWorkspaceProjects(workspaceHandle);
+       
+       // Sort by recent? They don't have lastOpened natively unless we read it from db, but let's just sort by title
+       projects.sort((a,b) => (b.projectData.title || b.projectData.name || '').localeCompare(a.projectData.title || a.projectData.name || ''));
+       
+       let gridHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> Workspace: <b>${workspaceHandle.name}</b></div>
+         <button class="btn-ghost btn-sm" id="tme-btn-change-workspace" title="Change Workspace"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+       </div>`;
+       
+       gridHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">`;
+       
+       // New Project Card
+       gridHtml += `
+         <button id="tme-btn-new-project" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:rgba(255,255,255,0.02); border:2px dashed var(--ps-border); border-radius:12px; cursor:pointer; color:var(--ps-text-muted); transition:0.2s;" onmouseover="this.style.color='var(--ps-blue)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.color='var(--ps-text-muted)'; this.style.borderColor='var(--ps-border)';">
+           <span class="material-symbols-outlined" style="font-size:32px; margin-bottom:8px;">add_circle</span>
+           <span style="font-size:14px; font-weight:600;">New Project</span>
+         </button>
+       `;
+       
+       // Project Cards
+       projects.forEach((p, i) => {
+         const title = p.projectData.title || p.projectData.name || 'Untitled';
+         const thumb = p.projectData.mediaPool && p.projectData.mediaPool.length > 0 ? `<div style="width:100%; height:120px; background:#111; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;"><span class="material-symbols-outlined text-muted" style="font-size:32px;">movie</span></div>` : `<div style="width:100%; height:120px; background:var(--ps-surface); border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;"><span class="material-symbols-outlined text-muted text-[32px]">folder</span></div>`;
+         
+         gridHtml += `
+           <div class="tme-project-card" data-index="${i}" style="display:flex; flex-direction:column; padding:12px; background:var(--ps-surface); border:1px solid var(--ps-border); border-radius:12px; cursor:pointer; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.background='var(--ps-surface)'; this.style.borderColor='var(--ps-border)';">
+              ${thumb}
+              <span style="font-size:14px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${title}</span>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${p.projectData.mediaPool?.length || 0} assets</span>
+           </div>
+         `;
+       });
+       
+       gridHtml += `</div>`;
+       rootEl.innerHTML = gridHtml;
+       
+       rootEl.querySelector('#tme-btn-change-workspace').onclick = async () => {
+          try {
+             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+             await setWorkspaceRoot(handle);
+             renderWorkspace();
+          } catch(e) {}
+       };
+       
+       rootEl.querySelector('#tme-btn-new-project').onclick = async () => {
+          const name = await showDialog({ type: 'prompt', title: 'New Project', message: 'Project Name:' });
+          if (!name) return;
+          try {
+             const dirHandle = await createProjectInWorkspace(workspaceHandle, name, createEmptyTimeline());
+             const fileHandle = await dirHandle.getFileHandle('project.json');
+             const file = await fileHandle.getFile();
+             currentTimeline = JSON.parse(await file.text());
+             currentProjectDirHandle = dirHandle;
+             render(container);
+          } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+       };
+       
+       rootEl.querySelectorAll('.tme-project-card').forEach(card => {
+          card.onclick = async () => {
+             const p = projects[card.dataset.index];
+             try {
+               const projectData = await openProjectFromHandle(p.dirHandle);
+               currentProjectDirHandle = p.dirHandle;
+               currentTimeline = projectData;
+               
+               // Re-hydrate media handles
+               if (currentTimeline.mediaPool) {
+                  for (const item of currentTimeline.mediaPool) {
+                     try {
+                        if (!item.filename) continue;
+                        const parts = item.filename.split('/');
+                        let h = currentProjectDirHandle;
+                        for (let i = 0; i < parts.length - 1; i++) {
+                           h = await h.getDirectoryHandle(parts[i]);
+                        }
+                        item.fileHandle = await h.getFileHandle(parts[parts.length - 1]);
+                     } catch(e) { console.error('Missing media:', item.filename); }
+                  }
+               }
+               render(container);
+             } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: 'Could not open project. Error: ' + e.message }); }
+          };
+       });
+    };
     
-    // Fallbacks for older DB schemas
-    if (!currentTimeline.videoTrack) currentTimeline.videoTrack = [];
-    if (!currentTimeline.effectTracks) currentTimeline.effectTracks = [{ id: 'fx1', name: 'FX 1', blocks: [] }];
-    if (!currentTimeline.audioTracks) currentTimeline.audioTracks = [{ id: 'a1', name: 'A1', blocks: [] }];
-    
-  } else {
-    currentTimeline = createEmptyTimeline();
-    await saveTimeline(currentTimeline);
+    renderWorkspace();
+    return;
   }
+
+  // Fallbacks for older schemas
+  if (!currentTimeline.mediaPool || !Array.isArray(currentTimeline.mediaPool)) currentTimeline.mediaPool = [];
+  if (!currentTimeline.videoTrack) currentTimeline.videoTrack = [];
+  if (!currentTimeline.effectTracks) currentTimeline.effectTracks = [{ id: 'fx1', name: 'FX 1', blocks: [] }];
+  if (!currentTimeline.audioTracks) currentTimeline.audioTracks = [{ id: 'a1', name: 'A1', blocks: [] }];
 
   container.innerHTML = `
     <div class="screen">
@@ -91,8 +264,11 @@ export async function render(container) {
         <!-- Top Half: Media Pool + Player -->
         <div class="flex" style="flex: 1; min-height: 0; border-bottom: 1px solid var(--ps-border);">
           
-          <!-- Media Pool -->
-          <div class="panel-left" style="width: 320px; border-right: 1px solid var(--ps-border);">
+          <!-- Left Sidebar: Asset Browser & Media Pool -->
+          <div class="panel-left" style="width: 320px; border-right: 1px solid var(--ps-border); display: flex; flex-direction: column;">
+            
+            <div id="tme-fsa-browser-panel" style="flex: 2; min-height: 400px; display: none; flex-direction: column; border-bottom: 1px solid var(--ps-border);"></div>
+
             <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
               <span class="panel-header-title">Media Pool</span>
               <div style="display: flex; gap: 4px;">
@@ -100,7 +276,8 @@ export async function render(container) {
                   <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
                 </button>
 
-                <button class="btn-ghost" id="tme-btn-add-media" title="Import Media" style="padding: 4px;">
+                <button class="btn-ghost" id="tme-btn-import-folder" title="Import Folder" style="padding: 4px;"><span class="material-symbols-outlined" style="font-size: 20px;">snippet_folder</span></button>
+                <button class="btn-ghost" id="tme-btn-add-media" title="Import Media Files" style="padding: 4px;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
                 </button>
               </div>
@@ -156,6 +333,7 @@ export async function render(container) {
 
   const poolContainer = container.querySelector('#tme-media-pool');
   const btnAddMedia = container.querySelector('#tme-btn-add-media');
+  const btnImportFolder = container.querySelector('#tme-btn-import-folder');
 
   const handleGlobalKeyDown = async (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
@@ -168,7 +346,7 @@ export async function render(container) {
     }
 
     if ((e.key === 'Backspace' || e.key === 'Delete') && timelineView && timelineView.selectedClips.size > 0) {
-        if (!confirm('Are you sure you want to delete the selected items?')) return;
+        if (!(await showDialog({ title: 'Delete Items', message: 'Are you sure you want to delete the selected items?' }))) return;
         
         currentTimeline.videoTrack = currentTimeline.videoTrack.filter(c => !timelineView.selectedClips.has(c.id));
         currentTimeline.effectTracks.forEach(t => {
@@ -182,7 +360,7 @@ export async function render(container) {
         selectedItemId = null;
         selectedItemType = null;
         
-        await saveTimeline(currentTimeline);
+        await saveTimeline(currentTimeline, currentProjectDirHandle);
         renderTimelineTracks();
         renderFrame();
         renderPropertiesPanel();
@@ -262,12 +440,25 @@ export async function render(container) {
       }
 
       el.addEventListener('click', (e) => {
-        if (e.metaKey || e.ctrlKey || e.shiftKey) {
+        const idx = currentTimeline.mediaPool.findIndex(x => x.id === item.id);
+        if (e.shiftKey && lastSelectedPoolIndex !== -1) {
+          const start = Math.min(lastSelectedPoolIndex, idx);
+          const end = Math.max(lastSelectedPoolIndex, idx);
+          if (!e.metaKey && !e.ctrlKey) mediaPoolSelection.clear();
+          for (let i = start; i <= end; i++) {
+             mediaPoolSelection.add(currentTimeline.mediaPool[i].id);
+          }
+          lastSelectedPoolIndex = idx;
+        } else if (e.metaKey || e.ctrlKey) {
           if (isSelected) mediaPoolSelection.delete(item.id);
-          else mediaPoolSelection.add(item.id);
+          else {
+             mediaPoolSelection.add(item.id);
+             lastSelectedPoolIndex = idx;
+          }
         } else {
           mediaPoolSelection.clear();
           mediaPoolSelection.add(item.id);
+          lastSelectedPoolIndex = idx;
         }
         renderMediaPool();
       });
@@ -314,7 +505,7 @@ export async function render(container) {
           }
           targetTrack.blocks.push({ id: generateId(), poolId: item.id, timelineStart: maxT, duration: duration, sourceStart: 0 });
         }
-        await saveTimeline(currentTimeline);
+        await saveTimeline(currentTimeline, currentProjectDirHandle);
         renderTimelineTracks();
       });
 
@@ -346,7 +537,7 @@ export async function render(container) {
       const idsToRemove = Array.from(mediaPoolSelection);
       currentTimeline.mediaPool = currentTimeline.mediaPool.filter(p => !idsToRemove.includes(p.id));
       mediaPoolSelection.clear();
-      await saveTimeline(currentTimeline);
+      await saveTimeline(currentTimeline, currentProjectDirHandle);
       renderMediaPool();
     });
   }
@@ -434,7 +625,7 @@ export async function render(container) {
             params: {},
             keyframes: []
           });
-          await saveTimeline(currentTimeline);
+          await saveTimeline(currentTimeline, currentProjectDirHandle);
           renderTimelineTracks();
           renderFrame();
         }
@@ -506,7 +697,7 @@ export async function render(container) {
       const updateTransitions = async () => {
         block.transitionIn = { style: tInStyle.value, duration: parseFloat(tInDur.value) || 0 };
         block.transitionOut = { style: tOutStyle.value, duration: parseFloat(tOutDur.value) || 0 };
-        await saveTimeline(currentTimeline);
+        await saveTimeline(currentTimeline, currentProjectDirHandle);
         renderTimelineTracks();
         renderFrame();
       };
@@ -580,7 +771,7 @@ export async function render(container) {
         const val = parseFloat(e.target.value);
         volVal.textContent = Math.round(val * 100) + '%';
         aBlock.volume = val;
-        await saveTimeline(currentTimeline);
+        await saveTimeline(currentTimeline, currentProjectDirHandle);
         syncAudioPlayback(); // immediate update of volume
       });
       
@@ -713,7 +904,7 @@ export async function render(container) {
          if (fxBlock.keyframes.length === 0) {
            delete fxBlock.keyframes;
          }
-         await saveTimeline(currentTimeline);
+         await saveTimeline(currentTimeline, currentProjectDirHandle);
          renderTimelineTracks();
          renderPropertiesPanel();
          renderFrame();
@@ -754,7 +945,7 @@ export async function render(container) {
            }
         });
 
-        await saveTimeline(currentTimeline);
+        await saveTimeline(currentTimeline, currentProjectDirHandle);
         renderFrame();
       };
 
@@ -813,7 +1004,7 @@ export async function render(container) {
          } else if (type === 'audio') {
            currentTimeline.audioTracks[idx].disabled = !currentTimeline.audioTracks[idx].disabled;
          }
-         await saveTimeline(currentTimeline);
+         await saveTimeline(currentTimeline, currentProjectDirHandle);
          renderTimelineTracks();
          renderFrame();
       }
@@ -829,7 +1020,7 @@ export async function render(container) {
       const clickX = e.clientX - rect.left + scrollContainer.scrollLeft;
       const clickTime = Math.max(0, clickX / PIXELS_PER_SECOND);
       
-      const gapStr = window.prompt(`Insert gap at ${clickTime.toFixed(2)}s.\nEnter number of seconds to shift everything forward:`, '1.0');
+      const gapStr = await showDialog({ type: 'prompt', title: 'Insert Gap', message: `Insert gap at ${clickTime.toFixed(2)}s.\nEnter number of seconds to shift everything forward:`, defaultValue: '1.0' });
       if (!gapStr) return;
       const gap = parseFloat(gapStr);
       if (isNaN(gap) || gap <= 0) return;
@@ -869,7 +1060,7 @@ export async function render(container) {
       }
       
       if (changed) {
-        await saveTimeline(currentTimeline);
+        await saveTimeline(currentTimeline, currentProjectDirHandle);
         renderTimelineTracks();
         renderFrame();
       }
@@ -962,24 +1153,31 @@ export async function render(container) {
             timelineView.selectedClips.add(clipId);
           }
           selectedItemId = timelineView.selectedClips.size === 1 ? [...timelineView.selectedClips][0] : null;
-          selectedItemType = trackId === 'v1' ? 'video' : (trackId.startsWith('audio_') || trackId.startsWith('A') ? 'audio' : 'fx');
+          selectedItemType = trackId === 'v1' ? 'video' : (trackId.startsWith('audio_') || trackId.startsWith('a') || trackId.startsWith('A') ? 'audio' : 'fx');
           renderPropertiesPanel();
           renderTimelineTracks();
         },
         onTrackSelect: (trackId, event) => {
           timelineView.selectedClips.clear();
           let trackClips = [];
-          if (trackId === 'v1') trackClips = currentTimeline.videoTrack;
-          else if (trackId.startsWith('A')) {
-            const t = currentTimeline.audioTracks.find(x => x.id === trackId);
-            if (t) trackClips = t.blocks;
+          if (trackId === 'v1') {
+             trackClips = currentTimeline.videoTrack;
+             selectedItemType = 'video';
           } else {
-            const t = currentTimeline.effectTracks.find(x => x.id === trackId);
-            if (t) trackClips = t.blocks;
+             const audioTrack = currentTimeline.audioTracks.find(x => x.id === trackId);
+             if (audioTrack) {
+                trackClips = audioTrack.blocks;
+                selectedItemType = 'audio';
+             } else {
+                const effectTrack = currentTimeline.effectTracks.find(x => x.id === trackId);
+                if (effectTrack) {
+                   trackClips = effectTrack.blocks;
+                   selectedItemType = 'fx';
+                }
+             }
           }
           trackClips.forEach(c => timelineView.selectedClips.add(c.id));
           selectedItemId = timelineView.selectedClips.size === 1 ? [...timelineView.selectedClips][0] : null;
-          selectedItemType = trackId === 'v1' ? 'video' : (trackId.startsWith('audio_') || trackId.startsWith('A') ? 'audio' : 'fx');
           renderPropertiesPanel();
           renderTimelineTracks();
         },
@@ -1011,7 +1209,7 @@ export async function render(container) {
                   const idx = currentTimeline.effectTracks.length + 1;
                   currentTimeline.effectTracks.push({ id: generateId(), name: `FX ${idx}`, blocks: [] });
               }
-              await saveTimeline(currentTimeline);
+              await saveTimeline(currentTimeline, currentProjectDirHandle);
               renderTimelineTracks();
               document.body.removeChild(dialog);
           };
@@ -1091,7 +1289,7 @@ export async function render(container) {
                      const currentParams = getInterpolatedParams(fxBlock, fxBlock.timelineStart + splitOffsetSec);
                      fxBlock.keyframes.push({ offset: offset, params: currentParams });
                      fxBlock.keyframes.sort((a, b) => a.offset - b.offset);
-                     await saveTimeline(currentTimeline);
+                     await saveTimeline(currentTimeline, currentProjectDirHandle);
                      renderTimelineTracks();
                      renderPropertiesPanel();
                    }
@@ -1145,7 +1343,7 @@ export async function render(container) {
                 }
 
                 if (splitHappened) {
-                  await saveTimeline(currentTimeline);
+                  await saveTimeline(currentTimeline, currentProjectDirHandle);
                   renderTimelineTracks();
                   renderFrame();
                 }
@@ -1164,20 +1362,19 @@ export async function render(container) {
         },
         onClipDrag: (clipId, newTimeSec) => {
            // Find the clip and update its timelineStart
-           if (selectedItemType === 'video') {
-             const c = currentTimeline.videoTrack.find(x => x.id === clipId);
-             if (c) c.timelineStart = newTimeSec;
-           } else if (selectedItemType === 'audio') {
-             currentTimeline.audioTracks.forEach(t => {
-               const c = t.blocks.find(x => x.id === clipId);
-               if (c) c.timelineStart = newTimeSec;
-             });
-           } else if (selectedItemType === 'fx') {
-             currentTimeline.effectTracks.forEach(t => {
-               const c = t.blocks.find(x => x.id === clipId);
-               if (c) c.timelineStart = newTimeSec;
-             });
-           }
+           let c = currentTimeline.videoTrack.find(x => x.id === clipId);
+           if (c) c.timelineStart = newTimeSec;
+           
+           currentTimeline.audioTracks.forEach(t => {
+             let ac = t.blocks.find(x => x.id === clipId);
+             if (ac) ac.timelineStart = newTimeSec;
+           });
+           
+           currentTimeline.effectTracks.forEach(t => {
+             let fc = t.blocks.find(x => x.id === clipId);
+             if (fc) fc.timelineStart = newTimeSec;
+           });
+           
            renderFrame();
         },
         onTrackDrop: async (track, offsetX, event) => {
@@ -1232,14 +1429,14 @@ export async function render(container) {
              }
              
              if (dropped) {
-                 await saveTimeline(currentTimeline);
+                 await saveTimeline(currentTimeline, currentProjectDirHandle);
                  renderTimelineTracks();
                  renderFrame();
              }
            } catch(err) {}
         },
         onClipDrop: async (clipId) => {
-           await saveTimeline(currentTimeline);
+           await saveTimeline(currentTimeline, currentProjectDirHandle);
            renderTimelineTracks();
         },
         onDeleteSelected: async () => {
@@ -1253,7 +1450,7 @@ export async function render(container) {
            });
            timelineView.selectedClips.clear();
            selectedItemId = null;
-           await saveTimeline(currentTimeline);
+           await saveTimeline(currentTimeline, currentProjectDirHandle);
            renderTimelineTracks();
            renderFrame();
         },
@@ -1328,7 +1525,7 @@ export async function render(container) {
 
           if (splitHappened) {
             selectedItemId = null;
-            await saveTimeline(currentTimeline);
+            await saveTimeline(currentTimeline, currentProjectDirHandle);
             renderTimelineTracks();
             renderFrame();
           }
@@ -1366,10 +1563,10 @@ export async function render(container) {
             if (btnDel) {
                 btnDel.onclick = async (e) => {
                     e.stopPropagation();
-                    if (!confirm(`Delete track ${track.name}?`)) return;
+                    if (!(await showDialog({ title: 'Delete Track', message: `Delete track ${track.name}?` }))) return;
                     currentTimeline.audioTracks = currentTimeline.audioTracks.filter(t => t.id !== track.id);
                     currentTimeline.effectTracks = currentTimeline.effectTracks.filter(t => t.id !== track.id);
-                    await saveTimeline(currentTimeline);
+                    await saveTimeline(currentTimeline, currentProjectDirHandle);
                     renderTimelineTracks();
                     renderFrame();
                 };
@@ -1388,7 +1585,7 @@ export async function render(container) {
                         const et = currentTimeline.effectTracks.find(t => t.id === track.id);
                         if (et) et.disabled = !et.disabled;
                     }
-                    await saveTimeline(currentTimeline);
+                    await saveTimeline(currentTimeline, currentProjectDirHandle);
                     renderTimelineTracks();
                     renderFrame();
                 };
@@ -1445,7 +1642,7 @@ export async function render(container) {
                   });
                   
                   if (dropped) {
-                      await saveTimeline(currentTimeline);
+                      await saveTimeline(currentTimeline, currentProjectDirHandle);
                       renderTimelineTracks();
                       renderFrame();
                   }
@@ -1560,7 +1757,7 @@ export async function render(container) {
                     const onMouseUp = async () => {
                         window.removeEventListener('mousemove', onMouseMove);
                         window.removeEventListener('mouseup', onMouseUp);
-                        await saveTimeline(currentTimeline);
+                        await saveTimeline(currentTimeline, currentProjectDirHandle);
                         renderTimelineTracks();
                         renderFrame();
                     };
@@ -1643,7 +1840,7 @@ export async function render(container) {
          ...currentTimeline.effectTracks.flatMap(t => t.blocks.map(b => b.timelineStart + b.duration)),
          0
       );
-      if (maxTime === 0) return alert("Timeline is empty!");
+      if (maxTime === 0) { window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: "Timeline is empty!" }); return; }
 
       // Find the first video clip's resolution if available
       let defaultW = currentTimeline.width || 1920;
@@ -1693,15 +1890,15 @@ export async function render(container) {
         document.body.removeChild(dialog);
 
         const [parsedW, parsedH] = resStr.toLowerCase().split('x').map(s => parseInt(s.trim(), 10));
-        if (!parsedW || !parsedH) return alert("Invalid resolution format. Please use WxH (e.g. 1920x1080).");
-        if (exportStart >= exportEnd) return alert("Start time must be before end time.");
+        if (!parsedW || !parsedH) { window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: "Invalid resolution format. Please use WxH (e.g. 1920x1080)." }); return; }
+        if (exportStart >= exportEnd) { window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: "Start time must be before end time." }); return; }
         
         // Update canvas and timeline with new dimensions
         canvas.width = parsedW;
         canvas.height = parsedH;
         currentTimeline.width = parsedW;
         currentTimeline.height = parsedH;
-        await saveTimeline(currentTimeline);
+        await saveTimeline(currentTimeline, currentProjectDirHandle);
         renderFrame();
 
         // Pause playback if it's currently running
@@ -1710,6 +1907,18 @@ export async function render(container) {
         const fps = 30;
         const w = canvas.width % 2 === 0 ? canvas.width : canvas.width - 1;
         const h = canvas.height % 2 === 0 ? canvas.height : canvas.height - 1;
+
+        let fileStream = null;
+        try {
+           const projectNameSafe = (currentTimeline.name || 'export').replace(/[^a-z0-9_\- ]/gi, '').trim().replace(/ +/g, '_').toLowerCase();
+           const handle = await window.showSaveFilePicker({
+              suggestedName: `${projectNameSafe}.mp4`,
+              types: [{ description: 'MP4 Video', accept: {'video/mp4': ['.mp4']} }],
+           });
+           fileStream = await handle.createWritable();
+        } catch(e) {
+           return; // User cancelled save picker
+        }
 
         let cancelExport = false;
         // Show progress modal
@@ -1728,7 +1937,7 @@ export async function render(container) {
         });
 
         try {
-          const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+          const { Muxer, FileSystemWritableFileStreamTarget } = await import('mp4-muxer');
           const { avcCodec } = await import('../engine/video-convert.js');
 
           // Mix Audio
@@ -1778,12 +1987,12 @@ export async function render(container) {
             renderedAudio = await offlineCtx.startRendering();
           }
 
-          const target = new ArrayBufferTarget();
+          const target = new FileSystemWritableFileStreamTarget(fileStream);
           const muxer  = new Muxer({ 
             target, 
             video: { codec: 'avc', width: w, height: h }, 
             audio: { codec: 'aac', sampleRate: 44100, numberOfChannels: 2 },
-            fastStart: 'in-memory' 
+            fastStart: false 
           });
 
           await new Promise((resolve, reject) => {
@@ -1879,15 +2088,7 @@ export async function render(container) {
           });
 
           muxer.finalize();
-          const blob = new Blob([target.buffer], { type: 'video/mp4' });
-          
-          // Trigger download
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `timeline-export-${Date.now()}.mp4`;
-          a.click();
-          URL.revokeObjectURL(url);
+          await fileStream.close();
           
           modal.innerHTML = `
             <div style="text-align:center;">
@@ -1897,6 +2098,7 @@ export async function render(container) {
             </div>
           `;
         } catch (err) {
+          if (fileStream) await fileStream.close().catch(()=>{});
           if (err.message === 'Cancelled') {
             modal.remove();
           } else {
@@ -1916,6 +2118,86 @@ export async function render(container) {
   }
 
   // ─── Import Media ───────────────────────────────────────
+
+  const fsaPanelEl = container.querySelector('#tme-fsa-browser-panel');
+  let fsaBrowserInstance = null;
+  
+  if (btnImportFolder) {
+    btnImportFolder.innerHTML = '<span class="material-symbols-outlined" style="font-size: 20px;">folder_special</span>';
+    btnImportFolder.title = 'Asset Browser';
+    
+    btnImportFolder.addEventListener('click', () => {
+      fsaPanelEl.style.display = fsaPanelEl.style.display === 'none' ? 'flex' : 'none';
+      if (!fsaBrowserInstance && fsaPanelEl.style.display === 'flex') {
+         fsaBrowserInstance = new FsaBrowser(fsaPanelEl, {
+            onClose: () => { fsaPanelEl.style.display = 'none'; },
+            onImportMedia: async (fileHandle) => {
+               try {
+                 const file = await fileHandle.getFile();
+                 const type = file.type.startsWith('video') ? 'video' : (file.type.startsWith('audio') ? 'audio' : 'image');
+                 let thumbnail = null;
+                 let meta = await extractMediaMeta(file, type);
+                 
+                 if (type === 'image') { thumbnail = URL.createObjectURL(file); }
+                 else if (type === 'video') { thumbnail = await extractVideoThumbnail(file); }
+                 
+                 const filename = await importMediaToProject(fileHandle, currentProjectDirHandle);
+                 currentTimeline.mediaPool = currentTimeline.mediaPool || [];
+                 currentTimeline.mediaPool.push({
+                   id: generateId(),
+                   type,
+                   name: fileHandle.name,
+                   filename,
+                   fileHandle: fileHandle,
+                   thumbnail,
+                   meta
+                 });
+                 await saveTimeline(currentTimeline, currentProjectDirHandle);
+                 renderMediaPool();
+                 window.AuroraToast?.show({ variant: 'success', title: 'Asset Imported', description: fileHandle.name });
+               } catch (err) {
+                 console.error('Error importing from Asset Browser:', err);
+                 window.AuroraToast?.show({ variant: 'error', title: 'Import Failed', description: 'Failed to import asset: ' + err.message });
+               }
+            },
+            onImportMediaBatch: async (fileHandles) => {
+               try {
+                 let count = 0;
+                 for (const fileHandle of fileHandles) {
+                   const file = await fileHandle.getFile();
+                   const type = file.type.startsWith('video') ? 'video' : (file.type.startsWith('audio') ? 'audio' : 'image');
+                   let thumbnail = null;
+                   let meta = await extractMediaMeta(file, type);
+                   
+                   if (type === 'image') { thumbnail = URL.createObjectURL(file); }
+                   else if (type === 'video') { thumbnail = await extractVideoThumbnail(file); }
+                   
+                   const filename = await importMediaToProject(fileHandle, currentProjectDirHandle);
+                   currentTimeline.mediaPool = currentTimeline.mediaPool || [];
+                   currentTimeline.mediaPool.push({
+                     id: generateId(),
+                     type,
+                     name: fileHandle.name,
+                     filename,
+                     fileHandle: fileHandle,
+                     thumbnail,
+                     meta
+                   });
+                   count++;
+                 }
+                 await saveTimeline(currentTimeline, currentProjectDirHandle);
+                 renderMediaPool();
+                 window.AuroraToast?.show({ variant: 'success', title: 'Batch Import Complete', description: `Imported ${count} assets` });
+               } catch (err) {
+                 console.error('Error importing batch from Asset Browser:', err);
+                 window.AuroraToast?.show({ variant: 'error', title: 'Import Failed', description: 'Failed to import some assets: ' + err.message });
+               }
+            }
+         });
+      }
+    });
+  }
+
   btnAddMedia.addEventListener('click', async () => {
     try {
       const handles = await window.showOpenFilePicker({
@@ -1945,17 +2227,19 @@ export async function render(container) {
           thumbnail = await extractVideoThumbnail(file);
         }
 
+        const filename = await importMediaToProject(handle, currentProjectDirHandle);
         currentTimeline.mediaPool.push({
           id: generateId(),
           type,
           name: handle.name,
+          filename,
           fileHandle: handle,
           thumbnail,
           meta
         });
       }
 
-      await saveTimeline(currentTimeline);
+      await saveTimeline(currentTimeline, currentProjectDirHandle);
       renderMediaPool();
 
     } catch (err) {
@@ -2010,9 +2294,11 @@ export async function render(container) {
           thumbnail = await extractVideoThumbnail(file);
         }
 
+        const filename = await importMediaToProject(handle, currentProjectDirHandle);
         currentTimeline.mediaPool.push({
           id: generateId(),
           fileHandle: handle,
+          filename,
           type,
           name: file.name,
           thumbnail,
@@ -2020,7 +2306,7 @@ export async function render(container) {
         });
       }
     }
-    await saveTimeline(currentTimeline);
+    await saveTimeline(currentTimeline, currentProjectDirHandle);
     renderMediaPool();
   });
 
@@ -2522,9 +2808,25 @@ export async function render(container) {
   const btnNew = container.querySelector('#tme-btn-new');
   const projectNameEl = container.querySelector('#tme-project-name');
 
+  if (projectNameEl) {
+    projectNameEl.addEventListener('blur', async () => {
+      const newName = projectNameEl.textContent.trim() || 'Untitled Project';
+      projectNameEl.textContent = newName;
+      currentTimeline.name = newName;
+      currentTimeline.title = newName;
+      await saveTimeline(currentTimeline, currentProjectDirHandle);
+    });
+    projectNameEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        projectNameEl.blur();
+      }
+    });
+  }
+
   if (btnNew) {
     btnNew.addEventListener('click', async () => {
-      if (confirm('Create a new project? Any unsaved changes will be lost.')) {
+      if (await showDialog({ title: 'New Project', message: 'Create a new project? Any unsaved changes will be lost.' })) {
         if (isPlaying) {
           isPlaying = false;
           btnPlay.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
@@ -2532,29 +2834,40 @@ export async function render(container) {
           if (typeof syncAudioPlayback === 'function') syncAudioPlayback();
         }
         
-        currentTimeline = createEmptyTimeline();
-        await saveTimeline(currentTimeline);
-        playheadTime = 0;
-        mediaPoolSelection.clear();
-        selectedItemId = null;
-        selectedItemType = null;
-        
-        if (projectNameEl) projectNameEl.textContent = currentTimeline.name;
-        
-        renderMediaPool();
-        renderTimelineTracks();
-        renderPropertiesPanel();
-        updatePlayheadUI();
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the video preview
-        renderFrame();
+        const dirHandle = await createProject(createEmptyTimeline());
+        if (dirHandle) {
+          currentProjectDirHandle = dirHandle;
+          const fileHandle = await dirHandle.getFileHandle('project.json');
+          const file = await fileHandle.getFile();
+          currentTimeline = JSON.parse(await file.text());
+          await addRecentProject('video', dirHandle, currentTimeline);
+          render(container);
+        }
       }
+    });
+  }
+  
+  if (btnOpen) {
+    btnOpen.addEventListener('click', async () => {
+       if (!(await showDialog({ title: 'Open Project', message: 'Close current project to open another? Unsaved changes will be lost.' }))) return;
+       
+       if (isPlaying) {
+         isPlaying = false;
+         btnPlay.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
+         if (animFrameId) cancelAnimationFrame(animFrameId);
+         if (typeof syncAudioPlayback === 'function') syncAudioPlayback();
+       }
+       
+       currentTimeline = null;
+       currentProjectDirHandle = null;
+       render(container);
     });
   }
 
   if (projectNameEl) {
     projectNameEl.addEventListener('blur', async () => {
       currentTimeline.name = projectNameEl.textContent.trim() || 'Untitled Project';
-      await saveTimeline(currentTimeline);
+      await saveTimeline(currentTimeline, currentProjectDirHandle);
     });
     projectNameEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); projectNameEl.blur(); }
@@ -2563,87 +2876,8 @@ export async function render(container) {
 
   if (btnSave) {
     btnSave.addEventListener('click', async () => {
-      try {
-        const fileHandle = await window.showSaveFilePicker({
-          suggestedName: `${currentTimeline.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.videoproject`,
-          types: [{ description: 'Pic-Machina Video Project', accept: { 'application/x-videoproject': ['.videoproject'] } }]
-        });
-        
-        const saveState = JSON.parse(JSON.stringify(currentTimeline));
-        const zip = new JSZip();
-        zip.file('project.json', JSON.stringify(saveState, null, 2));
-        
-        const assetsFolder = zip.folder('assets');
-        if (currentTimeline.mediaPool) {
-            for (const item of currentTimeline.mediaPool) {
-                if (item.fileHandle) {
-                    try {
-                        const file = item.fileHandle.getFile ? await item.fileHandle.getFile() : item.fileHandle;
-                        assetsFolder.file(item.id, file);
-                    } catch (e) { console.warn("Failed to read media pool item for saving", item); }
-                }
-            }
-        }
-        
-        const blob = await zip.generateAsync({ type: 'blob' });
-        const writable = await fileHandle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        window.AuroraToast?.show({ variant: 'success', title: 'Project Saved' });
-      } catch (err) { /* user cancelled */ }
-    });
-  }
-
-  if (btnOpen) {
-    btnOpen.addEventListener('click', async () => {
-      try {
-        const [fileHandle] = await window.showOpenFilePicker({
-          types: [{ description: 'Pic-Machina Video Project', accept: { 'application/x-videoproject': ['.videoproject'] } }]
-        });
-        
-        const file = await fileHandle.getFile();
-        const zip = new JSZip();
-        await zip.loadAsync(file);
-        
-        const metaFile = zip.file('project.json');
-        if (!metaFile) throw new Error("Invalid project format: missing project.json");
-        
-        const metaText = await metaFile.async('string');
-        const loadedTimeline = JSON.parse(metaText);
-        
-        // Unzip and map assets
-        if (loadedTimeline.mediaPool) {
-            for (const item of loadedTimeline.mediaPool) {
-                const binFile = zip.file(`assets/${item.id}`);
-                if (binFile) {
-                    const blob = await binFile.async('blob');
-                    // Store native File object so IndexedDB can clone it safely
-                    item.fileHandle = new File([blob], item.name || 'asset', { type: blob.type || 'video/mp4' });
-                    item.thumbnail = URL.createObjectURL(blob);
-                }
-            }
-        }
-        
-        currentTimeline = loadedTimeline;
-        playheadTime = 0;
-        mediaPoolSelection.clear();
-        selectedItemId = null;
-        selectedItemType = null;
-        
-        if (projectNameEl) projectNameEl.textContent = currentTimeline.name;
-        
-        await saveTimeline(currentTimeline);
-        
-        renderMediaPool();
-        renderTimelineTracks();
-        renderPropertiesPanel();
-        updatePlayheadUI();
-        renderFrame();
-        
-      } catch (err) {
-        console.error(err);
-        window.AuroraToast?.show({ variant: 'error', title: 'Failed to Open Project' });
-      }
+      await saveTimeline(currentTimeline, currentProjectDirHandle);
+      window.AuroraToast?.show({ variant: 'success', title: 'Project Saved' });
     });
   }
 
@@ -2676,6 +2910,16 @@ async function extractMediaMeta(file, type) {
       };
       v.onerror = () => { URL.revokeObjectURL(v.src); res(); };
     });
+  } else if (type === 'audio') {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const arrayBuffer = await file.arrayBuffer();
+      const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+      meta.duration = decodedBuffer.duration;
+      ctx.close();
+    } catch(e) {
+      console.warn("Failed to extract exact audio duration:", e);
+    }
   }
   return meta;
 }

@@ -33,13 +33,13 @@ import * as pixabay from './pixabay.js';
 const REGISTRY = {
   [pexels.PROVIDER]:   pexels,
   [unsplash.PROVIDER]: unsplash,
-  [pixabay.PROVIDER]:  pixabay
+  [pixabay.PROVIDER]:  pixabay,
 };
 
 const PROVIDER_META = {
   [pexels.PROVIDER]:   { configHint: 'Pexels API key',     siteUrl: 'https://www.pexels.com' },
   [unsplash.PROVIDER]: { configHint: 'Unsplash Access Key', siteUrl: 'https://unsplash.com'   },
-  [pixabay.PROVIDER]:  { configHint: 'Pixabay API key',    siteUrl: 'https://pixabay.com'    }
+  [pixabay.PROVIDER]:  { configHint: 'Pixabay API key',    siteUrl: 'https://pixabay.com'    },
 };
 
 export function listProviders() {
@@ -59,6 +59,7 @@ export function getProvider(id) {
     id: mod.PROVIDER,
     label: mod.PROVIDER_LABEL,
     supportsVideos: mod.SUPPORTS_VIDEOS,
+    isUrlProvider: !!mod.IS_URL_PROVIDER,
     configHint: PROVIDER_META[mod.PROVIDER]?.configHint || 'API credentials',
     siteUrl: PROVIDER_META[mod.PROVIDER]?.siteUrl || '',
     hasKey:             () => mod.hasKey(),
@@ -66,6 +67,7 @@ export function getProvider(id) {
     listCollections:    (o) => mod.listCollections(o),
     getCollectionMedia: (o) => mod.getCollectionMedia(o),
     toSidecar:          (a, opts) => mod.toSidecar(a, opts),
-    registerDownload:   (a) => mod.registerDownload ? mod.registerDownload(a) : null
+    registerDownload:   (a) => mod.registerDownload ? mod.registerDownload(a) : null,
+    fetchUrl:           (url, quality, mediaType) => mod.fetchUrl ? mod.fetchUrl(url, quality, mediaType) : Promise.reject(new Error('fetchUrl not supported')),
   };
 }

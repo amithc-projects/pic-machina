@@ -2,7 +2,7 @@
 
 Here is the checklist of tasks we outlined to tackle tomorrow:
 
-- [ ] **a) Enhance AI Studio UX:** Refine the user experience and interface of the AI studio.
+- [x] **a) Enhance AI Studio UX:** Refine the user experience and interface of the AI studio.
 - [ ] **b) Audio Effects in Timeline:** Ensure audio effects created in the Audio Studio can be applied within the timeline and dragged to the effects bar.
 - [ ] **c) Voicecraft Review:** Double-check Voicecraft issues, specifically addressing problems with longer speech generation (more than 30 seconds).
 - [ ] **d) Final Branding - Jidokasa Studio:** Finalize the name change to "Jidokasa Studio", including creating/updating the new logo and application icons.

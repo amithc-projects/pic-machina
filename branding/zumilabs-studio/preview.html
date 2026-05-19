@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ZumiLabs Studio — Logo preview</title>
+  <link rel="icon" href="icon.svg">
+  <style>
+    :root { font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #F8FAFC; color: #0F172A; }
+    h1 { padding: 32px; margin: 0; font-weight: 700; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #E2E8F0; }
+    .cell { padding: 48px; display: flex; align-items: center; justify-content: center; min-height: 220px; }
+    .light { background: #ffffff; }
+    .dark  { background: #0F172A; color: #F8FAFC; }
+    .label { position: absolute; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.5; margin: 8px 12px; }
+    .cell { position: relative; }
+    img { max-width: 90%; max-height: 160px; }
+    .sizes { display: flex; gap: 24px; align-items: center; padding: 32px; background: #fff; }
+    .sizes img { max-height: none; }
+  </style>
+</head>
+<body>
+  <h1>ZumiLabs Studio — logo lockups</h1>
+
+  <div class="row">
+    <div class="cell light"><span class="label">horizontal · light</span><img src="logo-horizontal.svg" alt=""></div>
+    <div class="cell dark"><span class="label">horizontal · dark</span><img src="logo-horizontal.svg" alt=""></div>
+    <div class="cell light"><span class="label">stacked · light</span><img src="logo-stacked.svg" alt=""></div>
+    <div class="cell dark"><span class="label">stacked · dark</span><img src="logo-stacked.svg" alt=""></div>
+    <div class="cell light"><span class="label">icon</span><img src="icon.svg" alt="" style="max-height:128px"></div>
+    <div class="cell dark" style="color:#F8FAFC"><span class="label">mono · dark</span><img src="logo-mono.svg" alt="" style="filter: invert(1)"></div>
+  </div>
+
+  <div class="sizes">
+    <span class="label" style="position:static">Icon scale test:</span>
+    <img src="icon.svg" width="16" height="16" alt="">
+    <img src="icon.svg" width="24" height="24" alt="">
+    <img src="icon.svg" width="32" height="32" alt="">
+    <img src="icon.svg" width="64" height="64" alt="">
+    <img src="icon.svg" width="128" height="128" alt="">
+  </div>
+</body>
+</html>

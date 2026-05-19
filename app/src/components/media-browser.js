@@ -64,8 +64,8 @@ export class MediaBrowser {
         
         /* Header */
         .ic-mb-header { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--ps-border); background: var(--ps-surface); }
-        .ic-mb-top-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-        .ic-mb-bottom-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .ic-mb-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        .ic-mb-bottom-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
         
         .ic-mb-breadcrumbs { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
         .ic-mb-crumb-btn { background: none; border: none; color: var(--ps-text-muted); padding: 4px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; transition: 0.15s; }
@@ -74,7 +74,7 @@ export class MediaBrowser {
         .ic-mb-crumb-current { color: var(--ps-text); padding: 4px; }
         
         .ic-mb-toolbar { display: flex; gap: 8px; align-items: center; }
-        .ic-mb-search { background: var(--ps-bg); border: 1px solid var(--ps-border); color: var(--ps-text); border-radius: 6px; padding: 6px 12px; font-size: 13px; width: 220px; outline: none; transition: 0.2s; }
+        .ic-mb-search { background: var(--ps-bg); border: 1px solid var(--ps-border); color: var(--ps-text); border-radius: 6px; padding: 6px 12px; font-size: 13px; width: 100%; max-width: 220px; outline: none; transition: 0.2s; min-width: 100px; }
         .ic-mb-search:focus { border-color: var(--ps-blue); }
         
         .ic-mb-actions { display: flex; gap: 6px; align-items: center; border-left: 1px solid var(--ps-border); padding-left: 12px; margin-left: 4px; }

@@ -221,7 +221,7 @@ export async function render(container) {
   });
 
   // ── Load recipes ──────────────────────────────────────
-  let recipes = await getAllRecipes();
+  let recipes = (await getAllRecipes()).filter(r => !r._transient);
   let activeTags = new Set();
   let sortBy     = 'updated';
 

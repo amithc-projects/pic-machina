@@ -58,9 +58,10 @@ export async function render(container, hash) {
   // Captured during each preview run — used by the {{vars}} picker modal
   // to show the current file's resolved variable values.
   let _latestVarContext = null;
-  const params   = new URLSearchParams((hash.split('?')[1] || ''));
-  const recipeId = params.get('recipe');
-  const nodeId   = params.get('node');
+  const params      = new URLSearchParams((hash.split('?')[1] || ''));
+  const recipeId    = params.get('recipe');
+  const nodeId      = params.get('node');
+  const nedTransient = params.get('transient') === '1';
 
   const recipe = recipeId ? await getRecipe(recipeId) : null;
   const node   = recipe ? findNode(recipe.nodes, nodeId) : null;
@@ -126,33 +127,47 @@ export async function render(container, hash) {
       <div class="ned-body">
         <!-- Params panel -->
         <div class="ned-params-panel">
-          <div class="ned-section-title">
-            <span class="material-symbols-outlined" style="font-size:14px">settings</span>
-            Parameters
-          </div>
-
-          ${node.type === 'transform' && def ? `
-            <div class="ned-fields">
-              ${paramsHtml || '<div class="text-sm text-muted" style="padding:12px">No parameters for this step.</div>'}
-            </div>` : ''}
-
-          ${conditionHtml}
-          <div id="ned-branches-wrapper">
-            ${branchHtml}
-          </div>
-
-          ${timeRangeHtml}
-
-          <!-- Label override -->
-          <div class="ned-section-title" style="margin-top:16px">
-            <span class="material-symbols-outlined" style="font-size:14px">label</span>
-            Display Label
-          </div>
-          <div class="ned-fields">
-            <div class="ned-field">
-              <label class="ned-field-label" for="ned-label-input">Step Label</label>
-              <input type="text" id="ned-label-input" class="ic-input" value="${escHtml(node.label || '')}" placeholder="Custom label…">
+          <div class="ned-params-scroll">
+            <div class="ned-section-title">
+              <span class="material-symbols-outlined" style="font-size:14px">settings</span>
+              Parameters
             </div>
+
+            ${node.type === 'transform' && def ? `
+              <div class="ned-fields">
+                ${paramsHtml || '<div class="text-sm text-muted" style="padding:12px">No parameters for this step.</div>'}
+              </div>` : ''}
+
+            ${conditionHtml}
+            <div id="ned-branches-wrapper">
+              ${branchHtml}
+            </div>
+
+            ${timeRangeHtml}
+
+            <!-- Label override -->
+            <div class="ned-section-title" style="margin-top:16px">
+              <span class="material-symbols-outlined" style="font-size:14px">label</span>
+              Display Label
+            </div>
+            <div class="ned-fields">
+              <div class="ned-field">
+                <label class="ned-field-label" for="ned-label-input">Step Label</label>
+                <input type="text" id="ned-label-input" class="ic-input" value="${escHtml(node.label || '')}" placeholder="Custom label…">
+              </div>
+            </div>
+          </div>
+
+          <!-- Fixed action bar always visible at bottom -->
+          <div class="ned-params-actions">
+            <button class="btn-secondary" id="ned-btn-reset-bottom" title="Reset all parameters to defaults">
+              <span class="material-symbols-outlined" style="font-size:14px">restart_alt</span>
+              Reset
+            </button>
+            <button class="btn-primary" id="ned-done-btn-bottom">
+              <span class="material-symbols-outlined" style="font-size:14px">check</span>
+              Done
+            </button>
           </div>
         </div>
 
@@ -313,6 +328,59 @@ export async function render(container, hash) {
     },
   });
 
+  // ── Compare controls (Before/After toggles) ─────────────
+  let nedCompareRef  = 'original'; // 'original' | 'prev' — what the left panel shows
+  let nedResultRef   = 'step';     // 'step' | 'final'    — what the right panel shows
+
+  const _nb = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #374151;border-radius:5px;background:#1e293b;color:#94a3b8;font-size:11px;cursor:pointer;white-space:nowrap';
+  const _nbA = 'background:#0077ff;color:#fff;border-color:#0077ff';
+  const _nbI = 'background:#1e293b;color:#94a3b8;border-color:#374151';
+  const _nchk = '<span style="font-size:12px;line-height:1">✓</span> ';
+  const _nlbl = 'font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;flex-shrink:0';
+
+  function _nedCmpBtn(cls, attr, val, active, title, text) {
+    return `<button class="${cls}" data-${attr}="${val}" title="${title}" style="${_nb};${active ? _nbA : _nbI}">${active ? _nchk : ''}${text}</button>`;
+  }
+  function _buildNedControls() {
+    return `<div style="display:flex;align-items:center;justify-content:center;width:100%;gap:12px">
+      <span style="${_nlbl}">Before</span>
+      <div style="display:flex;gap:4px">
+        ${_nedCmpBtn('ned-cmp-ref-btn','ref','original', nedCompareRef==='original','Compare against the original image','Original')}
+        ${_nedCmpBtn('ned-cmp-ref-btn','ref','prev',     nedCompareRef==='prev',    'Compare against the previous step output','Prev Step')}
+      </div>
+      <div style="width:1px;height:22px;background:#374151;flex-shrink:0"></div>
+      <span style="${_nlbl}">After</span>
+      <div style="display:flex;gap:4px">
+        ${_nedCmpBtn('ned-cmp-result-btn','result','step',  nedResultRef==='step', 'Show result of this step only','This Step')}
+        ${_nedCmpBtn('ned-cmp-result-btn','result','final', nedResultRef==='final','Show final result of all steps','Final Result')}
+      </div>
+    </div>`;
+  }
+  function _nedUpdateBtn(btn, isActive) {
+    btn.style.cssText = `${_nb};${isActive ? _nbA : _nbI}`;
+    const sp = btn.querySelector('span');
+    if (isActive && !sp) btn.insertAdjacentHTML('afterbegin', _nchk);
+    else if (!isActive && sp) sp.remove();
+  }
+
+  sk.compareControls = _buildNedControls();
+  sk.compareBindControls = (cnt) => {
+    cnt.querySelectorAll('.ned-cmp-ref-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        nedCompareRef = e.currentTarget.dataset.ref;
+        cnt.querySelectorAll('.ned-cmp-ref-btn').forEach(b => _nedUpdateBtn(b, b.dataset.ref === nedCompareRef));
+        if (sk) sk.triggerProcess();
+      });
+    });
+    cnt.querySelectorAll('.ned-cmp-result-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        nedResultRef = e.currentTarget.dataset.result;
+        cnt.querySelectorAll('.ned-cmp-result-btn').forEach(b => _nedUpdateBtn(b, b.dataset.result === nedResultRef));
+        if (sk) sk.triggerProcess();
+      });
+    });
+  };
+
   // ── compareInfo callback ─────────────────────────────────
   sk.compareInfo = async (file) => {
     const panel = await getOrCreateInfoPanel();
@@ -382,46 +450,92 @@ export async function render(container, hash) {
       exif, meta: {}, sidecar,
     };
 
-    let imageSource;
+    // Helper: load file into an ImageProcessor canvas
+    async function _loadImageSource() {
+      if (isVideoFile(file)) {
+        const seekTime = getStoredSeekTime(file.name);
+        return extractVideoFrame(file, seekTime);
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+      return img;
+    }
+
+    // Helper: run a list of recipe nodes through ImageProcessor
+    async function _runNodes(imageSource, nodes) {
+      const p = new ImageProcessor();
+      p.canvas.width  = imageSource.width  ?? imageSource.naturalWidth;
+      p.canvas.height = imageSource.height ?? imageSource.naturalHeight;
+      p.ctx.drawImage(imageSource, 0, 0);
+      for (const n of (nodes || [])) {
+        if (n.disabled) continue;
+        const d = n.type === 'transform' ? registry.get(n.transformId) : null;
+        if (!d) continue;
+        const np = n.id === node.id ? params : (n.params || {});
+        const applyDef = d.sourceTransformId ? registry.get(d.sourceTransformId) : d;
+        const fn = typeof d.applyPerFrame === 'function'
+          ? (c, pp, cx) => d.applyPerFrame(c, pp, cx)
+          : applyDef?.apply ? (c, pp, cx) => applyDef.apply(c, pp, cx) : null;
+        if (fn) try { await fn(p.ctx, np, context); } catch { /* ignore */ }
+      }
+      return p;
+    }
+
+    const imageSource = await _loadImageSource();
+
+    // Flatten top-level nodes for prev/final computation
+    const flatNodes = recipe.nodes || [];
+
+    // --- Before (left panel) ---
     let beforeUrl;
-    if (isVideoFile(file)) {
-      const seekTime = getStoredSeekTime(file.name);
-      const frameCanvas = await extractVideoFrame(file, seekTime);
-      imageSource = frameCanvas;
-      beforeUrl = await new Promise(r => frameCanvas.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.88));
+    if (nedCompareRef === 'prev') {
+      // Run all nodes strictly before the current one
+      const prevNodes = [];
+      for (const n of flatNodes) { if (n.id === node.id) break; prevNodes.push(n); }
+      if (prevNodes.length > 0) {
+        const prevProc = await _runNodes(imageSource, prevNodes);
+        beforeUrl = await new Promise(r => prevProc.canvas.toBlob(b => r(b ? URL.createObjectURL(b) : null), 'image/jpeg', 0.88));
+      } else {
+        // No prior steps — fall back to original
+        beforeUrl = isVideoFile(file)
+          ? await new Promise(r => imageSource.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.88))
+          : URL.createObjectURL(file);
+      }
     } else {
-      const rawUrl = URL.createObjectURL(file);
-      const img    = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = rawUrl; });
-      imageSource = img;
-      beforeUrl   = rawUrl;
+      beforeUrl = isVideoFile(file)
+        ? await new Promise(r => imageSource.toBlob(b => r(URL.createObjectURL(b)), 'image/jpeg', 0.88))
+        : URL.createObjectURL(file);
     }
 
-    const proc = new ImageProcessor();
-    proc.canvas.width  = imageSource.width  ?? imageSource.naturalWidth;
-    proc.canvas.height = imageSource.height ?? imageSource.naturalHeight;
-    proc.ctx.drawImage(imageSource, 0, 0);
-
-    let applyFn;
-    if (typeof def.applyPerFrame === 'function') {
-      applyFn = (ctx, p, c) => def.applyPerFrame(ctx, p, c);
+    // --- After (right panel) ---
+    let afterUrl;
+    if (nedResultRef === 'final') {
+      // Run the full recipe
+      const finalProc = await _runNodes(imageSource, flatNodes);
+      afterUrl = await new Promise(r => finalProc.canvas.toBlob(b => r(b ? URL.createObjectURL(b) : null), 'image/jpeg', 0.88));
     } else {
-      const applyDef = def.sourceTransformId ? registry.get(def.sourceTransformId) : def;
-      if (applyDef?.apply) applyFn = (ctx, p, c) => applyDef.apply(ctx, p, c);
+      // Run only this step
+      const proc = new ImageProcessor();
+      proc.canvas.width  = imageSource.width  ?? imageSource.naturalWidth;
+      proc.canvas.height = imageSource.height ?? imageSource.naturalHeight;
+      proc.ctx.drawImage(imageSource, 0, 0);
+      let applyFn;
+      if (typeof def.applyPerFrame === 'function') {
+        applyFn = (ctx, p, c) => def.applyPerFrame(ctx, p, c);
+      } else {
+        const applyDef = def.sourceTransformId ? registry.get(def.sourceTransformId) : def;
+        if (applyDef?.apply) applyFn = (ctx, p, c) => applyDef.apply(ctx, p, c);
+      }
+      if (applyFn) try { await applyFn(proc.ctx, params, context); } catch { /* ignore */ }
+      afterUrl = await new Promise(res => proc.canvas.toBlob(b => res(b ? URL.createObjectURL(b) : null), 'image/jpeg', 0.88));
     }
-    if (applyFn) {
-      try { await applyFn(proc.ctx, params, context); } catch (err) { /* ignore */ }
-    }
-
-    const afterUrl = await new Promise(res => proc.canvas.toBlob(b => {
-      res(b ? URL.createObjectURL(b) : null);
-    }, 'image/jpeg', 0.88));
 
     return {
       beforeUrl,
       afterUrl,
-      beforeLabel: 'Original',
-      afterLabel: 'Result',
+      beforeLabel: nedCompareRef === 'prev' ? 'Prev Step' : 'Original',
+      afterLabel:  nedResultRef  === 'final' ? 'All Steps'  : 'This Step',
       context
     };
   };
@@ -443,7 +557,7 @@ export async function render(container, hash) {
   });
 
   // ── Back ──────────────────────────────────────────────────
-  container.querySelector('#ned-back')?.addEventListener('click', () => navigate(`#bld?id=${recipeId}`));
+  container.querySelector('#ned-back')?.addEventListener('click', () => navigate(`#bld?id=${recipeId}${nedTransient ? '&transient=1' : ''}`));
 
   // ── Done — save params and go back ───────────────────────
   const saveNode = async () => {
@@ -454,13 +568,12 @@ export async function render(container, hash) {
     await saveRecipe(recipe);
   };
 
-  container.querySelector('#ned-done-btn')?.addEventListener('click', async () => {
-    await saveNode();
-    navigate(`#bld?id=${recipeId}`);
-  });
+  const _doneFn = async () => { await saveNode(); navigate(`#bld?id=${recipeId}${nedTransient ? '&transient=1' : ''}`); };
+  container.querySelector('#ned-done-btn')?.addEventListener('click', _doneFn);
+  container.querySelector('#ned-done-btn-bottom')?.addEventListener('click', _doneFn);
 
   // ── Reset ─────────────────────────────────────────────────
-  container.querySelector('#ned-btn-reset')?.addEventListener('click', async () => {
+  const _resetFn = async () => {
     const confirmed = await showConfirm({
       title: 'Reset Parameters?',
       body: 'This will restore all settings in this step to their factory defaults. This action cannot be undone.',
@@ -472,8 +585,10 @@ export async function render(container, hash) {
     const defaults = {};
     (def?.params || []).forEach(p => { defaults[p.name] = p.defaultValue ?? ''; });
     node.params = defaults;
-    navigate(`#ned?recipe=${recipeId}&node=${nodeId}`); // re-render
-  });
+    navigate(`#ned?recipe=${recipeId}&node=${nodeId}`);
+  };
+  container.querySelector('#ned-btn-reset')?.addEventListener('click', _resetFn);
+  container.querySelector('#ned-btn-reset-bottom')?.addEventListener('click', _resetFn);
 
   // ── Wire range inputs ─────────────────────────────────────
   container.querySelectorAll('input[type=range]').forEach(input => {
@@ -560,6 +675,182 @@ export async function render(container, hash) {
     bindBranchActions();
   }
 
+  // ── Drag overlay for x/y/radius percent transforms ────────
+  const _xParam = def?.params?.find(p => (p.name === 'x' || p.name === 'centerX') && p.type === 'range');
+  const _yParam = def?.params?.find(p => (p.name === 'y' || p.name === 'centerY') && p.type === 'range');
+  const _rParam = def?.params?.find(p => p.name === 'radius' && p.type === 'range');
+
+  if (_xParam && _yParam) {
+    let _imgW = 1, _imgH = 1;
+    let _dragMode = null;
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    // Overlay covers the full wsContainer; we find the actual <img alt="after">
+    // element inside the sidekick to get exact image bounds via getBoundingClientRect.
+    const overlayDiv = document.createElement('div');
+    overlayDiv.style.cssText = 'position:absolute;inset:0;z-index:88;cursor:crosshair;pointer-events:none;';
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.style.cssText = 'width:100%;height:100%;pointer-events:none;overflow:visible;';
+    overlayDiv.appendChild(svg);
+    wsContainer.appendChild(overlayDiv);
+
+    function _getLetterbox() {
+      // The sidekick uses shadow DOM — must pierce it to find the after image
+      const afterImg = (sk.shadowRoot ?? sk).querySelector('img[alt="after"]');
+      if (afterImg) {
+        const ir = afterImg.getBoundingClientRect();
+        const cr = overlayDiv.getBoundingClientRect();
+        return { x: ir.left - cr.left, y: ir.top - cr.top, w: ir.width, h: ir.height };
+      }
+      // Fallback: rough estimate (full width minus filmstrip)
+      return { x: 0, y: 44, w: overlayDiv.offsetWidth / 2, h: overlayDiv.offsetHeight - 134 };
+    }
+
+    function _getVal(name) {
+      return parseFloat(container.querySelector(`#ned-param-${name}`)?.value ?? 50);
+    }
+    function _setVal(name, v, param) {
+      const el = container.querySelector(`#ned-param-${name}`);
+      if (!el) return;
+      const clamped = Math.round(Math.max(param.min ?? 0, Math.min(param.max ?? 100, v)));
+      el.value = clamped;
+      const valEl = container.querySelector(`#ned-param-${name}-val`);
+      if (valEl) valEl.textContent = clamped;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function _mkEl(tag, attrs) {
+      const el = document.createElementNS(SVG_NS, tag);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      return el;
+    }
+
+    function _renderOverlay() {
+      const lb = _getLetterbox();
+      const xv = _getVal(_xParam.name);
+      const yv = _getVal(_yParam.name);
+      const rv = _rParam ? _getVal(_rParam.name) : null;
+      const px = lb.x + (xv / 100) * lb.w;
+      const py = lb.y + (yv / 100) * lb.h;
+      const _rBase = node.transformId === 'gen-circle'
+        ? Math.hypot(lb.w, lb.h)
+        : Math.min(lb.w, lb.h);
+      const pr = rv !== null ? (rv / 100) * _rBase : 0;
+
+      // Rebuild SVG; all shapes go into a clipped group so nothing escapes the image bounds
+      svg.innerHTML = `
+        <defs>
+          <filter id="ned-ov-shadow"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="black" flood-opacity="0.7"/></filter>
+          <clipPath id="ned-ov-clip"><rect x="${lb.x}" y="${lb.y}" width="${lb.w}" height="${lb.h}"/></clipPath>
+        </defs>`;
+
+      // Hit-rect: transparent but captures mouse events within the image area
+      const hit = _mkEl('rect', { id: 'ned-ov-hit', x: lb.x, y: lb.y, width: lb.w, height: lb.h, fill: 'transparent' });
+      hit.style.cssText = 'cursor:crosshair;pointer-events:all;';
+      hit.addEventListener('mousedown', _onImageMouseDown);
+      svg.appendChild(hit);
+
+      // Clipped drawing group
+      const g = _mkEl('g', { 'clip-path': 'url(#ned-ov-clip)' });
+      svg.appendChild(g);
+
+      if (pr > 8) {
+        g.appendChild(_mkEl('circle', { cx: px, cy: py, r: pr, fill: 'none', stroke: 'rgba(255,255,255,0.85)', 'stroke-width': '1.5', 'stroke-dasharray': '6 3', filter: 'url(#ned-ov-shadow)' }));
+        if (_rParam) {
+          const rh = _mkEl('circle', { cx: px + pr, cy: py, r: 7, fill: 'white', stroke: '#0077ff', 'stroke-width': '2' });
+          rh.style.cssText = 'cursor:ew-resize;pointer-events:all;';
+          rh.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); _dragMode = 'radius'; });
+          g.appendChild(rh);
+        }
+      }
+
+      [[px - 10, py, px + 10, py], [px, py - 10, px, py + 10]].forEach(([x1, y1, x2, y2]) =>
+        g.appendChild(_mkEl('line', { x1, y1, x2, y2, stroke: 'white', 'stroke-width': '1.5', filter: 'url(#ned-ov-shadow)' }))
+      );
+      g.appendChild(_mkEl('circle', { cx: px, cy: py, r: 5, fill: '#0077ff', stroke: 'white', 'stroke-width': '1.5', filter: 'url(#ned-ov-shadow)' }));
+
+      const lbl = _mkEl('text', { x: px + 10, y: py - 10, fill: 'white', 'font-size': '11', filter: 'url(#ned-ov-shadow)' });
+      lbl.textContent = `${Math.round(xv)}%, ${Math.round(yv)}%${rv !== null ? ` r:${Math.round(rv)}%` : ''}`;
+      g.appendChild(lbl);
+
+      // Update hit area for radius handle (outside clip group intentionally resets each render)
+    }
+
+    function _onImageMouseDown(e) {
+      e.preventDefault();
+      const rect = overlayDiv.getBoundingClientRect();
+      const lb = _getLetterbox();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+
+      if (_rParam) {
+        const xv = _getVal(_xParam.name), yv = _getVal(_yParam.name), rv = _getVal(_rParam.name);
+        const cx = lb.x + (xv / 100) * lb.w, cy = lb.y + (yv / 100) * lb.h;
+        const cr = (rv / 100) * lb.w;
+        const dx = mx - (cx + cr), dy = my - cy;
+        if (Math.hypot(dx, dy) < 14) { _dragMode = 'radius'; return; }
+      }
+
+      _dragMode = 'center';
+      _setVal(_xParam.name, ((mx - lb.x) / lb.w) * 100, _xParam);
+      _setVal(_yParam.name, ((my - lb.y) / lb.h) * 100, _yParam);
+      _renderOverlay();
+      schedulePreview();
+    }
+
+    const _onMove = e => {
+      if (!_dragMode) return;
+      const rect = overlayDiv.getBoundingClientRect();
+      const lb = _getLetterbox();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      if (_dragMode === 'center') {
+        _setVal(_xParam.name, ((mx - lb.x) / lb.w) * 100, _xParam);
+        _setVal(_yParam.name, ((my - lb.y) / lb.h) * 100, _yParam);
+      } else {
+        const xv = _getVal(_xParam.name), yv = _getVal(_yParam.name);
+        const cx = lb.x + (xv / 100) * lb.w, cy = lb.y + (yv / 100) * lb.h;
+        const dist = Math.hypot(mx - cx, my - cy);
+        const rBase = node.transformId === 'gen-circle' ? Math.hypot(lb.w, lb.h) : Math.min(lb.w, lb.h);
+        _setVal(_rParam.name, (dist / rBase) * 100, _rParam);
+      }
+      _renderOverlay();
+      schedulePreview();
+    };
+    const _onUp = () => { _dragMode = null; };
+    window.addEventListener('mousemove', _onMove);
+    window.addEventListener('mouseup', _onUp);
+
+    // Capture image dimensions when a file is focused
+    sk.addEventListener('sidekick:file-focus', async e => {
+      if (!e.detail?.handle) return;
+      try {
+        const f = await e.detail.handle.getFile();
+        if (isVideoFile(f)) return;
+        const url = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = () => { _imgW = img.naturalWidth; _imgH = img.naturalHeight; URL.revokeObjectURL(url); _renderOverlay(); };
+        img.onerror = () => URL.revokeObjectURL(url);
+        img.src = url;
+      } catch { /* best-effort */ }
+    });
+
+    // Re-render when sliders change
+    [_xParam, _yParam, ...(_rParam ? [_rParam] : [])].forEach(p => {
+      container.querySelector(`#ned-param-${p.name}`)?.addEventListener('input', _renderOverlay);
+    });
+
+    new ResizeObserver(_renderOverlay).observe(wsContainer);
+
+    // Re-render after compareRender updates the after <img> src
+    const _origCompareRender = sk.compareRender;
+    sk.compareRender = async (file) => {
+      const result = await _origCompareRender(file);
+      // Wait one frame for the img element to be updated in DOM
+      requestAnimationFrame(() => requestAnimationFrame(_renderOverlay));
+      return result;
+    };
+
+    _renderOverlay();
+  }
 
 }
 
@@ -643,7 +934,9 @@ function injectNedStyles() {
     .ned-body { display:flex; flex:1; overflow:hidden; }
     .ned-node-icon { width:32px; height:32px; border-radius:8px; border:1px solid; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
-    .ned-params-panel { width:320px; flex-shrink:0; border-right:1px solid var(--ps-border); overflow-y:auto; }
+    .ned-params-panel { width:320px; flex-shrink:0; border-right:1px solid var(--ps-border); display:flex; flex-direction:column; overflow:hidden; }
+    .ned-params-scroll { flex:1; overflow-y:auto; }
+    .ned-params-actions { flex-shrink:0; padding:10px 16px 12px; display:flex; gap:8px; border-top:1px solid var(--ps-border); background:var(--ps-bg-surface); }
     .ned-section-title {
       display:flex; align-items:center; gap:6px;
       font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em;

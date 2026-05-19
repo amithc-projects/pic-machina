@@ -1,5 +1,49 @@
 import { isModelDownloaded } from '../data/models.js';
-import { getCustomVoices, saveCustomVoice, deleteCustomVoice } from '../data/voices.js';
+import { createProject, openProject, saveProject, resolveMediaUrl, revokeMediaUrl, addRecentProject, getRecentProjects, openProjectFromHandle, getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
+
+function showDialog(options) {
+  return new Promise((resolve) => {
+    const { title, message, type = 'confirm', defaultValue = '' } = options;
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:#fff;backdrop-filter:blur(4px);';
+    
+    let inputHtml = '';
+    if (type === 'prompt') {
+      inputHtml = `<input type="text" id="aud-dialog-input" class="ic-input" value="${defaultValue}" style="width:100%;margin-bottom:16px;">`;
+    }
+    
+    dialog.innerHTML = `
+      <div style="background:var(--ps-bg-surface);border:1px solid var(--ps-border);border-radius:8px;padding:20px;width:320px;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <h3 style="margin-top:0;margin-bottom:8px;color:var(--ps-text);font-size:16px;">${title}</h3>
+        <p style="margin-bottom:16px;color:var(--ps-text-muted);font-size:13px;line-height:1.4;">${message}</p>
+        ${inputHtml}
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button id="aud-btn-dialog-cancel" class="btn-ghost">Cancel</button>
+          <button id="aud-btn-dialog-confirm" class="${type === 'confirm' ? 'btn-danger' : 'btn-primary'}">OK</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    const btnCancel = dialog.querySelector('#aud-btn-dialog-cancel');
+    const btnConfirm = dialog.querySelector('#aud-btn-dialog-confirm');
+    const inputEl = dialog.querySelector('#aud-dialog-input');
+    
+    if (inputEl) {
+       inputEl.focus();
+       inputEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') btnConfirm.click();
+          if (e.key === 'Escape') btnCancel.click();
+       });
+    }
+    
+    const close = () => { document.body.removeChild(dialog); };
+    
+    btnCancel.addEventListener('click', () => { close(); resolve(false); });
+    btnConfirm.addEventListener('click', () => { close(); resolve(type === 'prompt' ? (inputEl.value || null) : true); });
+  });
+}
 
 async function checkWebGPU() {
   if (!navigator.gpu) return false;
@@ -16,7 +60,145 @@ function generateId() {
   return Math.random().toString(36).substring(2, 9);
 }
 
+let currentAudioProjectDirHandle = null;
+let currentAudioProject = null;
+let customVoices = [];
+let audioHistory = [];
+
 export async function render(container, hash) {
+  if (!currentAudioProject || !currentAudioProjectDirHandle) {
+    container.innerHTML = `
+      <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%;">
+        <div style="text-align:center;">
+           <h2 style="font-size:24px; margin-bottom:8px;">Speech Studio</h2>
+           <p class="text-muted" style="font-size:14px;">Select or create an audio project to get started.</p>
+        </div>
+        <div id="aud-workspace-root" style="width:100%; max-width:800px; display:flex; flex-direction:column; gap:16px;"></div>
+      </div>
+    `;
+
+    const renderWorkspace = async () => {
+       const rootEl = container.querySelector('#aud-workspace-root');
+       let workspaceHandle = await getWorkspaceRoot();
+       
+       if (!workspaceHandle) {
+          rootEl.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; padding:48px; border:2px dashed var(--ps-border); border-radius:12px; background:var(--ps-surface);">
+               <span class="material-symbols-outlined text-muted" style="font-size:48px; margin-bottom:16px;">folder_open</span>
+               <h3 style="margin-bottom:8px;">No Workspace Selected</h3>
+               <p class="text-muted" style="margin-bottom:24px; text-align:center;">A workspace is a local folder on your computer where all your audio projects will be stored.</p>
+               <button class="btn-primary" id="aud-btn-set-workspace">Select Workspace Folder</button>
+            </div>
+          `;
+          rootEl.querySelector('#aud-btn-set-workspace').onclick = async () => {
+             try {
+                workspaceHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                await setWorkspaceRoot(workspaceHandle);
+                renderWorkspace();
+             } catch(e) { if(e.name !== 'AbortError') alert(e.message); }
+          };
+          return;
+       }
+       
+       if (!(await verifyPermission(workspaceHandle, true))) {
+          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">Permission required to access Workspace.</p><button class="btn-primary" id="aud-btn-grant">Grant Permission</button></div>`;
+          rootEl.querySelector('#aud-btn-grant').onclick = async () => {
+             if (await verifyPermission(workspaceHandle, true)) renderWorkspace();
+          };
+          return;
+       }
+       
+       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> Scanning workspace...</div>`;
+       const projects = await scanWorkspaceProjects(workspaceHandle);
+       
+       projects.sort((a,b) => (b.projectData.title || b.projectData.name || '').localeCompare(a.projectData.title || a.projectData.name || ''));
+       
+       let gridHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> Workspace: <b>${workspaceHandle.name}</b></div>
+         <button class="btn-ghost btn-sm" id="aud-btn-change-workspace" title="Change Workspace"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+       </div>`;
+       
+       gridHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">`;
+       
+       // New Project Card
+       gridHtml += `
+         <button id="aud-btn-new-project" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:rgba(255,255,255,0.02); border:2px dashed var(--ps-border); border-radius:12px; cursor:pointer; color:var(--ps-text-muted); transition:0.2s;" onmouseover="this.style.color='var(--ps-blue)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.color='var(--ps-text-muted)'; this.style.borderColor='var(--ps-border)';">
+           <span class="material-symbols-outlined" style="font-size:32px; margin-bottom:8px;">add_circle</span>
+           <span style="font-size:14px; font-weight:600;">New Audio Project</span>
+         </button>
+       `;
+       
+       // Project Cards
+       projects.forEach((p, i) => {
+         // Filter to audio projects, assume it's audio if it has script or voices, or we can just try to open it
+         const isAudio = p.projectData.voices || p.projectData.script !== undefined;
+         if (!isAudio) return; // Skip video projects
+
+         const title = p.projectData.title || p.projectData.name || 'Untitled';
+         const thumb = `<div style="width:100%; height:120px; background:var(--ps-surface); border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;"><span class="material-symbols-outlined text-muted text-[32px]">record_voice_over</span></div>`;
+         
+         gridHtml += `
+           <div class="aud-project-card" data-index="${i}" style="display:flex; flex-direction:column; padding:12px; background:var(--ps-surface); border:1px solid var(--ps-border); border-radius:12px; cursor:pointer; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.background='var(--ps-surface)'; this.style.borderColor='var(--ps-border)';">
+              ${thumb}
+              <span style="font-size:14px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${title}</span>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${(p.projectData.history || []).length} items</span>
+           </div>
+         `;
+       });
+       
+       gridHtml += `</div>`;
+       rootEl.innerHTML = gridHtml;
+       
+       rootEl.querySelector('#aud-btn-change-workspace').onclick = async () => {
+          try {
+             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+             await setWorkspaceRoot(handle);
+             renderWorkspace();
+          } catch(e) {}
+       };
+       
+       rootEl.querySelector('#aud-btn-new-project').onclick = async () => {
+          const name = await showDialog({ type: 'prompt', title: 'New Project', message: 'Project Name:' });
+          if (!name) return;
+          try {
+             const initialData = {
+               title: name,
+               script: '',
+               voices: [],
+               history: []
+             };
+             const dirHandle = await createProjectInWorkspace(workspaceHandle, name, initialData);
+             const fileHandle = await dirHandle.getFileHandle('project.json');
+             const file = await fileHandle.getFile();
+             currentAudioProject = JSON.parse(await file.text());
+             currentAudioProjectDirHandle = dirHandle;
+             render(container, hash);
+          } catch(e) { alert(e.message); }
+       };
+       
+       rootEl.querySelectorAll('.aud-project-card').forEach(card => {
+          card.onclick = async () => {
+             const p = projects[card.dataset.index];
+             try {
+               const projectData = await openProjectFromHandle(p.dirHandle);
+               currentAudioProjectDirHandle = p.dirHandle;
+               currentAudioProject = projectData;
+               
+               if (!currentAudioProject.voices) currentAudioProject.voices = [];
+               if (!currentAudioProject.history) currentAudioProject.history = [];
+               if (!currentAudioProject.script) currentAudioProject.script = '';
+               
+               // Re-hydrate media handles if needed in future
+               render(container, hash);
+             } catch(e) { alert('Could not open project.\nError: ' + e.message); }
+          };
+       });
+    };
+    
+    renderWorkspace();
+    return;
+  }
+
   container.innerHTML = `
     <div class="screen aud-screen">
       <div class="screen-header shrink-0">
@@ -125,6 +307,30 @@ export async function render(container, hash) {
   // --- Element Refs ---
   const tabDialogue = container.querySelector('#aud-tab-dialogue');
   const tabVoicecraft = container.querySelector('#aud-tab-voicecraft');
+  
+  // Set initial project values
+  const inputTitleElDef = container.querySelector('#aud-input-title');
+  if (inputTitleElDef && currentAudioProject.title) inputTitleElDef.value = currentAudioProject.title;
+  const inputElDef = container.querySelector('#aud-input');
+  if (inputElDef && currentAudioProject.script) inputElDef.value = currentAudioProject.script;
+  
+  if (currentAudioProject.voices) customVoices = currentAudioProject.voices;
+  if (currentAudioProject.history) audioHistory = currentAudioProject.history;
+  renderHistory();
+  
+  // Auto-save script changes
+  if (inputElDef) {
+    inputElDef.addEventListener('input', async () => {
+      currentAudioProject.script = inputElDef.value;
+      await saveProject(currentAudioProjectDirHandle, currentAudioProject);
+    });
+  }
+  if (inputTitleElDef) {
+    inputTitleElDef.addEventListener('input', async () => {
+      currentAudioProject.title = inputTitleElDef.value;
+      await saveProject(currentAudioProjectDirHandle, currentAudioProject);
+    });
+  }
   const viewDialogue = container.querySelector('#aud-view-dialogue');
   const viewVoicecraft = container.querySelector('#aud-view-voicecraft');
 
@@ -154,7 +360,8 @@ export async function render(container, hash) {
   const customVoicesGrid = container.querySelector('#aud-custom-voices-grid');
 
   // --- State ---
-  let customVoices = [];
+  customVoices = currentAudioProject?.voices ? [...currentAudioProject.voices] : [];
+  audioHistory = currentAudioProject?.history ? [...currentAudioProject.history] : [];
   let detectedSpeakers = [];
   let parsedSegments = [];
   
@@ -166,7 +373,35 @@ export async function render(container, hash) {
   let ptWorker = null;
   let ptReady = false;
 
-  let audioHistory = [];
+  async function renderHistory() {
+     if (!audioHistory || audioHistory.length === 0) {
+        if(historyListEl) historyListEl.innerHTML = '<div class="text-sm text-muted" id="aud-history-empty">No audio generated in this session yet.</div>';
+        return;
+     }
+     
+     let html = '';
+     for (const hist of audioHistory) {
+         let wavUrl = '';
+         let mp3Url = '';
+         if (hist.wavFile) wavUrl = await resolveMediaUrl(hist.wavFile, currentAudioProjectDirHandle) || '';
+         if (hist.mp3File) mp3Url = await resolveMediaUrl(hist.mp3File, currentAudioProjectDirHandle) || '';
+         
+         html += `
+           <div class="p-4 border border-[var(--ps-border)] rounded-lg bg-[var(--ps-bg)] flex flex-col gap-3" id="aud-hist-${hist.id}">
+             <div class="flex justify-between items-center">
+               <span class="font-bold text-[var(--ps-text)]">${hist.title}</span>
+               <span class="text-xs text-muted">${hist.durationSecs}s • ${hist.speakerCount} speaker(s)</span>
+             </div>
+             ${wavUrl ? `<audio controls class="w-full h-10 outline-none" src="${wavUrl}"></audio>` : '<div class="text-xs text-danger">Missing file</div>'}
+             <div class="flex gap-2 mt-1">
+               ${wavUrl ? `<a href="${wavUrl}" download="${hist.title}.wav" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .wav</a>` : ''}
+               ${mp3Url ? `<a href="${mp3Url}" download="${hist.title}.mp3" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .mp3</a>` : ''}
+             </div>
+           </div>
+         `;
+     }
+     if(historyListEl) historyListEl.innerHTML = html;
+  }
 
   function executeWorkerTask(worker, type, payload, statusEl, progressEl) {
       return new Promise((resolve, reject) => {
@@ -284,12 +519,15 @@ export async function render(container, hash) {
 
   // --- VoiceCraft Logic ---
   async function loadCustomVoices() {
-    customVoices = await getCustomVoices();
-    renderCustomVoices();
+    customVoices = currentAudioProject.voices || [];
+    await renderCustomVoices();
   }
 
-  function renderCustomVoices() {
-    customVoicesGrid.innerHTML = customVoices.map(v => `
+  async function renderCustomVoices() {
+    let html = '';
+    for (const v of customVoices) {
+      const blobUrl = await resolveMediaUrl(v.filename, currentAudioProjectDirHandle);
+      html += `
       <div class="flex flex-col bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded p-4">
         <div class="flex justify-between items-center mb-3">
           <div class="flex items-center gap-2">
@@ -299,66 +537,77 @@ export async function render(container, hash) {
           <button class="material-symbols-outlined text-muted hover:text-danger cursor-pointer text-sm" data-delete-id="${v.id}">close</button>
         </div>
         <div class="text-xs text-muted mb-2">Voice Sample</div>
-        <audio controls class="w-full h-8 outline-none rounded" src="${URL.createObjectURL(new Blob([v.bytes], { type: 'audio/wav' }))}"></audio>
-      </div>
-    `).join('');
+        <audio controls class="w-full h-8 outline-none rounded" src="${blobUrl}"></audio>
+      </div>`;
+    }
+    customVoicesGrid.innerHTML = html;
 
     customVoicesGrid.querySelectorAll('button[data-delete-id]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const id = e.target.getAttribute('data-delete-id');
-        if (confirm('Delete this custom voice?')) {
-          await deleteCustomVoice(id);
+        if (await showDialog({ title: 'Delete Voice', message: 'Delete this custom voice?' })) {
+          currentAudioProject.voices = currentAudioProject.voices.filter(v => v.id !== id);
+          await saveProject(currentAudioProjectDirHandle, currentAudioProject);
           loadCustomVoices();
         }
       });
     });
   }
 
-  btnAddVoice.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'audio/wav, audio/mpeg, audio/mp3';
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const name = prompt('Enter a name for this Character/Voice:');
+  btnAddVoice.addEventListener('click', async () => {
+    try {
+      const handles = await window.showOpenFilePicker({
+        id: 'aud_voice_picker',
+        types: [{ description: 'Audio Files', accept: {'audio/*': ['.wav', '.mp3', '.mpeg']} }],
+        multiple: false
+      });
+      if (!handles || handles.length === 0) return;
+      const file = await handles[0].getFile();
+      
+      const name = await showDialog({ type: 'prompt', title: 'New Voice', message: 'Enter a name for this Character/Voice:' });
       if (!name) return;
 
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-        const arrayBuffer = await file.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        const float32Data = audioBuffer.getChannelData(0);
-        await audioCtx.close();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      const float32Data = audioBuffer.getChannelData(0);
+      await audioCtx.close();
 
-        // Convert to WAV buffer for IDB storage (simpler than storing raw arrays and reconstructing)
-        const wavBlob = audioBufferToWav(float32Data, 24000);
-        const wavBuffer = await wavBlob.arrayBuffer();
+      const wavBlob = audioBufferToWav(float32Data, 24000);
+      const wavBuffer = await wavBlob.arrayBuffer();
 
-        await saveCustomVoice(generateId(), name, wavBuffer);
-        loadCustomVoices();
-      } catch (err) {
+      const newId = generateId();
+      const voicesDirHandle = await currentAudioProjectDirHandle.getDirectoryHandle('voices', { create: true });
+      const cleanName = name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const targetFileName = `${cleanName}_${newId}.wav`;
+      const targetFileHandle = await voicesDirHandle.getFileHandle(targetFileName, { create: true });
+      const writable = await targetFileHandle.createWritable();
+      await writable.write(wavBuffer);
+      await writable.close();
+      
+      currentAudioProject.voices.push({ id: newId, name, filename: 'voices/' + targetFileName });
+      await saveProject(currentAudioProjectDirHandle, currentAudioProject);
+      loadCustomVoices();
+    } catch (err) {
+      if (err.name !== 'AbortError') {
         console.error(err);
-        alert('Failed to process audio file: ' + err.message);
+        await showDialog({ title: 'Error', message: 'Failed to process audio file: ' + err.message, type: 'confirm' });
       }
-    };
-    input.click();
+    }
   });
 
   // --- Script Upload Logic ---
-  btnUploadScript.addEventListener('click', () => {
-    inputUploadScript.click();
-  });
+  btnUploadScript.addEventListener('click', async () => {
+    try {
+      const handles = await window.showOpenFilePicker({
+        id: 'aud_script_picker',
+        types: [{ description: 'Text Files', accept: {'text/plain': ['.txt', '.srt', '.vtt']} }],
+        multiple: false
+      });
+      if (!handles || handles.length === 0) return;
+      const file = await handles[0].getFile();
+      let content = await file.text();
 
-  inputUploadScript.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      let content = event.target.result;
-      
       if (file.name.toLowerCase().endsWith('.srt')) {
         const blocks = content.trim().split(/\n\s*\n/);
         const textLines = [];
@@ -381,12 +630,10 @@ export async function render(container, hash) {
       }
 
       inputEl.value = content;
-      inputUploadScript.value = ''; // Reset for next upload
-      
-      // Trigger input event to re-evaluate sections
       inputEl.dispatchEvent(new Event('input'));
-    };
-    reader.readAsText(file);
+    } catch(e) {
+      if (e.name !== 'AbortError') console.error(e);
+    }
   });
   
   btnLoadSample.addEventListener('click', () => {
@@ -572,7 +819,7 @@ export async function render(container, hash) {
     }
 
     // Pre-load voices if we haven't
-    if (customVoices.length === 0) customVoices = await getCustomVoices();
+    if (customVoices.length === 0) customVoices = currentAudioProject.voices || [];
 
     const lines = text.split('\n');
     detectedSpeakers = [];
@@ -668,7 +915,10 @@ export async function render(container, hash) {
           
           // Decode the reference WAV stored in DB at 24000Hz for Chatterbox
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-          const refAudioBuffer = await audioCtx.decodeAudioData(customRec.bytes.slice(0)); // clone buffer
+          const refBlobUrl = await resolveMediaUrl(customRec.filename, currentAudioProjectDirHandle);
+          const refResp = await fetch(refBlobUrl);
+          const refAudioBuffer = await audioCtx.decodeAudioData(await refResp.arrayBuffer());
+          revokeMediaUrl(refBlobUrl);
           const refFloat32 = refAudioBuffer.getChannelData(0);
           await audioCtx.close();
           
@@ -696,7 +946,10 @@ export async function render(container, hash) {
 
           // Decode reference audio at 24 kHz (same store as Chatterbox custom voices)
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-          const refAudioBuffer = await audioCtx.decodeAudioData(customRec.bytes.slice(0));
+          const refBlobUrl = await resolveMediaUrl(customRec.filename, currentAudioProjectDirHandle);
+          const refResp = await fetch(refBlobUrl);
+          const refAudioBuffer = await audioCtx.decodeAudioData(await refResp.arrayBuffer());
+          revokeMediaUrl(refBlobUrl);
           const refFloat32 = refAudioBuffer.getChannelData(0);
           await audioCtx.close();
 
@@ -748,12 +1001,34 @@ export async function render(container, hash) {
 
       // Convert to WAV
       const wavBlob = audioBufferToWav(combinedAudio, SAMPLE_RATE);
-      const wavUrl = URL.createObjectURL(wavBlob);
+      const outputsDirHandle = await currentAudioProjectDirHandle.getDirectoryHandle('outputs', { create: true });
+      const cleanTitle = inputTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const baseName = `${cleanTitle}_${historyId}`;
       
-      // Convert to MP3
+      const wavFh = await outputsDirHandle.getFileHandle(baseName + '.wav', { create: true });
+      const wavWritable = await wavFh.createWritable();
+      await wavWritable.write(wavBlob);
+      await wavWritable.close();
+      
       genStatusEl.textContent = 'Encoding MP3...';
       const mp3Blob = await encodeMp3(combinedAudio, SAMPLE_RATE);
+      const mp3Fh = await outputsDirHandle.getFileHandle(baseName + '.mp3', { create: true });
+      const mp3Writable = await mp3Fh.createWritable();
+      await mp3Writable.write(mp3Blob);
+      await mp3Writable.close();
+      
+      const wavUrl = URL.createObjectURL(wavBlob);
       const mp3Url = URL.createObjectURL(mp3Blob);
+      
+      currentAudioProject.history.unshift({
+         id: historyId,
+         title: inputTitle,
+         durationSecs,
+         speakerCount: detectedSpeakers.length,
+         wavFile: 'outputs/' + baseName + '.wav',
+         mp3File: 'outputs/' + baseName + '.mp3'
+      });
+      await saveProject(currentAudioProjectDirHandle, currentAudioProject);
 
       // Replace History Placeholder
       const finalHtml = `
@@ -877,11 +1152,14 @@ export async function render(container, hash) {
   };
   window.addEventListener('beforeunload', handleBeforeUnload);
 
-  const handleNavClick = (e) => {
+  const handleNavClick = async (e) => {
     if (checkKokoro.checked || checkCb.checked || checkPt.checked || kokoroReady || cbReady || ptReady) {
-      if (!confirm("Warning: You have loaded TTS engines. If you leave this page, you will need to re-compile them again later (which can take 60+ seconds). Are you sure you want to leave?")) {
-        e.preventDefault();
-        e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
+      if (await showDialog({ title: 'Leave Page?', message: "Warning: You have loaded TTS engines. If you leave this page, you will need to re-compile them again later (which can take 60+ seconds). Are you sure you want to leave?" })) {
+         window.removeEventListener('beforeunload', handleBeforeUnload);
+         navItems.forEach(item => item.removeEventListener('click', handleNavClick, true));
+         window.location.hash = e.currentTarget.getAttribute('href');
       }
     }
   };
