@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Getting Started — PicMachina</title>
+<title>Getting Started — Zumilabs Studio</title>
 <meta name="viewport" content="width=1440" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -167,7 +167,7 @@ function Sidebar({active="started"}){
         <div style={{width:28, height:28, borderRadius:8, background:"linear-gradient(135deg,#3b82f6,#6366f1)", display:"grid", placeItems:"center", boxShadow:"0 0 0 1px rgba(255,255,255,0.08) inset"}}>
           <Icon size={15} d={<><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.2 4.2l4.3 4.3M15.5 15.5l4.3 4.3M1 12h6M17 12h6M4.2 19.8l4.3-4.3M15.5 8.5l4.3-4.3"/></>}/>
         </div>
-        <div style={{fontWeight:700, letterSpacing:.2}}>PicMachina</div>
+        <div style={{fontWeight:700, letterSpacing:.2}}>Zumilabs Studio</div>
       </div>
       {items.map((it,idx)=>{
         if(it.group) return <div key={"g"+idx} style={{height:1, background:"var(--line)", margin:"10px 2px"}}/>;
@@ -611,7 +611,7 @@ function RunPreview(){
   );
 }
 
-/* ===================== PIPELINE DIAGRAM (What can PicMachina do) ===================== */
+/* ===================== PIPELINE DIAGRAM (What can Zumilabs Studio do) ===================== */
 function PipelineDiagram(){
   const rows = [
     {label:"Process",  sub:"Extract · parse · metadata",           icon:I.code,    color:"var(--teal)"},
@@ -627,7 +627,7 @@ function PipelineDiagram(){
       <div style={{position:"absolute", inset:0, pointerEvents:"none", background:"radial-gradient(600px 200px at 50% 0%, rgba(59,130,246,0.08), transparent 70%)"}}/>
       <div style={{position:"relative"}}>
         <div style={{display:"flex", alignItems:"baseline", gap:14, marginBottom:26}}>
-          <h2 style={{margin:0, fontSize:28, fontWeight:700, letterSpacing:-.5}}>What can PicMachina do?</h2>
+          <h2 style={{margin:0, fontSize:28, fontWeight:700, letterSpacing:-.5}}>What can Zumilabs Studio do?</h2>
           <span className="mono" style={{fontSize:11, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4}}>7 node categories · 83 recipes</span>
         </div>
 
@@ -738,7 +738,7 @@ function Personas(){
   return (
     <div>
       <div style={{display:"flex", alignItems:"baseline", gap:14, marginBottom:20, flexWrap:"wrap"}}>
-        <h2 style={{margin:0, fontSize:28, fontWeight:700, letterSpacing:-.5, whiteSpace:"nowrap"}}>Who uses PicMachina?</h2>
+        <h2 style={{margin:0, fontSize:28, fontWeight:700, letterSpacing:-.5, whiteSpace:"nowrap"}}>Who uses Zumilabs Studio?</h2>
         <span className="mono" style={{fontSize:11, color:"var(--text-mute)", textTransform:"uppercase", letterSpacing:1.4, whiteSpace:"nowrap"}}>Pick a persona · see starter recipes</span>
       </div>
 

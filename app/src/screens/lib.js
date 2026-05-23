@@ -261,11 +261,11 @@ export async function render(container) {
         
         if (isEnterprise) {
           badges.insertAdjacentHTML('beforeend',
-            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Pic-Machina Enterprise">` +
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Zumilabs Studio Enterprise">` +
             `<span class="material-symbols-outlined" style="font-size:11px">business_center</span> ENTERPRISE</span>`);
         } else if (isPro) {
           badges.insertAdjacentHTML('beforeend',
-            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Pic-Machina Pro">` +
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Zumilabs Studio Pro">` +
             `<span class="material-symbols-outlined" style="font-size:11px">workspace_premium</span> PRO</span>`);
         } else {
           const tip = unmet.map(r => r.label).join(', ');
@@ -531,8 +531,8 @@ export async function render(container) {
         const data = JSON.parse(text);
         
         // Validation check
-        if (data.type !== 'PicMachinaRecipeBundle') {
-          throw new Error('This file does not appear to be a PicMachina recipe bundle.');
+        if (data.type !== 'ZumilabsStudioRecipeBundle' && data.type !== 'PicMachinaRecipeBundle') {
+          throw new Error('This file does not appear to be a Zumilabs Studio recipe bundle.');
         }
 
         // Before saving, see if recipe ID already exists

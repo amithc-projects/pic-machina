@@ -1,6 +1,7 @@
 const fs = require('fs');
-const path = "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/tme.js";
-let content = fs.readFileSync(path, 'utf8');
+const pathModule = require('path');
+const filePath = pathModule.join(__dirname, 'src/screens/tme.js');
+let content = fs.readFileSync(filePath, 'utf8');
 
 const regexVideoPush = /currentTimeline\.videoTrack\.push\(\{ id: generateId\(\), poolId: id, timelineStart: currentTime, duration: 4\.0, sourceStart: 0, transitionOut: null \}\);/g;
 const replaceVideoPush = `const duration = poolItem.meta?.duration || 4.0;
@@ -25,5 +26,5 @@ content = content.replace(regexAudioPush, replaceAudioPush);
 
 content = content.replace(/currentTime \+= 4\.0;/g, "currentTime += (typeof duration !== 'undefined' ? duration : 4.0);");
 
-fs.writeFileSync(path, content);
+fs.writeFileSync(filePath, content);
 console.log("Fixed!");

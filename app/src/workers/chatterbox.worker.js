@@ -7,6 +7,7 @@ let processor = null;
 const speakerCache = new Map();
 
 // Isolate cross-origin worker worker initialization error
+env.logLevel = 40; // Only show error messages to silence resolve_model_type warnings
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 if (env.backends?.onnx?.wasm) {
@@ -84,7 +85,10 @@ async function generateAudio(data) {
         ...inputs,
         ...speakerEmbeddings,
         exaggeration: emotionVal,
-        max_new_tokens: 256,
+        max_new_tokens: data.max_new_tokens || 1024,
+        do_sample: data.do_sample !== undefined ? data.do_sample : true,
+        temperature: data.temperature !== undefined ? data.temperature : 0.7,
+        top_k: data.top_k !== undefined ? data.top_k : 50,
     });
 
     const waveformData = waveform.data;

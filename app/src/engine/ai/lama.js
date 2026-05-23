@@ -1,5 +1,5 @@
 /**
- * PicMachina — LaMa Inpainting inference wrapper
+ * Zumilabs Studio — LaMa Inpainting inference wrapper
  */
 
 import { getModelBytes, isModelDownloaded } from '../../data/models.js';

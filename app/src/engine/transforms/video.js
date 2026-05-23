@@ -1,5 +1,5 @@
 /**
- * PicMachina — Per-Frame Video Effect Transforms (Phase 3 + 4)
+ * Zumilabs Studio — Per-Frame Video Effect Transforms (Phase 3 + 4)
  *
  * Each transform here wraps an existing image effect transform and applies it
  * to every frame of a video via mediabunny's process callback.
@@ -620,7 +620,7 @@ registry.register({
       options: [{ label: 'Text', value: 'text' }, { label: 'Image', value: 'image' }], defaultValue: 'text' },
     { name: 'imageUrl', label: 'Image File',    type: 'file',    defaultValue: '' },
     { name: 'repeat',  label: 'Repeat Pattern', type: 'boolean', defaultValue: true },
-    { name: 'text',    label: 'Text',           type: 'text',    defaultValue: '© PicMachina' },
+    { name: 'text',    label: 'Text',           type: 'text',    defaultValue: '© Zumilabs Studio' },
     { name: 'font',    label: 'Font',           type: 'font-select',    defaultValue: 'Inter' },
     { name: 'size',    label: 'Size (px)',       type: 'number',  defaultValue: 28 },
     { name: 'color',   label: 'Color',          type: 'color',   defaultValue: '#ffffff' },

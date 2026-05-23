@@ -1,4 +1,4 @@
-# Netlify configuration for PicMachina
+# Netlify configuration for Zumilabs Studio
 
 [build]
   publish = "dist"

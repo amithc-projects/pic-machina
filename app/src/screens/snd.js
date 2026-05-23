@@ -706,6 +706,46 @@ export async function render(container) {
       .snd-clip:active { cursor: grabbing; }
       .snd-clip.selected { border-color: #f472b6; background: rgba(244,114,182,0.15); z-index: 2; box-shadow: 0 0 15px rgba(244,114,182,0.3); }
       .snd-clip-name { position: absolute; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.5); font-size: 10px; padding: 2px 6px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+      
+      #snd-fsa-browser-panel .ic-mb-list-row {
+        grid-template-columns: 32px 1fr 40px !important;
+        gap: 8px !important;
+        padding: 4px 8px !important;
+      }
+      #snd-fsa-browser-panel .ic-mb-list-row > div:nth-child(3),
+      #snd-fsa-browser-panel .ic-mb-list-row > div:nth-child(4) {
+        display: none !important;
+      }
+      #snd-fsa-browser-panel .ic-mb-list-thumb {
+        width: 24px !important;
+        height: 24px !important;
+      }
+      #snd-fsa-browser-panel .ic-mb-list-thumb span {
+        font-size: 16px !important;
+      }
+      
+      #snd-fsa-browser-panel .ic-mb-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+        gap: 8px !important;
+        padding: 8px !important;
+      }
+      #snd-fsa-browser-panel .ic-mb-cell {
+        padding: 4px !important;
+        gap: 4px !important;
+      }
+      #snd-fsa-browser-panel .ic-mb-name {
+        font-size: 10px !important;
+      }
+      @keyframes snd-pulse {
+        0% { opacity: 0.4; }
+        100% { opacity: 1; }
+      }
+      .snd-recording-pulse {
+        animation: snd-pulse 0.6s infinite alternate;
+      }
+      #snd-fsa-browser-panel .ic-mb-grid-action button span {
+        font-size: 16px !important;
+      }
     </style>
 
     <div class="snd-root">
@@ -744,13 +784,37 @@ export async function render(container) {
         <!-- Left Sidebar -->
         <div class="snd-sidebar" style="width: 320px; background: #151521; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; z-index: 10;">
             
-            <div id="snd-fsa-browser-panel" style="flex: 2; min-height: 400px; display: none; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.05);"></div>
+            <div id="snd-fsa-browser-panel" style="flex: 3.5; min-height: 480px; display: none; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.05);"></div>
+
+            <div id="snd-sfx-generator-panel" style="display: none; flex-direction: column; padding: 16px; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);">
+              <div class="fx-title" style="margin: 0; border: none; padding: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; margin-bottom: 4px;">
+                <span>AI SFX & MIC RECORDING</span>
+                <button class="btn-ghost" id="snd-btn-close-sfx" style="padding: 2px; color: #94a3b8; cursor: pointer; background: transparent; border: none; display: flex; align-items: center;">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+                </button>
+              </div>
+              <textarea id="snd-sfx-prompt" placeholder="e.g. a horse walks across gravel, cinematic..." class="snd-select" style="height: 60px; font-size: 12px; resize: none;"></textarea>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span class="text-xs text-muted" style="white-space: nowrap;">Duration:</span>
+                <input type="number" id="snd-sfx-duration" value="4" min="1" max="22" class="snd-select" style="width: 60px; padding: 4px 8px; font-size: 12px;">
+                <button id="snd-btn-trigger-sfx" class="snd-btn snd-btn-primary" style="flex: 1; padding: 6px 12px; font-size: 12px; height: 32px;">Generate</button>
+                <button id="snd-btn-record" class="snd-btn" style="padding: 6px 10px; height: 32px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center;" title="Record from Microphone">
+                  <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
+                </button>
+              </div>
+              <div id="snd-sfx-status" style="display: none; font-size: 11px; margin-top: 4px;"></div>
+            </div>
 
             <div style="padding: 20px 20px 0 20px; display:flex; justify-content:space-between; align-items:center;">
                <div class="fx-title" style="margin:0; border:none; padding:0;">AUDIO POOL</div>
-               <button class="btn-ghost" id="snd-btn-import-folder" title="Asset Browser" style="padding: 4px; color: #06b6d4; cursor:pointer; background: transparent; border: none;">
-                  <span class="material-symbols-outlined" style="font-size:20px;">folder_special</span>
-               </button>
+               <div style="display: flex; gap: 8px; align-items: center;">
+                 <button class="btn-ghost" id="snd-btn-toggle-sfx" title="AI Sound FX & Mic Recorder" style="padding: 4px; color: #a855f7; cursor:pointer; background: transparent; border: none; display: flex; align-items: center;">
+                    <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
+                 </button>
+                 <button class="btn-ghost" id="snd-btn-import-folder" title="Asset Browser" style="padding: 4px; color: #06b6d4; cursor:pointer; background: transparent; border: none; display: flex; align-items: center;">
+                    <span class="material-symbols-outlined" style="font-size:20px;">folder_special</span>
+                 </button>
+               </div>
             </div>
             <div class="snd-scroll" id="snd-audio-pool" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
                <!-- Audio Pool Items Dynamically Rendered Here -->
@@ -949,6 +1013,52 @@ export async function render(container) {
                   lastSelectedPoolIndex = idx;
               }
               renderAudioPool();
+          });
+          
+          itemEl.addEventListener('dblclick', () => {
+              if (project.tracks.length === 0) {
+                  project.tracks.push({
+                      id: 'trk_' + Date.now(),
+                      name: `Track 1`,
+                      color: '#10b981',
+                      clips: [],
+                      muted: false
+                  });
+              }
+              
+              let targetTrack = null;
+              if (selectedItems.tracks.size > 0) {
+                  const selectedTrackId = Array.from(selectedItems.tracks)[0];
+                  targetTrack = project.tracks.find(t => t.id === selectedTrackId);
+              }
+              if (!targetTrack) {
+                  targetTrack = project.tracks[0];
+              }
+              
+              let insertTime = 0;
+              if (targetTrack.clips.length > 0) {
+                  targetTrack.clips.forEach(clip => {
+                      const clipEnd = clip.timelineStart + clip.duration;
+                      if (clipEnd > insertTime) {
+                          insertTime = clipEnd;
+                      }
+                  });
+              }
+              
+              targetTrack.clips.push({
+                  id: 'clip_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                  name: buf._name || 'Audio Clip',
+                  buffer: null,
+                  poolId: id,
+                  sourceStart: 0,
+                  timelineStart: insertTime,
+                  duration: buf.duration,
+                  rate: 1,
+                  fx: [], keyframes: []
+              });
+              
+              rebuildPlayback();
+              renderTimeline();
           });
 
           itemEl.addEventListener('dragstart', e => {
@@ -1633,6 +1743,13 @@ export async function render(container) {
       if (e.target.files[0]) loadAudioFile(e.target.files[0]);
   });
   const importAudioFile = async (file) => {
+      const isDuplicate = Object.values(project.mediaPool).some(buf => {
+          return buf._name === file.name || buf._name.startsWith(file.name + ' (Ch ');
+      });
+      if (isDuplicate) {
+          window.AuroraToast?.show({ variant: 'info', title: 'Already In Pool', description: `${file.name} is already in the audio pool.` });
+          return;
+      }
       try {
           const ctx = getAudioCtx();
           const arrayBuffer = await file.arrayBuffer();
@@ -1665,23 +1782,241 @@ export async function render(container) {
   if (btnImportFolder) {
       btnImportFolder.addEventListener('click', () => {
           fsaPanelEl.style.display = fsaPanelEl.style.display === 'none' ? 'flex' : 'none';
+          if (fsaPanelEl.style.display === 'flex') {
+              sfxPanelEl.style.display = 'none'; // close SFX panel
+          }
           if (!fsaBrowserInstance && fsaPanelEl.style.display === 'flex') {
-             fsaBrowserInstance = new FsaBrowser(fsaPanelEl, {
-                onClose: () => { fsaPanelEl.style.display = 'none'; },
-                onImportMedia: async (fileHandle) => {
-                   const file = await fileHandle.getFile();
-                   await importAudioFile(file);
-                },
-                onImportMediaBatch: async (fileHandles) => {
-                   for (const fileHandle of fileHandles) {
-                      const file = await fileHandle.getFile();
-                      await importAudioFile(file);
-                   }
-                }
-             });
+              fsaBrowserInstance = new FsaBrowser(fsaPanelEl, {
+                 onClose: () => { fsaPanelEl.style.display = 'none'; },
+                 isAssetAdded: (name) => {
+                    return Object.values(project.mediaPool).some(buf => {
+                       return buf._name === name || buf._name.startsWith(name + ' (Ch ');
+                    });
+                 },
+                 onImportMedia: async (fileHandle) => {
+                    const file = await fileHandle.getFile();
+                    await importAudioFile(file);
+                 },
+                 onImportMediaBatch: async (fileHandles) => {
+                    for (const fileHandle of fileHandles) {
+                       const file = await fileHandle.getFile();
+                       await importAudioFile(file);
+                    }
+                 }
+              });
+          } else if (fsaBrowserInstance && fsaPanelEl.style.display === 'flex') {
+              fsaBrowserInstance.scanCurrent();
           }
       });
   }
+
+  const sfxPanelEl = container.querySelector('#snd-sfx-generator-panel');
+  const btnToggleSfx = container.querySelector('#snd-btn-toggle-sfx');
+  const btnCloseSfx = container.querySelector('#snd-btn-close-sfx');
+  const btnTriggerSfx = container.querySelector('#snd-btn-trigger-sfx');
+  const sfxPromptEl = container.querySelector('#snd-sfx-prompt');
+  const sfxDurationEl = container.querySelector('#snd-sfx-duration');
+  const sfxStatusEl = container.querySelector('#snd-sfx-status');
+
+  if (btnToggleSfx) {
+      btnToggleSfx.addEventListener('click', () => {
+          sfxPanelEl.style.display = sfxPanelEl.style.display === 'none' ? 'flex' : 'none';
+          if (sfxPanelEl.style.display === 'flex') {
+              fsaPanelEl.style.display = 'none'; // Close asset browser
+          }
+      });
+  }
+
+  if (btnCloseSfx) {
+      btnCloseSfx.addEventListener('click', () => {
+          sfxPanelEl.style.display = 'none';
+      });
+  }
+
+  if (btnTriggerSfx) {
+      btnTriggerSfx.addEventListener('click', async () => {
+          const promptText = sfxPromptEl.value.trim();
+          if (!promptText) {
+              window.AuroraToast?.show({ variant: 'error', title: 'Empty Prompt', description: 'Please enter a sound effect prompt.' });
+              return;
+          }
+          
+          const duration = parseInt(sfxDurationEl.value, 10) || 4;
+          
+          btnTriggerSfx.disabled = true;
+          sfxStatusEl.style.display = 'block';
+          sfxStatusEl.textContent = 'Generating sound effect...';
+          sfxStatusEl.style.color = '#94a3b8';
+          
+          try {
+              const { getSettings } = await import('../utils/settings.js');
+              const settings = getSettings();
+              const apiKey = settings.elevenlabs?.apiKey;
+              if (!apiKey) {
+                  throw new Error('Please configure your Eleven Labs API Key in settings first.');
+              }
+              
+              const format = 'mp3_44100_96';
+              const response = await fetch(`https://api.elevenlabs.io/v1/sound-generation?output_format=${format}`, {
+                  method: 'POST',
+                  headers: {
+                      'xi-api-key': apiKey,
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      text: promptText,
+                      duration_seconds: duration,
+                      model_id: 'eleven_text_to_sound_v2'
+                  })
+              });
+              
+              if (!response.ok) {
+                  let errorMsg = `HTTP ${response.status}`;
+                  try {
+                      const errData = await response.json();
+                      if (errData && errData.detail && errData.detail.message) {
+                          errorMsg = errData.detail.message;
+                      }
+                  } catch (e) {}
+                  throw new Error(errorMsg);
+              }
+              
+              const blob = await response.blob();
+              const filename = `${promptText.substring(0, 20).replace(/[^a-zA-Z0-9_-]/g, '_')}_sfx.mp3`;
+              const sfxFile = new File([blob], filename, { type: 'audio/mp3' });
+              
+              await importAudioFile(sfxFile);
+              
+              sfxStatusEl.textContent = 'Success! Added to Audio Pool.';
+              sfxStatusEl.style.color = '#22c55e';
+              setTimeout(() => { sfxStatusEl.style.display = 'none'; }, 4000);
+              sfxPromptEl.value = '';
+          } catch (err) {
+              console.error(err);
+              sfxStatusEl.textContent = `Error: ${err.message}`;
+              sfxStatusEl.style.color = '#ef4444';
+          } finally {
+              btnTriggerSfx.disabled = false;
+          }
+      });
+  }
+
+  // Microphone recording state
+  let micStream = null;
+  let mediaRecorder = null;
+  let recordTimerId = null;
+  let recordedChunks = [];
+  let isRecording = false;
+
+  const btnRecord = container.querySelector('#snd-btn-record');
+  if (btnRecord) {
+      btnRecord.addEventListener('click', async () => {
+          if (!isRecording) {
+              try {
+                  micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                  
+                  let options = {};
+                  if (MediaRecorder.isTypeSupported('audio/webm')) {
+                      options.mimeType = 'audio/webm';
+                  } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+                      options.mimeType = 'audio/ogg';
+                  } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                      options.mimeType = 'audio/mp4';
+                  }
+                  
+                  mediaRecorder = new MediaRecorder(micStream, options);
+                  recordedChunks = [];
+                  
+                  mediaRecorder.addEventListener('dataavailable', e => {
+                      if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+                  });
+                  
+                  mediaRecorder.addEventListener('stop', async () => {
+                      if (micStream) {
+                          micStream.getTracks().forEach(track => track.stop());
+                      }
+                      
+                      sfxStatusEl.textContent = 'Processing recording...';
+                      sfxStatusEl.style.color = '#22d3ee';
+                      
+                      try {
+                          const blob = new Blob(recordedChunks, { type: options.mimeType || 'audio/webm' });
+                          const arrayBuffer = await blob.arrayBuffer();
+                          const audioCtx = getAudioCtx();
+                          const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                          
+                          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                          audioBuffer._name = `Mic Record (${timeStr})`;
+                          
+                          const poolId = 'pool_mic_' + Date.now();
+                          project.mediaPool[poolId] = audioBuffer;
+                          
+                          renderAudioPool();
+                          
+                          sfxStatusEl.textContent = `Recording saved: ${audioBuffer._name}`;
+                          sfxStatusEl.style.color = '#22c55e';
+                          setTimeout(() => { sfxStatusEl.style.display = 'none'; }, 4000);
+                          
+                          window.AuroraToast?.show({ variant: 'success', title: 'Recording Saved', description: `Added to audio pool.` });
+                      } catch (err) {
+                          console.error("Mic decode error:", err);
+                          sfxStatusEl.textContent = `Processing error: ${err.message}`;
+                          sfxStatusEl.style.color = '#ef4444';
+                      }
+                  });
+                  
+                  mediaRecorder.start();
+                  isRecording = true;
+                  
+                  btnRecord.style.color = '#ffffff';
+                  btnRecord.style.background = '#ef4444';
+                  btnRecord.style.borderColor = '#ef4444';
+                  btnRecord.innerHTML = `<span class="material-symbols-outlined snd-recording-pulse" style="font-size: 18px;">stop</span>`;
+                  btnRecord.title = "Stop Recording";
+                  
+                  if (btnTriggerSfx) btnTriggerSfx.disabled = true;
+                  
+                  sfxStatusEl.style.display = 'block';
+                  sfxStatusEl.style.color = '#ef4444';
+                  let elapsed = 0;
+                  sfxStatusEl.textContent = `Recording... 0:00`;
+                  
+                  recordTimerId = setInterval(() => {
+                      elapsed++;
+                      const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                      const secs = (elapsed % 60).toString().padStart(2, '0');
+                      sfxStatusEl.textContent = `Recording... ${mins}:${secs}`;
+                  }, 1000);
+                  
+              } catch (err) {
+                  console.error("Mic access failed:", err);
+                  window.AuroraToast?.show({ variant: 'error', title: 'Mic Access Failed', description: err.message });
+                  sfxStatusEl.style.display = 'block';
+                  sfxStatusEl.textContent = `Mic Error: ${err.message}`;
+                  sfxStatusEl.style.color = '#ef4444';
+              }
+          } else {
+              if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                  mediaRecorder.stop();
+              }
+              isRecording = false;
+              
+              if (recordTimerId) {
+                  clearInterval(recordTimerId);
+                  recordTimerId = null;
+              }
+              
+              btnRecord.style.color = '#ef4444';
+              btnRecord.style.background = 'rgba(239, 68, 68, 0.1)';
+              btnRecord.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+              btnRecord.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">mic</span>`;
+              btnRecord.title = "Record from Microphone";
+              
+              if (btnTriggerSfx) btnTriggerSfx.disabled = false;
+          }
+      });
+  }
+
   container.querySelector('#btn-close').addEventListener('click', () => {
       showDialog('Close Session', 'Are you sure you want to close this audio session? Unsaved changes will be lost.', true, () => {
           if (isPlaying) container.querySelector('#btn-stop').click();
@@ -2345,6 +2680,9 @@ export async function render(container) {
 
   container.querySelector('#snd-intro').style.opacity = '0';
   container.querySelector('#snd-intro').style.pointerEvents = 'none';
+  project.tracks.forEach(t => t.clips.forEach(c => {
+      recomputeClipBuffer(c);
+  }));
   renderTimeline();
   renderInspector();
   renderAudioPool();

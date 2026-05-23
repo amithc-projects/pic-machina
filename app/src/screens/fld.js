@@ -10,7 +10,7 @@
 
 import { getRun }                                   from '../data/runs.js';
 import { getFolder, pickFolder, loadVideoPreviews,
-         writeVideoPreview, hasPicMachinaMarker }    from '../data/folders.js';
+         writeVideoPreview, hasStudioMarker }    from '../data/folders.js';
 import { extractVideoFrame }                         from '../utils/video-frame.js';
 import { setRecipeThumbnail }                        from '../data/recipes.js';
 import { navigate }                                  from '../main.js';
@@ -30,9 +30,9 @@ const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff
 const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm','.avi','.mkv']);
 const AUDIO_EXTS   = new Set(['.mp3','.wav','.flac','.ogg','.m4a','.aac']);
 const DOC_EXTS     = new Set(['.pdf','.docx','.doc','.txt','.csv','.json','.html','.md']);
-// Archive types we recognise as PicMachina deliverables. Only included
-// in listings when the folder has been confirmed as PicMachina output
-// (via hasPicMachinaMarker), to avoid showing user-placed zips.
+// Archive types we recognise as Zumilabs Studio deliverables. Only included
+// in listings when the folder has been confirmed as Zumilabs Studio output
+// (via hasStudioMarker), to avoid showing user-placed zips.
 const ARCHIVE_EXTS = new Set(['.zip', '.pptx']);
 
 function escHtml(s) {
@@ -252,7 +252,7 @@ export async function render(container, hash) {
   let activeSubHandle = null; // used by deleteSelected
   let allEntries = [];   // { file: File, handle: FileSystemFileHandle }[]
   let allFolders = [];   // { name: string, handle: FileSystemDirectoryHandle }[]
-  let isPicMachinaFolder = false; // true when the active dir has a `.PicMachina/` marker — controls archive visibility
+  let isStudioFolder = false; // true when the active dir has a `.zumilabs-studio/` or legacy `.PicMachina/` marker — controls archive visibility
   let filteredFolders = []; // currently visible folders
   let currentHandle = null; // FileSystemDirectoryHandle being viewed
   let dirStack = [];     // [{ handle, name }] — path from root to parent of currentHandle
@@ -422,13 +422,13 @@ export async function render(container, hash) {
     migrateSidecarFiles(currentHandle).catch(err =>
       console.warn('[sidecarMigrate] migration failed:', err)
     );
-    // Only surface PicMachina-style archives (zip / pptx) when the
-    // folder we're browsing was actually written to by PicMachina (the
-    // engine drops a `.PicMachina/` marker dir in every output folder
+    // Only surface Zumilabs Studio-style archives (zip / pptx) when the
+    // folder we're browsing was actually written to by Zumilabs Studio (the
+    // engine drops a `.zumilabs-studio/` marker dir in every output folder
     // it creates). Avoids showing user-placed zips in arbitrary folders.
-    const allowArchives = await hasPicMachinaMarker(currentHandle);
+    const allowArchives = await hasStudioMarker(currentHandle);
     const { files, folders } = await listContents(currentHandle, { allowArchives });
-    isPicMachinaFolder = allowArchives;
+    isStudioFolder = allowArchives;
     allEntries = files;
     allFolders = folders;
     videoPreviews = await loadVideoPreviews(currentHandle);
@@ -573,10 +573,10 @@ export async function render(container, hash) {
     }
 
     if (!main.querySelector('#ic-sk-manager')) {
-      // no-hash-routing: pic-machina uses the URL hash for its own router
+      // no-hash-routing: zumilabs-studio uses the URL hash for its own router
       // (e.g. `#fld`). Without this attribute, sidekick would treat the
       // route name as a sub-folder deep link, fail to find it, then clear
-      // the hash — which fires pic-machina's router and navigates away.
+      // the hash — which fires zumilabs-studio's router and navigates away.
       main.innerHTML = `<sidekick-manager id="ic-sk-manager" no-hash-routing hide-inspector style="display:block; width:100%; height:100%"></sidekick-manager>`;
       const sk = main.querySelector('#ic-sk-manager');
 
@@ -599,7 +599,7 @@ export async function render(container, hash) {
       }];
 
       // Wire shared folder-state tracking + restoration (retains folder/file
-      // across screen switches) and also drive pic-machina's metadata panel.
+      // across screen switches) and also drive zumilabs-studio's metadata panel.
       // In browse mode, use 'input' as the primary folder key so that state
       // (subfolder navigation, selection) is shared with bld/ned/set.
       // In run context, root is the output parent; navigate into the subfolder;
@@ -719,7 +719,7 @@ export async function render(container, hash) {
 
       // Refresh data — preserve archive visibility decision so deletions
       // don't accidentally hide zip/pptx tiles after the refresh.
-      allEntries = await listAllMedia(activeSubHandle, { allowArchives: isPicMachinaFolder });
+      allEntries = await listAllMedia(activeSubHandle, { allowArchives: isStudioFolder });
       selectedSet.clear();
       lastIdx = -1;
       selected = null;
@@ -785,7 +785,7 @@ export async function render(container, hash) {
       const blob   = new Blob([zipped], { type: 'application/zip' });
       const url    = URL.createObjectURL(blob);
       const a      = document.createElement('a');
-      a.href = url; a.download = 'picmachina-export.zip';
+      a.href = url; a.download = 'zumilabs-studio-export.zip';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err) {

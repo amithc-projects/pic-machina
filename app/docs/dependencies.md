@@ -1,5 +1,5 @@
-# PicMachina Dependencies
-This document outlines the core libraries and dependencies that power PicMachina.
+# Zumilabs Studio Dependencies
+This document outlines the core libraries and dependencies that power Zumilabs Studio.
 
 ## Core Framework
 - **Vite** (`vite`): Used as the next-generation frontend build tool and development server, ensuring rapid HMR (Hot Module Replacement) and optimized production builds.

@@ -61,7 +61,7 @@ export function render(container) {
             </div>
           </div>
           <div class="terminal" id="que-terminal" style="flex:1;border-radius:0;border:none;border-top:1px solid var(--ps-border);font-size:11.5px;height:0;">
-            <div class="terminal-line--muted">[PicMachina] Ready — waiting for batch…</div>
+            <div class="terminal-line--muted">[Zumilabs Studio] Ready — waiting for batch…</div>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 /**
- * PicMachina — Image Processor
+ * Zumilabs Studio — Image Processor
  *
  * Executes a recipe's node tree against a single image.
  * Supports:

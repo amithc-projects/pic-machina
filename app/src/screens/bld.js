@@ -510,6 +510,7 @@ export async function render(container, hash) {
   // ── Video scrubber state ─────────────────────────────────────
   let _bldScrubber = null;
   let _bldActiveVideoFile = null;
+  let _bldCurrentDirHandle = null;
 
   const wsContainer = container.querySelector('#bld-workspace-container');
   wsContainer.style.position = 'relative';
@@ -534,6 +535,10 @@ export async function render(container, hash) {
   // ── Track active file → scrubber + info panel; restore folder state ──
   // Attach BEFORE compareInfo/compareRender so the sidekick:ready listener
   // is registered before the element fires it.
+  bldSk.addEventListener('sidekick:workspace', (e) => {
+    if (e.detail?.currentHandle) _bldCurrentDirHandle = e.detail.currentHandle;
+  });
+
   wireFolderState(bldSk, () => getFolder('input').catch(() => getFolder('browse')), {
     label: 'bld',
     onFileFocus: async (e) => {
@@ -657,8 +662,8 @@ export async function render(container, hash) {
     try {
       const { getFolder }   = await import('../data/folders.js');
       const { readSidecar } = await import('../data/sidecar.js');
-      const inputHandle = await getFolder('input').catch(() => null);
-      if (inputHandle) sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
+      const dirHandle = _bldCurrentDirHandle || await getFolder('input').catch(() => null);
+      if (dirHandle) sidecar = await readSidecar(dirHandle, file.name).catch(() => null);
     } catch { /* best-effort */ }
 
     const context = {
@@ -789,11 +794,11 @@ export async function render(container, hash) {
           const tip = unmet.map(r => r.label).join(', ');
           if (isEnterprise) {
             row.insertAdjacentHTML('beforeend',
-              `<span class="material-symbols-outlined bld-req-warn" title="Requires Pic-Machina Enterprise"` +
+              `<span class="material-symbols-outlined bld-req-warn" title="Requires Zumilabs Studio Enterprise"` +
               ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">business_center</span>`);
           } else if (isPro) {
             row.insertAdjacentHTML('beforeend',
-              `<span class="material-symbols-outlined bld-req-warn" title="Requires Pic-Machina Pro"` +
+              `<span class="material-symbols-outlined bld-req-warn" title="Requires Zumilabs Studio Pro"` +
               ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">workspace_premium</span>`);
           } else {
             row.insertAdjacentHTML('beforeend',
@@ -1009,7 +1014,7 @@ export async function render(container, hash) {
   });
 
   container.querySelector('#bld-thumb-prompt')?.addEventListener('click', async () => {
-    const promptText = `I need you generate an ICON for a recipe within PicMachina.
+    const promptText = `I need you generate an ICON for a recipe within Zumilabs Studio.
 
 
 # README: Studio Recipe Icon Style Definition
@@ -1085,11 +1090,11 @@ ${draft.description || ''}`;
           const isPro = unmet.some(r => r.type === 'premium' && r.id === 'pro');
           if (isEnterprise) {
             tile.insertAdjacentHTML('beforeend',
-              `<span class="ic-badge ic-badge--amber" title="Requires Pic-Machina Enterprise"` +
+              `<span class="ic-badge ic-badge--amber" title="Requires Zumilabs Studio Enterprise"` +
               ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">business_center</span>ENTERPRISE</span>`);
           } else if (isPro) {
             tile.insertAdjacentHTML('beforeend',
-              `<span class="ic-badge ic-badge--amber" title="Requires Pic-Machina Pro"` +
+              `<span class="ic-badge ic-badge--amber" title="Requires Zumilabs Studio Pro"` +
               ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">workspace_premium</span>PRO</span>`);
           } else {
             tile.insertAdjacentHTML('beforeend',

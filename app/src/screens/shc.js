@@ -1,5 +1,5 @@
 /**
- * PicMachina — SHC: Showcase Screen
+ * Zumilabs Studio — SHC: Showcase Screen
  *
  * List view: searchable, filterable grid of curated run outputs.
  * Detail view: before/after thumbnails, editable title/description, pipeline diagram.

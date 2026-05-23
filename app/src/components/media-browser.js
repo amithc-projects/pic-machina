@@ -36,7 +36,9 @@ export class MediaBrowser {
       onNavigateUp: null,
       onDownloadSelected: null,
       onDeleteSelected: null,
-      isOrderedSelection: false
+      isOrderedSelection: false,
+      isAssetAdded: null,
+      onAddAsset: null
     }, options);
 
     this.entries = this.options.entries;
@@ -130,6 +132,7 @@ export class MediaBrowser {
         .ic-mb-list-row:hover { background: rgba(255,255,255,0.02); }
         .ic-mb-list-row.is-selected { background: rgba(56, 139, 253, 0.15); }
         .ic-mb-list-row.is-header { background: var(--ps-surface); font-weight: 600; font-size: 11px; color: var(--ps-text-muted); text-transform: uppercase; border-bottom: 2px solid var(--ps-border); cursor: default; }
+        .ic-mb-list-thumb-wrapper { position: relative; width: 32px; height: 32px; }
         .ic-mb-list-thumb { width: 32px; height: 32px; border-radius: 4px; overflow: hidden; background: #111; display: flex; align-items: center; justify-content: center; }
         .ic-mb-list-thumb img, .ic-mb-list-thumb video { width: 100%; height: 100%; object-fit: cover; }
         .ic-mb-list-col { font-size: 13px; color: var(--ps-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -147,7 +150,9 @@ export class MediaBrowser {
         .ic-mb-fs-name { font-size: 10px; color: var(--ps-text); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         .ic-mb-fs-item .ic-mb-sel-indicator { top: 4px; left: 4px; }
-        .ic-mb-list-row .ic-mb-sel-indicator { top: 12px; left: -4px; transform: scale(0.75); }
+        .ic-mb-list-row .ic-mb-sel-indicator { top: 16px; left: -6px; transform: scale(0.75); z-index: 10; }
+        .ic-mb-list-row.has-action { grid-template-columns: 48px minmax(200px, 2fr) 1fr 1fr 48px; }
+        .ic-mb-cell.is-added, .ic-mb-list-row.is-added { position: relative; }
       </style>
       <div class="ic-mb">
         <div class="ic-mb-header" id="ic-mb-header"></div>
@@ -592,18 +597,39 @@ export class MediaBrowser {
     for (let i = 0; i < limit; i++) {
       const ent = this.filtered[i];
       const type = getFileType(ent.name, ent.isFolder);
+      const isAdded = (!ent.isFolder && ent.name !== '..' && this.options.isAssetAdded) ? this.options.isAssetAdded(ent.name) : false;
       
       const cell = document.createElement('div');
-      cell.className = `ic-mb-cell ${this.selectedIds.has(ent.name) ? 'is-selected' : ''}`;
+      cell.className = `ic-mb-cell ${this.selectedIds.has(ent.name) ? 'is-selected' : ''} ${isAdded ? 'is-added' : ''}`;
       cell.setAttribute('data-name', ent.name);
+      
+      let actionHtml = '';
+      if (this.options.onAddAsset && !ent.isFolder && ent.name !== '..') {
+        if (isAdded) {
+          actionHtml = `<div class="ic-mb-grid-action" style="position:absolute; top:8px; right:8px; z-index:5;"><span class="material-symbols-outlined" style="color: var(--ps-blue); background: var(--ps-bg-surface); border-radius: 50%; font-size: 20px; padding: 2px;" title="Already added">check_circle</span></div>`;
+        } else {
+          actionHtml = `<div class="ic-mb-grid-action" style="position:absolute; top:8px; right:8px; z-index:5;"><button class="btn-ghost mb-add-btn" style="padding: 2px; color: var(--ps-blue); background: var(--ps-bg-surface); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; border: none;" title="Add to Pool"><span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span></button></div>`;
+        }
+      }
+
       cell.innerHTML = `
         ${ent.name === '..' ? '' : `<div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>`}
-        <div class="ic-mb-thumb">${this._createThumbnailHtml(ent, type)}</div>
-        <div class="ic-mb-name">${escHtml(ent.name)}</div>
+        ${actionHtml}
+        <div class="ic-mb-thumb" style="${isAdded ? 'opacity: 0.5;' : ''}">${this._createThumbnailHtml(ent, type)}</div>
+        <div class="ic-mb-name" style="${isAdded ? 'opacity: 0.5;' : ''}">${escHtml(ent.name)}</div>
       `;
       
       this.bindTooltip(cell, ent);
       this.bindCellEvents(cell, ent, i);
+      
+      const addBtn = cell.querySelector('.mb-add-btn');
+      if (addBtn) {
+        addBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.options.onAddAsset(ent);
+        });
+      }
+
       grid.appendChild(cell);
     }
     
@@ -625,11 +651,12 @@ export class MediaBrowser {
     list.className = 'ic-mb-list';
     
     list.innerHTML = `
-      <div class="ic-mb-list-row is-header">
+      <div class="ic-mb-list-row is-header ${this.options.onAddAsset ? 'has-action' : ''}">
         <div></div>
         <div>Name</div>
         <div>Type</div>
         <div>Size</div>
+        ${this.options.onAddAsset ? '<div></div>' : ''}
       </div>
     `;
 
@@ -638,22 +665,47 @@ export class MediaBrowser {
     for (let i = 0; i < limit; i++) {
       const ent = this.filtered[i];
       const type = getFileType(ent.name, ent.isFolder);
+      const isAdded = (!ent.isFolder && ent.name !== '..' && this.options.isAssetAdded) ? this.options.isAssetAdded(ent.name) : false;
       
       const row = document.createElement('div');
-      row.className = `ic-mb-list-row ${this.selectedIds.has(ent.name) ? 'is-selected' : ''}`;
+      row.className = `ic-mb-list-row ${this.selectedIds.has(ent.name) ? 'is-selected' : ''} ${isAdded ? 'is-added' : ''} ${this.options.onAddAsset ? 'has-action' : ''}`;
       row.setAttribute('data-name', ent.name);
+      
+      let actionHtml = '';
+      if (this.options.onAddAsset && !ent.isFolder && ent.name !== '..') {
+        if (isAdded) {
+          actionHtml = `<div class="ic-mb-action-col" style="display:flex; justify-content:center;"><span class="material-symbols-outlined" style="color: var(--ps-blue); cursor: default;" title="Already added">check_circle</span></div>`;
+        } else {
+          actionHtml = `<div class="ic-mb-action-col" style="display:flex; justify-content:center;"><button class="btn-ghost mb-add-btn" style="padding: 4px; color: var(--ps-blue); cursor: pointer; display: flex; align-items: center; justify-content: center; background: transparent; border: none;" title="Add to Pool"><span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span></button></div>`;
+        }
+      } else if (this.options.onAddAsset) {
+        actionHtml = '<div></div>';
+      }
+
       row.innerHTML = `
-        <div class="ic-mb-list-thumb" style="position:relative;">
+        <div class="ic-mb-list-thumb-wrapper">
           ${ent.name === '..' ? '' : `<div class="ic-mb-sel-indicator ${this.options.isOrderedSelection ? 'ordered' : 'unordered'}"></div>`}
-          ${this._createThumbnailHtml(ent, type)}
+          <div class="ic-mb-list-thumb">
+            ${this._createThumbnailHtml(ent, type)}
+          </div>
         </div>
-        <div class="ic-mb-list-col">${escHtml(ent.name)}</div>
-        <div class="ic-mb-list-col text-[var(--ps-text-muted)]">${type.toUpperCase()}</div>
-        <div class="ic-mb-list-col text-[var(--ps-text-muted)]">${ent.file ? formatBytes(ent.file.size) : '--'}</div>
+        <div class="ic-mb-list-col" style="${isAdded ? 'opacity: 0.6;' : ''}">${escHtml(ent.name)}</div>
+        <div class="ic-mb-list-col text-[var(--ps-text-muted)]" style="${isAdded ? 'opacity: 0.6;' : ''}">${type.toUpperCase()}</div>
+        <div class="ic-mb-list-col text-[var(--ps-text-muted)]" style="${isAdded ? 'opacity: 0.6;' : ''}">${ent.file ? formatBytes(ent.file.size) : '--'}</div>
+        ${actionHtml}
       `;
       
       this.bindTooltip(row, ent);
       this.bindCellEvents(row, ent, i);
+      
+      const addBtn = row.querySelector('.mb-add-btn');
+      if (addBtn) {
+        addBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.options.onAddAsset(ent);
+        });
+      }
+
       list.appendChild(row);
     }
     

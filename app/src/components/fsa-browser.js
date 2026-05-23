@@ -71,10 +71,17 @@ export class FsaBrowser {
 
     this.browserRoot = this.container.querySelector('#fsa-browser-root');
     this.mediaBrowser = new MediaBrowser(this.browserRoot, {
-      mode: 'grid',
+      mode: 'list',
       onChangeFolderClick: null,
       onNavigateUp: () => this.navigateUp(),
       onDoubleClick: (ent) => this.handleDoubleClick(ent),
+      isAssetAdded: (name) => this.options.isAssetAdded ? this.options.isAssetAdded(name) : false,
+      onAddAsset: async (ent) => {
+         if (this.options.onImportMedia) {
+            await this.options.onImportMedia(ent.handle);
+            await this.scanCurrent();
+         }
+      },
       onSelectionChange: (ids, filtered) => {
          const fileIds = ids.filter(id => {
             const e = filtered.find(x => x.name === id);
@@ -160,8 +167,12 @@ export class FsaBrowser {
       this.currentHandle = ent.handle;
       await this.scanCurrent();
     } else {
-      // Import file
-      await this.options.onImportMedia(ent.handle);
+      // Import file if not already added
+      const alreadyAdded = this.options.isAssetAdded ? this.options.isAssetAdded(ent.name) : false;
+      if (!alreadyAdded && this.options.onImportMedia) {
+         await this.options.onImportMedia(ent.handle);
+         await this.scanCurrent();
+      }
     }
   }
 

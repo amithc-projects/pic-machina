@@ -1,5 +1,5 @@
 /**
- * PicMachina — Face Swap Engine (Machina-Swap)
+ * Zumilabs Studio — Face Swap Engine (Machina-Swap)
  *
  * Cross-mesh affine face warping between a source and a target image.
  *

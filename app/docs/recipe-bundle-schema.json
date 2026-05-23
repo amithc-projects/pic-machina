@@ -1,13 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "PicMachinaRecipeBundle",
-  "description": "A self-contained Pic Machina recipe bundle including the main recipe and optional nested blocks.",
+  "title": "ZumilabsStudioRecipeBundle",
+  "description": "A self-contained Zumilabs Studio recipe bundle including the main recipe and optional nested blocks.",
   "type": "object",
   "required": ["type", "version", "recipe"],
   "properties": {
     "type": {
       "type": "string",
-      "const": "PicMachinaRecipeBundle"
+      "enum": ["ZumilabsStudioRecipeBundle", "PicMachinaRecipeBundle"]
     },
     "version": {
       "type": "number",

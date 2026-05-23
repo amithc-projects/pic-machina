@@ -1,5 +1,5 @@
 /**
- * PicMachina — Showcase CRUD
+ * Zumilabs Studio — Showcase CRUD
  *
  * A Showcase captures a curated view of a run's output:
  * {

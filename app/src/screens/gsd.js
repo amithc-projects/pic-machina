@@ -1,5 +1,5 @@
 /**
- * PicMachina — GSD: Get Started (benefits-focused, scroll-snap landing)
+ * Zumilabs Studio — GSD: Get Started (benefits-focused, scroll-snap landing)
  *
  * Vertical stack of full-viewport slides with CSS scroll-snap (Apple-style).
  * Three interactive slides — Why-switch, Outcomes, Personas — let the user
@@ -81,7 +81,7 @@ const OUTCOME_DETAILS = {
 };
 
 const PERSONA_DETAILS = {
-  creator:      { title: 'Content creators',           blurb: '"I publish 5 videos a week — PicMachina makes the thumbnails."', video: 'persona-creator.mp4' },
+  creator:      { title: 'Content creators',           blurb: '"I publish 5 videos a week — Zumilabs Studio makes the thumbnails."', video: 'persona-creator.mp4' },
   shop:         { title: 'Small shops & marketplaces', blurb: '"Every listing photo perfectly on-brand, in minutes."',          video: 'persona-shop.mp4' },
   photographer: { title: 'Photographers',              blurb: '"Client galleries delivered in every format the brief asks for."', video: 'persona-photographer.mp4' },
   library:      { title: 'Anyone with a messy library',blurb: '"My 30,000-photo backlog, finally organised."',                  video: 'persona-library.mp4' },
@@ -103,7 +103,7 @@ export async function render(container) {
             <span class="wel-accent">Apply it to a thousand.</span>
           </h1>
           <p class="wel-hero__sub">
-            PicMachina turns the fiddly bits of image and video work — resizing,
+            Zumilabs Studio turns the fiddly bits of image and video work — resizing,
             watermarking, swapping backgrounds, exporting for every platform —
             into one-click recipes you can reuse forever.
           </p>
@@ -129,7 +129,7 @@ export async function render(container) {
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
             <p class="wel-eyebrow">The benefits</p>
-            <h2 class="wel-h2">Why people switch to PicMachina</h2>
+            <h2 class="wel-h2">Why people switch to Zumilabs Studio</h2>
           </header>
           <div class="wel-detail-wrap" data-kind="why">
             <div class="wel-tiles">
@@ -274,7 +274,7 @@ export async function render(container) {
         </svg>
         <div class="wel-slide__inner wel-closing">
           <h2 class="wel-closing__title">Ready to make<br/>something amazing?</h2>
-          <p class="wel-closing__sub">PicMachina is free to try. No credit card required.</p>
+          <p class="wel-closing__sub">Zumilabs Studio is free to try. No credit card required.</p>
           <div class="wel-closing__cta">
             <button class="wel-btn wel-btn--primary wel-btn--lg" data-go="#lib">
               <span class="material-symbols-outlined">upload</span>

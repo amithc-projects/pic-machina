@@ -263,6 +263,7 @@ export async function render(container, hash) {
   wsContainer.style.position = 'relative';
   let testFile = null;
   let _nedScrubber = null;
+  let _nedCurrentDirHandle = null;
 
   // Determine file filter for hidden-files-count warning banner
   const stepIsVideoOnly = node.transformId?.startsWith('flow-video-') || !!def?.sourceTransformId || def?.categoryKey === 'video-effect';
@@ -289,6 +290,10 @@ export async function render(container, hash) {
   // ── Track active file → scrubber + info panel; restore folder state ──
   // Attach BEFORE compareInfo/compareRender so the sidekick:ready listener
   // is registered before the element fires it.
+  sk.addEventListener('sidekick:workspace', (e) => {
+    if (e.detail?.currentHandle) _nedCurrentDirHandle = e.detail.currentHandle;
+  });
+
   wireFolderState(sk, () => getFolder('input').catch(() => getFolder('browse')), {
     label: 'ned',
     onFileFocus: async (e) => {
@@ -420,9 +425,9 @@ export async function render(container, hash) {
     try {
       const { getFolder }   = await import('../data/folders.js');
       const { readSidecar } = await import('../data/sidecar.js');
-      const inputHandle = await getFolder('input').catch(() => null);
-      if (inputHandle) {
-        sidecar = await readSidecar(inputHandle, file.name).catch(() => null);
+      const dirHandle = _nedCurrentDirHandle || await getFolder('input').catch(() => null);
+      if (dirHandle) {
+        sidecar = await readSidecar(dirHandle, file.name).catch(() => null);
       }
     } catch { /* best-effort */ }
 
@@ -610,6 +615,13 @@ export async function render(container, hash) {
   // ── Wire all other inputs ─────────────────────────────────
   container.querySelectorAll('.ic-input:not(.ned-branch-label), input[type=checkbox]').forEach(input => {
     if (input.type !== 'color') input.addEventListener('change', schedulePreview);
+  });
+
+  // ── Wire custom param editors (curves, levels, hsl, mask) ─
+  // These store their value in a hidden <input> and dispatch bubbling
+  // 'input' events when the user interacts with the canvas/sliders.
+  container.querySelectorAll('input[type=hidden]').forEach(input => {
+    input.addEventListener('input', schedulePreview);
   });
 
   // ── Wire file-browse buttons ──────────────────────────────
@@ -850,6 +862,867 @@ export async function render(container, hash) {
     };
 
     _renderOverlay();
+  }
+
+  // ── Rect overlay helper for box-based transforms ──────────
+  // Used by: Clipping Mask (cx/cy/scaleW/scaleH), Rich Text box, geo-crop
+  function _mountRectOverlay({ getRect, setRect, constrainAspect = false }) {
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    let _rdragMode = null; // 'move' | 'tl'|'tr'|'bl'|'br'|'n'|'s'|'e'|'w'
+    let _rdragStart = null;
+
+    const od = document.createElement('div');
+    od.style.cssText = 'position:absolute;inset:0;z-index:88;pointer-events:none;';
+    const sv = document.createElementNS(SVG_NS, 'svg');
+    sv.style.cssText = 'width:100%;height:100%;pointer-events:none;overflow:visible;';
+    od.appendChild(sv); wsContainer.appendChild(od);
+
+    function _getLb() {
+      const ai = (sk.shadowRoot ?? sk).querySelector('img[alt="after"]');
+      if (ai) { const ir = ai.getBoundingClientRect(), cr = od.getBoundingClientRect();
+        return { x: ir.left - cr.left, y: ir.top - cr.top, w: ir.width, h: ir.height }; }
+      return { x: 0, y: 44, w: od.offsetWidth / 2, h: od.offsetHeight - 134 };
+    }
+
+    function _renderRect() {
+      const lb = _getLb();
+      const r = getRect(); // { x, y, w, h } all in 0-100 percent
+      const px = lb.x + (r.x / 100) * lb.w;
+      const py = lb.y + (r.y / 100) * lb.h;
+      const pw = (r.w / 100) * lb.w;
+      const ph = (r.h / 100) * lb.h;
+
+      sv.innerHTML = `<defs>
+        <filter id="ned-rv-shadow"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="black" flood-opacity="0.7"/></filter>
+        <clipPath id="ned-rv-clip"><rect x="${lb.x}" y="${lb.y}" width="${lb.w}" height="${lb.h}"/></clipPath>
+      </defs>`;
+
+      const hit = document.createElementNS(SVG_NS, 'rect');
+      Object.entries({ x: lb.x, y: lb.y, width: lb.w, height: lb.h, fill: 'transparent' }).forEach(([k,v]) => hit.setAttribute(k,v));
+      hit.style.cssText = 'cursor:crosshair;pointer-events:all;';
+      hit.addEventListener('mousedown', _onRectDown);
+      sv.appendChild(hit);
+
+      const g = document.createElementNS(SVG_NS, 'g');
+      g.setAttribute('clip-path', 'url(#ned-rv-clip)');
+      sv.appendChild(g);
+
+      // Main rect
+      const rect = document.createElementNS(SVG_NS, 'rect');
+      Object.entries({ x: px, y: py, width: pw, height: ph, fill: 'none',
+        stroke: 'rgba(255,255,255,0.85)', 'stroke-width': '1.5', 'stroke-dasharray': '6 3',
+        filter: 'url(#ned-rv-shadow)' }).forEach(([k,v]) => rect.setAttribute(k,v));
+      rect.style.cssText = 'cursor:move;pointer-events:all;';
+      rect.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); _rdragMode = 'move'; _startDrag(e); });
+      g.appendChild(rect);
+
+      // 8 resize handles
+      const handles = [
+        { id:'tl', cx:px,       cy:py,       cursor:'nwse-resize' },
+        { id:'tr', cx:px+pw,    cy:py,       cursor:'nesw-resize' },
+        { id:'bl', cx:px,       cy:py+ph,    cursor:'nesw-resize' },
+        { id:'br', cx:px+pw,    cy:py+ph,    cursor:'nwse-resize' },
+        { id:'n',  cx:px+pw/2,  cy:py,       cursor:'ns-resize'   },
+        { id:'s',  cx:px+pw/2,  cy:py+ph,    cursor:'ns-resize'   },
+        { id:'e',  cx:px+pw,    cy:py+ph/2,  cursor:'ew-resize'   },
+        { id:'w',  cx:px,       cy:py+ph/2,  cursor:'ew-resize'   },
+      ];
+      for (const h of handles) {
+        const hc = document.createElementNS(SVG_NS, 'circle');
+        Object.entries({ cx: h.cx, cy: h.cy, r: 7, fill: 'white', stroke: '#0077ff', 'stroke-width': '2',
+          filter: 'url(#ned-rv-shadow)' }).forEach(([k,v]) => hc.setAttribute(k,v));
+        hc.style.cssText = `cursor:${h.cursor};pointer-events:all;`;
+        hc.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); _rdragMode = h.id; _startDrag(e); });
+        g.appendChild(hc);
+      }
+
+      // Label
+      const lbl = document.createElementNS(SVG_NS, 'text');
+      Object.entries({ x: px+4, y: py-6, fill: 'white', 'font-size': '11', filter: 'url(#ned-rv-shadow)' }).forEach(([k,v]) => lbl.setAttribute(k,v));
+      lbl.textContent = `${Math.round(r.x)}%, ${Math.round(r.y)}%  ${Math.round(r.w)}×${Math.round(r.h)}%`;
+      g.appendChild(lbl);
+    }
+
+    function _startDrag(e) {
+      const rect = od.getBoundingClientRect();
+      _rdragStart = { mx: e.clientX, my: e.clientY, rect: { ...getRect() } };
+    }
+
+    function _onRectDown(e) {
+      e.preventDefault();
+      const lb = _getLb();
+      const mx = e.clientX - od.getBoundingClientRect().left;
+      const my = e.clientY - od.getBoundingClientRect().top;
+      const r = getRect();
+      const px = lb.x + (r.x / 100) * lb.w, py = lb.y + (r.y / 100) * lb.h;
+      const pw = (r.w / 100) * lb.w, ph = (r.h / 100) * lb.h;
+      // click inside rect = move
+      if (mx >= px && mx <= px+pw && my >= py && my <= py+ph) {
+        _rdragMode = 'move'; _startDrag(e);
+      } else {
+        // click outside = redefine from scratch
+        _rdragMode = 'br';
+        const nx = ((mx - lb.x) / lb.w) * 100;
+        const ny = ((my - lb.y) / lb.h) * 100;
+        setRect({ x: nx, y: ny, w: 0, h: 0 });
+        _rdragStart = { mx: e.clientX, my: e.clientY, rect: { x: nx, y: ny, w: 0, h: 0 } };
+        _renderRect();
+      }
+    }
+
+    const _onRMove = e => {
+      if (!_rdragMode || !_rdragStart) return;
+      const lb = _getLb();
+      const dx = ((e.clientX - _rdragStart.mx) / lb.w) * 100;
+      const dy = ((e.clientY - _rdragStart.my) / lb.h) * 100;
+      const s = _rdragStart.rect;
+      let { x, y, w, h } = s;
+      const clamp = (v, mn, mx) => Math.max(mn, Math.min(mx, v));
+      if (_rdragMode === 'move') {
+        x = clamp(s.x + dx, 0, 100 - w); y = clamp(s.y + dy, 0, 100 - h);
+      } else {
+        if (_rdragMode.includes('e'))  w = clamp(s.w + dx, 1, 100 - s.x);
+        if (_rdragMode.includes('s'))  h = clamp(s.h + dy, 1, 100 - s.y);
+        if (_rdragMode.includes('w')) { const nw = clamp(s.w - dx, 1, s.x + s.w); x = s.x + s.w - nw; w = nw; }
+        if (_rdragMode.includes('n')) { const nh = clamp(s.h - dy, 1, s.y + s.h); y = s.y + s.h - nh; h = nh; }
+        if (_rdragMode === 'tl') { const nw=clamp(s.w-dx,1,s.x+s.w); const nh=clamp(s.h-dy,1,s.y+s.h); x=s.x+s.w-nw; y=s.y+s.h-nh; w=nw; h=nh; }
+        if (_rdragMode === 'tr') { w=clamp(s.w+dx,1,100-s.x); const nh=clamp(s.h-dy,1,s.y+s.h); y=s.y+s.h-nh; h=nh; }
+        if (_rdragMode === 'bl') { const nw=clamp(s.w-dx,1,s.x+s.w); x=s.x+s.w-nw; w=nw; h=clamp(s.h+dy,1,100-s.y); }
+        if (_rdragMode === 'br') { w=clamp(s.w+dx,1,100-s.x); h=clamp(s.h+dy,1,100-s.y); }
+      }
+      setRect({ x: Math.round(x*10)/10, y: Math.round(y*10)/10, w: Math.round(w*10)/10, h: Math.round(h*10)/10 });
+      _renderRect();
+      schedulePreview();
+    };
+    const _onRUp = () => { _rdragMode = null; _rdragStart = null; };
+    window.addEventListener('mousemove', _onRMove);
+    window.addEventListener('mouseup', _onRUp);
+    new ResizeObserver(_renderRect).observe(wsContainer);
+
+    const _origCR = sk.compareRender;
+    sk.compareRender = async (file) => {
+      const result = await _origCR(file);
+      requestAnimationFrame(() => requestAnimationFrame(_renderRect));
+      return result;
+    };
+
+    _renderRect();
+    return { renderRect: _renderRect, _overlayDiv: od, destroy() {
+      window.removeEventListener('mousemove', _onRMove);
+      window.removeEventListener('mouseup', _onRUp);
+      od.remove();
+    }};
+  }
+
+  // ── Clipping Mask: cx/cy/scaleW/scaleH rect overlay ───────
+  const _cxParam   = def?.params?.find(p => p.name === 'cx'     && p.type === 'range');
+  const _cyParam   = def?.params?.find(p => p.name === 'cy'     && p.type === 'range');
+  const _scaleW    = def?.params?.find(p => p.name === 'scaleW' && p.type === 'range');
+  const _scaleH    = def?.params?.find(p => p.name === 'scaleH' && p.type === 'range');
+
+  if (_cxParam && _cyParam && _scaleW && _scaleH) {
+    const _getV = n => parseFloat(container.querySelector(`#ned-param-${n}`)?.value ?? 50);
+    const _setV = (name, v, param) => {
+      const el = container.querySelector(`#ned-param-${name}`);
+      if (!el) return;
+      const clamped = Math.round(Math.max(param.min ?? 0, Math.min(param.max ?? 100, v)) * 10) / 10;
+      el.value = clamped;
+      const vEl = container.querySelector(`#ned-param-${name}-val`);
+      if (vEl) vEl.textContent = clamped;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    _mountRectOverlay({
+      getRect: () => {
+        const cx = _getV('cx'), cy = _getV('cy');
+        const sw = _getV('scaleW'), sh = _getV('scaleH');
+        // cx/cy is centre; convert to top-left x/y for rect overlay
+        return { x: cx - sw / 2, y: cy - sh / 2, w: sw, h: sh };
+      },
+      setRect: ({ x, y, w, h }) => {
+        _setV('cx', x + w / 2, _cxParam);
+        _setV('cy', y + h / 2, _cyParam);
+        _setV('scaleW', w, _scaleW);
+        _setV('scaleH', h, _scaleH);
+      },
+    });
+    [_cxParam, _cyParam, _scaleW, _scaleH].forEach(p => {
+      container.querySelector(`#ned-param-${p.name}`)?.addEventListener('input', () => {});
+    });
+  }
+
+  // ── Rich Text: boxX/Y/W/H rect overlay ────────────────────
+  const _rtBX = def?.params?.find(p => p.name === 'boxX' && p.type === 'range');
+  const _rtBY = def?.params?.find(p => p.name === 'boxY' && p.type === 'range');
+  const _rtBW = def?.params?.find(p => p.name === 'boxW' && p.type === 'range');
+  const _rtBH = def?.params?.find(p => p.name === 'boxH' && p.type === 'range');
+
+  if (_rtBX && _rtBY && _rtBW && _rtBH) {
+    const _getV = n => parseFloat(container.querySelector(`#ned-param-${n}`)?.value ?? 50);
+    const _setV = (name, v, param) => {
+      const el = container.querySelector(`#ned-param-${name}`);
+      if (!el) return;
+      const clamped = Math.round(Math.max(param.min ?? 0, Math.min(param.max ?? 100, v)) * 10) / 10;
+      el.value = clamped;
+      const vEl = container.querySelector(`#ned-param-${name}-val`);
+      if (vEl) vEl.textContent = clamped;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const _rtOverlay = _mountRectOverlay({
+      getRect: () => {
+        const bx = _getV('boxX'), by = _getV('boxY');
+        const bw = _getV('boxW'), bh = _getV('boxH');
+        return { x: bx - bw / 2, y: by - bh / 2, w: bw, h: bh };
+      },
+      setRect: ({ x, y, w, h }) => {
+        _setV('boxX', x + w / 2, _rtBX);
+        _setV('boxY', y + h / 2, _rtBY);
+        _setV('boxW', w, _rtBW);
+        _setV('boxH', h, _rtBH);
+      },
+    });
+
+    const _modeEl = container.querySelector('#ned-param-positionMode');
+    // Show/hide box vs anchor params based on mode
+    const _boxParamNames   = ['boxX','boxY','boxW','boxH'];
+    const _anchorParamNames = ['anchor','offsetX','offsetY'];
+    const _updateBoxParamVisibility = () => {
+      const isFree = _modeEl?.value === 'free';
+      _boxParamNames.forEach(n => {
+        const f = container.querySelector(`#ned-param-${n}`)?.closest('.ned-field');
+        if (f) f.style.display = isFree ? '' : 'none';
+      });
+      _anchorParamNames.forEach(n => {
+        const f = container.querySelector(`#ned-param-${n}`)?.closest('.ned-field');
+        if (f) f.style.display = isFree ? 'none' : '';
+      });
+      if (_rtOverlay?._overlayDiv) _rtOverlay._overlayDiv.style.display = isFree ? '' : 'none';
+    };
+    _modeEl?.addEventListener('change', _updateBoxParamVisibility);
+    _updateBoxParamVisibility();
+  }
+
+  // ── geo-crop: x/y/width/height text-type rect overlay ─────
+  if (node.transformId === 'geo-crop') {
+    function _parsePct(val, dim) {
+      if (!val) return 0;
+      const s = String(val).trim();
+      if (s.endsWith('%')) return parseFloat(s);
+      return (parseFloat(s) / dim) * 100;
+    }
+    function _getCropRect(lb) {
+      const xv = container.querySelector('#ned-param-x')?.value || '0';
+      const yv = container.querySelector('#ned-param-y')?.value || '0';
+      const wv = container.querySelector('#ned-param-width')?.value || '100%';
+      const hv = container.querySelector('#ned-param-height')?.value || '100%';
+      return {
+        x: _parsePct(xv, lb?.w ?? 100),
+        y: _parsePct(yv, lb?.h ?? 100),
+        w: _parsePct(wv, lb?.w ?? 100),
+        h: _parsePct(hv, lb?.h ?? 100),
+      };
+    }
+    function _setCropVal(name, pct) {
+      const el = container.querySelector(`#ned-param-${name}`);
+      if (!el) return;
+      el.value = `${Math.round(pct * 10) / 10}%`;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    _mountRectOverlay({
+      getRect: () => _getCropRect(),
+      setRect: ({ x, y, w, h }) => {
+        _setCropVal('x', x); _setCropVal('y', y);
+        _setCropVal('width', w); _setCropVal('height', h);
+      },
+    });
+  }
+
+  // ── Rectangle & Ellipse overlays ──────────────────────────
+  if (node.transformId === 'gen-rect' || node.transformId === 'gen-ellipse') {
+    const isEllipse = node.transformId === 'gen-ellipse';
+    const xParamName = 'x';
+    const yParamName = 'y';
+    const wParamName = isEllipse ? 'radiusX' : 'width';
+    const hParamName = isEllipse ? 'radiusY' : 'height';
+    
+    const _xParam = def?.params?.find(p => p.name === xParamName && p.type === 'range');
+    const _yParam = def?.params?.find(p => p.name === yParamName && p.type === 'range');
+    const _wParam = def?.params?.find(p => p.name === wParamName && p.type === 'range');
+    const _hParam = def?.params?.find(p => p.name === hParamName && p.type === 'range');
+
+    if (_xParam && _yParam && _wParam && _hParam) {
+      const _getV = n => parseFloat(container.querySelector(`#ned-param-${n}`)?.value ?? 50);
+      const _setV = (name, v, param) => {
+        const el = container.querySelector(`#ned-param-${name}`);
+        if (!el) return;
+        const clamped = Math.round(Math.max(param.min ?? 0, Math.min(param.max ?? 100, v)) * 10) / 10;
+        el.value = clamped;
+        const vEl = container.querySelector(`#ned-param-${name}-val`);
+        if (vEl) vEl.textContent = clamped;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+
+      _mountRectOverlay({
+        getRect: () => {
+          const cx = _getV(xParamName), cy = _getV(yParamName);
+          const w = _getV(wParamName), h = _getV(hParamName);
+          if (isEllipse) {
+            return { x: cx - w, y: cy - h, w: w * 2, h: h * 2 };
+          }
+          return { x: cx - w / 2, y: cy - h / 2, w: w, h: h };
+        },
+        setRect: ({ x, y, w, h }) => {
+          if (isEllipse) {
+            _setV(xParamName, x + w / 2, _xParam);
+            _setV(yParamName, y + h / 2, _yParam);
+            _setV(wParamName, w / 2, _wParam);
+            _setV(hParamName, h / 2, _hParam);
+          } else {
+            _setV(xParamName, x + w / 2, _xParam);
+            _setV(yParamName, y + h / 2, _yParam);
+            _setV(wParamName, w, _wParam);
+            _setV(hParamName, h, _hParam);
+          }
+        },
+      });
+    }
+  }
+
+  // ── Vector Path: points list overlay ──────────────────────────
+  if (node.transformId === 'gen-path') {
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    let _pdragIdx = null;
+
+    const od = document.createElement('div');
+    od.style.cssText = 'position:absolute;inset:0;z-index:88;pointer-events:none;';
+    const sv = document.createElementNS(SVG_NS, 'svg');
+    sv.style.cssText = 'width:100%;height:100%;pointer-events:none;overflow:visible;';
+    od.appendChild(sv); wsContainer.appendChild(od);
+
+    function _getLb() {
+      const ai = (sk.shadowRoot ?? sk).querySelector('img[alt="after"]');
+      if (ai) { const ir = ai.getBoundingClientRect(), cr = od.getBoundingClientRect();
+        return { x: ir.left - cr.left, y: ir.top - cr.top, w: ir.width, h: ir.height }; }
+      return { x: 0, y: 44, w: od.offsetWidth / 2, h: od.offsetHeight - 134 };
+    }
+
+    function _getPoints() {
+      const input = container.querySelector('#ned-param-points');
+      try { return JSON.parse(input?.value || '[]'); } catch(e) { return []; }
+    }
+
+    function _setPoints(pts) {
+      const input = container.querySelector('#ned-param-points');
+      if (!input) return;
+      input.value = JSON.stringify(pts);
+      const countEl = container.querySelector('.ned-path-points-count');
+      if (countEl) countEl.textContent = `${pts.length} points`;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function _renderPath() {
+      const lb = _getLb();
+      const pts = _getPoints();
+      
+      sv.innerHTML = `<defs>
+        <filter id="ned-pv-shadow"><feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="black" flood-opacity="0.8"/></filter>
+      </defs>`;
+
+      const hit = document.createElementNS(SVG_NS, 'rect');
+      Object.entries({ x: lb.x, y: lb.y, width: lb.w, height: lb.h, fill: 'transparent' }).forEach(([k,v]) => hit.setAttribute(k,v));
+      hit.style.cssText = 'cursor:crosshair;pointer-events:all;';
+      hit.addEventListener('mousedown', _onPathBgDown);
+      sv.appendChild(hit);
+
+      if (pts.length > 0) {
+        const pathLine = document.createElementNS(SVG_NS, 'path');
+        const d = pts.map((p, i) => {
+          const px = lb.x + (p[0] / 100) * lb.w;
+          const py = lb.y + (p[1] / 100) * lb.h;
+          return `${i === 0 ? 'M' : 'L'} ${px} ${py}`;
+        }).join(' ');
+        
+        const style = container.querySelector('#ned-param-style')?.value || 'stroke';
+        const isClosed = style === 'closed-stroke' || style === 'fill';
+        const closedD = isClosed ? d + ' Z' : d;
+
+        Object.entries({
+          d: closedD,
+          fill: 'none',
+          stroke: 'rgba(255,255,255,0.85)',
+          'stroke-width': '2',
+          'stroke-dasharray': '6 3',
+          filter: 'url(#ned-pv-shadow)'
+        }).forEach(([k,v]) => pathLine.setAttribute(k,v));
+        sv.appendChild(pathLine);
+
+        pts.forEach((p, idx) => {
+          const px = lb.x + (p[0] / 100) * lb.w;
+          const py = lb.y + (p[1] / 100) * lb.h;
+          
+          const circle = document.createElementNS(SVG_NS, 'circle');
+          Object.entries({
+            cx: px,
+            cy: py,
+            r: 7,
+            fill: idx === 0 ? '#10b981' : '#0077ff',
+            stroke: 'white',
+            'stroke-width': '1.5',
+            filter: 'url(#ned-pv-shadow)'
+          }).forEach(([k,v]) => circle.setAttribute(k,v));
+          circle.style.cssText = 'cursor:move;pointer-events:all;';
+          
+          circle.addEventListener('mousedown', e => {
+            e.preventDefault(); e.stopPropagation();
+            _pdragIdx = idx;
+          });
+          
+          circle.addEventListener('dblclick', e => {
+            e.preventDefault(); e.stopPropagation();
+            const current = _getPoints();
+            current.splice(idx, 1);
+            _setPoints(current);
+            _renderPath();
+            schedulePreview();
+          });
+
+          sv.appendChild(circle);
+        });
+      }
+    }
+
+    function _onPathBgDown(e) {
+      e.preventDefault();
+      const rect = od.getBoundingClientRect();
+      const lb = _getLb();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      
+      const px = ((mx - lb.x) / lb.w) * 100;
+      const py = ((my - lb.y) / lb.h) * 100;
+      
+      const pts = _getPoints();
+      pts.push([Math.round(px * 10) / 10, Math.round(py * 10) / 10]);
+      _pdragIdx = pts.length - 1;
+      _setPoints(pts);
+      _renderPath();
+      schedulePreview();
+    }
+
+    const _onPathMove = e => {
+      if (_pdragIdx === null) return;
+      const rect = od.getBoundingClientRect();
+      const lb = _getLb();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      
+      const px = Math.max(0, Math.min(100, ((mx - lb.x) / lb.w) * 100));
+      const py = Math.max(0, Math.min(100, ((my - lb.y) / lb.h) * 100));
+      
+      const pts = _getPoints();
+      pts[_pdragIdx] = [Math.round(px * 10) / 10, Math.round(py * 10) / 10];
+      _setPoints(pts);
+      _renderPath();
+      schedulePreview();
+    };
+
+    const _onPathUp = () => { _pdragIdx = null; };
+    
+    window.addEventListener('mousemove', _onPathMove);
+    window.addEventListener('mouseup', _onPathUp);
+    new ResizeObserver(_renderPath).observe(wsContainer);
+    
+    container.querySelector('#ned-param-style')?.addEventListener('change', _renderPath);
+    container.querySelector('#ned-param-points')?.addEventListener('input', _renderPath);
+    
+    const _origCR = sk.compareRender;
+    sk.compareRender = async (file) => {
+      const result = await _origCR(file);
+      requestAnimationFrame(() => requestAnimationFrame(_renderPath));
+      return result;
+    };
+
+    _renderPath();
+  }
+
+  // ── Draw Paint: freehand canvas drawing UI ─────────────────
+  const _paintParam = def?.params?.find(p => p.type === 'paint');
+  if (_paintParam) {
+    function _hexToRgb(hex) {
+      const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+      hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 255, g: 0, b: 0 };
+    }
+
+    function _drawBrushStamp(pc, x, y, width, color, feather, erase) {
+      pc.save();
+      if (erase) {
+        pc.globalCompositeOperation = 'destination-out';
+      } else {
+        pc.globalCompositeOperation = 'source-over';
+      }
+      
+      const r = width / 2;
+      if (r <= 0) {
+        pc.restore();
+        return;
+      }
+      
+      if (feather <= 0) {
+        pc.fillStyle = color;
+        pc.beginPath();
+        pc.arc(x, y, r, 0, Math.PI * 2);
+        pc.fill();
+      } else {
+        const grad = pc.createRadialGradient(x, y, r * (1 - feather / 100), x, y, r);
+        if (erase) {
+          grad.addColorStop(0, 'rgba(0,0,0,1)');
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+        } else {
+          grad.addColorStop(0, color);
+          const rgb = _hexToRgb(color);
+          grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+        }
+        pc.fillStyle = grad;
+        pc.beginPath();
+        pc.arc(x, y, r, 0, Math.PI * 2);
+        pc.fill();
+      }
+      pc.restore();
+    }
+
+    container.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.ned-paint-edit-btn');
+      if (!btn) return;
+      const paramId = btn.dataset.paramId;
+      const hiddenInput = container.querySelector(`#${paramId}`);
+      if (!hiddenInput) return;
+
+      const drawHost = document.createElement('div');
+      drawHost.style.cssText = 'position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;';
+
+      const afterImg = (sk.shadowRoot ?? sk).querySelector('img[alt="after"]');
+      const bgSrc = afterImg?.src || '';
+
+      drawHost.innerHTML = `
+        <div style="flex:1;position:relative;overflow:hidden;background:#111;">
+          ${bgSrc ? `<img src="${bgSrc}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;">` : ''}
+          <canvas id="ned-paint-canvas" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;cursor:crosshair;touch-action:none;opacity:0.85;mix-blend-mode:normal;"></canvas>
+        </div>
+        <div style="flex-shrink:0;padding:12px 18px;display:flex;flex-direction:column;gap:10px;background:var(--ps-bg-surface);border-top:1px solid var(--ps-border);">
+          <!-- Row 1: Swatches -->
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:var(--ps-text-muted)">Color Swatches:</span>
+            <div id="ned-paint-swatches" style="display:flex;gap:6px;align-items:center;"></div>
+            <span style="font-size:11px;color:var(--ps-text-muted);margin-left:12px;">Custom:</span>
+            <input type="color" id="ned-paint-brush-color" value="#ff0000" style="width:36px;height:24px;border:1px solid var(--ps-border);border-radius:4px;cursor:pointer;padding:0;background:none;">
+          </div>
+          <!-- Row 2: Sliders & Controls -->
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:11px;color:var(--ps-text-muted)">Size:</span>
+              <input type="range" id="ned-paint-brush-size" min="2" max="150" value="15" style="width:100px">
+              <span id="ned-paint-brush-size-val" style="font-size:11px;width:35px;color:var(--ps-text-muted)">15px</span>
+            </div>
+            
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:11px;color:var(--ps-text-muted)">Feather:</span>
+              <input type="range" id="ned-paint-brush-feather" min="0" max="100" value="20" style="width:100px">
+              <span id="ned-paint-brush-feather-val" style="font-size:11px;width:35px;color:var(--ps-text-muted)">20%</span>
+            </div>
+            
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:11px;">
+              <input type="checkbox" id="ned-paint-brush-speed" checked style="cursor:pointer;">
+              <span>Speed-sensitive Size</span>
+            </label>
+            
+            <button class="btn-secondary" id="ned-paint-erase-btn" style="font-size:11px;display:flex;align-items:center;gap:4px;">
+              <span class="material-symbols-outlined" style="font-size:14px;">ink_eraser</span>
+              <span>Erase Mode</span>
+            </button>
+            
+            <button class="btn-secondary" id="ned-paint-clear-btn" style="font-size:11px;display:flex;align-items:center;gap:4px;">
+              <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
+              <span>Clear All</span>
+            </button>
+            
+            <div style="flex:1"></div>
+            
+            <button class="btn-secondary" id="ned-paint-cancel-btn">Cancel</button>
+            <button class="btn-primary"   id="ned-paint-confirm-btn">Confirm</button>
+          </div>
+        </div>`;
+      wsContainer.appendChild(drawHost);
+
+      const paintCanvas = drawHost.querySelector('#ned-paint-canvas');
+      const sizeSlider = drawHost.querySelector('#ned-paint-brush-size');
+      const sizeVal = drawHost.querySelector('#ned-paint-brush-size-val');
+      const featherSlider = drawHost.querySelector('#ned-paint-brush-feather');
+      const featherVal = drawHost.querySelector('#ned-paint-brush-feather-val');
+      const colorInput = drawHost.querySelector('#ned-paint-brush-color');
+      const swatchesContainer = drawHost.querySelector('#ned-paint-swatches');
+      
+      sizeSlider.addEventListener('input', () => { sizeVal.textContent = `${sizeSlider.value}px`; });
+      featherSlider.addEventListener('input', () => { featherVal.textContent = `${featherSlider.value}%`; });
+
+      // Quick palette
+      const colorsList = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff', '#000000', '#f97316', '#8b5cf6'];
+      colorsList.forEach(col => {
+        const sw = document.createElement('div');
+        sw.style.cssText = `width:18px;height:18px;border-radius:50%;background:${col};cursor:pointer;border:2px solid ${col === '#ffffff' ? 'var(--ps-border)' : 'transparent'};transition:transform 0.1s;`;
+        sw.addEventListener('click', () => {
+          colorInput.value = col;
+          drawHost.querySelectorAll('#ned-paint-swatches > div').forEach(d => d.style.transform = '');
+          sw.style.transform = 'scale(1.25)';
+          if (eraseMode) {
+            eraseMode = false;
+            drawHost.querySelector('#ned-paint-erase-btn').classList.remove('btn-primary');
+            drawHost.querySelector('#ned-paint-erase-btn').classList.add('btn-secondary');
+          }
+        });
+        swatchesContainer.appendChild(sw);
+      });
+      if (swatchesContainer.children.length > 0) {
+        swatchesContainer.children[0].style.transform = 'scale(1.25)';
+      }
+
+      let eraseMode = false;
+
+      function _sizeCanvas() {
+        if (afterImg) {
+          const ir = afterImg.getBoundingClientRect();
+          paintCanvas.width  = afterImg.naturalWidth  || ir.width;
+          paintCanvas.height = afterImg.naturalHeight || ir.height;
+        } else {
+          paintCanvas.width  = wsContainer.offsetWidth;
+          paintCanvas.height = wsContainer.offsetHeight;
+        }
+      }
+      _sizeCanvas();
+
+      const pc = paintCanvas.getContext('2d');
+      if (hiddenInput.value) {
+        const prev = new Image(); prev.src = hiddenInput.value;
+        prev.onload = () => pc.drawImage(prev, 0, 0, paintCanvas.width, paintCanvas.height);
+      }
+
+      let _drawing = false;
+      let lastX = null, lastY = null;
+      let lastTime = null;
+      let lastWidth = null;
+
+      function _coords(ev) {
+        const r = paintCanvas.getBoundingClientRect();
+        const sx = paintCanvas.width  / r.width;
+        const sy = paintCanvas.height / r.height;
+        const cx = (ev.clientX - r.left) * sx;
+        const cy = (ev.clientY - r.top)  * sy;
+        return [cx, cy];
+      }
+
+      paintCanvas.addEventListener('mousedown', ev => {
+        _drawing = true;
+        const [x, y] = _coords(ev);
+        lastX = x; lastY = y;
+        lastTime = Date.now();
+        lastWidth = parseInt(sizeSlider.value);
+        
+        const baseWidth = parseInt(sizeSlider.value);
+        const col = colorInput.value;
+        const feather = parseInt(featherSlider.value);
+        _drawBrushStamp(pc, x, y, baseWidth, col, feather, eraseMode);
+      });
+
+      paintCanvas.addEventListener('mousemove', ev => {
+        if (!_drawing) return;
+        const [x, y] = _coords(ev);
+        const time = Date.now();
+        const dt = Math.max(1, time - lastTime);
+        const dx = x - lastX;
+        const dy = y - lastY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        const baseWidth = parseInt(sizeSlider.value);
+        const col = colorInput.value;
+        const feather = parseInt(featherSlider.value);
+        const speedEnabled = drawHost.querySelector('#ned-paint-brush-speed').checked;
+        
+        const speed = dist / dt;
+        let targetWidth = baseWidth;
+        if (speedEnabled && !eraseMode) {
+          const speedFactor = Math.min(1, speed / 5);
+          targetWidth = baseWidth * (1 - 0.75 * speedFactor);
+        }
+        
+        const steps = Math.max(1, Math.floor(dist / 1.5));
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const ix = lastX + dx * t;
+          const iy = lastY + dy * t;
+          const iw = lastWidth + (targetWidth - lastWidth) * t;
+          _drawBrushStamp(pc, ix, iy, iw, col, feather, eraseMode);
+        }
+        
+        lastX = x; lastY = y;
+        lastTime = time;
+        lastWidth = targetWidth;
+      });
+
+      paintCanvas.addEventListener('mouseup',    () => { _drawing = false; });
+      paintCanvas.addEventListener('mouseleave', () => { _drawing = false; });
+
+      drawHost.querySelector('#ned-paint-erase-btn').addEventListener('click', () => {
+        eraseMode = !eraseMode;
+        const eraseBtn = drawHost.querySelector('#ned-paint-erase-btn');
+        if (eraseMode) {
+          eraseBtn.classList.remove('btn-secondary');
+          eraseBtn.classList.add('btn-primary');
+          drawHost.querySelectorAll('#ned-paint-swatches > div').forEach(d => d.style.transform = '');
+        } else {
+          eraseBtn.classList.remove('btn-primary');
+          eraseBtn.classList.add('btn-secondary');
+        }
+      });
+      
+      drawHost.querySelector('#ned-paint-clear-btn').addEventListener('click', () => {
+        pc.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+      });
+      drawHost.querySelector('#ned-paint-cancel-btn').addEventListener('click', () => drawHost.remove());
+      drawHost.querySelector('#ned-paint-confirm-btn').addEventListener('click', () => {
+        hiddenInput.value = paintCanvas.toDataURL('image/png');
+        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+        drawHost.remove();
+        
+        const editBtn = container.querySelector(`[data-param-id="${paramId}"]`);
+        if (editBtn) editBtn.textContent = 'Edit Paint';
+        const parentField = editBtn?.closest('.ned-field');
+        if (parentField && !parentField.querySelector('span[style*="4ade80"]')) {
+          const tick = document.createElement('span');
+          tick.style.cssText = 'color:#4ade80;font-size:11px;white-space:nowrap;margin-left:8px';
+          tick.textContent = '✓ Painted';
+          editBtn.after(tick);
+        }
+        schedulePreview();
+      });
+    });
+  }
+
+  // ── Draw Mask: freehand canvas drawing UI ─────────────────
+  const _maskParam = def?.params?.find(p => p.type === 'mask');
+  if (_maskParam) {
+    container.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.ned-mask-edit-btn');
+      if (!btn) return;
+      const paramId = btn.dataset.paramId;
+      const hiddenInput = container.querySelector(`#${paramId}`);
+      if (!hiddenInput) return;
+
+      // Build a full-size drawing overlay over wsContainer
+      const drawHost = document.createElement('div');
+      drawHost.style.cssText = 'position:absolute;inset:0;z-index:200;display:flex;flex-direction:column;';
+
+      // Find current after image to use as background
+      const afterImg = (sk.shadowRoot ?? sk).querySelector('img[alt="after"]');
+      const bgSrc = afterImg?.src || '';
+
+      drawHost.innerHTML = `
+        <div style="flex:1;position:relative;overflow:hidden;background:#111;">
+          ${bgSrc ? `<img src="${bgSrc}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;">` : ''}
+          <canvas id="ned-mask-canvas" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;cursor:crosshair;touch-action:none;opacity:0.75;mix-blend-mode:screen;"></canvas>
+        </div>
+        <div style="flex-shrink:0;padding:10px 16px;display:flex;gap:10px;align-items:center;background:var(--ps-bg-surface);border-top:1px solid var(--ps-border);">
+          <span style="font-size:11px;color:var(--ps-text-muted)">Brush:</span>
+          <input type="range" id="ned-mask-brush-size" min="5" max="120" value="30" style="width:100px">
+          <button class="btn-secondary" id="ned-mask-erase-btn" style="font-size:11px">Erase</button>
+          <button class="btn-secondary" id="ned-mask-clear-btn" style="font-size:11px">Clear</button>
+          <div style="flex:1"></div>
+          <span style="font-size:10px;color:var(--ps-text-muted)">Paint white = keep area visible</span>
+          <button class="btn-secondary" id="ned-mask-cancel-btn">Cancel</button>
+          <button class="btn-primary"   id="ned-mask-confirm-btn">Confirm</button>
+        </div>`;
+      wsContainer.appendChild(drawHost);
+
+      const maskCanvas = drawHost.querySelector('#ned-mask-canvas');
+      const bgImg = drawHost.querySelector('img');
+      let eraseMode = false;
+
+      // Size canvas to match displayed image dimensions
+      function _sizeCanvas() {
+        if (afterImg) {
+          const ir = afterImg.getBoundingClientRect();
+          maskCanvas.width  = afterImg.naturalWidth  || ir.width;
+          maskCanvas.height = afterImg.naturalHeight || ir.height;
+        } else {
+          maskCanvas.width  = wsContainer.offsetWidth;
+          maskCanvas.height = wsContainer.offsetHeight;
+        }
+      }
+      _sizeCanvas();
+
+      const mc = maskCanvas.getContext('2d');
+      // Restore existing mask if any
+      if (hiddenInput.value) {
+        const prev = new Image(); prev.src = hiddenInput.value;
+        prev.onload = () => mc.drawImage(prev, 0, 0, maskCanvas.width, maskCanvas.height);
+      }
+      mc.lineCap = 'round'; mc.lineJoin = 'round';
+
+      let _drawing = false;
+      function _coords(ev) {
+        const r = maskCanvas.getBoundingClientRect();
+        const sx = maskCanvas.width  / r.width;
+        const sy = maskCanvas.height / r.height;
+        const cx = (ev.clientX - r.left) * sx;
+        const cy = (ev.clientY - r.top)  * sy;
+        return [cx, cy];
+      }
+      maskCanvas.addEventListener('mousedown', ev => {
+        _drawing = true;
+        const [x, y] = _coords(ev);
+        mc.globalCompositeOperation = eraseMode ? 'destination-out' : 'source-over';
+        mc.strokeStyle = 'white'; mc.lineWidth = parseInt(drawHost.querySelector('#ned-mask-brush-size').value) * (maskCanvas.width / maskCanvas.getBoundingClientRect().width);
+        mc.beginPath(); mc.moveTo(x, y);
+      });
+      maskCanvas.addEventListener('mousemove', ev => {
+        if (!_drawing) return;
+        const [x, y] = _coords(ev);
+        mc.lineTo(x, y); mc.stroke();
+      });
+      maskCanvas.addEventListener('mouseup',    () => { _drawing = false; });
+      maskCanvas.addEventListener('mouseleave', () => { _drawing = false; });
+
+      drawHost.querySelector('#ned-mask-erase-btn').addEventListener('click', () => {
+        eraseMode = !eraseMode;
+        drawHost.querySelector('#ned-mask-erase-btn').textContent = eraseMode ? 'Paint' : 'Erase';
+      });
+      drawHost.querySelector('#ned-mask-clear-btn').addEventListener('click', () => {
+        mc.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+      });
+      drawHost.querySelector('#ned-mask-cancel-btn').addEventListener('click', () => drawHost.remove());
+      drawHost.querySelector('#ned-mask-confirm-btn').addEventListener('click', () => {
+        hiddenInput.value = maskCanvas.toDataURL('image/png');
+        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+        drawHost.remove();
+        // Refresh the button label
+        const editBtn = container.querySelector(`[data-param-id="${paramId}"]`);
+        if (editBtn) editBtn.textContent = 'Edit Mask';
+        const parentField = editBtn?.closest('.ned-field');
+        if (parentField && !parentField.querySelector('span[style*="4ade80"]')) {
+          const tick = document.createElement('span');
+          tick.style.cssText = 'color:#4ade80;font-size:11px;white-space:nowrap;margin-left:8px';
+          tick.textContent = '✓ Painted';
+          editBtn.after(tick);
+        }
+        schedulePreview();
+      });
+    });
   }
 
 }

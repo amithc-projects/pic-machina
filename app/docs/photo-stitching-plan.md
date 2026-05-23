@@ -14,9 +14,9 @@ While there are pure-JS algorithms (like `jsfeat`), they lack the sophisticated 
 
 To explicitly use `cv.Stitcher.create()`, we typically need a **custom Emscripten build** of OpenCV with `-DBUILD_opencv_stitching=ON` and heavily whitelisted bindings.
 
-## 2. Proposed Architecture for PicMachina
+## 2. Proposed Architecture for Zumilabs Studio
 
-Since PicMachina is a local-first node engine, we will implement this as a new Aggregator Node (`flow-photo-stitcher`).
+Since Zumilabs Studio is a local-first node engine, we will implement this as a new Aggregator Node (`flow-photo-stitcher`).
 
 ### Node Definition (`system-recipes.js`)
 - **ID**: `flow-photo-stitcher`
@@ -32,6 +32,6 @@ Since PicMachina is a local-first node engine, we will implement this as a new A
 
 ## 3. Potential Paths Forward
 
-1. **The Custom Build Path**: Write the Docker/Emscripten bash script necessary to pull the OpenCV C++ source, whitelist the `Stitcher` API, and compile a custom `opencv_picmachina.js` with WASM for the app.
+1. **The Custom Build Path**: Write the Docker/Emscripten bash script necessary to pull the OpenCV C++ source, whitelist the `Stitcher` API, and compile a custom `opencv_zumilabs_studio.js` with WASM for the app.
 2. **The Feature-Matching Fallback (Pure JS)**: Avoid a heavy 15MB+ custom WASM binary by using a lightweight library like `jsfeat` combined with a manually written RANSAC homography Javascript implementation. (Fast, but prone to visible "seams" and ghosting, as it lacks advanced blending).
 3. **Pre-compiled Repositories**: Scrape Github for someone who has already successfully built and published an OpenCV WASM binary with the Stitching module exposed.

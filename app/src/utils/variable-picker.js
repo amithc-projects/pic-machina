@@ -1,5 +1,5 @@
 /**
- * PicMachina — Variable Picker Modal
+ * Zumilabs Studio — Variable Picker Modal
  *
  * Opens a modal listing every {{variable}} token the user could insert into
  * the current input, grouped by source (Built-in, Recipe Vars, File EXIF,

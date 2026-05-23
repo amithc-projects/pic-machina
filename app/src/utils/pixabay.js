@@ -1,5 +1,5 @@
 /**
- * Pic-Machina — Pixabay API Client
+ * Zumilabs Studio — Pixabay API Client
  *
  * Wraps the Pixabay public API and normalises results into the
  * provider-agnostic asset shape used by the Get Media screen.
@@ -183,7 +183,7 @@ export async function getCollectionMedia({ id, page = 1, perPage = 24 } = {}) {
 }
 
 /**
- * Map a Pixabay asset onto a partial Pic-Machina sidecar (schema v2).
+ * Map a Pixabay asset onto a partial Zumilabs Studio sidecar (schema v2).
  * Pixabay's `tags` field is a comma-separated string — split on save.
  */
 export function toSidecar(asset, { filename } = {}) {

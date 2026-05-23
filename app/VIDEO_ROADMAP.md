@@ -1,6 +1,6 @@
 # Video Roadmap
 
-Pic-Machina is gaining a new tier of video processing capabilities powered by [Mediabunny](https://mediabunny.dev), a WebCodecs-based media library that runs entirely in the browser with zero server uploads.
+Zumilabs Studio is gaining a new tier of video processing capabilities powered by [Mediabunny](https://mediabunny.dev), a WebCodecs-based media library that runs entirely in the browser with zero server uploads.
 
 All video operations run inside the existing Web Worker architecture and follow the same node-based recipe pattern as image transforms.
 
@@ -8,9 +8,9 @@ All video operations run inside the existing Web Worker architecture and follow 
 
 ## How It Works
 
-Mediabunny decodes video files frame-by-frame using the browser's hardware-accelerated WebCodecs API. Each frame is exposed as a `VideoSample` which can be drawn onto an `OffscreenCanvas`. Pic-Machina's existing Canvas 2D transform logic (the same code that powers image effects) runs on that canvas before the frame is re-encoded into the output file.
+Mediabunny decodes video files frame-by-frame using the browser's hardware-accelerated WebCodecs API. Each frame is exposed as a `VideoSample` which can be drawn onto an `OffscreenCanvas`. Zumilabs Studio's existing Canvas 2D transform logic (the same code that powers image effects) runs on that canvas before the frame is re-encoded into the output file.
 
-This means **any image effect in Pic-Machina can be applied to video**, with no new pixel-manipulation code required.
+This means **any image effect in Zumilabs Studio can be applied to video**, with no new pixel-manipulation code required.
 
 ---
 
@@ -39,7 +39,7 @@ Join multiple video files end-to-end into a single output.
 - **Params**: sequence order (from file selection order in browser), output format, transition (cut / crossfade)
 - **Implementation**: Sequential mediabunny reads with running timestamp offset; audio tracks merged in sync
 - **Use case**: Assemble clips from a folder into a single video; build a highlight reel from a batch selection
-- **Note**: Input order follows the file selection order in the Pic-Machina folder browser
+- **Note**: Input order follows the file selection order in the Zumilabs Studio folder browser
 
 ### `flow-video-change-fps`
 Change the frame rate of a video.
@@ -50,7 +50,7 @@ Change the frame rate of a video.
 
 ## Phase 2: Audio Operations
 
-New audio transforms — entirely new capability with no current equivalent in Pic-Machina.
+New audio transforms — entirely new capability with no current equivalent in Zumilabs Studio.
 
 ### `flow-video-strip-audio`
 Remove all audio tracks from a video.
@@ -77,7 +77,7 @@ Adjust audio channel layout and sample rate.
 
 ## Phase 3: Per-Frame Video Effects
 
-New `video` category transforms. Each reuses existing Pic-Machina image processing logic, applied inside a mediabunny `process` callback on every decoded frame.
+New `video` category transforms. Each reuses existing Zumilabs Studio image processing logic, applied inside a mediabunny `process` callback on every decoded frame.
 
 ### Colour & Tone Effects (reused from existing image transforms)
 

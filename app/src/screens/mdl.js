@@ -1,5 +1,5 @@
 /**
- * PicMachina — MDL: Model Manager
+ * Zumilabs Studio — MDL: Model Manager
  *
  * Lists downloadable AI models (e.g. InSPyReNet) and lets the user manage
  * local copies stored in IndexedDB.

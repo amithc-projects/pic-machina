@@ -60,14 +60,36 @@ registry.register({
   timeline: 'unsupported',
   icon: 'restore',
   description: 'Restore a previously saved canvas state.',
-  params: [{ name: 'label', label: 'Label', type: 'text', defaultValue: 'state-1' }],
+  params: [
+    { name: 'label',     label: 'Label',      type: 'text',   defaultValue: 'state-1' },
+    { name: 'blendMode', label: 'Blend Mode', type: 'select',
+      options: [
+        { label: 'Replace (full restore)', value: 'replace' },
+        { label: 'Under current (compose over saved)', value: 'destination-over' },
+        { label: 'Over current (compose saved on top)', value: 'source-over' },
+        { label: 'Multiply', value: 'multiply' },
+        { label: 'Screen',   value: 'screen' },
+        { label: 'Overlay',  value: 'overlay' },
+      ],
+      defaultValue: 'replace' },
+  ],
   apply(ctx, p, context) {
     const key = p.label || 'state-1';
     const saved = context.variables.get(key);
-    if (saved) {
+    if (!saved) return;
+    if ((p.blendMode || 'replace') === 'replace') {
       ctx.canvas.width  = saved.width;
       ctx.canvas.height = saved.height;
       ctx.putImageData(saved, 0, 0);
+    } else {
+      // Composite the saved state using the specified blend mode
+      const tmp = document.createElement('canvas');
+      tmp.width = saved.width; tmp.height = saved.height;
+      tmp.getContext('2d').putImageData(saved, 0, 0);
+      ctx.save();
+      ctx.globalCompositeOperation = p.blendMode;
+      ctx.drawImage(tmp, 0, 0);
+      ctx.restore();
     }
   }
 });
@@ -236,7 +258,7 @@ registry.register({
   timeline: 'unsupported',
   icon: 'photo_library',
   description: 'Collect all photos and compose an animated polaroid stack — each photo appears on a desk in sequence. Outputs GIF or MP4.',
-  requires: [{ type: 'premium', id: 'pro', label: 'Pic-Machina Pro' }],
+  requires: [{ type: 'premium', id: 'pro', label: 'Zumilabs Studio Pro' }],
   params: [
     { name: 'filename',     label: 'Output Filename',       type: 'text',    defaultValue: 'photo-stack' },
     { name: 'format',       label: 'Output Format',         type: 'select',
@@ -470,7 +492,7 @@ registry.register({
   timeline: 'unsupported',
   icon: 'layers',
   description: 'Collect frames and animate them appearing on a desk surface one by one. Add overlay-polaroid-frame upstream to get polaroid borders.',
-  requires: [{ type: 'premium', id: 'pro', label: 'Pic-Machina Pro' }],
+  requires: [{ type: 'premium', id: 'pro', label: 'Zumilabs Studio Pro' }],
   params: [
     { name: 'filename',    label: 'Output Filename',    type: 'text',   defaultValue: 'stack' },
     { name: 'format',      label: 'Output Format',      type: 'select',
@@ -769,7 +791,7 @@ registry.register({
   timeline: 'unsupported',
   icon: 'playlist_add',
   description: 'Join all selected video files end-to-end into a single output video. Input order follows file selection order.',
-  requires: [{ type: 'premium', id: 'pro', label: 'Pic-Machina Pro' }],
+  requires: [{ type: 'premium', id: 'pro', label: 'Zumilabs Studio Pro' }],
   params: [
     { name: 'filename', label: 'Output Filename',      type: 'text',   defaultValue: 'concatenated.mp4' },
     { name: 'fps',      label: 'Output Frame Rate',    type: 'number', defaultValue: 30   },

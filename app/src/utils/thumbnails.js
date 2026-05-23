@@ -1,5 +1,5 @@
 /**
- * PicMachina — Thumbnail generation (baseline + subject-aware "smart")
+ * Zumilabs Studio — Thumbnail generation (baseline + subject-aware "smart")
  *
  * Two exports:
  *   generateBaselineThumbnail(source, opts)  — fast, no inference. Cover-crop.

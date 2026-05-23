@@ -1,5 +1,5 @@
 /**
- * PicMachina — InSPyReNet inference wrapper
+ * Zumilabs Studio — InSPyReNet inference wrapper
  *
  * Runs the SwinB-Plus-Ultra saliency segmentation model via onnxruntime-web.
  * Prefers the WebGPU execution provider, falls back to WASM (SIMD + threads).

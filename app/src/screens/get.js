@@ -2,7 +2,7 @@
  * ImageChef — Getting Started Screen
  *
  * An introductory page that explains the use cases and capabilities
- * of the PicMachina platform.
+ * of the Zumilabs Studio platform.
  */
 
 import { navigate } from '../main.js';
@@ -42,7 +42,7 @@ export async function render(container) {
 
       <!-- Core Capabilities Grid -->
       <section class="get-core-section">
-        <h2 class="get-section-title">What can PicMachina do?</h2>
+        <h2 class="get-section-title">What can Zumilabs Studio do?</h2>
         <div class="pm-feature-grid" id="capabilities-grid">
           
           <div class="pm-feature-card" tabindex="0">
@@ -57,7 +57,7 @@ export async function render(container) {
             <p class="pm-feature-desc">Extract and parse metadata effortlessly from thousands of files.</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>PicMachina reads EXIF data, GPS coordinates, and embedded dates at lightning speed. Use this data to power your workflows automatically.</p>
+                <p>Zumilabs Studio reads EXIF data, GPS coordinates, and embedded dates at lightning speed. Use this data to power your workflows automatically.</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
                     <span class="pm-ba-label">Before</span>
@@ -225,7 +225,7 @@ export async function render(container) {
             <p class="pm-feature-desc">Route files dynamically into intelligent folder structures.</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Tired of manually sorting files? Let PicMachina move your landscape photos into one folder, and portraits into another, automatically.</p>
+                <p>Tired of manually sorting files? Let Zumilabs Studio move your landscape photos into one folder, and portraits into another, automatically.</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
                     <span class="pm-ba-label">Before</span>
@@ -244,9 +244,9 @@ export async function render(container) {
         </div>
       </section>
 
-      <!-- Who uses Pic Machina Section (Bento Design) -->
+      <!-- Who uses Zumilabs Studio Section (Bento Design) -->
       <section class="get-users-section bento-section">
-        <h2 class="get-section-title">Who uses PicMachina?</h2>
+        <h2 class="get-section-title">Who uses Zumilabs Studio?</h2>
         <div class="gu-bento-grid">
           
           <div class="gu-bento-card gu-span-5 gu-individuals" tabindex="0">
@@ -298,7 +298,7 @@ export async function render(container) {
           <div class="get-automation-content">
             <h2 class="get-automation-title">Smart Automation, Made Simple.</h2>
             <p class="get-automation-desc">
-              Think of PicMachina as your tireless creative assistant. You can set simple rules—like "skip blurry photos" or "only process landscapes"—and let it do the heavy lifting on thousands of images at once.
+              Think of Zumilabs Studio as your tireless creative assistant. You can set simple rules—like "skip blurry photos" or "only process landscapes"—and let it do the heavy lifting on thousands of images at once.
             </p>
             <p class="get-automation-desc" style="margin-top: 15px;">
               <strong>Just Ask Claude:</strong> Describe what you want in plain English, and our AI will instantly build the perfect editing workflow for you. No technical skills required.

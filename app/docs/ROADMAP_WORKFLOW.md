@@ -1,4 +1,4 @@
-# Pic-Machina Workflow & Capabilities Roadmap
+# Zumilabs Studio Workflow & Capabilities Roadmap
 
 This document outlines the planned automated workflow for assessing, ranking, and tagging photos entirely locally, prioritizing user privacy and taking advantage of on-device ML/AI technologies.
 

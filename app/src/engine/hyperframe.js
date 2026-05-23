@@ -30,6 +30,8 @@ export async function createStandaloneHyperframe(htmlContent, { fps = 30, width 
   canvas.style.top = '-9999px';
   canvas.style.left = '-9999px';
   canvas.style.pointerEvents = 'none';
+  // Required by Chrome's drawElementImage variant (HTML-in-Canvas flag)
+  canvas.setAttribute('layoutsubtree', '');
   document.body.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');

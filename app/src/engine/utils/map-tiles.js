@@ -96,7 +96,7 @@ export async function fetchRenderedMap(points = [], paddingPixels = 200, onLog =
       const gY = startY + y;
       const url = `https://tile.openstreetmap.org/${zoom}/${gX}/${gY}.png`;
       
-      const p = fetch(url, { headers: { 'User-Agent': 'PicMachina/1.0' }})
+      const p = fetch(url, { headers: { 'User-Agent': 'ZumilabsStudio/1.0' }})
         .then(res => res.blob())
         .then(blob => createImageBitmap(blob))
         .then(bmp => {

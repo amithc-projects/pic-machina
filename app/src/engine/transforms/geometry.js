@@ -775,6 +775,182 @@ registry.register({
   }
 });
 
+// ─── Rectangle Generator ─────────────────────────────────────────
+registry.register({
+  id: 'gen-rect', name: 'Rectangle', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
+  icon: 'rectangle',
+  description: 'Generate a solid or stroked rectangle/square.',
+  params: [
+    { name: 'x', label: 'Center X (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'y', label: 'Center Y (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'width', label: 'Width (%)', type: 'range', min: 1, max: 100, defaultValue: 40 },
+    { name: 'height', label: 'Height (%)', type: 'range', min: 1, max: 100, defaultValue: 30 },
+    { name: 'color', label: 'Color', type: 'color', defaultValue: '#ff0000' },
+    { name: 'style', label: 'Style', type: 'select', options: [{label:'Fill', value:'fill'}, {label:'Stroke', value:'stroke'}], defaultValue: 'fill' },
+    { name: 'thickness', label: 'Stroke Thickness (px)', type: 'range', min: 1, max: 50, defaultValue: 5 },
+    { name: 'cornerRadius', label: 'Corner Radius (px)', type: 'range', min: 0, max: 100, defaultValue: 0 },
+    { name: 'opacity', label: 'Opacity (%)', type: 'range', min: 0, max: 100, defaultValue: 100 },
+    { name: 'blendMode', label: 'Blend Mode', type: 'select', options: [{label:'Normal', value:'source-over'}, {label:'Multiply', value:'multiply'}, {label:'Screen', value:'screen'}, {label:'Overlay', value:'overlay'}], defaultValue: 'source-over' }
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const w = W * (p.width ?? 40) / 100;
+    const h = H * (p.height ?? 30) / 100;
+    const cx = W * (p.x ?? 50) / 100;
+    const cy = H * (p.y ?? 50) / 100;
+    const rx = cx - w / 2;
+    const ry = cy - h / 2;
+    const r = p.cornerRadius ?? 0;
+    
+    ctx.save();
+    ctx.globalAlpha = (p.opacity ?? 100) / 100;
+    ctx.globalCompositeOperation = p.blendMode || 'source-over';
+    
+    ctx.beginPath();
+    if (r > 0) {
+      ctx.roundRect(rx, ry, w, h, r);
+    } else {
+      ctx.rect(rx, ry, w, h);
+    }
+    
+    if (p.style === 'stroke') {
+      ctx.strokeStyle = p.color || '#ff0000';
+      ctx.lineWidth = p.thickness ?? 5;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = p.color || '#ff0000';
+      ctx.fill();
+    }
+    
+    ctx.restore();
+  }
+});
+
+// ─── Ellipse Generator ─────────────────────────────────────────
+registry.register({
+  id: 'gen-ellipse', name: 'Ellipse', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
+  icon: 'circle',
+  description: 'Generate a solid or stroked ellipse.',
+  params: [
+    { name: 'x', label: 'Center X (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'y', label: 'Center Y (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'radiusX', label: 'Radius X (%)', type: 'range', min: 1, max: 100, defaultValue: 20 },
+    { name: 'radiusY', label: 'Radius Y (%)', type: 'range', min: 1, max: 100, defaultValue: 15 },
+    { name: 'color', label: 'Color', type: 'color', defaultValue: '#ff0000' },
+    { name: 'style', label: 'Style', type: 'select', options: [{label:'Fill', value:'fill'}, {label:'Stroke', value:'stroke'}], defaultValue: 'fill' },
+    { name: 'thickness', label: 'Stroke Thickness (px)', type: 'range', min: 1, max: 50, defaultValue: 5 },
+    { name: 'opacity', label: 'Opacity (%)', type: 'range', min: 0, max: 100, defaultValue: 100 },
+    { name: 'blendMode', label: 'Blend Mode', type: 'select', options: [{label:'Normal', value:'source-over'}, {label:'Multiply', value:'multiply'}, {label:'Screen', value:'screen'}, {label:'Overlay', value:'overlay'}], defaultValue: 'source-over' }
+  ],
+  apply(ctx, p) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const cx = W * (p.x ?? 50) / 100;
+    const cy = H * (p.y ?? 50) / 100;
+    const rx = W * (p.radiusX ?? 20) / 100;
+    const ry = H * (p.radiusY ?? 15) / 100;
+    
+    ctx.save();
+    ctx.globalAlpha = (p.opacity ?? 100) / 100;
+    ctx.globalCompositeOperation = p.blendMode || 'source-over';
+    
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    
+    if (p.style === 'stroke') {
+      ctx.strokeStyle = p.color || '#ff0000';
+      ctx.lineWidth = p.thickness ?? 5;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = p.color || '#ff0000';
+      ctx.fill();
+    }
+    
+    ctx.restore();
+  }
+});
+
+// ─── Vector Path Generator ─────────────────────────────────────────
+registry.register({
+  id: 'gen-path', name: 'Vector Path', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
+  icon: 'gesture',
+  description: 'Generate straight lines, polylines, or polygons.',
+  params: [
+    { name: 'points', label: 'Path Points', type: 'path-points', defaultValue: '[]' },
+    { name: 'color', label: 'Color', type: 'color', defaultValue: '#ff0000' },
+    { name: 'style', label: 'Style', type: 'select', options: [{label:'Open Stroke', value:'stroke'}, {label:'Closed Stroke', value:'closed-stroke'}, {label:'Fill Shape', value:'fill'}], defaultValue: 'stroke' },
+    { name: 'thickness', label: 'Stroke Thickness (px)', type: 'range', min: 1, max: 50, defaultValue: 5 },
+    { name: 'opacity', label: 'Opacity (%)', type: 'range', min: 0, max: 100, defaultValue: 100 },
+    { name: 'blendMode', label: 'Blend Mode', type: 'select', options: [{label:'Normal', value:'source-over'}, {label:'Multiply', value:'multiply'}, {label:'Screen', value:'screen'}, {label:'Overlay', value:'overlay'}], defaultValue: 'source-over' }
+  ],
+  apply(ctx, p) {
+    let pts = [];
+    try { pts = JSON.parse(p.points || '[]'); } catch(e) {}
+    if (pts.length < 2) return;
+    
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    
+    ctx.save();
+    ctx.globalAlpha = (p.opacity ?? 100) / 100;
+    ctx.globalCompositeOperation = p.blendMode || 'source-over';
+    
+    ctx.beginPath();
+    pts.forEach((pt, i) => {
+      const px = W * pt[0] / 100;
+      const py = H * pt[1] / 100;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    });
+    
+    const style = p.style || 'stroke';
+    if (style === 'fill') {
+      ctx.closePath();
+      ctx.fillStyle = p.color || '#ff0000';
+      ctx.fill();
+    } else {
+      if (style === 'closed-stroke') ctx.closePath();
+      ctx.strokeStyle = p.color || '#ff0000';
+      ctx.lineWidth = p.thickness ?? 5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+    
+    ctx.restore();
+  }
+});
+
+// ─── Freehand Paint Generator ─────────────────────────────────────────
+registry.register({
+  id: 'gen-paint', name: 'Freehand Paint', category: 'Geometric & Framing', categoryKey: 'geo',
+  timeline: 'unsupported',
+  icon: 'brush',
+  description: 'Paint directly on top of the image canvas.',
+  params: [
+    { name: 'paintData', label: 'Paint Layer', type: 'paint', defaultValue: '' },
+    { name: 'opacity', label: 'Opacity (%)', type: 'range', min: 0, max: 100, defaultValue: 100 },
+    { name: 'blendMode', label: 'Blend Mode', type: 'select', options: [{label:'Normal', value:'source-over'}, {label:'Multiply', value:'multiply'}, {label:'Screen', value:'screen'}, {label:'Overlay', value:'overlay'}], defaultValue: 'source-over' }
+  ],
+  async apply(ctx, p) {
+    if (!p.paintData) return;
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    
+    const img = new Image();
+    img.src = p.paintData;
+    await img.decode().catch(() => {});
+    
+    ctx.save();
+    ctx.globalAlpha = (p.opacity ?? 100) / 100;
+    ctx.globalCompositeOperation = p.blendMode || 'source-over';
+    
+    ctx.drawImage(img, 0, 0, W, H);
+    
+    ctx.restore();
+  }
+});
+
 // ─── Magnify ─────────────────────────────────────────
 registry.register({
   id: 'geo-magnify', name: 'Magnify', category: 'Geometric & Framing', categoryKey: 'geo',

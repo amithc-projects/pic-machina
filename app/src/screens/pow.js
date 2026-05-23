@@ -1,5 +1,5 @@
 /**
- * PicMachina — POW: Power Users
+ * Zumilabs Studio — POW: Power Users
  *
  * In-depth tour of the engine for technical users. Covers the live pipeline
  * diagram, node categories, automation, and Claude skills. (Previously the
@@ -572,7 +572,7 @@ async function renderPipelineDiagram(host, counts) {
       <div class="gsd-pipeline-diagram__bg"></div>
       <div class="gsd-pipeline-diagram__inner">
         <div class="gsd-section-title">
-          <h2>What can PicMachina do?</h2>
+          <h2>What can Zumilabs Studio do?</h2>
           <span class="mono">${counts.categoryCount} node categories · ${counts.recipeCount} recipes</span>
         </div>
         <div class="gsd-pipeline-diagram__grid">
@@ -652,7 +652,7 @@ function renderPersonas(host) {
   host.innerHTML = `
     <div class="gsd-personas">
       <div class="gsd-section-title">
-        <h2>Who uses PicMachina?</h2>
+        <h2>Who uses Zumilabs Studio?</h2>
         <span class="mono">Pick a persona · see starter recipes</span>
       </div>
       <div class="gsd-personas__grid">
@@ -808,7 +808,7 @@ function renderClaudeSkills(host) {
             <span class="material-symbols-outlined" style="font-size:14px">psychology</span>
             <span class="mono">Claude Skills</span>
           </div>
-          <h3 class="gsd-skills__headline">Supercharge Pic Machina with AI</h3>
+          <h3 class="gsd-skills__headline">Supercharge Zumilabs Studio with AI</h3>
           <p class="gsd-skills__lede">
             These Claude.ai Project skills let you use AI to build recipes and
             analyse images without writing a single line of code. Set them up once
@@ -827,7 +827,7 @@ function renderClaudeSkills(host) {
               <div class="gsd-skill-card__title">Recipe Architect</div>
               <div class="gsd-skill-card__desc">
                 Describe an image editing workflow in plain English — Claude generates
-                a complete, ready-to-import Pic Machina recipe JSON with every node
+                a complete, ready-to-import Zumilabs Studio recipe JSON with every node
                 and parameter already configured.
               </div>
 
@@ -890,7 +890,7 @@ function renderClaudeSkills(host) {
               <div class="gsd-skill-card__desc">
                 Upload any image — Claude produces rich AI analysis JSON (scene,
                 subjects, colour palette, composition, generative prompts, DAM notes)
-                in the exact format Pic Machina's metadata sidecar expects. Works
+                in the exact format Zumilabs Studio's metadata sidecar expects. Works
                 standalone or wired to the <strong>AI endpoint</strong> in Settings.
               </div>
 
@@ -909,7 +909,7 @@ function renderClaudeSkills(host) {
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">4</span>
-                  <span>Upload an image and say: <em>"Describe this image for PicMachina"</em></span>
+                  <span>Upload an image and say: <em>"Describe this image for Zumilabs Studio"</em></span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">5</span>

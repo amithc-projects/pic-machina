@@ -1,4 +1,4 @@
-# PicMachina Roadmap
+# Zumilabs Studio Roadmap
 
 ## Phase 1: Infrastructure & The "Fast Core" (COMPLETE)
 - [x] IndexedDB Master Store & Asset Metadata Store
@@ -66,7 +66,7 @@ Full video pipeline built on **mediabunny** (WebCodecs-based conversion engine).
 - [x] **`filter-relight`** — up to 3 independent point lights via ambient darkening + screen-mode radial gradients. Configurable colour, intensity, position (X/Y %), and radius per light.
 - [x] **`ai-glow-eyes`** — BlazeFace detects eye-centre keypoints; replaces irises with coloured glow (iris fill + dark pupil + screen radial falloff). Used by `sys-vampire-gfx`.
 - [x] **`sys-vampire-gfx`** — chalk-white pallor via near-full desaturation, cold colour grade, Kuwahara skin smoothing, bloom glow, and AI glowing red eyes.
-- [x] **File System Shadow Persistence** — after every mutation to recipes/blocks/templates, JSON shadow files are written fire-and-forget to `.PicMachina/data/` inside the project root. On startup, if IndexedDB is empty, data is silently restored from these files.
+- [x] **File System Shadow Persistence** — after every mutation to recipes/blocks/templates, JSON shadow files are written fire-and-forget to `.zumilabs-studio/data/` (with fallback support for legacy `.PicMachina/data/` folders) inside the project root. On startup, if IndexedDB is empty, data is silently restored from these files.
 - [x] **Shared current folder** — input folder is synchronised across all four active screens (Batch Setup, Recipe Builder, Step Editor, Folder Viewer); MRU dropdown in Recipe Builder toolbar.
 - [x] **Thumbnail picker in Recipe Builder** — browse for any image file directly from the recipe config panel; stored as base64 data URL in IndexedDB.
 - [x] **File-type filtering** — workspace carousel and folder picker respect `recipe.inputType` (image / video / any); Step Editor applies additional per-step video filtering.

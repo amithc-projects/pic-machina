@@ -1478,19 +1478,28 @@ registry.register({
       options: [{ label: 'Circle', value: 'Circle' }, { label: 'Rounded Rectangle', value: 'RoundedRect' }, { label: 'Diamond', value: 'Diamond' }],
       defaultValue: 'Circle' },
     { name: 'feathering', label: 'Feathering (%)', type: 'range', min: 0, max: 50, defaultValue: 0 },
+    { name: 'cx',     label: 'Centre X (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'cy',     label: 'Centre Y (%)', type: 'range', min: 0, max: 100, defaultValue: 50 },
+    { name: 'scaleW', label: 'Width (%)',    type: 'range', min: 1, max: 200, defaultValue: 100 },
+    { name: 'scaleH', label: 'Height (%)',   type: 'range', min: 1, max: 200, defaultValue: 100 },
   ],
   apply(ctx, p) {
     const W = ctx.canvas.width, H = ctx.canvas.height;
+    const cx = ((p.cx ?? 50) / 100) * W;
+    const cy = ((p.cy ?? 50) / 100) * H;
+    const rw = ((p.scaleW ?? 100) / 100) * W / 2;
+    const rh = ((p.scaleH ?? 100) / 100) * H / 2;
     const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
     const tc = tmp.getContext('2d'); tc.drawImage(ctx.canvas, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.save(); ctx.beginPath();
     if (p.shape === 'Circle') {
-      ctx.arc(W / 2, H / 2, Math.min(W, H) / 2, 0, Math.PI * 2);
+      const r = Math.min(rw, rh);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
     } else if (p.shape === 'RoundedRect') {
-      ctx.roundRect(0, 0, W, H, Math.min(W, H) * 0.1);
+      ctx.roundRect(cx - rw, cy - rh, rw * 2, rh * 2, Math.min(rw, rh) * 0.1);
     } else { // Diamond
-      ctx.moveTo(W / 2, 0); ctx.lineTo(W, H / 2); ctx.lineTo(W / 2, H); ctx.lineTo(0, H / 2);
+      ctx.moveTo(cx, cy - rh); ctx.lineTo(cx + rw, cy); ctx.lineTo(cx, cy + rh); ctx.lineTo(cx - rw, cy);
     }
     ctx.clip(); ctx.drawImage(tmp, 0, 0); ctx.restore();
   }

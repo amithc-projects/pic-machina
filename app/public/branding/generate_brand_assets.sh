@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# PicMachina brand asset generator
+# Zumilabs Studio brand asset generator
 # Requires: ImageMagick 7+ ("magick")
 #
 # Usage:
@@ -13,7 +13,7 @@ set -euo pipefail
 #   icon-512.png             # square symbol master, 512x512 or larger
 #   icon-512-maskable.png    # square symbol master for maskable use
 #   logo.svg                 # horizontal logo master (preferred)
-#   PicMachina-side-by-side.jpeg  # horizontal logo fallback if SVG missing
+#   ZumilabsStudio-side-by-side.jpeg  # horizontal logo fallback if SVG missing
 #   pm-logo-above-web.png    # stacked logo master
 
 SRC_DIR="${1:-$(pwd)}"
@@ -83,9 +83,9 @@ if [[ -f "$SRC_DIR/logo.svg" ]]; then
   HORIZONTAL_MASTER="$SRC_DIR/logo.svg"
 else
   HORIZONTAL_MASTER="$(pick_existing \
-    "$SRC_DIR/PicMachina-side-by-side.jpeg" \
-    "$SRC_DIR/PicMachina-side-by-side.jpg" \
-    "$SRC_DIR/PicMachina-side-by-side.png")" || {
+    "$SRC_DIR/ZumilabsStudio-side-by-side.jpeg" \
+    "$SRC_DIR/ZumilabsStudio-side-by-side.jpg" \
+    "$SRC_DIR/ZumilabsStudio-side-by-side.png")" || {
       echo "Error: could not find a horizontal logo master in $SRC_DIR" >&2
       exit 1
     }
@@ -180,8 +180,8 @@ fi
 
 cat > "$OUT_DIR/manifests/site.webmanifest" <<'JSON'
 {
-  "name": "PicMachina",
-  "short_name": "PicMachina",
+  "name": "Zumilabs Studio",
+  "short_name": "Zumilabs Studio",
   "icons": [
     { "src": "/brand-pack/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/brand-pack/pwa/icon-512.png", "sizes": "512x512", "type": "image/png" },
@@ -207,7 +207,7 @@ cat > "$OUT_DIR/manifests/html-head-snippet.html" <<'HTML'
 HTML
 
 cat > "$OUT_DIR/README-generated-assets.txt" <<EOF
-Generated PicMachina brand assets.
+Generated Zumilabs Studio brand assets.
 
 Run:
   ./generate_brand_assets.sh "$SRC_DIR" "$OUT_DIR"

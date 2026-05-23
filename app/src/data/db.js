@@ -11,7 +11,7 @@
  * Store: models       keyPath: id   (ONNX model blobs for local inference)
  */
 
-const DB_NAME = 'PicMachina';
+const DB_NAME = 'ZumilabsStudio';
 const DB_VERSION = 7;
 
 let _db = null;
@@ -21,78 +21,162 @@ export function getDB() {
   return _db;
 }
 
-export function initDB() {
-  if (_db) return Promise.resolve(_db);
+function createSchema(db) {
+  // recipes
+  if (!db.objectStoreNames.contains('recipes')) {
+    const recipeStore = db.createObjectStore('recipes', { keyPath: 'id' });
+    recipeStore.createIndex('name', 'name', { unique: false });
+    recipeStore.createIndex('isSystem', 'isSystem', { unique: false });
+    recipeStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+  }
+
+  // blocks
+  if (!db.objectStoreNames.contains('blocks')) {
+    const blockStore = db.createObjectStore('blocks', { keyPath: 'id' });
+    blockStore.createIndex('name', 'name', { unique: false });
+    blockStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+  }
+
+  // runs  (batch execution logs)
+  if (!db.objectStoreNames.contains('runs')) {
+    const runStore = db.createObjectStore('runs', { keyPath: 'id' });
+    runStore.createIndex('recipeId', 'recipeId', { unique: false });
+    runStore.createIndex('startedAt', 'startedAt', { unique: false });
+  }
+
+  // folders (File System Access handles)
+  if (!db.objectStoreNames.contains('folders')) {
+    db.createObjectStore('folders', { keyPath: 'key' });
+  }
+
+  // assets (v2) — per-file metadata store keyed by content hash
+  if (!db.objectStoreNames.contains('assets')) {
+    const assetStore = db.createObjectStore('assets', { keyPath: 'hash' });
+    assetStore.createIndex('filename',   'filename',   { unique: false });
+    assetStore.createIndex('ingestedAt', 'ingestedAt', { unique: false });
+    assetStore.createIndex('updatedAt',  'updatedAt',  { unique: false });
+  }
+
+  // templates
+  if (!db.objectStoreNames.contains('templates')) {
+    const tStore = db.createObjectStore('templates', { keyPath: 'id' });
+    tStore.createIndex('name', 'name', { unique: false });
+    tStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+  }
+
+  // showcases (v4)
+  if (!db.objectStoreNames.contains('showcases')) {
+    const shcStore = db.createObjectStore('showcases', { keyPath: 'id' });
+    shcStore.createIndex('createdAt', 'createdAt', { unique: false });
+  }
+
+  // models (v5) — ONNX model blobs for local inference (InSPyReNet, etc.)
+  if (!db.objectStoreNames.contains('models')) {
+    db.createObjectStore('models', { keyPath: 'id' });
+  }
+
+  // timelines (v6) — Standalone video editor projects
+  if (!db.objectStoreNames.contains('timelines')) {
+    const tmeStore = db.createObjectStore('timelines', { keyPath: 'id' });
+    tmeStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+  }
+
+  // voices (v7) — Custom voice samples for VoiceCraft
+  if (!db.objectStoreNames.contains('voices')) {
+    db.createObjectStore('voices', { keyPath: 'id' });
+  }
+}
+
+async function migrateLegacyDatabase() {
+  if (localStorage.getItem('db_migration_to_zumilabs_studio') === 'done') {
+    return;
+  }
+
+  const oldDbExists = await new Promise((resolve) => {
+    if (indexedDB.databases) {
+      indexedDB.databases().then(dbs => {
+        resolve(dbs.some(db => db.name === 'PicMachina'));
+      }).catch(() => resolve(true));
+    } else {
+      resolve(true);
+    }
+  });
+
+  if (!oldDbExists) {
+    localStorage.setItem('db_migration_to_zumilabs_studio', 'done');
+    return;
+  }
+
+  console.info('[Zumilabs Studio] Migrating legacy PicMachina database...');
+
+  const stores = ['recipes', 'blocks', 'runs', 'folders', 'assets', 'templates', 'showcases', 'models', 'timelines', 'voices'];
+
+  try {
+    const oldDb = await new Promise((resolve, reject) => {
+      const req = indexedDB.open('PicMachina');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    const migrationData = {};
+    for (const store of stores) {
+      if (!oldDb.objectStoreNames.contains(store)) continue;
+      migrationData[store] = await new Promise((resolve, reject) => {
+        const tx = oldDb.transaction(store, 'readonly');
+        const req = tx.objectStore(store).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    oldDb.close();
+
+    const newDb = await new Promise((resolve, reject) => {
+      const req = indexedDB.open('ZumilabsStudio', DB_VERSION);
+      req.onupgradeneeded = e => createSchema(e.target.result);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    for (const store of stores) {
+      const records = migrationData[store];
+      if (!records || records.length === 0) continue;
+      await new Promise((resolve, reject) => {
+        const tx = newDb.transaction(store, 'readwrite');
+        const os = tx.objectStore(store);
+        records.forEach(rec => os.put(rec));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    newDb.close();
+
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.deleteDatabase('PicMachina');
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+
+    localStorage.setItem('db_migration_to_zumilabs_studio', 'done');
+    console.info('[Zumilabs Studio] Legacy database successfully migrated.');
+  } catch (err) {
+    console.warn('[Zumilabs Studio] Database migration failed or was interrupted:', err);
+  }
+}
+
+export async function initDB() {
+  if (_db) return _db;
+
+  try {
+    await migrateLegacyDatabase();
+  } catch (err) {
+    console.warn('[Zumilabs Studio] Pre-migration check failed:', err);
+  }
 
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
 
     req.onupgradeneeded = e => {
-      const db = e.target.result;
-
-      // recipes
-      if (!db.objectStoreNames.contains('recipes')) {
-        const recipeStore = db.createObjectStore('recipes', { keyPath: 'id' });
-        recipeStore.createIndex('name', 'name', { unique: false });
-        recipeStore.createIndex('isSystem', 'isSystem', { unique: false });
-        recipeStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-      }
-
-      // blocks
-      if (!db.objectStoreNames.contains('blocks')) {
-        const blockStore = db.createObjectStore('blocks', { keyPath: 'id' });
-        blockStore.createIndex('name', 'name', { unique: false });
-        blockStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-      }
-
-      // runs  (batch execution logs)
-      if (!db.objectStoreNames.contains('runs')) {
-        const runStore = db.createObjectStore('runs', { keyPath: 'id' });
-        runStore.createIndex('recipeId', 'recipeId', { unique: false });
-        runStore.createIndex('startedAt', 'startedAt', { unique: false });
-      }
-
-      // folders (File System Access handles)
-      if (!db.objectStoreNames.contains('folders')) {
-        db.createObjectStore('folders', { keyPath: 'key' });
-      }
-
-      // assets (v2) — per-file metadata store keyed by content hash
-      if (!db.objectStoreNames.contains('assets')) {
-        const assetStore = db.createObjectStore('assets', { keyPath: 'hash' });
-        assetStore.createIndex('filename',   'filename',   { unique: false });
-        assetStore.createIndex('ingestedAt', 'ingestedAt', { unique: false });
-        assetStore.createIndex('updatedAt',  'updatedAt',  { unique: false });
-      }
-
-      // templates
-      if (!db.objectStoreNames.contains('templates')) {
-        const tStore = db.createObjectStore('templates', { keyPath: 'id' });
-        tStore.createIndex('name', 'name', { unique: false });
-        tStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-      }
-
-      // showcases (v4)
-      if (!db.objectStoreNames.contains('showcases')) {
-        const shcStore = db.createObjectStore('showcases', { keyPath: 'id' });
-        shcStore.createIndex('createdAt', 'createdAt', { unique: false });
-      }
-
-      // models (v5) — ONNX model blobs for local inference (InSPyReNet, etc.)
-      if (!db.objectStoreNames.contains('models')) {
-        db.createObjectStore('models', { keyPath: 'id' });
-      }
-
-      // timelines (v6) — Standalone video editor projects
-      if (!db.objectStoreNames.contains('timelines')) {
-        const tmeStore = db.createObjectStore('timelines', { keyPath: 'id' });
-        tmeStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-      }
-
-      // voices (v7) — Custom voice samples for VoiceCraft
-      if (!db.objectStoreNames.contains('voices')) {
-        db.createObjectStore('voices', { keyPath: 'id' });
-      }
+      createSchema(e.target.result);
     };
 
     req.onsuccess = async e => {
@@ -103,7 +187,7 @@ export function initDB() {
       // Silently restore from file system shadow if IDB has no user data
       import('../utils/backup.js').then(({ shadowRestore }) => {
         shadowRestore().then(restored => {
-          if (restored) console.info('[PicMachina] User data restored from file system shadow.');
+          if (restored) console.info('[Zumilabs Studio] User data restored from file system shadow.');
         });
       });
       resolve(_db);

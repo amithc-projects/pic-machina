@@ -51,7 +51,7 @@
   },
   "analysis": {
     "generatedAt": "2026-04-28T11:35:00Z",
-    "generatedBy": "pic-machina-v2-vision",
+    "generatedBy": "zumilabs-studio-v2-vision",
     "computed": {
       "sharpnessScore": 88,
       "blurLabel": "sharp",

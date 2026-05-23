@@ -1,8 +1,8 @@
-# Product Requirements Document: PicMachina
+# Product Requirements Document: Zumilabs Studio
 
 ## 1. Project Overview
 
-PicMachina is a **local-first, browser-based desktop application** for high-performance batch image processing. Users build **Recipes** — ordered sequences of transform nodes — and run them against a local folder of images. All processing happens entirely on the user's device using the File System Access API; no images are uploaded to any server.
+Zumilabs Studio is a **local-first, browser-based desktop application** for high-performance batch image processing. Users build **Recipes** — ordered sequences of transform nodes — and run them against a local folder of images. All processing happens entirely on the user's device using the File System Access API; no images are uploaded to any server.
 
 The application targets photographers, content teams, and power users who need repeatable, automated image workflows without cloud dependencies.
 
@@ -31,7 +31,7 @@ The application targets photographers, content teams, and power users who need r
 - **Local-only operation**: all transforms execute on-device via Canvas API and Web Workers
 - **File System Access API**: users grant access to input and output directories; handles are persisted in IndexedDB and re-verified on next launch
 - **Non-destructive**: original files are never modified; outputs saved to a configurable subfolder
-- **File System Shadow Persistence**: after every recipe/block/template save, JSON shadow files are written to `.PicMachina/data/` inside the linked project root folder. On startup, if IndexedDB is empty, data is silently restored from these shadow files — surviving browser storage clears
+- **File System Shadow Persistence**: after every recipe/block/template save, JSON shadow files are written to `.zumilabs-studio/data/` (with fallback support for legacy `.PicMachina/data/` folder) inside the linked project root folder. On startup, if IndexedDB is empty, data is silently restored from these shadow files — surviving browser storage clears
 - **Shared current folder**: the selected input folder is synchronised across the Recipe Library, Batch Setup, Recipe Builder, and Step Editor screens. Changing the folder in any one screen updates all others
 - **Project Root Linking**: users can link their project root directory in Settings. This enables thumbnail storage to `public/user-samples/` and shadow persistence. Thumbnails are always stored as base64 in IndexedDB for reliable display regardless of server configuration
 - **Format support**: JPEG, PNG, WebP, HEIC, TIFF, BMP, GIF (image input); MP4, MOV, WebM (video input); JPEG, PNG, WebP (image output); GIF, MP4 (aggregation output); MP3, WAV, FLAC, Ogg, AAC (audio extraction output)

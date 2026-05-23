@@ -1,10 +1,10 @@
-# Pic-Machina Promotional Video Script (Instagram Reels/Stories)
+# Zumilabs Studio Promotional Video Script (Instagram Reels/Stories)
 
 **Total Duration:** 32 seconds  
 **Format:** Vertical (9:16)  
 **Style/Vibe:** High-energy, magical transitions, premium commercial aesthetic. 
 
-Below are the 4 prompts designed specifically for an AI video generator (like Google Veo, Sora, or Runway). They describe the *visual action* to create a stunning representation of Pic-Machina's capabilities. 
+Below are the 4 prompts designed specifically for an AI video generator (like Google Veo, Sora, or Runway). They describe the *visual action* to create a stunning representation of Zumilabs Studio's capabilities. 
 
 ---
 
@@ -40,7 +40,7 @@ Below are the 4 prompts designed specifically for an AI video generator (like Go
 > A chaotic, massive grid of thousands of random images quickly flies across the screen, snapping instantly into perfectly organized, color-coded folders and neat rows. The camera pushes in fast on a central glowing folder which opens to reveal a bright, clean light that forms the text: "Imagine the Outcome. Automate the Rest." Satisfying motion, clean modern design, vertical 9:16 format.
 
 **Instagram Text Overlay:** 
-*Pic-Machina: Imagine the outcome. Automate the rest.* ⚙️
+*Zumilabs Studio: Imagine the outcome. Automate the rest.* ⚙️
 
 ---
 

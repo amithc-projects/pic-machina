@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pic-machina.app/sidecar.schema.json",
-  "title": "Pic-Machina Image Sidecar",
-  "description": "Per-image metadata sidecar file written alongside the source image (e.g. photo.jpg → photo.jpg.json). Combines workflow metadata written by Pic-Machina (EXIF mirror, user annotations, processing log) with rich AI-generated content analysis (scene, subjects, composition, lighting, colour palette, identified location, architecture, segmentation, generative prompts).",
+  "$id": "https://zumilabs-studio.app/sidecar.schema.json",
+  "title": "Zumilabs Studio Image Sidecar",
+  "description": "Per-image metadata sidecar file written alongside the source image (e.g. photo.jpg → photo.jpg.json). Combines workflow metadata written by Zumilabs Studio (EXIF mirror, user annotations, processing log) with rich AI-generated content analysis (scene, subjects, composition, lighting, colour palette, identified location, architecture, segmentation, generative prompts).",
   "type": "object",
   "required": ["$version"],
 
@@ -175,7 +175,7 @@
     },
 
     "exif": {
-      "description": "Mirror of embedded EXIF fields extracted from the image. Read-only — populated automatically by Pic-Machina.",
+      "description": "Mirror of embedded EXIF fields extracted from the image. Read-only — populated automatically by Zumilabs Studio.",
       "type": "object",
       "properties": {
         "cameraMake": {
@@ -280,7 +280,7 @@
     },
 
     "annotation": {
-      "description": "User-authored curation and editorial data. The primary fields a human edits in the Pic-Machina metadata panel.",
+      "description": "User-authored curation and editorial data. The primary fields a human edits in the Zumilabs Studio metadata panel.",
       "type": "object",
       "properties": {
         "rating": {
@@ -330,11 +330,11 @@
         "generatedBy": {
           "description": "Model or system that produced this analysis.",
           "type": "string",
-          "examples": ["claude-opus-4", "gpt-4o", "pic-machina-v2"]
+          "examples": ["claude-opus-4", "gpt-4o", "zumilabs-studio-v2"]
         },
 
         "computed": {
-          "description": "Scalar values written by Pic-Machina batch transforms. Backwards-compatible with the v1 'computed' section.",
+          "description": "Scalar values written by Zumilabs Studio batch transforms. Backwards-compatible with the v1 'computed' section.",
           "type": "object",
           "properties": {
             "sharpnessScore": {
@@ -905,7 +905,7 @@
             "model": {
               "description": "Model or tool used to generate these segmentation results.",
               "type": "string",
-              "examples": ["segment-anything-2", "mediapipe-selfie", "pic-machina-seg-v1"]
+              "examples": ["segment-anything-2", "mediapipe-selfie", "zumilabs-studio-seg-v1"]
             },
             "subjects": {
               "description": "Per-subject region data. Entries correspond by index to analysis.subjects.items[] where possible.",
@@ -986,7 +986,7 @@
     },
 
     "vision": {
-      "description": "AI vision-derived data such as salient subject bounding boxes, centroids, and areas, stored by Pic-Machina during processing to avoid re-running intensive models on subsequent nodes or batch runs.",
+      "description": "AI vision-derived data such as salient subject bounding boxes, centroids, and areas, stored by Zumilabs Studio during processing to avoid re-running intensive models on subsequent nodes or batch runs.",
       "type": "object",
       "properties": {
         "subjectBBox": {
@@ -1017,7 +1017,7 @@
     },
 
     "computed": {
-      "description": "Scalar values written by Pic-Machina batch transforms (e.g. sharpness analysis, OCR, face count) and arbitrary keys produced by the meta-sidecar-write transform. Open shape — transforms may add additional properties.",
+      "description": "Scalar values written by Zumilabs Studio batch transforms (e.g. sharpness analysis, OCR, face count) and arbitrary keys produced by the meta-sidecar-write transform. Open shape — transforms may add additional properties.",
       "type": "object",
       "properties": {
         "sharpnessScore": {
@@ -1047,7 +1047,7 @@
     },
 
     "processing": {
-      "description": "Append-only log of every Pic-Machina batch run that has processed this image.",
+      "description": "Append-only log of every Zumilabs Studio batch run that has processed this image.",
       "type": "array",
       "items": {
         "type": "object",

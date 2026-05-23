@@ -1,5 +1,5 @@
 /**
- * PicMachina Service Worker
+ * Zumilabs Studio Service Worker
  *
  * Strategy: network-first with no aggressive caching.
  *
@@ -13,7 +13,7 @@
  * so the app can at least open and show a meaningful message.
  */
 
-const CACHE_NAME = 'picmachina-shell-v1';
+const CACHE_NAME = 'zumilabs-studio-shell-v1';
 
 // Only cache the bare minimum needed to open the app offline
 const SHELL_URLS = [

@@ -1,5 +1,5 @@
 /**
- * PicMachina — Perspective Rendering Utilities
+ * Zumilabs Studio — Perspective Rendering Utilities
  */
 
 /**

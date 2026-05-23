@@ -9,6 +9,12 @@ const STORAGE_KEY = 'ic-global-settings';
 
 const DEFAULT_SETTINGS = {
   license: 'Free',
+  capabilities: {
+    // Set to true if you have enabled the HTML-in-Canvas Chrome flag
+    // (chrome://flags/#canvas-draw-element) and the browser probe fails to
+    // auto-detect it.  This bypasses the detection warning.
+    htmlInCanvasConfirmed: false,
+  },
   batch: {
     useInputForOutput: true // Output directly inside Input directory
   },
@@ -23,7 +29,7 @@ const DEFAULT_SETTINGS = {
     // URL of the AI Image Describer endpoint.
     // Receives a multipart/form-data POST with an `image` file field and an
     // optional `filename` text field. Must return JSON matching (or mappable
-    // to) the Pic-Machina sidecar schema — either the full sidecar format
+    // to) the Zumilabs Studio sidecar schema — either the full sidecar format
     // (with a top-level `analysis` key) or the raw AI analysis format
     // (with top-level keys: scene, subjects, composition, lighting, etc.).
     describerEndpoint: ''
@@ -44,6 +50,17 @@ const DEFAULT_SETTINGS = {
     // Get Media screen to search and download photos/videos. Stored
     // locally only.
     apiKey: ''
+  },
+  elevenlabs: {
+    // Eleven Labs API key (https://elevenlabs.io/). Used by the
+    // Voice Studio screen to synthesize voices via Cloud API. Stored
+    // locally only.
+    apiKey: ''
+  },
+  localTts: {
+    // Self-hosted Local TTS Gateway URL (e.g. http://localhost:8000).
+    // Used by Voice Studio to fetch and synthesize speech via local Python API.
+    url: ''
   },
   masterFonts: [
     { id: 'font-inter', label: 'Inter', value: 'Inter' },

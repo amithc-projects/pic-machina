@@ -1,5 +1,5 @@
 /**
- * Pic-Machina — Pexels API Client
+ * Zumilabs Studio — Pexels API Client
  *
  * Wraps the Pexels public API and normalises results into the
  * provider-agnostic asset shape used by the Get Media screen and
@@ -100,7 +100,7 @@ function videoToAsset(v) {
 }
 
 /**
- * Map a Pexels asset onto a partial Pic-Machina sidecar (schema v2).
+ * Map a Pexels asset onto a partial Zumilabs Studio sidecar (schema v2).
  * Caller fills in `source.sizeBytes` after the blob is fetched.
  * See docs/sidecar.schema.json.
  */

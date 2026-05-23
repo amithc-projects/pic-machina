@@ -1,5 +1,5 @@
 /**
- * PicMachina — Model Blob Storage
+ * Zumilabs Studio — Model Blob Storage
  *
  * Persists large ONNX model weights in IndexedDB so the user doesn't need to
  * re-download 100s of MB on every visit. Survives Cache-API eviction.
@@ -235,6 +235,8 @@ export async function downloadModel(id, onProgress, signal) {
           if (hf.env.backends?.onnx?.wasm) {
               hf.env.backends.onnx.wasm.numThreads = 1;
           }
+          
+          hf.env.logLevel = 40; // Only show error messages to silence resolve_model_type warnings
           
           const useDevice = navigator.gpu ? 'webgpu' : 'wasm';
           

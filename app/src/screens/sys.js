@@ -16,7 +16,48 @@ export async function render(container, hash) {
   }
 
   container.innerHTML = `
-    <div class="screen sys-screen" style="display:flex;flex-direction:column;height:100%;background:var(--ps-surface)">
+    <style>
+      .sys-screen .tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 10px 12px;
+        border: none;
+        background: none;
+        border-radius: 6px;
+        cursor: pointer;
+        color: var(--ps-text-muted);
+        text-align: left;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.15s ease-in-out;
+      }
+      .sys-screen .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--ps-text);
+      }
+      .sys-screen .tab-btn.active {
+        background: rgba(59, 130, 246, 0.15);
+        color: var(--ps-blue);
+        font-weight: 600;
+      }
+      .sys-screen .settings-section-group {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        animation: sysFadeIn 0.2s ease-out;
+      }
+      .sys-screen .settings-section-group.hidden {
+        display: none !important;
+      }
+      @keyframes sysFadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+
+    <div class="screen sys-screen" style="display:flex; flex-direction:column; height:100%; background:var(--ps-surface)">
       <div class="screen-header" style="flex-shrink:0;">
         <div class="flex items-center gap-2">
            <span class="material-symbols-outlined" style="color:var(--ps-blue)">settings</span>
@@ -27,211 +68,293 @@ export async function render(container, hash) {
         </div>
       </div>
       
-      <div style="padding: 24px; max-width:900px; margin:0 auto; width:100%; display:flex; flex-direction:column; gap:24px; overflow-y: auto;">
-        
-        <!-- Project Root Link -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
-          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Project Storage</h4>
-          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-              <div style="display:flex; flex-direction:column;">
-                <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Project Root Directory</span>
-                <span id="project-root-status" style="font-size:11px; color:var(--ps-text-muted); margin-top:2px;">
-                  ${projectRootHandle ? `<span style="color:var(--ps-green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> Linked to: ${projectRootHandle.name}</span>` : 'Not linked. Thumbnails will use base64 fallback.'}
-                </span>
+      <div class="settings-layout" style="display:flex; flex:1; height:calc(100% - 48px); overflow:hidden;">
+        <!-- Left Sidebar Navigation -->
+        <div class="settings-sidebar" style="width:220px; border-right:1px solid var(--ps-border); background:var(--ps-bg-app); padding:16px 8px; display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+          <button class="tab-btn active" data-tab="general">
+            <span class="material-symbols-outlined" style="font-size:18px;">tune</span>
+            General & Storage
+          </button>
+          <button class="tab-btn" data-tab="ai">
+            <span class="material-symbols-outlined" style="font-size:18px;">psychology</span>
+            AI & Speech
+          </button>
+          <button class="tab-btn" data-tab="stock">
+            <span class="material-symbols-outlined" style="font-size:18px;">imagesmode</span>
+            Stock Media
+          </button>
+          <button class="tab-btn" data-tab="styling">
+            <span class="material-symbols-outlined" style="font-size:18px;">palette</span>
+            Fonts & Styling
+          </button>
+        </div>
+
+        <!-- Right Content Panels -->
+        <div class="settings-content" style="flex:1; padding:24px 32px; overflow-y:auto; display:flex; flex-direction:column; gap:28px;">
+          
+          <!-- TAB: General & Storage -->
+          <div id="tab-sec-general" class="settings-section-group">
+            <!-- Project Root Link -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Project Storage</h4>
+              <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Project Root Directory</span>
+                    <span id="project-root-status" style="font-size:11px; color:var(--ps-text-muted); margin-top:2px;">
+                      ${projectRootHandle ? `<span style="color:var(--ps-green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> Linked to: ${projectRootHandle.name}</span>` : 'Not linked. Thumbnails will use base64 fallback.'}
+                    </span>
+                  </div>
+                  <button class="btn-secondary" id="btn-link-project" style="font-size:11px; padding:6px 12px;">
+                    <span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">folder_shared</span>
+                    ${projectRootHandle ? 'Change Link' : 'Link Project Folder'}
+                  </button>
+                </div>
+                <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.4;">
+                  Linking the project root allows the app to save recipe thumbnails directly into the <code>samples/</code> and <code>user-samples/</code> folders for persistence.
+                </p>
               </div>
-              <button class="btn-secondary" id="btn-link-project" style="font-size:11px; padding:6px 12px;">
-                <span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">folder_shared</span>
-                ${projectRootHandle ? 'Change Link' : 'Link Project Folder'}
-              </button>
-            </div>
-            <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.4;">
-              Linking the project root allows the app to save recipe thumbnails directly into the <code>samples/</code> and <code>user-samples/</code> folders for persistence.
-            </p>
-          </div>
-        </section>
+            </section>
 
-        <!-- License Tier -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
-          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">License Tier</h4>
-          <div style="background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <select id="cfg-license" class="ic-input" style="max-width:200px;">
-                <option value="Free" ${current.license === 'Free' || !current.license ? 'selected' : ''}>Free</option>
-                <option value="Pro" ${current.license === 'Pro' ? 'selected' : ''}>Pro</option>
-                <option value="Enterprise" ${current.license === 'Enterprise' ? 'selected' : ''}>Enterprise</option>
-              </select>
-              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">Select your mock license tier to test UX variations for Premium dependencies.</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Smart Thumbnails -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
-          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Content-Aware Thumbnails</h4>
-          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
-            <input type="checkbox" id="cfg-smart-thumbs" ${current.thumbnails?.smart ? 'checked' : ''} style="margin-top:2px;" />
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Crop recipe &amp; showcase covers around the subject</span>
-              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">
-                Uses InSPyReNet saliency to detect the subject of each uploaded image and centre the thumbnail on it, instead of cropping to the image centre. Requires the AI model to be downloaded (see <code>#mdl</code>). Falls back to centre-crop silently when unavailable.
-              </span>
-            </div>
-          </label>
-          <div style="background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-              <div style="display:flex; flex-direction:column;">
-                <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Rebuild existing thumbnails</span>
-                <span id="rebuild-thumbs-status" style="font-size:11px; color:var(--ps-text-muted); margin-top:2px;">One-off pass that re-crops all existing recipe and showcase thumbnails using the smart crop.</span>
+            <!-- License Tier -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">License Tier</h4>
+              <div style="background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <select id="cfg-license" class="ic-input" style="max-width:200px;">
+                    <option value="Free" ${current.license === 'Free' || !current.license ? 'selected' : ''}>Free</option>
+                    <option value="Pro" ${current.license === 'Pro' ? 'selected' : ''}>Pro</option>
+                    <option value="Enterprise" ${current.license === 'Enterprise' ? 'selected' : ''}>Enterprise</option>
+                  </select>
+                  <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">Select your mock license tier to test UX variations for Premium dependencies.</span>
+                </div>
               </div>
-              <button class="btn-secondary" id="btn-rebuild-thumbs" style="font-size:11px; padding:6px 12px; flex-shrink:0;">
-                <span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">refresh</span>
-                Rebuild
-              </button>
-            </div>
+            </section>
+
+            <!-- Browser Capabilities -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Browser Capabilities</h4>
+              <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+                <input type="checkbox" id="cfg-html-in-canvas" ${current.capabilities?.htmlInCanvasConfirmed ? 'checked' : ''} style="margin-top:2px;" />
+                <div style="display:flex; flex-direction:column;">
+                  <span style="font-size:13px; font-weight:500; color:var(--ps-text);">HTML-in-Canvas enabled</span>
+                  <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">
+                    Check this if you have enabled the <code>HTML-in-Canvas</code> flag in Chrome
+                    (<code>chrome://flags/#canvas-draw-element</code>). Bypasses the auto-detection
+                    check and removes the "Setup required" warning from Hyperframe recipes.
+                    <a href="#hlp?id=html-in-canvas" style="color:var(--ps-accent); margin-left:4px;">How to enable →</a>
+                  </span>
+                </div>
+              </label>
+            </section>
+
+            <!-- Smart Thumbnails -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Content-Aware Thumbnails</h4>
+              <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+                <input type="checkbox" id="cfg-smart-thumbs" ${current.thumbnails?.smart ? 'checked' : ''} style="margin-top:2px;" />
+                <div style="display:flex; flex-direction:column;">
+                  <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Crop recipe &amp; showcase covers around the subject</span>
+                  <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">
+                    Uses InSPyReNet saliency to detect the subject of each uploaded image and centre the thumbnail on it, instead of cropping to the image centre. Requires the AI model to be downloaded (see <code>#mdl</code>). Falls back to centre-crop silently when unavailable.
+                  </span>
+                </div>
+              </label>
+              <div style="background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Rebuild existing thumbnails</span>
+                    <span id="rebuild-thumbs-status" style="font-size:11px; color:var(--ps-text-muted); margin-top:2px;">One-off pass that re-crops all existing recipe and showcase thumbnails using the smart crop.</span>
+                  </div>
+                  <button class="btn-secondary" id="btn-rebuild-thumbs" style="font-size:11px; padding:6px 12px; flex-shrink:0;">
+                    <span class="material-symbols-outlined" style="font-size:16px; margin-right:6px;">refresh</span>
+                    Rebuild
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Batch Core -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Batch Engine</h4>
+              <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
+                <input type="checkbox" id="cfg-batch-sync" ${current.batch?.useInputForOutput ? 'checked' : ''} style="margin-top:2px;" />
+                <div style="display:flex; flex-direction:column;">
+                  <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Default Output Folder to Input Source</span>
+                  <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">If enabled, you do not need to select an output destination. The system will automatically build outputs natively inside your input directory.</span>
+                </div>
+              </label>
+            </section>
+
+            <!-- Custom Color Swatches -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                    <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Application Color Swatches</h4>
+                    <button class="btn-ghost" id="btn-add-swatch" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Swatch</button>
+                </div>
+                <span style="font-size:11px; color:var(--ps-text-muted);">Manage standard colors available in the parameter configurator panels.</span>
+              </div>
+              
+              <div id="swatch-list" style="display:flex; flex-direction:column; gap:10px; background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border);">
+              </div>
+            </section>
           </div>
-        </section>
 
-        <!-- Batch Core -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
-          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Batch Engine</h4>
-          <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
-            <input type="checkbox" id="cfg-batch-sync" ${current.batch?.useInputForOutput ? 'checked' : ''} style="margin-top:2px;" />
-            <div style="display:flex; flex-direction:column;">
-              <span style="font-size:13px; font-weight:500; color:var(--ps-text);">Default Output Folder to Input Source</span>
-              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">If enabled, you do not need to select an output destination. The system will automatically build outputs natively inside your input directory.</span>
-            </div>
-          </label>
-        </section>
+          <!-- TAB: AI & Speech Integrations -->
+          <div id="tab-sec-ai" class="settings-section-group hidden">
+            <!-- AI Integration -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">AI Integration</h4>
+              <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <label for="cfg-ai-endpoint" style="font-size:13px; font-weight:500; color:var(--ps-text);">AI Image Describer Endpoint</label>
+                  <input type="url" id="cfg-ai-endpoint" class="ic-input"
+                    value="${current.ai?.describerEndpoint || ''}"
+                    placeholder="https://your-server.example.com/describe"
+                    style="font-size:12px; font-family:var(--font-mono);"
+                  />
+                </div>
+                <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                  When set, a <strong>Describe Image with AI</strong> button appears in the metadata panel.
+                  The endpoint receives a <code>multipart/form-data</code> POST with an <code>image</code>
+                  file field and a <code>filename</code> text field. It must return JSON matching the
+                  Zumilabs Studio sidecar schema (full sidecar or a raw analysis object). The response is
+                  merged into the image sidecar without overwriting your annotations.
+                </p>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                  <button class="btn-secondary" id="btn-test-ai-endpoint" style="font-size:11px; padding:5px 12px;">
+                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">electric_bolt</span>
+                    Test connection
+                  </button>
+                  <span id="ai-endpoint-test-result" style="font-size:11px; color:var(--ps-text-faint);"></span>
+                </div>
 
-        <!-- AI Integration -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
-          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">AI Integration</h4>
-          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <label for="cfg-ai-endpoint" style="font-size:13px; font-weight:500; color:var(--ps-text);">AI Image Describer Endpoint</label>
-              <input type="url" id="cfg-ai-endpoint" class="ic-input"
-                value="${current.ai?.describerEndpoint || ''}"
-                placeholder="https://your-server.example.com/describe"
-                style="font-size:12px; font-family:var(--font-mono);"
-              />
-            </div>
-            <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
-              When set, a <strong>Describe Image with AI</strong> button appears in the metadata panel.
-              The endpoint receives a <code>multipart/form-data</code> POST with an <code>image</code>
-              file field and a <code>filename</code> text field. It must return JSON matching the
-              Pic-Machina sidecar schema (full sidecar or a raw analysis object). The response is
-              merged into the image sidecar without overwriting your annotations.
-            </p>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <button class="btn-secondary" id="btn-test-ai-endpoint" style="font-size:11px; padding:5px 12px;">
-                <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">electric_bolt</span>
-                Test connection
-              </button>
-              <span id="ai-endpoint-test-result" style="font-size:11px; color:var(--ps-text-faint);"></span>
-            </div>
+                <!-- Local TTS Gateway -->
+                <div style="border-top:1px solid var(--ps-border); padding-top:12px; display:flex; flex-direction:column; gap:4px;">
+                  <label for="cfg-local-tts-url" style="font-size:13px; font-weight:500; color:var(--ps-text);">Local TTS Gateway URL</label>
+                  <input type="url" id="cfg-local-tts-url" class="ic-input"
+                    value="${current.localTts?.url || ''}"
+                    placeholder="http://localhost:8000"
+                    style="font-size:12px; font-family:var(--font-mono);"
+                  />
+                </div>
+                <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                  URL of your self-hosted Local TTS Gateway server. Used by the Voice Studio screen
+                  to dynamically query available voices (e.g. VibeVoice, Coqui XTTS) and generate audio.
+                </p>
+              </div>
+            </section>
+
+            <!-- Cloud Voice Providers -->
+            <section id="cfg-cloud-voice-section" style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Cloud Voice Providers</h4>
+              <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <label for="cfg-elevenlabs-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Eleven Labs API Key</label>
+                  <input type="password" id="cfg-elevenlabs-key" class="ic-input"
+                    value="${current.elevenlabs?.apiKey || ''}"
+                    placeholder="Paste your Eleven Labs API key"
+                    autocomplete="off" spellcheck="false"
+                    style="font-size:12px; font-family:var(--font-mono);"
+                  />
+                  <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                    Get your API key from Eleven Labs Profile settings. Allows zero-shot high-quality voice synthesis in Voice Studio.
+                  </p>
+                </div>
+              </div>
+            </section>
           </div>
-        </section>
 
-        <!-- Stock Media Providers -->
-        <section id="cfg-stock-section" style="display:flex; flex-direction:column; gap:12px;">
-          <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Stock Media Providers</h4>
-          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <label for="cfg-pexels-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Pexels API Key</label>
-              <input type="password" id="cfg-pexels-key" class="ic-input"
-                value="${current.pexels?.apiKey || ''}"
-                placeholder="Paste your Pexels API key"
-                autocomplete="off" spellcheck="false"
-                style="font-size:12px; font-family:var(--font-mono);"
-              />
+          <!-- TAB: Stock Media Providers -->
+          <div id="tab-sec-stock" class="settings-section-group hidden">
+            <!-- Stock Media Providers -->
+            <section id="cfg-stock-section" style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Stock Media Providers</h4>
+              <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <label for="cfg-pexels-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Pexels API Key</label>
+                  <input type="password" id="cfg-pexels-key" class="ic-input"
+                    value="${current.pexels?.apiKey || ''}"
+                    placeholder="Paste your Pexels API key"
+                    autocomplete="off" spellcheck="false"
+                    style="font-size:12px; font-family:var(--font-mono);"
+                  />
+                  <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                    Get a free key at <a href="https://www.pexels.com/api/" target="_blank" rel="noopener" style="color:var(--ps-accent);">pexels.com/api</a>.
+                    Supports photos and videos. Free tier: 200 requests/hour.
+                  </p>
+                </div>
+              </div>
+              <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <label for="cfg-unsplash-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Unsplash Access Key</label>
+                  <input type="password" id="cfg-unsplash-key" class="ic-input"
+                    value="${current.unsplash?.accessKey || ''}"
+                    placeholder="Paste your Unsplash Access Key"
+                    autocomplete="off" spellcheck="false"
+                    style="font-size:12px; font-family:var(--font-mono);"
+                  />
+                  <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                    Register an app at <a href="https://unsplash.com/developers" target="_blank" rel="noopener" style="color:var(--ps-accent);">unsplash.com/developers</a>.
+                    Unsplash issues three credentials &mdash; <strong>only the Access Key</strong> is needed here.
+                    Photos only. Demo apps: 50 requests/hour.
+                  </p>
+                </div>
+              </div>
+              <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                  <label for="cfg-pixabay-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Pixabay API Key</label>
+                  <input type="password" id="cfg-pixabay-key" class="ic-input"
+                    value="${current.pixabay?.apiKey || ''}"
+                    placeholder="Paste your Pixabay API key"
+                    autocomplete="off" spellcheck="false"
+                    style="font-size:12px; font-family:var(--font-mono);"
+                  />
+                  <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
+                    Get a free key at <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener" style="color:var(--ps-accent);">pixabay.com/api/docs</a>.
+                    Supports photos and videos. Free tier: 100 requests/minute.
+                  </p>
+                </div>
+              </div>
               <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
-                Get a free key at <a href="https://www.pexels.com/api/" target="_blank" rel="noopener" style="color:var(--ps-accent);">pexels.com/api</a>.
-                Supports photos and videos. Free tier: 200 requests/hour.
+                All keys are stored locally in your browser only. Used by the <a href="#gmd" style="color:var(--ps-accent);">Get Media</a> screen.
               </p>
-            </div>
+            </section>
           </div>
-          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <label for="cfg-unsplash-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Unsplash Access Key</label>
-              <input type="password" id="cfg-unsplash-key" class="ic-input"
-                value="${current.unsplash?.accessKey || ''}"
-                placeholder="Paste your Unsplash Access Key"
-                autocomplete="off" spellcheck="false"
-                style="font-size:12px; font-family:var(--font-mono);"
-              />
-              <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
-                Register an app at <a href="https://unsplash.com/developers" target="_blank" rel="noopener" style="color:var(--ps-accent);">unsplash.com/developers</a>.
-                Unsplash issues three credentials &mdash; <strong>only the Access Key</strong> is needed here.
-                The Secret Key (used for OAuth user actions) and Application ID are not required and should not be pasted in this field.
-                Photos only. Demo apps: 50 requests/hour.
-              </p>
-            </div>
-          </div>
-          <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <label for="cfg-pixabay-key" style="font-size:13px; font-weight:500; color:var(--ps-text);">Pixabay API Key</label>
-              <input type="password" id="cfg-pixabay-key" class="ic-input"
-                value="${current.pixabay?.apiKey || ''}"
-                placeholder="Paste your Pixabay API key"
-                autocomplete="off" spellcheck="false"
-                style="font-size:12px; font-family:var(--font-mono);"
-              />
-              <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
-                Get a free key at <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener" style="color:var(--ps-accent);">pixabay.com/api/docs</a>
-                (sign in, scroll to the <em>Search Images</em> section, the key is shown in the example URL).
-                Supports photos and videos. Free tier: 100 requests/minute.
-              </p>
-            </div>
-          </div>
-          <p style="margin:0; font-size:11px; color:var(--ps-text-faint); line-height:1.5;">
-            All keys are stored locally in your browser only. Used by the <a href="#gmd" style="color:var(--ps-accent);">Get Media</a> screen.
-          </p>
-        </section>
 
-        <!-- Master Fonts -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
-          <div style="display:flex; flex-direction:column;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Master Fonts</h4>
-                <button class="btn-ghost" id="btn-add-font" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Font</button>
-            </div>
-            <span style="font-size:11px; color:var(--ps-text-muted);">Manage fonts available for text styles and overlays.</span>
+          <!-- TAB: Fonts & Styling -->
+          <div id="tab-sec-styling" class="settings-section-group hidden">
+            <!-- Master Fonts -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                    <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Master Fonts</h4>
+                    <button class="btn-ghost" id="btn-add-font" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Font</button>
+                </div>
+                <span style="font-size:11px; color:var(--ps-text-muted);">Manage fonts available for text styles and overlays.</span>
+              </div>
+              
+              <div id="font-list" style="display:flex; flex-direction:column; gap:10px; background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border);">
+              </div>
+            </section>
+
+            <!-- Text Styles -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                    <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Global Text Styles</h4>
+                    <button class="btn-ghost" id="btn-add-text-style" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Style</button>
+                </div>
+                <span style="font-size:11px; color:var(--ps-text-muted);">Define reusable typography configurations for your recipes.</span>
+              </div>
+              
+              <div id="text-style-list" style="display:flex; flex-direction:column; gap:10px;">
+              </div>
+            </section>
           </div>
           
-          <div id="font-list" style="display:flex; flex-direction:column; gap:10px; background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border);">
-          </div>
-        </section>
-
-        <!-- Text Styles -->
-        <section style="display:flex; flex-direction:column; gap:12px;">
-          <div style="display:flex; flex-direction:column;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Global Text Styles</h4>
-                <button class="btn-ghost" id="btn-add-text-style" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Style</button>
-            </div>
-            <span style="font-size:11px; color:var(--ps-text-muted);">Define reusable typography configurations for your recipes.</span>
-          </div>
-          
-          <div id="text-style-list" style="display:flex; flex-direction:column; gap:10px;">
-          </div>
-        </section>
-
-        <!-- Custom Color Swatches -->
-        <section style="display:flex; flex-direction:column; gap:12px; margin-bottom: 32px;">
-          <div style="display:flex; flex-direction:column;">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">Application Color Swatches</h4>
-                <button class="btn-ghost" id="btn-add-swatch" style="font-size:11px; padding:2px 6px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span>Add Swatch</button>
-            </div>
-            <span style="font-size:11px; color:var(--ps-text-muted);">Manage standard colors available in the parameter configurator panels.</span>
-          </div>
-          
-          <div id="swatch-list" style="display:flex; flex-direction:column; gap:10px; background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border);">
-          </div>
-
-        </section>
-        
+        </div>
       </div>
     </div>
   `;
@@ -241,6 +364,24 @@ export async function render(container, hash) {
   const fontList = container.querySelector('#font-list');
   const textStyles = current.textStyles || [];
   const masterFonts = current.masterFonts || [];
+
+  // Handle tab switching
+  const tabs = container.querySelectorAll('.tab-btn');
+  const groups = container.querySelectorAll('.settings-section-group');
+  tabs.forEach(tab => {
+    tab.onclick = () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const targetTab = tab.dataset.tab;
+      groups.forEach(group => {
+        if (group.id === `tab-sec-${targetTab}`) {
+          group.classList.remove('hidden');
+        } else {
+          group.classList.add('hidden');
+        }
+      });
+    };
+  });
 
   const renderMasterFonts = () => {
     fontList.innerHTML = masterFonts.map((mf, idx) => `
@@ -547,6 +688,9 @@ export async function render(container, hash) {
 
     saveSettings({
       license: container.querySelector('#cfg-license').value,
+      capabilities: {
+        htmlInCanvasConfirmed: container.querySelector('#cfg-html-in-canvas').checked
+      },
       batch: {
         useInputForOutput: container.querySelector('#cfg-batch-sync').checked
       },
@@ -565,10 +709,20 @@ export async function render(container, hash) {
       pixabay: {
         apiKey: container.querySelector('#cfg-pixabay-key').value.trim()
       },
+      elevenlabs: {
+        apiKey: container.querySelector('#cfg-elevenlabs-key').value.trim()
+      },
+      localTts: {
+        url: container.querySelector('#cfg-local-tts-url').value.trim()
+      },
       palette: nextPalette,
       textStyles: textStyles,
       masterFonts: masterFonts
     });
+
+    // Invalidate html-in-canvas capability cache so the new setting is picked
+    // up immediately without requiring a page reload.
+    import('../engine/capabilities.js').then(({ invalidate }) => invalidate('html-in-canvas', 'wicg-drawhtml'));
 
     showToast({ variant: 'success', title: 'Settings Saved', description: 'Preferences applied globally.' });
   };

@@ -42,7 +42,7 @@
  */
 
 /**
- * Map a pic-machina recipe's `inputType` field to the comma-separated
+ * Map a zumilabs-studio recipe's `inputType` field to the comma-separated
  * `allowed-types` attribute string consumed by <sidekick-manager>.
  *
  *   recipe.inputType  | allowed-types

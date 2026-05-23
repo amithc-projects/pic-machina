@@ -1,5 +1,5 @@
 /**
- * PicMachina — Time Range Strip Component (Phase 6)
+ * Zumilabs Studio — Time Range Strip Component (Phase 6)
  *
  * Renders an interactive time-range editor for video-effect nodes in NED.
  * Includes mode toggle (Standard/Freeze), numeric fields, easing selector,

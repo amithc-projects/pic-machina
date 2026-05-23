@@ -1,5 +1,5 @@
 /**
- * PicMachina — Capabilities & Requirements
+ * Zumilabs Studio — Capabilities & Requirements
  *
  * Centralises the logic for checking whether a transform's prerequisites are
  * met (e.g. a model has been downloaded, a Chrome flag is enabled).
@@ -44,13 +44,42 @@ const RESOLVERS = {
    *  always returns false until the user confirms manually. */
   'flag': async (_req) => false,
 
-  /** WICG experimental html-in-canvas capability */
+  /** WICG experimental html-in-canvas capability.
+   *
+   *  Chrome's drawElement is only present on context instances created from a
+   *  canvas that is attached to the DOM — it does NOT appear on
+   *  CanvasRenderingContext2D.prototype.  We must do a live probe:
+   *  create a minimal in-DOM canvas, get its 2D context, and test for the
+   *  method there.  Clean up immediately afterwards. */
   'html-in-canvas': async (_req) => {
-    return typeof CanvasRenderingContext2D !== 'undefined' && 
-      ('drawElement' in CanvasRenderingContext2D.prototype || 'drawHTML' in CanvasRenderingContext2D.prototype);
+    try {
+      // Manual override: user confirmed the flag is enabled via Settings
+      const { getSettings } = await import('../utils/settings.js');
+      if (getSettings().capabilities?.htmlInCanvasConfirmed) return true;
+
+      // Use typeof rather than 'in' — Chrome exposes drawElement as a
+      // non-enumerable own property on context instances, so the 'in'
+      // operator may miss it.  Also avoid opacity:0 — hyperframe.js notes
+      // that opacity on the canvas corrupts drawElement output, suggesting
+      // the browser gates the method behind compositing state.
+      const canvas = document.createElement('canvas');
+      canvas.width  = 4;
+      canvas.height = 4;
+      // Off-screen, not opacity:0 — matches how hyperframe.js sets up its canvas
+      canvas.style.cssText = 'position:fixed;top:-20px;left:-20px;pointer-events:none';
+      document.body.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+      const supported = !!(ctx &&
+        (typeof ctx.drawElement === 'function' ||
+         typeof ctx.drawHTML    === 'function'));
+      document.body.removeChild(canvas);
+      return supported;
+    } catch (_) {
+      return false;
+    }
   },
 
-  /** PicMachina Pro licence (mocked via settings for now) */
+  /** Zumilabs Studio Pro licence (mocked via settings for now) */
   'premium': async (req) => {
     const { getSettings } = await import('../utils/settings.js');
     const s = getSettings();
@@ -133,6 +162,13 @@ export async function checkRecipeAvailability(recipe) {
   const unmet = [...unmetMap.values()];
   return { available: unmet.length === 0, unmet };
 }
+
+// ─── Startup: invalidate html-in-canvas so the live probe always runs fresh ──
+// The prototype check returns false in current Chrome (drawElement only exists
+// on DOM-attached context instances), so we must never serve a stale cached
+// false across page loads.  Clearing it here costs one tiny DOM probe per
+// session instead of silently showing a false warning forever.
+_cache.delete('html-in-canvas:wicg-drawhtml');
 
 // ─── Cache invalidation ───────────────────────────────────
 

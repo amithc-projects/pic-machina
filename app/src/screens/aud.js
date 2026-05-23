@@ -1,3 +1,4 @@
+import { dbGet, dbPut } from '../data/db.js';
 import { isModelDownloaded } from '../data/models.js';
 import { createProject, openProject, saveProject, resolveMediaUrl, revokeMediaUrl, addRecentProject, getRecentProjects, openProjectFromHandle, getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
 
@@ -65,12 +66,44 @@ let currentAudioProject = null;
 let customVoices = [];
 let audioHistory = [];
 
+// Module-level model caches (persisting across screen re-renders)
+let kokoroTts = null;
+let kokoroReady = false;
+let cbWorker = null;
+let cbReady = false;
+let ptWorker = null;
+let ptReady = false;
+let elReady = false;
+let elevenLabsVoices = [];
+let localReady = false;
+let localTtsVoices = [];
+let previewAudio = null;
+
 export async function render(container, hash) {
+  if (!currentAudioProject || !currentAudioProjectDirHandle) {
+    try {
+      const activeRec = await dbGet('folders', 'active_audio_project');
+      if (activeRec && activeRec.handle) {
+        const dirHandle = activeRec.handle;
+        if (await verifyPermission(dirHandle)) {
+          const projectData = await openProjectFromHandle(dirHandle);
+          currentAudioProjectDirHandle = dirHandle;
+          currentAudioProject = projectData;
+          if (!currentAudioProject.voices) currentAudioProject.voices = [];
+          if (!currentAudioProject.history) currentAudioProject.history = [];
+          if (!currentAudioProject.script) currentAudioProject.script = '';
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to auto-restore active audio project:', e);
+    }
+  }
+
   if (!currentAudioProject || !currentAudioProjectDirHandle) {
     container.innerHTML = `
       <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%;">
         <div style="text-align:center;">
-           <h2 style="font-size:24px; margin-bottom:8px;">Speech Studio</h2>
+           <h2 style="font-size:24px; margin-bottom:8px;">Voice Studio</h2>
            <p class="text-muted" style="font-size:14px;">Select or create an audio project to get started.</p>
         </div>
         <div id="aud-workspace-root" style="width:100%; max-width:800px; display:flex; flex-direction:column; gap:16px;"></div>
@@ -172,6 +205,7 @@ export async function render(container, hash) {
              const file = await fileHandle.getFile();
              currentAudioProject = JSON.parse(await file.text());
              currentAudioProjectDirHandle = dirHandle;
+             await dbPut('folders', { key: 'active_audio_project', handle: dirHandle });
              render(container, hash);
           } catch(e) { alert(e.message); }
        };
@@ -188,6 +222,7 @@ export async function render(container, hash) {
                if (!currentAudioProject.history) currentAudioProject.history = [];
                if (!currentAudioProject.script) currentAudioProject.script = '';
                
+               await dbPut('folders', { key: 'active_audio_project', handle: p.dirHandle });
                // Re-hydrate media handles if needed in future
                render(container, hash);
              } catch(e) { alert('Could not open project.\nError: ' + e.message); }
@@ -200,91 +235,121 @@ export async function render(container, hash) {
   }
 
   container.innerHTML = `
-    <div class="screen aud-screen">
-      <div class="screen-header shrink-0">
-        <div class="screen-title">
-          <span class="material-symbols-outlined">record_voice_over</span>
-          Speech Studio
+    <style>
+      .hidden { display: none !important; }
+    </style>
+    <div class="screen aud-screen" style="display:flex; flex-direction:column; height:100%;">
+      <div class="screen-header shrink-0" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="flex items-center gap-4">
+          <div class="screen-title flex items-center gap-2">
+            <span class="material-symbols-outlined text-[var(--ps-blue)]">record_voice_over</span>
+            <span>Voice Studio</span>
+          </div>
+          <div class="flex gap-2">
+            <button id="aud-tab-dialogue" class="btn-primary btn-sm">Dialogue Studio</button>
+            <button id="aud-tab-voicecraft" class="btn-secondary btn-sm">VoiceCraft (Custom Voices)</button>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <button id="aud-tab-dialogue" class="btn-primary">Dialogue Studio</button>
-          <button id="aud-tab-voicecraft" class="btn-secondary">VoiceCraft (Custom Voices)</button>
-        </div>
+        <button id="aud-btn-close-project" class="btn-secondary btn-sm" style="display: flex; align-items: center; gap: 4px;">
+          <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+          Close Project
+        </button>
       </div>
       
       <!-- Dialogue Studio Tab -->
-      <div id="aud-view-dialogue" class="flex-1 p-6" style="display: flex; flex-direction: column; min-height: 0;">
-        <div style="display: flex; gap: 1.5rem; flex: 1; min-height: 0;">
-          
-          <!-- Section 1: Input & Model Choice -->
-          <div style="flex: 1; background-color: var(--ps-bg-surface, #1e1e1e); border: 1px solid var(--ps-border, #333); border-radius: 0.5rem; padding: 1.5rem; display: flex; flex-direction: column; min-height: 0;">
-            <div class="flex flex-col h-full overflow-y-auto" style="padding-right: 0.5rem;">
-            <h2 class="text-lg font-bold mb-4">1. Script & Engine</h2>
-            
-            <div class="mb-4">
+      <div id="aud-view-dialogue" class="panel-layout flex-1" style="display: flex; min-height: 0; height: 100%;">
+        
+        <!-- Left Panel: Engine Selection & Speaker Mapping -->
+        <div class="panel-left" style="width: 320px; min-width: 320px; border-right: 1px solid var(--ps-border); background: var(--ps-bg-surface);">
+          <div class="panel-header">
+            <span class="panel-header-title">1. Setup & Mapping</span>
+          </div>
+          <div class="panel-body flex flex-col gap-4 overflow-y-auto" style="padding: 16px;">
+            <div>
               <label class="ic-label">Project Title</label>
-              <input type="text" id="aud-input-title" class="ic-input" placeholder="e.g. Explainer Video Voiceover">
+              <input type="text" id="aud-input-title" class="ic-input" placeholder="e.g. Explainer Video Voiceover" style="margin-top: 4px;">
             </div>
 
-            <div class="mb-4">
-              <label class="ic-label">Engines</label>
-              <div class="flex flex-col gap-2 mt-1">
+            <div>
+              <label class="ic-label">Speech Engines</label>
+              <div class="flex flex-col gap-2 mt-2">
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-kokoro" class="accent-[var(--ps-blue)]">
-                  <span>Kokoro TTS (Fast, standard voices)</span>
+                  <span>Kokoro TTS (Fast, standard)</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-cb" class="accent-[var(--ps-blue)]">
-                  <span>Chatterbox VoiceCraft (Zero-shot cloning)</span>
+                  <span>Chatterbox (Zero-shot cloning)</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-pt" class="accent-[var(--ps-blue)]">
-                  <span>Pocket TTS (Fast voice cloning, ~100 MB)</span>
+                  <span>Pocket TTS (Local clone, ~100MB)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                  <input type="checkbox" id="aud-check-el" class="accent-[var(--ps-blue)]">
+                  <span>Eleven Labs (Cloud, high-quality)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                  <input type="checkbox" id="aud-check-local" class="accent-[var(--ps-blue)]">
+                  <span>Local TTS Gateway (Self-hosted)</span>
                 </label>
               </div>
-              <div id="aud-engine-status" class="text-xs text-[var(--ps-blue)] mt-2 h-4"></div>
+              <div id="aud-engine-status" class="text-xs text-[var(--ps-blue)] mt-2 min-h-4"></div>
               <progress id="aud-engine-progress" class="w-full hidden mt-1 h-1.5 rounded overflow-hidden" value="0" max="100"></progress>
             </div>
 
-            <div class="flex-1 flex flex-col min-h-0">
-              <div class="flex justify-between items-end mb-1 shrink-0">
-                <label class="ic-label">Script (Text or SRT/VTT)</label>
-                <div class="flex gap-2">
-                  <button id="aud-btn-load-sample" class="btn-ghost" style="padding: 2px 6px; font-size: 12px;">Load Sample</button>
-                  <button id="aud-btn-upload-script" class="btn-secondary" style="padding: 2px 6px; font-size: 12px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span> Import Captions</button>
-                </div>
-                <input type="file" id="aud-input-upload-script" style="display: none" accept=".txt,.srt,.vtt,.md">
+            <!-- Divider -->
+            <div style="border-top: 1px solid var(--ps-border); margin: 8px 0;"></div>
+
+            <!-- Speaker Mapping -->
+            <div id="aud-section-mapping" class="opacity-50 pointer-events-none transition-opacity duration-300 flex-1 flex flex-col min-h-0">
+              <label class="ic-label mb-2">2. Speaker Mapping</label>
+              <div id="aud-speaker-list" class="flex-1 flex flex-col gap-3 overflow-y-auto min-h-[100px] pr-1">
+                <div class="text-sm text-muted">Click 'Parse Speakers' to detect speakers.</div>
               </div>
-              <textarea id="aud-input" class="ic-input" style="flex: 1; resize: none; font-family: monospace; padding: 12px;" placeholder="[Narrator]: Welcome to Speech Studio.&#10;[Dwight]: You can paste multiple speakers here!"></textarea>
-            </div>
-            
-            <button id="aud-btn-parse" class="btn-primary mt-4 w-full" style="justify-content: center;">Parse Speakers</button>
             </div>
           </div>
+        </div>
 
-          <!-- Section 2: Speaker Mapping & Generate -->
-          <div id="aud-section-mapping" class="opacity-50 pointer-events-none transition-opacity duration-300" style="flex: 1; background-color: var(--ps-bg-surface, #1e1e1e); border: 1px solid var(--ps-border, #333); border-radius: 0.5rem; padding: 1.5rem; display: flex; flex-direction: column; min-height: 0;">
-            <h2 class="text-lg font-bold mb-4 shrink-0">2. Speaker Mapping</h2>
-            
-            <div id="aud-speaker-list" class="flex-1 flex flex-col gap-3 mb-6 overflow-y-auto min-h-[50px]" style="padding-right: 0.5rem;">
-              <div class="text-sm text-muted">Click 'Parse Speakers' to detect speakers.</div>
+        <!-- Center Panel: Large Transcript Editor -->
+        <div class="panel-center" style="flex: 1; display: flex; flex-direction: column; background: var(--ps-bg-app); border-right: 1px solid var(--ps-border);">
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="panel-header-title">Script Editor</span>
+            <div class="flex gap-2">
+              <button id="aud-btn-load-sample" class="btn-ghost btn-sm" style="font-size: 11px;">Load Sample</button>
+              <button id="aud-btn-upload-script" class="btn-secondary btn-sm" style="font-size: 11px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span> Import Captions</button>
             </div>
-
-            <div class="shrink-0 pt-4 border-t border-[var(--ps-border)]">
-              <button id="aud-btn-generate" class="btn-primary w-full" style="justify-content: center;" disabled title="Waiting for models...">Generate Audio</button>
-              <div id="aud-generate-status" class="text-xs text-muted mt-2 text-center h-4"></div>
-              <progress id="aud-generate-progress" class="w-full hidden mt-2 h-1.5 rounded overflow-hidden" value="0" max="100"></progress>
+            <input type="file" id="aud-input-upload-script" style="display: none" accept=".txt,.srt,.vtt,.md">
+          </div>
+          <div class="panel-body flex flex-col gap-4" style="flex: 1; padding: 16px; min-height: 0; justify-content: space-between;">
+            <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+              <textarea id="aud-input" class="ic-input" style="flex: 1; width: 100%; min-height: 250px; font-family: monospace; padding: 16px; font-size: 14px; line-height: 1.5; resize: vertical; background: var(--ps-bg-surface); border: 1px solid var(--ps-border);" placeholder="[Narrator]: Welcome to Voice Studio.&#10;[Dwight]: You can paste multiple speakers here!"></textarea>
+            </div>
+            
+            <div class="flex flex-col gap-3 shrink-0 pt-2">
+              <button id="aud-btn-parse" class="btn-primary w-full" style="justify-content: center; height: 40px; font-weight: 600;">Parse Speakers</button>
+              
+              <div id="aud-generate-container" class="opacity-50 pointer-events-none transition-opacity duration-300">
+                <button id="aud-btn-generate" class="btn-primary w-full" style="justify-content: center; height: 44px; font-weight: 600;" disabled title="Waiting for models...">Generate Audio</button>
+                <div id="aud-generate-status" class="text-xs text-muted mt-2 text-center min-h-4"></div>
+                <progress id="aud-generate-progress" class="w-full hidden mt-2 h-1.5 rounded overflow-hidden" value="0" max="100"></progress>
+              </div>
             </div>
           </div>
+        </div>
 
-          <!-- Section 3: Output History -->
-          <div id="aud-section-output" class="opacity-50 pointer-events-none transition-opacity duration-300" style="flex: 1; background-color: var(--ps-bg-surface, #1e1e1e); border: 1px solid var(--ps-border, #333); border-radius: 0.5rem; padding: 1.5rem; display: flex; flex-direction: column; min-height: 0;">
-            <h2 class="text-lg font-bold mb-4 shrink-0">3. Output History</h2>
-            <div id="aud-history-list" class="flex-1 flex flex-col gap-4 overflow-y-auto min-h-0" style="padding-right: 0.5rem;">
+        <!-- Right Panel: Output History -->
+        <div id="aud-section-output" class="panel-right opacity-50 pointer-events-none transition-opacity duration-300" style="width: 360px; min-width: 360px; background: var(--ps-bg-surface);">
+          <div class="panel-header">
+            <span class="panel-header-title">3. Output History</span>
+          </div>
+          <div class="panel-body flex flex-col gap-4 overflow-y-auto" style="padding: 16px;">
+            <div id="aud-history-list" class="flex-1 flex flex-col gap-4">
               <div class="text-sm text-muted" id="aud-history-empty">No audio generated in this session yet.</div>
             </div>
           </div>
         </div>
+
       </div>
 
       <!-- VoiceCraft Tab -->
@@ -338,6 +403,8 @@ export async function render(container, hash) {
   const checkKokoro = container.querySelector('#aud-check-kokoro');
   const checkCb = container.querySelector('#aud-check-cb');
   const checkPt = container.querySelector('#aud-check-pt');
+  const checkEl = container.querySelector('#aud-check-el');
+  const checkLocal = container.querySelector('#aud-check-local');
   const engineStatusEl = container.querySelector('#aud-engine-status');
   const engineProgressEl = container.querySelector('#aud-engine-progress');
 
@@ -350,6 +417,7 @@ export async function render(container, hash) {
   const generateBtn = container.querySelector('#aud-btn-generate');
   const genStatusEl = container.querySelector('#aud-generate-status');
   const genProgressEl = container.querySelector('#aud-generate-progress');
+  const generateContainerEl = container.querySelector('#aud-generate-container');
   
   const sectionMappingEl = container.querySelector('#aud-section-mapping');
   const sectionOutputEl = container.querySelector('#aud-section-output');
@@ -365,13 +433,10 @@ export async function render(container, hash) {
   let detectedSpeakers = [];
   let parsedSegments = [];
   
-  // Model Caching
-  let kokoroTts = null;
-  let kokoroReady = false;
-  let cbWorker = null;
-  let cbReady = false;
-  let ptWorker = null;
-  let ptReady = false;
+  // Model Caching (using module-level caches)
+
+  const cleanupVisualizers = [];
+  const activeVisualizerAnims = [];
 
   async function renderHistory() {
      if (!audioHistory || audioHistory.length === 0) {
@@ -392,7 +457,10 @@ export async function render(container, hash) {
                <span class="font-bold text-[var(--ps-text)]">${hist.title}</span>
                <span class="text-xs text-muted">${hist.durationSecs}s • ${hist.speakerCount} speaker(s)</span>
              </div>
-             ${wavUrl ? `<audio controls class="w-full h-10 outline-none" src="${wavUrl}"></audio>` : '<div class="text-xs text-danger">Missing file</div>'}
+             <div class="flex gap-2 items-center">
+               ${wavUrl ? `<audio controls class="flex-1 h-10 outline-none" src="${wavUrl}"></audio>` : '<div class="text-xs text-danger">Missing file</div>'}
+               ${wavUrl ? `<canvas class="aud-hist-visualizer" width="80" height="40" style="border-radius: 4px; background: rgba(0,0,0,0.15); width: 80px; height: 40px; flex-shrink: 0;"></canvas>` : ''}
+             </div>
              <div class="flex gap-2 mt-1">
                ${wavUrl ? `<a href="${wavUrl}" download="${hist.title}.wav" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .wav</a>` : ''}
                ${mp3Url ? `<a href="${mp3Url}" download="${hist.title}.mp3" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .mp3</a>` : ''}
@@ -400,44 +468,69 @@ export async function render(container, hash) {
            </div>
          `;
      }
-     if(historyListEl) historyListEl.innerHTML = html;
+     if(historyListEl) {
+         historyListEl.innerHTML = html;
+         initHistoryVisualizers();
+     }
   }
 
   function executeWorkerTask(worker, type, payload, statusEl, progressEl) {
-      return new Promise((resolve, reject) => {
-          const handler = (e) => {
-              const res = e.data;
-              if (res.type === 'error') {
-                  worker.removeEventListener('message', handler);
-                  reject(new Error(res.payload));
-              } else if (res.type === 'progress') {
-                  const prog = res.payload;
-                  if (prog.status === 'download') {
-                      if (statusEl) statusEl.textContent = `Downloading ${prog.name}...`;
-                      if (progressEl && prog.total) {
-                          progressEl.classList.remove('hidden');
-                          progressEl.value = (prog.loaded / prog.total) * 100;
-                      }
-                  } else if (prog.status === 'done') {
-                      if (statusEl) statusEl.innerHTML = `<span class="animate-pulse" style="display: inline-block; background-color: #fbbf24; color: #000; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 0.75rem;">Loaded ${prog.name}. Compiling sessions...</span>`;
-                      if (progressEl) {
-                          progressEl.classList.remove('hidden');
-                          progressEl.removeAttribute('value');
-                      }
-                  } else if (prog.status === 'encoding_speaker') {
-                      if (statusEl) statusEl.textContent = `Encoding speaker...`;
-                  } else if (prog.status === 'generating') {
-                      if (statusEl) statusEl.textContent = `Generating audio...`;
-                  }
-              } else if (res.type === `${type}:complete`) {
-                  worker.removeEventListener('message', handler);
-                  resolve(res.payload);
-              }
-          };
-          worker.addEventListener('message', handler);
-          worker.postMessage({ type, payload });
-      });
-  }
+       return new Promise((resolve, reject) => {
+           const handler = (e) => {
+               const res = e.data;
+               if (res.type === 'error') {
+                   worker.removeEventListener('message', handler);
+                   reject(new Error(res.payload));
+               } else if (res.type === 'progress') {
+                   const prog = res.payload;
+                   if (prog.status === 'download' || prog.status === 'downloading' || prog.status === 'progress') {
+                       const name = prog.name || prog.file || 'model weights';
+                       let text = `Downloading ${name}...`;
+                       if (prog.loaded && prog.total) {
+                           const loadedMB = (prog.loaded / (1024 * 1024)).toFixed(1);
+                           const totalMB = (prog.total / (1024 * 1024)).toFixed(1);
+                           text = `Downloading ${name} (${loadedMB} / ${totalMB} MB)...`;
+                       }
+                       if (statusEl) statusEl.textContent = text;
+                       if (progressEl) {
+                           progressEl.classList.remove('hidden');
+                           if (prog.total) {
+                               progressEl.value = (prog.loaded / prog.total) * 100;
+                           } else if (prog.progress) {
+                               progressEl.value = prog.progress;
+                           }
+                       }
+                   } else if (prog.status === 'loading_model') {
+                       const file = prog.file || '';
+                       if (statusEl) statusEl.textContent = `Loading ${file} (${prog.loaded + 1} / ${prog.total})...`;
+                       if (progressEl && prog.total) {
+                           progressEl.classList.remove('hidden');
+                           progressEl.value = ((prog.loaded + 1) / prog.total) * 100;
+                       }
+                   } else if (prog.status === 'loading_config' || prog.status === 'loading_tokenizer' || prog.status === 'loading_bos') {
+                       if (statusEl) statusEl.textContent = `Initializing: ${prog.status.replace('loading_', '')}...`;
+                   } else if (prog.status === 'done') {
+                       if (statusEl) statusEl.innerHTML = `<span class="animate-pulse" style="display: inline-block; background-color: #fbbf24; color: #000; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 0.75rem;">Loaded ${prog.name || ''}. Compiling sessions...</span>`;
+                       if (progressEl) {
+                           progressEl.classList.remove('hidden');
+                           progressEl.removeAttribute('value');
+                       }
+                   } else if (prog.status === 'encoding_speaker') {
+                       if (statusEl) statusEl.textContent = `Encoding speaker...`;
+                   } else if (prog.status === 'generating') {
+                       if (statusEl) statusEl.textContent = `Generating audio...`;
+                   } else if (prog.status === 'tokenizing' || prog.status === 'encoding_text' || prog.status === 'encoding_voice' || prog.status === 'synthesizing' || prog.status === 'decoding') {
+                       if (statusEl) statusEl.textContent = `${prog.status.replace('_', ' ')}...`;
+                   }
+               } else if (res.type === `${type}:complete`) {
+                   worker.removeEventListener('message', handler);
+                   resolve(res.payload);
+               }
+           };
+           worker.addEventListener('message', handler);
+           worker.postMessage({ type, payload });
+       });
+   }
 
   const KOKORO_OPTIONS = [
     { label: 'af_heart (American Female)', value: 'af_heart' },
@@ -501,6 +594,16 @@ export async function render(container, hash) {
     return float32;
   }
 
+  const btnCloseProject = container.querySelector('#aud-btn-close-project');
+  if (btnCloseProject) {
+    btnCloseProject.onclick = async () => {
+      await dbPut('folders', { key: 'active_audio_project', handle: null });
+      currentAudioProject = null;
+      currentAudioProjectDirHandle = null;
+      render(container, hash);
+    };
+  }
+
   tabDialogue.addEventListener('click', () => {
     tabDialogue.className = 'btn-primary';
     tabVoicecraft.className = 'btn-secondary';
@@ -521,6 +624,8 @@ export async function render(container, hash) {
   async function loadCustomVoices() {
     customVoices = currentAudioProject.voices || [];
     await renderCustomVoices();
+    renderSpeakerList();
+    updateGenerateButtonState();
   }
 
   async function renderCustomVoices() {
@@ -646,6 +751,7 @@ export async function render(container, hash) {
 
   inputEl.addEventListener('input', () => {
     sectionMappingEl.classList.add('opacity-50', 'pointer-events-none');
+    if (generateContainerEl) generateContainerEl.classList.add('opacity-50', 'pointer-events-none');
     generateBtn.disabled = true;
   });
 
@@ -654,8 +760,10 @@ export async function render(container, hash) {
     const isKokoroChecked = checkKokoro.checked;
     const isCbChecked = checkCb.checked;
     const isPtChecked = checkPt.checked;
+    const isElChecked = checkEl.checked;
+    const isLocalChecked = checkLocal.checked;
 
-    if (!isKokoroChecked && !isCbChecked && !isPtChecked) {
+    if (!isKokoroChecked && !isCbChecked && !isPtChecked && !isElChecked && !isLocalChecked) {
       generateBtn.disabled = true;
       generateBtn.title = "Select at least one engine above.";
       return;
@@ -666,10 +774,20 @@ export async function render(container, hash) {
       return;
     }
 
+    const requiresCustomVoiceOnly = (isCbChecked || isPtChecked) && !isKokoroChecked && !isElChecked && !isLocalChecked;
+    if (requiresCustomVoiceOnly && customVoices.length === 0) {
+      generateBtn.disabled = true;
+      generateBtn.title = "Chatterbox/Pocket TTS requires at least one custom voice. Add one in the VoiceCraft tab.";
+      generateBtn.textContent = "Voice Sample Required";
+      return;
+    }
+
     let isWaiting = false;
     if (isKokoroChecked && !kokoroReady) isWaiting = true;
     if (isCbChecked && !cbReady) isWaiting = true;
     if (isPtChecked && !ptReady) isWaiting = true;
+    if (isElChecked && !elReady) isWaiting = true;
+    if (isLocalChecked && !localReady) isWaiting = true;
 
     if (isWaiting) {
       generateBtn.disabled = true;
@@ -716,6 +834,32 @@ export async function render(container, hash) {
           ptWorker.modelLoaded = true;
         }
         ptReady = true;
+      } else if (type === 'el') {
+        const { getSettings } = await import('../utils/settings.js');
+        const s = getSettings();
+        const apiKey = s.elevenlabs?.apiKey;
+        if (!apiKey) throw new Error('Eleven Labs API Key is not configured. Please add it in Settings.');
+        
+        engineStatusEl.textContent = 'Fetching Eleven Labs voices...';
+        const response = await fetch('https://api.elevenlabs.io/v1/voices', {
+          headers: { 'xi-api-key': apiKey }
+        });
+        if (!response.ok) throw new Error(`Eleven Labs HTTP error: ${response.status}`);
+        const data = await response.json();
+        elevenLabsVoices = data.voices || [];
+        elReady = true;
+      } else if (type === 'local') {
+        const { getSettings } = await import('../utils/settings.js');
+        const s = getSettings();
+        const gatewayUrl = s.localTts?.url?.trim();
+        if (!gatewayUrl) throw new Error('Local TTS Gateway URL is not configured. Please add it in Settings.');
+
+        engineStatusEl.textContent = 'Fetching local voices...';
+        const response = await fetch(`${gatewayUrl.endsWith('/') ? gatewayUrl : gatewayUrl + '/' }voices`);
+        if (!response.ok) throw new Error(`Local gateway HTTP error: ${response.status}`);
+        const data = await response.json();
+        localTtsVoices = data || [];
+        localReady = true;
       }
 
       engineStatusEl.textContent = '';
@@ -726,6 +870,8 @@ export async function render(container, hash) {
       if (type === 'kokoro') checkKokoro.checked = false;
       if (type === 'cb') checkCb.checked = false;
       if (type === 'pt') checkPt.checked = false;
+      if (type === 'el') checkEl.checked = false;
+      if (type === 'local') checkLocal.checked = false;
     }
     updateGenerateButtonState();
     renderSpeakerList();
@@ -746,8 +892,45 @@ export async function render(container, hash) {
     else { updateGenerateButtonState(); renderSpeakerList(); }
   });
 
+  checkEl.addEventListener('change', () => {
+    if (checkEl.checked && !elReady) loadEngine('el');
+    else { updateGenerateButtonState(); renderSpeakerList(); }
+  });
+
+  checkLocal.addEventListener('change', () => {
+    if (checkLocal.checked && !localReady) loadEngine('local');
+    else { updateGenerateButtonState(); renderSpeakerList(); }
+  });
+
   function renderSpeakerList() {
     if (detectedSpeakers.length === 0) return;
+
+    const isCbChecked = checkCb.checked;
+    const isPtChecked = checkPt.checked;
+    const isKokoroChecked = checkKokoro.checked;
+    const isElChecked = checkEl.checked;
+
+    if (!isCbChecked && !isPtChecked && !isKokoroChecked && !isElChecked && !checkLocal.checked) {
+      speakerListEl.innerHTML = `<div class="p-3 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded text-sm text-muted">Please select an engine above to map speakers.</div>`;
+      return;
+    }
+
+    const requiresCustomVoice = (isCbChecked || isPtChecked) && !isKokoroChecked && !isElChecked && !checkLocal.checked;
+    if (requiresCustomVoice && customVoices.length === 0) {
+      speakerListEl.innerHTML = `
+        <div class="p-4 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded flex flex-col gap-2 m-1">
+          <div class="flex items-center gap-2 text-[var(--ps-orange)] font-bold text-sm">
+            <span class="material-symbols-outlined">warning</span>
+            <span>Custom Voice Required</span>
+          </div>
+          <div class="text-xs text-[var(--ps-text)] leading-relaxed">
+            ${isCbChecked ? 'Chatterbox' : 'Pocket TTS'} requires at least one custom voice sample to clone.
+            Please add a voice sample in the <a href="#" class="aud-link-to-voicecraft text-[var(--ps-blue)] hover:underline font-semibold">VoiceCraft (Custom Voices) tab</a> first.
+          </div>
+        </div>
+      `;
+      return;
+    }
 
     speakerListEl.innerHTML = detectedSpeakers.map((spk, i) => {
       const spkLower = spk.toLowerCase();
@@ -764,13 +947,29 @@ export async function render(container, hash) {
         autoMatchedKk = KOKORO_OPTIONS.find(opt => opt.label.toLowerCase().includes(spkLower) || spkLower.includes(opt.label.toLowerCase()));
       }
 
+      // If no CB or KK match, Auto-match Eleven Labs
+      let autoMatchedEl = null;
+      if (!autoMatchedCb && !autoMatchedKk && checkEl.checked && elevenLabsVoices.length > 0) {
+        autoMatchedEl = elevenLabsVoices.find(v => v.name.toLowerCase().includes(spkLower) || spkLower.includes(v.name.toLowerCase()));
+      }
+
+      // If no CB, KK, or EL match, Auto-match Local Voices
+      let autoMatchedLocal = null;
+      if (!autoMatchedCb && !autoMatchedKk && !autoMatchedEl && checkLocal.checked && localTtsVoices.length > 0) {
+        autoMatchedLocal = localTtsVoices.find(v => v.name.toLowerCase().includes(spkLower) || spkLower.includes(v.name.toLowerCase()));
+      }
+
       // Determine default
       let defaultSelection = '';
       if (autoMatchedCb) defaultSelection = `cb_${autoMatchedCb.id}`;
       else if (autoMatchedKk) defaultSelection = `kk_${autoMatchedKk.value}`;
+      else if (autoMatchedEl) defaultSelection = `el_${autoMatchedEl.voice_id}`;
+      else if (autoMatchedLocal) defaultSelection = `local_${autoMatchedLocal.id}`;
       else if (checkKokoro.checked) defaultSelection = `kk_${KOKORO_OPTIONS[i % KOKORO_OPTIONS.length].value}`;
       else if (checkCb.checked && customVoices.length > 0) defaultSelection = `cb_${customVoices[0].id}`;
       else if (checkPt.checked) defaultSelection = `pp_${POCKET_TTS_PRESETS[i % POCKET_TTS_PRESETS.length].id}`;
+      else if (checkEl.checked && elevenLabsVoices.length > 0) defaultSelection = `el_${elevenLabsVoices[0].voice_id}`;
+      else if (checkLocal.checked && localTtsVoices.length > 0) defaultSelection = `local_${localTtsVoices[0].id}`;
 
       let customOptionsHtml = '';
       if (checkCb.checked && customVoices.length > 0) {
@@ -788,18 +987,46 @@ export async function render(container, hash) {
         kokoroOptionsHtml = `<optgroup label="Standard (Kokoro)">${KOKORO_OPTIONS.map(opt => `<option value="kk_${opt.value}" ${defaultSelection === `kk_${opt.value}` ? 'selected' : ''}>${opt.label}</option>`).join('')}</optgroup>`;
       }
 
-      if (!customOptionsHtml && !kokoroOptionsHtml) {
+      let elevenLabsOptionsHtml = '';
+      if (checkEl.checked && elevenLabsVoices.length > 0) {
+        elevenLabsOptionsHtml = `<optgroup label="Eleven Labs">${elevenLabsVoices.map(v => `<option value="el_${v.voice_id}" ${defaultSelection === `el_${v.voice_id}` ? 'selected' : ''}>${v.name}</option>`).join('')}</optgroup>`;
+      }
+
+      let localOptionsHtml = '';
+      if (checkLocal.checked && localTtsVoices.length > 0) {
+        const engines = {};
+        localTtsVoices.forEach(v => {
+          const eng = v.engine || 'Local Server';
+          if (!engines[eng]) engines[eng] = [];
+          engines[eng].push(v);
+        });
+        
+        Object.entries(engines).forEach(([engName, voices]) => {
+          localOptionsHtml += `<optgroup label="Local (${engName})">`;
+          voices.forEach(v => {
+            localOptionsHtml += `<option value="local_${v.id}" ${defaultSelection === `local_${v.id}` ? 'selected' : ''}>${v.name}</option>`;
+          });
+          localOptionsHtml += `</optgroup>`;
+        });
+      }
+
+      if (!customOptionsHtml && !kokoroOptionsHtml && !elevenLabsOptionsHtml && !localOptionsHtml) {
         return `<div class="p-3 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded text-sm text-muted">Please select an engine above to map speaker: <b>${spk}</b></div>`;
       }
 
       return `
         <div class="flex flex-col gap-2 p-3 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-sm text-[var(--ps-text)]">${spk}</span>
-            <select class="aud-voice-select bg-[var(--ps-bg-surface)] border border-[var(--ps-border)] rounded text-xs px-2 py-1 outline-none" data-speaker="${spk}">
+          <div class="font-bold text-sm text-[var(--ps-text)]">${spk}</div>
+          <div class="flex items-center gap-2">
+            <select class="aud-voice-select bg-[var(--ps-bg-surface)] border border-[var(--ps-border)] rounded text-xs px-2 py-1 outline-none flex-1 min-w-0" data-speaker="${spk}">
               ${customOptionsHtml}
               ${kokoroOptionsHtml}
+              ${elevenLabsOptionsHtml}
+              ${localOptionsHtml}
             </select>
+            <button class="aud-voice-preview-btn btn btn-secondary p-1 flex items-center justify-center" title="Preview Voice" data-speaker="${spk}" style="width: 28px; height: 28px; min-width: 28px; border-radius: 4px;">
+              <span class="material-symbols-outlined text-sm">volume_up</span>
+            </button>
           </div>
           <div class="flex items-center gap-2 mt-1">
              <span class="text-xs text-muted w-14">Emotion:</span>
@@ -809,6 +1036,118 @@ export async function render(container, hash) {
       `;
     }).join('');
   }
+
+  speakerListEl.addEventListener('click', async (e) => {
+    if (e.target && e.target.classList.contains('aud-link-to-voicecraft')) {
+      e.preventDefault();
+      tabVoicecraft.click();
+      return;
+    }
+
+    const btn = e.target.closest('.aud-voice-preview-btn');
+    if (!btn) return;
+    
+    const speaker = btn.dataset.speaker;
+    const selectEl = speakerListEl.querySelector(`.aud-voice-select[data-speaker="${speaker}"]`);
+    if (!selectEl) return;
+    
+    const voiceId = selectEl.value;
+    if (!voiceId) return;
+
+    btn.disabled = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">refresh</span>';
+
+    try {
+      if (previewAudio) {
+        previewAudio.pause();
+        previewAudio = null;
+      }
+
+      if (voiceId.startsWith('el_')) {
+        const elVoiceId = voiceId.substring(3);
+        const voice = elevenLabsVoices.find(v => v.voice_id === elVoiceId);
+        if (voice && voice.preview_url) {
+          const resp = await fetch(voice.preview_url);
+          if (!resp.ok) throw new Error(`Failed to download preview: HTTP ${resp.status}`);
+          const blob = await resp.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          previewAudio = new Audio(blobUrl);
+          previewAudio.onended = () => { URL.revokeObjectURL(blobUrl); };
+          await previewAudio.play();
+        } else {
+          throw new Error('No preview URL available for this Eleven Labs voice.');
+        }
+      } else if (voiceId.startsWith('cb_') || voiceId.startsWith('pt_')) {
+        const dbId = voiceId.substring(3);
+        const customRec = customVoices.find(c => c.id === dbId);
+        if (customRec) {
+          const refBlobUrl = await resolveMediaUrl(customRec.filename, currentAudioProjectDirHandle);
+          previewAudio = new Audio(refBlobUrl);
+          previewAudio.onended = () => { revokeMediaUrl(refBlobUrl); };
+          await previewAudio.play();
+        } else {
+          throw new Error('Custom voice reference file not found.');
+        }
+      } else if (voiceId.startsWith('pp_')) {
+        const presetId = voiceId.substring(3);
+        const preset = POCKET_TTS_PRESETS.find(p => p.id === presetId);
+        if (preset && preset.url) {
+          previewAudio = new Audio(preset.url);
+          await previewAudio.play();
+        } else {
+          throw new Error('Pocket TTS preset URL not found.');
+        }
+      } else if (voiceId.startsWith('kk_')) {
+        if (!kokoroReady) {
+          throw new Error('Please enable and load the Kokoro engine first to preview this voice.');
+        }
+        const v = voiceId.substring(3);
+        const out = await kokoroTts.generate("Kokoro voice preview", { voice: v });
+        const wavBlob = audioBufferToWav(out.audio, 24000);
+        const blobUrl = URL.createObjectURL(wavBlob);
+        previewAudio = new Audio(blobUrl);
+        previewAudio.onended = () => { URL.revokeObjectURL(blobUrl); };
+        await previewAudio.play();
+      } else if (voiceId.startsWith('local_')) {
+        const localVoiceId = voiceId.substring(6);
+        const voice = localTtsVoices.find(v => v.id === localVoiceId);
+        if (voice) {
+          const { getSettings } = await import('../utils/settings.js');
+          const s = getSettings();
+          const gatewayUrl = s.localTts?.url?.trim();
+          if (!gatewayUrl) throw new Error('Local TTS Gateway URL is not configured.');
+
+          let previewUrl = voice.preview_url;
+          if (previewUrl && !previewUrl.startsWith('http://') && !previewUrl.startsWith('https://')) {
+            const p = previewUrl.startsWith('/') ? previewUrl.substring(1) : previewUrl;
+            const base = gatewayUrl.endsWith('/') ? gatewayUrl : gatewayUrl + '/';
+            previewUrl = base + p;
+          }
+
+          if (previewUrl) {
+            const resp = await fetch(previewUrl);
+            if (!resp.ok) throw new Error(`Failed to download local preview: HTTP ${resp.status}`);
+            const blob = await resp.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            previewAudio = new Audio(blobUrl);
+            previewAudio.onended = () => { URL.revokeObjectURL(blobUrl); };
+            await previewAudio.play();
+          } else {
+            throw new Error('No preview URL available for this local voice.');
+          }
+        } else {
+          throw new Error('Local voice reference not found.');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  });
 
   parseBtn.addEventListener('click', async () => {
     const text = inputEl.value.trim();
@@ -851,6 +1190,7 @@ export async function render(container, hash) {
     }
 
     sectionMappingEl.classList.remove('opacity-50', 'pointer-events-none');
+    if (generateContainerEl) generateContainerEl.classList.remove('opacity-50', 'pointer-events-none');
     renderSpeakerList();
     updateGenerateButtonState();
   });
@@ -859,7 +1199,8 @@ export async function render(container, hash) {
     try {
       generateBtn.disabled = true;
       generateBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm mr-2">refresh</span> Generating...';
-      genProgressEl.classList.add('hidden');
+      genProgressEl.classList.remove('hidden');
+      genProgressEl.value = 0;
       genStatusEl.textContent = 'Preparing generation...';
       
       // Un-gray section 3
@@ -894,6 +1235,7 @@ export async function render(container, hash) {
       let totalSamples = 0;
 
       for (let i = 0; i < parsedSegments.length; i++) {
+        genProgressEl.value = (i / parsedSegments.length) * 100;
         const seg = parsedSegments[i];
         genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length}...`;
         
@@ -980,6 +1322,24 @@ export async function render(container, hash) {
           }, genStatusEl, genProgressEl);
 
           audioData = new Float32Array(waveform);
+        } else if (voiceId.startsWith('el_')) {
+          if (!elReady) throw new Error('Eleven Labs engine is not ready.');
+          const { getSettings } = await import('../utils/settings.js');
+          const s = getSettings();
+          const apiKey = s.elevenlabs?.apiKey;
+          if (!apiKey) throw new Error('Eleven Labs API Key is not configured. Please add it in Settings.');
+          const elVoiceId = voiceId.substring(3);
+          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Eleven Labs)...`;
+          audioData = await generateElevenLabsAudio(seg.text, elVoiceId, apiKey);
+        } else if (voiceId.startsWith('local_')) {
+          if (!localReady) throw new Error('Local TTS engine is not ready.');
+          const { getSettings } = await import('../utils/settings.js');
+          const s = getSettings();
+          const gatewayUrl = s.localTts?.url?.trim();
+          if (!gatewayUrl) throw new Error('Local TTS Gateway URL is not configured. Please add it in Settings.');
+          const localVoiceId = voiceId.substring(6);
+          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Local TTS Gateway)...`;
+          audioData = await generateLocalTtsAudio(seg.text, localVoiceId, gatewayUrl);
         }
 
         if (audioData) {
@@ -988,6 +1348,7 @@ export async function render(container, hash) {
         }
       }
 
+      genProgressEl.value = 100;
       genStatusEl.textContent = 'Compiling final audio...';
 
       const combinedAudio = new Float32Array(totalSamples);
@@ -1036,7 +1397,10 @@ export async function render(container, hash) {
           <span class="font-bold text-[var(--ps-text)]">${inputTitle}</span>
           <span class="text-xs text-muted">${durationSecs}s • ${detectedSpeakers.length} speaker(s)</span>
         </div>
-        <audio controls class="w-full h-10 outline-none" src="${wavUrl}"></audio>
+        <div class="flex gap-2 items-center">
+          <audio controls class="flex-1 h-10 outline-none" src="${wavUrl}"></audio>
+          <canvas class="aud-hist-visualizer" width="80" height="40" style="border-radius: 4px; background: rgba(0,0,0,0.15); width: 80px; height: 40px; flex-shrink: 0;"></canvas>
+        </div>
         <div class="flex gap-2 mt-1">
           <a href="${wavUrl}" download="${inputTitle}.wav" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .wav</a>
           <a href="${mp3Url}" download="${inputTitle}.mp3" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .mp3</a>
@@ -1047,6 +1411,7 @@ export async function render(container, hash) {
       if (placeholderEl) {
         placeholderEl.className = "p-4 border border-[var(--ps-border)] rounded-lg bg-[var(--ps-bg)] flex flex-col gap-3";
         placeholderEl.innerHTML = finalHtml;
+        initHistoryVisualizers();
       }
       
       audioHistory.push({ id: historyId });
@@ -1062,13 +1427,158 @@ export async function render(container, hash) {
         const placeholderEl = container.querySelector(`#aud-hist-${historyId}`);
         if (placeholderEl) {
           placeholderEl.className = "p-4 border border-[var(--ps-red)] rounded-lg bg-[var(--ps-bg)] flex flex-col gap-3 opacity-50";
-          placeholderEl.innerHTML = `<div class="text-xs text-danger">Failed to generate</div>`;
+          placeholderEl.innerHTML = `<div class="text-xs text-danger">Failed to generate: ${e.message}</div>`;
         }
       }
     } finally {
+      genProgressEl.classList.add('hidden');
       updateGenerateButtonState();
     }
   });
+
+  async function generateElevenLabsAudio(text, voiceId, apiKey) {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_monolingual_v1',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Eleven Labs API error: ${response.status} - ${errText}`);
+    }
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    const float32 = audioBuffer.getChannelData(0);
+    await audioCtx.close();
+    return float32;
+  }
+
+  async function generateLocalTtsAudio(text, voiceId, gatewayUrl) {
+    const cleanUrl = gatewayUrl.endsWith('/') ? gatewayUrl : gatewayUrl + '/';
+    const response = await fetch(`${cleanUrl}tts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        voice_id: voiceId,
+        temperature: 0.7
+      })
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Local TTS Gateway error: ${response.status} - ${errText}`);
+    }
+    const blob = await response.blob();
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    const float32 = audioBuffer.getChannelData(0);
+    await audioCtx.close();
+    return float32;
+  }
+
+  function setupVisualizer(audioEl, canvasEl) {
+    let audioCtx = null;
+    let analyser = null;
+    let source = null;
+    let animationFrameId = null;
+
+    const draw = () => {
+      if (!canvasEl) return;
+      const ctx = canvasEl.getContext('2d');
+      const width = canvasEl.width;
+      const height = canvasEl.height;
+      
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, width, height);
+
+      const barWidth = (width / bufferLength) * 2.5;
+      let barHeight;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = (dataArray[i] / 255) * height;
+
+        const grad = ctx.createLinearGradient(0, height, 0, 0);
+        grad.addColorStop(0, 'var(--ps-blue)');
+        grad.addColorStop(1, '#3b82f6');
+        ctx.fillStyle = grad;
+        
+        ctx.fillRect(x, height - barHeight, barWidth - 1, barHeight);
+        x += barWidth;
+      }
+      
+      animationFrameId = requestAnimationFrame(draw);
+      activeVisualizerAnims.push(animationFrameId);
+    };
+
+    const onPlay = () => {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        source = audioCtx.createMediaElementSource(audioEl);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      cancelAnimationFrame(animationFrameId);
+      draw();
+    };
+
+    const onPause = () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+
+    audioEl.addEventListener('play', onPlay);
+    audioEl.addEventListener('pause', onPause);
+    audioEl.addEventListener('ended', onPause);
+    
+    return () => {
+      audioEl.removeEventListener('play', onPlay);
+      audioEl.removeEventListener('pause', onPause);
+      audioEl.removeEventListener('ended', onPause);
+      cancelAnimationFrame(animationFrameId);
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+      }
+    };
+  }
+
+  function initHistoryVisualizers() {
+    cleanupVisualizers.forEach(cleanup => cleanup());
+    cleanupVisualizers.length = 0;
+    activeVisualizerAnims.forEach(id => cancelAnimationFrame(id));
+    activeVisualizerAnims.length = 0;
+
+    container.querySelectorAll('.aud-hist-visualizer').forEach(canvasEl => {
+      const row = canvasEl.closest('[id^="aud-hist-"]');
+      if (!row) return;
+      const audioEl = row.querySelector('audio');
+      if (!audioEl) return;
+      const cleanup = setupVisualizer(audioEl, canvasEl);
+      cleanupVisualizers.push(cleanup);
+    });
+  }
 
   // --- Helpers ---
   function audioBufferToWav(float32Array, sampleRate) {
@@ -1175,6 +1685,16 @@ export async function render(container, hash) {
      container.querySelectorAll('#aud-history-list audio[src]').forEach(el => URL.revokeObjectURL(el.src));
      container.querySelectorAll('#aud-history-list a[href]').forEach(el => URL.revokeObjectURL(el.href));
      
+     if (previewAudio) {
+       previewAudio.pause();
+       previewAudio = null;
+     }
+
+     cleanupVisualizers.forEach(cleanup => cleanup());
+     cleanupVisualizers.length = 0;
+     activeVisualizerAnims.forEach(id => cancelAnimationFrame(id));
+     activeVisualizerAnims.length = 0;
+
      window.removeEventListener('beforeunload', handleBeforeUnload);
      navItems.forEach(item => item.removeEventListener('click', handleNavClick, true));
   };

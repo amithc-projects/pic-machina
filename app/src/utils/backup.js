@@ -7,13 +7,13 @@ import { showConfirm } from './dialogs.js';
  */
 
 // ─── File System Shadow Persistence ──────────────────────────────────────────
-// After every mutation, shadow files are written to .PicMachina/data/ inside
+// After every mutation, shadow files are written to .zumilabs-studio/data/ inside
 // the project_root folder. On startup, if IDB is empty, they are silently
 // restored. This survives browser storage clears.
 
 const SHADOW_STORES = ['recipes', 'blocks', 'templates', 'showcases'];
 
-async function getShadowDir() {
+async function getShadowDir({ create = true } = {}) {
   try {
     const record = await dbGet('folders', 'project_root');
     if (!record?.handle) return null;
@@ -22,8 +22,18 @@ async function getShadowDir() {
       const req = await record.handle.requestPermission({ mode: 'readwrite' });
       if (req !== 'granted') return null;
     }
-    const hidden = await record.handle.getDirectoryHandle('.PicMachina', { create: true });
-    return hidden.getDirectoryHandle('data', { create: true });
+    if (create) {
+      const hidden = await record.handle.getDirectoryHandle('.zumilabs-studio', { create: true });
+      return hidden.getDirectoryHandle('data', { create: true });
+    } else {
+      try {
+        const hidden = await record.handle.getDirectoryHandle('.zumilabs-studio', { create: false });
+        return await hidden.getDirectoryHandle('data', { create: false });
+      } catch {
+        const hidden = await record.handle.getDirectoryHandle('.PicMachina', { create: false });
+        return await hidden.getDirectoryHandle('data', { create: false });
+      }
+    }
   } catch {
     return null;
   }
@@ -83,7 +93,7 @@ export async function shadowWriteAll() {
  */
 export async function shadowRestore() {
   try {
-    const dir = await getShadowDir();
+    const dir = await getShadowDir({ create: false });
     if (!dir) return false;
 
     // Only restore if there is no user data in IDB already
@@ -91,7 +101,7 @@ export async function shadowRestore() {
     const hasUserData = recipes.some(r => !r.isSystem);
     if (hasUserData) return false;
 
-    const snapshot = { version: 1, checksum: 'PicMachinaExport', data: {} };
+    const snapshot = { version: 1, checksum: 'ZumilabsStudioExport', data: {} };
     let found = false;
     for (const store of SHADOW_STORES) {
       try {
@@ -114,7 +124,7 @@ export async function shadowRestore() {
 export async function exportAll() {
   const db = getDB();
   const stores = ['recipes', 'blocks', 'templates', 'showcases'];
-  const snapshot = { version: 1, checksum: 'PicMachinaExport', metadata: { exportedAt: new Date().toISOString() }, data: {} };
+  const snapshot = { version: 1, checksum: 'ZumilabsStudioExport', metadata: { exportedAt: new Date().toISOString() }, data: {} };
   
   try {
     for (const store of stores) {
@@ -144,7 +154,7 @@ export async function exportAll() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `PicMachina_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `ZumilabsStudio_Backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     
@@ -160,8 +170,8 @@ export async function importAll(file, { wipeFirst = true, silent = false } = {})
     const text = await file.text();
     const snapshot = JSON.parse(text);
 
-    if (snapshot.checksum !== 'PicMachinaExport' || !snapshot.data) {
-      throw new Error('Invalid backup file format. Missing PicMachina checksum.');
+    if ((snapshot.checksum !== 'ZumilabsStudioExport' && snapshot.checksum !== 'PicMachinaExport') || !snapshot.data) {
+      throw new Error('Invalid backup file format. Missing backup checksum.');
     }
 
     const db = getDB();

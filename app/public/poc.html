@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PicMachina Export POC</title>
+    <title>Zumilabs Studio Export POC</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
     <style>
@@ -56,7 +56,7 @@
 <body>
 
     <div class="card">
-        <h1>PicMachina Export Proof-of-Concept</h1>
+        <h1>Zumilabs Studio Export Proof-of-Concept</h1>
         <p>Testing purely client-side multi-page generation.</p>
         
         <div class="btn-group">
@@ -85,7 +85,7 @@
 
                 // Page 1
                 doc.setFontSize(22);
-                doc.text("PicMachina PDF POC", 20, 30);
+                doc.text("Zumilabs Studio PDF POC", 20, 30);
                 doc.setFontSize(12);
                 doc.text("This is page 1 of a client-side generated PDF.", 20, 50);
                 doc.rect(20, 60, 160, 10, 'F'); // A blue-ish bar
@@ -100,9 +100,9 @@
                 // Page 3
                 doc.addPage();
                 doc.text("Final Page 3", 20, 30);
-                doc.text("Check your downloads folder for 'PicMachina_Test.pdf'.", 20, 50);
-
-                doc.save("PicMachina_Test.pdf");
+                doc.text("Check your downloads folder for 'ZumilabsStudio_Test.pdf'.", 20, 50);
+                
+                doc.save("ZumilabsStudio_Test.pdf");
                 log("PDF Downloaded!");
             } catch (err) {
                 log("Error: " + err.message);
@@ -116,7 +116,7 @@
 
                 // Slide 1
                 let slide1 = pptx.addSlide();
-                slide1.addText("PicMachina PPTX POC", { x: 1, y: 1, w: '80%', fontSize: 36, color: '38bdf8', bold: true });
+                slide1.addText("Zumilabs Studio PPTX POC", { x: 1, y: 1, w: '80%', fontSize: 36, color: '38bdf8', bold: true });
                 slide1.addText("Client-side PowerPoint generation test.", { x: 1, y: 2, fontSize: 18 });
 
                 // Slide 2
@@ -129,7 +129,7 @@
                 let slide3 = pptx.addSlide();
                 slide3.addText("Success!", { x: '40%', y: '40%', fontSize: 48, align: 'center' });
 
-                await pptx.writeFile({ fileName: "PicMachina_Test.pptx" });
+                await pptx.writeFile({ fileName: "ZumilabsStudio_Test.pptx" });
                 log("PPTX Downloaded!");
             } catch (err) {
                 log("Error: " + err.message);

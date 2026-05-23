@@ -1,5 +1,5 @@
 /**
- * Pic-Machina — Stock Media Preview Modal
+ * Zumilabs Studio — Stock Media Preview Modal
  *
  * Lightweight <dialog>-based preview for normalised stock assets.
  * Mirrors the modal pattern from utils/info-modal.js.

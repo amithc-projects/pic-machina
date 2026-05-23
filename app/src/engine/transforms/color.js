@@ -84,6 +84,189 @@ registry.register({
   }
 });
 
+// ─── Curves ──────────────────────────────────────────────────
+registry.register({
+  id: 'color-curves', name: 'Curves', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
+  icon: 'show_chart',
+  description: 'Interactive tone curve per channel (All / R / G / B).',
+  params: [
+    { name: 'curves', label: 'Curves', type: 'curves',
+      defaultValue: JSON.stringify({ master: [[0,0],[255,255]], r: null, g: null, b: null }) },
+  ],
+  apply(ctx, p) {
+    let data = { master: [[0,0],[255,255]], r: null, g: null, b: null };
+    try { if (p.curves) data = { ...data, ...JSON.parse(p.curves) }; } catch(e) { return; }
+
+    const buildLUT = (pts) => {
+      if (!pts || pts.length < 2) return null;
+      const sorted = [...pts].sort((a, b) => a[0] - b[0]);
+      const lut = new Uint8Array(256);
+      for (let x = 0; x < 256; x++) {
+        let i = 1;
+        while (i < sorted.length - 1 && sorted[i][0] <= x) i++;
+        const [x0, y0] = sorted[i - 1], [x1, y1] = sorted[i];
+        const t = x1 > x0 ? (x - x0) / (x1 - x0) : 0;
+        lut[x] = Math.round(clamp(y0 + t * (y1 - y0), 0, 255));
+      }
+      return lut;
+    };
+
+    const masterLUT = buildLUT(data.master);
+    const rLUT = buildLUT(data.r);
+    const gLUT = buildLUT(data.g);
+    const bLUT = buildLUT(data.b);
+    if (!masterLUT && !rLUT && !gLUT && !bLUT) return;
+
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const imgData = ctx.getImageData(0, 0, W, H);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      let r = d[i], g = d[i + 1], b = d[i + 2];
+      if (masterLUT) { r = masterLUT[r]; g = masterLUT[g]; b = masterLUT[b]; }
+      if (rLUT) r = rLUT[r];
+      if (gLUT) g = gLUT[g];
+      if (bLUT) b = bLUT[b];
+      d[i] = r; d[i + 1] = g; d[i + 2] = b;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  },
+});
+
+// ─── Levels ───────────────────────────────────────────────────
+registry.register({
+  id: 'color-levels', name: 'Levels', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
+  icon: 'equalizer',
+  description: 'Set black point, white point and gamma for precise tonal control.',
+  params: [
+    { name: 'levels', label: 'Levels', type: 'levels',
+      defaultValue: JSON.stringify({ inBlack: 0, inWhite: 255, gamma: 1, outBlack: 0, outWhite: 255 }) },
+  ],
+  apply(ctx, p) {
+    let data = { inBlack: 0, inWhite: 255, gamma: 1, outBlack: 0, outWhite: 255 };
+    try { if (p.levels) data = { ...data, ...JSON.parse(p.levels) }; } catch(e) { return; }
+
+    const { inBlack, inWhite, gamma, outBlack, outWhite } = data;
+    if (inBlack === 0 && inWhite === 255 && gamma === 1 && outBlack === 0 && outWhite === 255) return;
+
+    const range = Math.max(1, inWhite - inBlack);
+    const lut = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) {
+      let v = clamp((i - inBlack) / range, 0, 1);
+      if (gamma !== 1) v = Math.pow(v, 1 / gamma);
+      lut[i] = Math.round(clamp(outBlack + v * (outWhite - outBlack), 0, 255));
+    }
+
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const imgData = ctx.getImageData(0, 0, W, H);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = lut[d[i]]; d[i + 1] = lut[d[i + 1]]; d[i + 2] = lut[d[i + 2]];
+    }
+    ctx.putImageData(imgData, 0, 0);
+  },
+});
+
+// ─── HSL / Colour Mixer ───────────────────────────────────────
+registry.register({
+  id: 'color-hsl', name: 'HSL / Colour Mixer', category: 'Color & Tone', categoryKey: 'color',
+  timeline: 'unsupported',
+  icon: 'palette',
+  description: 'Adjust hue, saturation and luminance per colour range.',
+  params: [
+    { name: 'hsl', label: 'HSL', type: 'hsl', defaultValue: '{}' },
+  ],
+  apply(ctx, p) {
+    let data = {};
+    try { if (p.hsl) data = JSON.parse(p.hsl); } catch(e) { return; }
+
+    const rangeDef = [
+      { name:'reds',     center:  0, hw: 30 },
+      { name:'oranges',  center: 30, hw: 20 },
+      { name:'yellows',  center: 60, hw: 25 },
+      { name:'greens',   center:120, hw: 40 },
+      { name:'cyans',    center:180, hw: 30 },
+      { name:'blues',    center:210, hw: 40 },
+      { name:'purples',  center:270, hw: 40 },
+      { name:'magentas', center:330, hw: 30 },
+    ];
+
+    const hasAny = rangeDef.some(rd => data[rd.name] && (data[rd.name].h || data[rd.name].s || data[rd.name].l));
+    if (!hasAny) return;
+
+    const rgbToHsl = (r, g, b) => {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          default: h = ((r - g) / d + 4) / 6;
+        }
+      }
+      return [h * 360, s * 100, l * 100];
+    };
+
+    const hslToRgb = (h, s, l) => {
+      h /= 360; s /= 100; l /= 100;
+      if (s === 0) { const v = Math.round(l * 255); return [v, v, v]; }
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1; if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s, pv = 2 * l - q;
+      return [
+        Math.round(hue2rgb(pv, q, h + 1/3) * 255),
+        Math.round(hue2rgb(pv, q, h) * 255),
+        Math.round(hue2rgb(pv, q, h - 1/3) * 255),
+      ];
+    };
+
+    const hueDist = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const imgData = ctx.getImageData(0, 0, W, H);
+    const d = imgData.data;
+
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] === 0) continue;
+      const [h, s, l] = rgbToHsl(d[i], d[i + 1], d[i + 2]);
+      if (s < 2) continue;
+
+      let dh = 0, ds = 0, dl = 0, totalW = 0;
+      for (const rd of rangeDef) {
+        const adj = data[rd.name];
+        if (!adj || (!adj.h && !adj.s && !adj.l)) continue;
+        const dist = hueDist(h, rd.center);
+        if (dist >= rd.hw) continue;
+        const w = 1 - dist / rd.hw;
+        dh += (adj.h || 0) * w;
+        ds += (adj.s || 0) * w;
+        dl += (adj.l || 0) * w;
+        totalW += w;
+      }
+
+      if (totalW > 0) {
+        const [r2, g2, b2] = hslToRgb(
+          (h + dh + 360) % 360,
+          clamp(s + ds, 0, 100),
+          clamp(l + dl, 0, 100)
+        );
+        d[i] = r2; d[i + 1] = g2; d[i + 2] = b2;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  },
+});
+
 // ─── Auto Levels ─────────────────────────────────────────
 registry.register({
   id: 'color-auto-levels', name: 'Auto Levels', category: 'Color & Tone', categoryKey: 'color',

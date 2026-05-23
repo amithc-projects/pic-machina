@@ -1,6 +1,6 @@
 # Migration Plan: Folder-Based Project Architecture
 
-This document outlines the step-by-step implementation plan for migrating PicMachina's Video Timeline (`tme.js`) and Audio (`aud.js`) workspaces away from IndexedDB, moving them toward a "Self-Contained Folder" architecture using the File System Access API.
+This document outlines the step-by-step implementation plan for migrating Zumilabs Studio's Video Timeline (`tme.js`) and Audio (`aud.js`) workspaces away from IndexedDB, moving them toward a "Self-Contained Folder" architecture using the File System Access API.
 
 ## 🎯 Goal
 Treat projects like professional NLEs (Non-Linear Editors). A project is a user-selected folder on disk. All imported media is copied into this folder. The project state is saved as a `project.json` file alongside the media. Zipping the folder backs up the entire project natively.

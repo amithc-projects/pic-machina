@@ -8,7 +8,7 @@ node-catalog.json
 .
 
 recipe-bundle-schema.json
-: Created a strict JSON schema that maps exactly to how PicMachinaRecipeBundle and RecipeNode are evaluated in your UI.
+: Created a strict JSON schema that maps exactly to how ZumilabsStudioRecipeBundle (and legacy PicMachinaRecipeBundle) and RecipeNode are evaluated in your UI.
 
 claude-recipe-prompt.md
 : Generated the Master System Prompt that teaches Claude about the schema, Sidecar variable interpolation, and the logic of your execution engine using multiple Few-Shot examples.
@@ -24,6 +24,6 @@ In the Project settings, set the Custom Instructions to the complete contents of
 Add the app/docs/node-catalog.json and app/docs/recipe-bundle-schema.json files to the project knowledge.
 You can now ask that Claude instance: "Let's make a recipe that takes an image, crops it to a square, adds a soft glow, and then puts a title at the bottom saying 'Sunny Days'."
 
-It will respond with a completed JSON payload that you can save as a file and load directly into Pic Machina via the "Import JSON" button in your Library!
+It will respond with a completed JSON payload that you can save as a file and load directly into Zumilabs Studio via the "Import JSON" button in your Library!
 
 Are there any other structural elements you'd like me to add for this?

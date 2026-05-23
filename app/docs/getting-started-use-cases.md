@@ -1,4 +1,4 @@
-# Pic-Machina: Getting Started Use Cases
+# Zumilabs Studio: Getting Started Use Cases
 
 A comprehensive list of high-value, outcome-driven use cases to showcase the "magic" of the engine on the Getting Started screen. These are designed to appeal to a broad audience, shifting the narrative from a technical "programmer tool" to an intuitive "time-saving machine".
 

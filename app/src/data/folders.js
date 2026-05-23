@@ -138,9 +138,9 @@ export async function loadVideoPreviews(dirHandle) {
 // same definitions without redeclaring them.
 export const IMAGE_EXTS   = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tif', '.tiff', '.heic', '.heif', '.bmp']);
 export const VIDEO_EXTS   = new Set(['.mp4', '.mov', '.webm']);
-// PicMachina-produced archives (createPPTX / createZIP in compositor.js).
+// Zumilabs Studio-produced archives (createPPTX / createZIP in compositor.js).
 // Listed separately so callers can opt in — most code paths still want
-// media only, archives only matter inside known PicMachina output folders.
+// media only, archives only matter inside known Zumilabs Studio output folders.
 export const ARCHIVE_EXTS = new Set(['.zip', '.pptx']);
 
 export async function listImages(dirHandle, { includeVideo = false, onlyVideo = false, includeArchives = false } = {}) {
@@ -171,25 +171,29 @@ export async function listImages(dirHandle, { includeVideo = false, onlyVideo = 
 }
 
 /**
- * Check whether a directory has a `.PicMachina/` subfolder — our marker
- * for "this folder contains PicMachina-written outputs". The marker is
- * created by the batch engine for every run that completes
- * (engine/batch.js → getOrCreateOutputSubfolder(subHandle, '.PicMachina')).
+ * Check whether a directory has a `.zumilabs-studio/` or legacy `.PicMachina/`
+ * subfolder — our marker for "this folder contains studio-written outputs".
+ * The marker is created by the batch engine for every run that completes.
  *
  * Used by the Folder Viewer to decide whether to include zip/pptx files
  * in its listing — we only show those archive types when we know they
- * came from PicMachina.
+ * came from the app.
  *
  * Returns false on permission errors or missing handles rather than
  * throwing, so callers can use it directly in a conditional.
  */
-export async function hasPicMachinaMarker(dirHandle) {
+export async function hasStudioMarker(dirHandle) {
   if (!dirHandle) return false;
   try {
-    await dirHandle.getDirectoryHandle('.PicMachina', { create: false });
+    await dirHandle.getDirectoryHandle('.zumilabs-studio', { create: false });
     return true;
   } catch {
-    return false;
+    try {
+      await dirHandle.getDirectoryHandle('.PicMachina', { create: false });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

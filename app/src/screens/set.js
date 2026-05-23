@@ -642,7 +642,7 @@ export async function render(container, hash) {
             btn.disabled = true;
             if (warningText) {
               const lockType = unmet.find(r => r.type === 'premium')?.id === 'enterprise' ? 'Enterprise' : 'Pro';
-              warningText.textContent = `Requires Pic-Machina ${lockType}`;
+              warningText.textContent = `Requires Zumilabs Studio ${lockType}`;
               warningText.style.display = '';
             }
           }

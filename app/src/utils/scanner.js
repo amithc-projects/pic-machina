@@ -1,5 +1,5 @@
 /**
- * PicMachina — Computer Vision Scanner Delegate
+ * Zumilabs Studio — Computer Vision Scanner Delegate
  * 
  * Offloads OpenCV execution into a dedicated Web Worker to prevent
  * massive script parsing from permanently locking the UI thread.

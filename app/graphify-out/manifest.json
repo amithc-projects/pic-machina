@@ -1,0 +1,792 @@
+{
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/sidecar.schema.json": {
+    "mtime": 1778145501.4248192,
+    "ast_hash": "a11e3f7b0c8ef413ef677e85b46b4aff",
+    "semantic_hash": "a11e3f7b0c8ef413ef677e85b46b4aff"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/sidecar.schema.example.json": {
+    "mtime": 1778023028.3045313,
+    "ast_hash": "5df1aedf609f420265f59f9360b2d95d",
+    "semantic_hash": "5df1aedf609f420265f59f9360b2d95d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/recipe-bundle-schema.json": {
+    "mtime": 1778145492.3338804,
+    "ast_hash": "f8005d558a80bc6134a0a373a7e2b6d7",
+    "semantic_hash": "f8005d558a80bc6134a0a373a7e2b6d7"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/node-catalog.json": {
+    "mtime": 1777032758.9927866,
+    "ast_hash": "8d972b6c5c2396fdf7933a60f9d8ff36",
+    "semantic_hash": "8d972b6c5c2396fdf7933a60f9d8ff36"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/main.js": {
+    "mtime": 1778624643.2295828,
+    "ast_hash": "8d5376bb098c1817875bacf2c46399c1",
+    "semantic_hash": "8d5376bb098c1817875bacf2c46399c1"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/eval.js": {
+    "mtime": 1775599223.0130794,
+    "ast_hash": "c022a91b3a40a33aeafdf4b38cd899f3",
+    "semantic_hash": "c022a91b3a40a33aeafdf4b38cd899f3"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/aurora/splitter.js": {
+    "mtime": 1775599223.0079463,
+    "ast_hash": "4e8441462727ffa5fbea27e98a2e8115",
+    "semantic_hash": "4e8441462727ffa5fbea27e98a2e8115"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/aurora/tabs.js": {
+    "mtime": 1775599223.0079863,
+    "ast_hash": "90fa43f6509e2b0bba854fd5e2c6bed1",
+    "semantic_hash": "90fa43f6509e2b0bba854fd5e2c6bed1"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/aurora/drawer.js": {
+    "mtime": 1775599223.0079067,
+    "ast_hash": "358d98de05ed3ff1b06aea1d2a1824fe",
+    "semantic_hash": "358d98de05ed3ff1b06aea1d2a1824fe"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/aurora/toast.js": {
+    "mtime": 1775599223.008065,
+    "ast_hash": "2e15863aec2e769aaeda4a63ec2f1388",
+    "semantic_hash": "2e15863aec2e769aaeda4a63ec2f1388"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/aurora/accordion.js": {
+    "mtime": 1775599223.0078697,
+    "ast_hash": "f47ce342b6ab1b736e57e7289f0420b0",
+    "semantic_hash": "f47ce342b6ab1b736e57e7289f0420b0"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/image-info.js": {
+    "mtime": 1775599223.0147102,
+    "ast_hash": "ebbb55a85ec7d8b0e2b8035be82786f6",
+    "semantic_hash": "ebbb55a85ec7d8b0e2b8035be82786f6"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/time-range-strip.js": {
+    "mtime": 1777732224.4135594,
+    "ast_hash": "e012a2159952958f8b5ab3d978f06cda",
+    "semantic_hash": "e012a2159952958f8b5ab3d978f06cda"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/variables.js": {
+    "mtime": 1777163738.9767368,
+    "ast_hash": "8ef9e7f8aa0b2e71c8a760e11d618d25",
+    "semantic_hash": "8ef9e7f8aa0b2e71c8a760e11d618d25"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/info-modal.js": {
+    "mtime": 1775599223.0147622,
+    "ast_hash": "3c6005b30bc1ed6d85b8a05e2d9f07b7",
+    "semantic_hash": "3c6005b30bc1ed6d85b8a05e2d9f07b7"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/scanner.worker.js": {
+    "mtime": 1775599223.015029,
+    "ast_hash": "d9bd675acb2410fa34f71a5ac5f1eb41",
+    "semantic_hash": "d9bd675acb2410fa34f71a5ac5f1eb41"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/color-matcher.js": {
+    "mtime": 1776449120.590772,
+    "ast_hash": "025019a308a97c088ea27756a5ad4215",
+    "semantic_hash": "025019a308a97c088ea27756a5ad4215"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/backup.js": {
+    "mtime": 1778190216.6911526,
+    "ast_hash": "5b1181c7e9dd3f38312550c8b3ab9701",
+    "semantic_hash": "5b1181c7e9dd3f38312550c8b3ab9701"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/scanner.js": {
+    "mtime": 1775599223.0149565,
+    "ast_hash": "c2d1c78119dbde94443553505251e913",
+    "semantic_hash": "c2d1c78119dbde94443553505251e913"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/variable-picker.js": {
+    "mtime": 1776699793.4085286,
+    "ast_hash": "f9fedfe471619cb72b3406918000a867",
+    "semantic_hash": "f9fedfe471619cb72b3406918000a867"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/misc.js": {
+    "mtime": 1775599223.0148094,
+    "ast_hash": "e3df3854e27eeec6bf2abc8121642a7e",
+    "semantic_hash": "e3df3854e27eeec6bf2abc8121642a7e"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/unsplash.js": {
+    "mtime": 1778221176.6868443,
+    "ast_hash": "946fbe40fd2e83169a1cfdc5af8369a3",
+    "semantic_hash": "946fbe40fd2e83169a1cfdc5af8369a3"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/video-scrubber.js": {
+    "mtime": 1777743755.8119915,
+    "ast_hash": "51153c3baf78566c826eba7204fcf141",
+    "semantic_hash": "51153c3baf78566c826eba7204fcf141"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/pexels.js": {
+    "mtime": 1778221158.418795,
+    "ast_hash": "3f5e0ba289be0f84bbc67ef4318f6fcb",
+    "semantic_hash": "3f5e0ba289be0f84bbc67ef4318f6fcb"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/subtitles.js": {
+    "mtime": 1777511543.81301,
+    "ast_hash": "97459c1c42445395013a5e818e484dc1",
+    "semantic_hash": "97459c1c42445395013a5e818e484dc1"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/asset-panel.js": {
+    "mtime": 1775599223.014412,
+    "ast_hash": "a9754bf62159aa311539b0319b1d06c3",
+    "semantic_hash": "a9754bf62159aa311539b0319b1d06c3"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/help.js": {
+    "mtime": 1776849656.50112,
+    "ast_hash": "9c085e6eb14f825fb3f66b0cfe071080",
+    "semantic_hash": "9c085e6eb14f825fb3f66b0cfe071080"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/nodes.js": {
+    "mtime": 1775599223.014857,
+    "ast_hash": "82092e1e04acc4fb36709e910765717b",
+    "semantic_hash": "82092e1e04acc4fb36709e910765717b"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/media-preview.js": {
+    "mtime": 1778221252.650839,
+    "ast_hash": "233bd34355527985066efa8503dfbd44",
+    "semantic_hash": "233bd34355527985066efa8503dfbd44"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/dialogs.js": {
+    "mtime": 1775599223.0145864,
+    "ast_hash": "aa26fd13c7014d6e65a4f79b2010c6f4",
+    "semantic_hash": "aa26fd13c7014d6e65a4f79b2010c6f4"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/param-fields.js": {
+    "mtime": 1777635018.3549008,
+    "ast_hash": "f84d3373b43f435d5338149893f4fd7a",
+    "semantic_hash": "f84d3373b43f435d5338149893f4fd7a"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/thumbnails.js": {
+    "mtime": 1777652448.8149347,
+    "ast_hash": "14c04398edcbde24194a764b29db468e",
+    "semantic_hash": "14c04398edcbde24194a764b29db468e"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/media-providers.js": {
+    "mtime": 1778222239.503205,
+    "ast_hash": "28a6dee1267f9de997d09a7b4b12cf99",
+    "semantic_hash": "28a6dee1267f9de997d09a7b4b12cf99"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/pixabay.js": {
+    "mtime": 1778222231.2188156,
+    "ast_hash": "46a5b51265abd5641417cf2636ae1b9d",
+    "semantic_hash": "46a5b51265abd5641417cf2636ae1b9d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/video-frame.js": {
+    "mtime": 1778016488.110045,
+    "ast_hash": "1d17879a1d1555f6c1bb37c961eb7575",
+    "semantic_hash": "1d17879a1d1555f6c1bb37c961eb7575"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/run-thumbnail.js": {
+    "mtime": 1777940691.5365677,
+    "ast_hash": "55af811e6a49d9545fe6addbfeec05e6",
+    "semantic_hash": "55af811e6a49d9545fe6addbfeec05e6"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/settings.js": {
+    "mtime": 1778222164.3886185,
+    "ast_hash": "358cf33c785de21763e67dbca5b799c1",
+    "semantic_hash": "358cf33c785de21763e67dbca5b799c1"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/media-download.js": {
+    "mtime": 1778221754.314983,
+    "ast_hash": "7678fecb82ab8f919096739cda81058a",
+    "semantic_hash": "7678fecb82ab8f919096739cda81058a"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/utils/images.js": {
+    "mtime": 1776344173.3350987,
+    "ast_hash": "0dbb64240fd2a2c4eced250ce2e67402",
+    "semantic_hash": "0dbb64240fd2a2c4eced250ce2e67402"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/out.js": {
+    "mtime": 1777327356.2116258,
+    "ast_hash": "c78feaf52b002564350ff584ace556fc",
+    "semantic_hash": "c78feaf52b002564350ff584ace556fc"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/shc.js": {
+    "mtime": 1776344294.7957,
+    "ast_hash": "abcc1e5c04d6b9ba7e18fe076f2fc283",
+    "semantic_hash": "abcc1e5c04d6b9ba7e18fe076f2fc283"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/gsd.js": {
+    "mtime": 1777158022.9491365,
+    "ast_hash": "5f2291e75287a4649fbff7f84e2d88a9",
+    "semantic_hash": "5f2291e75287a4649fbff7f84e2d88a9"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/bup.js": {
+    "mtime": 1777540796.8590431,
+    "ast_hash": "a4e732e5ad89387d675e781e9a53f013",
+    "semantic_hash": "a4e732e5ad89387d675e781e9a53f013"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/pow.js": {
+    "mtime": 1777127104.7872145,
+    "ast_hash": "cc0a07d7aecd78a69b35df081a8d0b9d",
+    "semantic_hash": "cc0a07d7aecd78a69b35df081a8d0b9d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/ins.js": {
+    "mtime": 1776556050.8940618,
+    "ast_hash": "6bdd12265d8ba93f4ab57fe6493a64f8",
+    "semantic_hash": "6bdd12265d8ba93f4ab57fe6493a64f8"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/bld.js": {
+    "mtime": 1778712798.3179443,
+    "ast_hash": "aad3a9b00010597e4b3307d80bedd88c",
+    "semantic_hash": "aad3a9b00010597e4b3307d80bedd88c"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/aud.js": {
+    "mtime": 1778633467.5518322,
+    "ast_hash": "28ca9fd3297546e4a5e8d6ea48050f15",
+    "semantic_hash": "28ca9fd3297546e4a5e8d6ea48050f15"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/lic.js": {
+    "mtime": 1777553280.4078164,
+    "ast_hash": "bf072971bd0a2367ee2c975b17975ebc",
+    "semantic_hash": "bf072971bd0a2367ee2c975b17975ebc"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/lib.js": {
+    "mtime": 1777550960.57958,
+    "ast_hash": "858b9eafa74a75c1ca51635451331361",
+    "semantic_hash": "858b9eafa74a75c1ca51635451331361"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/hlp.js": {
+    "mtime": 1777540825.6510546,
+    "ast_hash": "7899fb9e886b09ceba581c69e1f95c6e",
+    "semantic_hash": "7899fb9e886b09ceba581c69e1f95c6e"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/set.js": {
+    "mtime": 1778674051.342081,
+    "ast_hash": "7c3cf677a5a8543b9845b03990c96652",
+    "semantic_hash": "7c3cf677a5a8543b9845b03990c96652"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/tme.js": {
+    "mtime": 1778831146.570648,
+    "ast_hash": "2d8485cc0da73498bf95728c0a547a9c",
+    "semantic_hash": "2d8485cc0da73498bf95728c0a547a9c"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/ned.js": {
+    "mtime": 1778624643.2302966,
+    "ast_hash": "c1c7bcb1b4d26e7afacfe54095610de8",
+    "semantic_hash": "c1c7bcb1b4d26e7afacfe54095610de8"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/bkb.js": {
+    "mtime": 1777282874.753098,
+    "ast_hash": "201ff159cfd074b000b833ae256d219a",
+    "semantic_hash": "201ff159cfd074b000b833ae256d219a"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/sys.js": {
+    "mtime": 1778222184.62656,
+    "ast_hash": "ffb803be92c2717443f5ccbf43f7919b",
+    "semantic_hash": "ffb803be92c2717443f5ccbf43f7919b"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/pvw.js": {
+    "mtime": 1777744200.525011,
+    "ast_hash": "2995ca38801fc392cf2221dc667b30aa",
+    "semantic_hash": "2995ca38801fc392cf2221dc667b30aa"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/get.js": {
+    "mtime": 1776447608.7311556,
+    "ast_hash": "6399cb117e8b077c5f057a4e8175e043",
+    "semantic_hash": "6399cb117e8b077c5f057a4e8175e043"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/snd.js": {
+    "mtime": 1778156198.9940705,
+    "ast_hash": "f5af9313c03b2fca257098e1007574a1",
+    "semantic_hash": "f5af9313c03b2fca257098e1007574a1"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/que.js": {
+    "mtime": 1778676539.379477,
+    "ast_hash": "1a5552a1605bf1b16c429bffb7b127d1",
+    "semantic_hash": "1a5552a1605bf1b16c429bffb7b127d1"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/fld.js": {
+    "mtime": 1778624643.2301319,
+    "ast_hash": "8a7d44665a4be4e0bb043239a0f68c62",
+    "semantic_hash": "8a7d44665a4be4e0bb043239a0f68c62"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/gmd.js": {
+    "mtime": 1778239554.3656745,
+    "ast_hash": "7df44794c6eded9a2edec5daaa050fde",
+    "semantic_hash": "7df44794c6eded9a2edec5daaa050fde"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/cmp.js": {
+    "mtime": 1775599223.0134616,
+    "ast_hash": "cc648a1874cc8b94e1faf81f46051296",
+    "semantic_hash": "cc648a1874cc8b94e1faf81f46051296"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/mdl.js": {
+    "mtime": 1778673627.7727947,
+    "ast_hash": "d8206ed1bfe1d36c4e42cda54e3fb9ef",
+    "semantic_hash": "d8206ed1bfe1d36c4e42cda54e3fb9ef"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/screens/tpl.js": {
+    "mtime": 1777571211.697695,
+    "ast_hash": "ed281a8aedf9fac6f65672778e703200",
+    "semantic_hash": "ed281a8aedf9fac6f65672778e703200"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/components/media-browser.js": {
+    "mtime": 1778627348.2735655,
+    "ast_hash": "bdb921c6ae1ff8c3474323d36581b974",
+    "semantic_hash": "bdb921c6ae1ff8c3474323d36581b974"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/components/metadata-panel.js": {
+    "mtime": 1777540926.1923678,
+    "ast_hash": "974e5909f2d122cc8744dab8095a841f",
+    "semantic_hash": "974e5909f2d122cc8744dab8095a841f"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/components/image-workspace.js": {
+    "mtime": 1777981073.594691,
+    "ast_hash": "e39bdbc3e35bb01b639f49844c0a3f1f",
+    "semantic_hash": "e39bdbc3e35bb01b639f49844c0a3f1f"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/components/timeline-view.js": {
+    "mtime": 1778793399.7299497,
+    "ast_hash": "9a37c768822943b63b892f309b388256",
+    "semantic_hash": "9a37c768822943b63b892f309b388256"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/components/sidecar-drawer.js": {
+    "mtime": 1776551437.4074738,
+    "ast_hash": "640467505a4849d15a73a2247598497e",
+    "semantic_hash": "640467505a4849d15a73a2247598497e"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/components/lightbox.js": {
+    "mtime": 1777938225.673475,
+    "ast_hash": "647d551182d8639a82e86cfae9b367a2",
+    "semantic_hash": "647d551182d8639a82e86cfae9b367a2"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/workers/chatterbox.worker.js": {
+    "mtime": 1777479807.4844773,
+    "ast_hash": "e5d4f84a2ac0db77429912b8df59cc6f",
+    "semantic_hash": "e5d4f84a2ac0db77429912b8df59cc6f"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/workers/pocket-tts.worker.js": {
+    "mtime": 1778624643.230629,
+    "ast_hash": "5d0b7efdbfd7597111feed34efca7470",
+    "semantic_hash": "5d0b7efdbfd7597111feed34efca7470"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/system-blocks.js": {
+    "mtime": 1775599223.0085876,
+    "ast_hash": "40751c8cb7d6ebf7f00fe8791761b450",
+    "semantic_hash": "40751c8cb7d6ebf7f00fe8791761b450"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/db.js": {
+    "mtime": 1777474566.8915646,
+    "ast_hash": "daf2293afe771fe414bbb88d5b527743",
+    "semantic_hash": "daf2293afe771fe414bbb88d5b527743"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/showcases.js": {
+    "mtime": 1776464299.7225966,
+    "ast_hash": "cab26c89d3b758a52f7ec9879af22964",
+    "semantic_hash": "cab26c89d3b758a52f7ec9879af22964"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/folder-state.js": {
+    "mtime": 1778668927.2260902,
+    "ast_hash": "a677cb6f1c2b666c7c608a37f9a59965",
+    "semantic_hash": "a677cb6f1c2b666c7c608a37f9a59965"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/sidecarMigrate.js": {
+    "mtime": 1778453299.037178,
+    "ast_hash": "003dbe360901577a442670f8ed77cb97",
+    "semantic_hash": "003dbe360901577a442670f8ed77cb97"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/sidecar.js": {
+    "mtime": 1778524190.1608903,
+    "ast_hash": "928ded0dd84fecff09351a279bbc3c37",
+    "semantic_hash": "928ded0dd84fecff09351a279bbc3c37"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/models.js": {
+    "mtime": 1778673704.2977872,
+    "ast_hash": "045d08a067d6e135d69d5b7b2176ffdb",
+    "semantic_hash": "045d08a067d6e135d69d5b7b2176ffdb"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/help.js": {
+    "mtime": 1776849564.7221086,
+    "ast_hash": "fe6fb62686757ccc8ea893cc0aed8057",
+    "semantic_hash": "fe6fb62686757ccc8ea893cc0aed8057"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/runs.js": {
+    "mtime": 1777241414.2558482,
+    "ast_hash": "0ded3970592f65231727a21b07103da9",
+    "semantic_hash": "0ded3970592f65231727a21b07103da9"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/folders.js": {
+    "mtime": 1777594107.909003,
+    "ast_hash": "53975203de2a94149fba377335d08cd6",
+    "semantic_hash": "53975203de2a94149fba377335d08cd6"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/blocks.js": {
+    "mtime": 1776206666.0549273,
+    "ast_hash": "4048dfbb75d414605c4a73c0a19d65ef",
+    "semantic_hash": "4048dfbb75d414605c4a73c0a19d65ef"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/timeline-store.js": {
+    "mtime": 1777415727.0614893,
+    "ast_hash": "2c5b5c44f94016252d4c3779f8ca561b",
+    "semantic_hash": "2c5b5c44f94016252d4c3779f8ca561b"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/system-recipes.js": {
+    "mtime": 1777551005.989449,
+    "ast_hash": "7488dc04559575535f8d33c5aa3b837d",
+    "semantic_hash": "7488dc04559575535f8d33c5aa3b837d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/templates.js": {
+    "mtime": 1777571129.0930073,
+    "ast_hash": "92655f8a372744256d13af686fb65b1b",
+    "semantic_hash": "92655f8a372744256d13af686fb65b1b"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/voices.js": {
+    "mtime": 1777474605.18434,
+    "ast_hash": "14f699b3ea449de8fa81c0ea862f109d",
+    "semantic_hash": "14f699b3ea449de8fa81c0ea862f109d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/recipes.js": {
+    "mtime": 1777652427.1236174,
+    "ast_hash": "c0af161d6cad2e6c1cdee96d3ba4e387",
+    "semantic_hash": "c0af161d6cad2e6c1cdee96d3ba4e387"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/data/assets.js": {
+    "mtime": 1775599223.008252,
+    "ast_hash": "6fefd1d6c6b008a35a60e4c9f2dcbc59",
+    "semantic_hash": "6fefd1d6c6b008a35a60e4c9f2dcbc59"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/batch.js": {
+    "mtime": 1778673978.222579,
+    "ast_hash": "546c5eefb6ba05e5eb44918760f30631",
+    "semantic_hash": "546c5eefb6ba05e5eb44918760f30631"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/registry.js": {
+    "mtime": 1776415990.1835694,
+    "ast_hash": "1bb5df83f8d773b9c1ce85764deb9b86",
+    "semantic_hash": "1bb5df83f8d773b9c1ce85764deb9b86"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/face-morph.js": {
+    "mtime": 1777401147.3026783,
+    "ast_hash": "fb06628ccf1f75d7913f9563bc4feb28",
+    "semantic_hash": "fb06628ccf1f75d7913f9563bc4feb28"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/types.js": {
+    "mtime": 1775599223.0098112,
+    "ast_hash": "5fd7b1750e994b0b1cf27cb88a34a244",
+    "semantic_hash": "5fd7b1750e994b0b1cf27cb88a34a244"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/processor.js": {
+    "mtime": 1778022689.6386023,
+    "ast_hash": "e30cb49c9a3c070468c40773d0cdf5a8",
+    "semantic_hash": "e30cb49c9a3c070468c40773d0cdf5a8"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/video-wall.js": {
+    "mtime": 1777745501.1325407,
+    "ast_hash": "736059a3f4b0e3594fcf0f448a2b9b82",
+    "semantic_hash": "736059a3f4b0e3594fcf0f448a2b9b82"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/video-convert.js": {
+    "mtime": 1777730959.5505512,
+    "ast_hash": "f009d1ce447fdcd7c2175728d9c61559",
+    "semantic_hash": "f009d1ce447fdcd7c2175728d9c61559"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/worker.js": {
+    "mtime": 1778535163.4719021,
+    "ast_hash": "1f24327f2e86054f708c4e8f4375d4ee",
+    "semantic_hash": "1f24327f2e86054f708c4e8f4375d4ee"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/hyperframe.js": {
+    "mtime": 1777570389.1852205,
+    "ast_hash": "0e90c0d81b382b7bb22a0d4079fec4db",
+    "semantic_hash": "0e90c0d81b382b7bb22a0d4079fec4db"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/face-swap.js": {
+    "mtime": 1777399051.138498,
+    "ast_hash": "1b556a3b473f2871ef0ad5ce3593447d",
+    "semantic_hash": "1b556a3b473f2871ef0ad5ce3593447d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/index.js": {
+    "mtime": 1777505752.0317323,
+    "ast_hash": "3cd8e98fb292b72ef4b950219dc11c21",
+    "semantic_hash": "3cd8e98fb292b72ef4b950219dc11c21"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/geo-timeline.js": {
+    "mtime": 1775599223.0090604,
+    "ast_hash": "daeac85bbc039d020cc98c706666e10d",
+    "semantic_hash": "daeac85bbc039d020cc98c706666e10d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/stitcher.js": {
+    "mtime": 1777592698.9763584,
+    "ast_hash": "ae13b3bde4e8e8940be9388dd6dc62c9",
+    "semantic_hash": "ae13b3bde4e8e8940be9388dd6dc62c9"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/compositor.js": {
+    "mtime": 1776464299.7246206,
+    "ast_hash": "659a93aa1732a989d2393e66eacf5fee",
+    "semantic_hash": "659a93aa1732a989d2393e66eacf5fee"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/capabilities.js": {
+    "mtime": 1777550940.6087663,
+    "ast_hash": "918d80da503c05d82f6aa9f352a37b9b",
+    "semantic_hash": "918d80da503c05d82f6aa9f352a37b9b"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/behaviors.js": {
+    "mtime": 1778021692.7771401,
+    "ast_hash": "91941dade03efd75678d76369ce93f6a",
+    "semantic_hash": "91941dade03efd75678d76369ce93f6a"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/exif-reader.js": {
+    "mtime": 1775599223.0089297,
+    "ast_hash": "667f9425632fa916adcd0455f5327530",
+    "semantic_hash": "667f9425632fa916adcd0455f5327530"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/bg-swap.js": {
+    "mtime": 1776244472.6356003,
+    "ast_hash": "db2322a71e796b3ff5820f6c4be10787",
+    "semantic_hash": "db2322a71e796b3ff5820f6c4be10787"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/utils/delaunay.js": {
+    "mtime": 1775599223.0098717,
+    "ast_hash": "1d850d94e5176a62951123ace83d8963",
+    "semantic_hash": "1d850d94e5176a62951123ace83d8963"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/utils/perspective.js": {
+    "mtime": 1775599223.010004,
+    "ast_hash": "429031ef72a38284f3be19d2a60f01d9",
+    "semantic_hash": "429031ef72a38284f3be19d2a60f01d9"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/utils/map-tiles.js": {
+    "mtime": 1775599223.0099413,
+    "ast_hash": "fc404d909ab45c17a98484b20cb754c2",
+    "semantic_hash": "fc404d909ab45c17a98484b20cb754c2"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/ai.js": {
+    "mtime": 1778674786.4840465,
+    "ast_hash": "567b2c3ce8aad0bda86a7495e66f24aa",
+    "semantic_hash": "567b2c3ce8aad0bda86a7495e66f24aa"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/flow.js": {
+    "mtime": 1778151952.0600808,
+    "ast_hash": "b71c4abc0b3cca32db96fde8953c3d87",
+    "semantic_hash": "b71c4abc0b3cca32db96fde8953c3d87"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/metadata.js": {
+    "mtime": 1778151163.8166265,
+    "ast_hash": "1c0907e43eb525b1bb6c43387bdaa2da",
+    "semantic_hash": "1c0907e43eb525b1bb6c43387bdaa2da"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/color.js": {
+    "mtime": 1778151388.73057,
+    "ast_hash": "d65d5d3c8f6e6b139aad18adab26fe36",
+    "semantic_hash": "d65d5d3c8f6e6b139aad18adab26fe36"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/audio.js": {
+    "mtime": 1777245335.173031,
+    "ast_hash": "72f88a577dca4bd275a79ef1f78f8cd3",
+    "semantic_hash": "72f88a577dca4bd275a79ef1f78f8cd3"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/video.js": {
+    "mtime": 1778154944.1623933,
+    "ast_hash": "ebc79230d10389410fbb94466157f6c0",
+    "semantic_hash": "ebc79230d10389410fbb94466157f6c0"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/overlays.js": {
+    "mtime": 1778150993.0630727,
+    "ast_hash": "647c71742ff8fe9e4ac959a3651a0987",
+    "semantic_hash": "647c71742ff8fe9e4ac959a3651a0987"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/geometry.js": {
+    "mtime": 1778150993.0597868,
+    "ast_hash": "1bdc214f61a957ab4368aee1a9bab1c3",
+    "semantic_hash": "1bdc214f61a957ab4368aee1a9bab1c3"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/ai/diarize.js": {
+    "mtime": 1777245335.1728492,
+    "ast_hash": "4ffd169c4d404dd4d96b7c378011b0b2",
+    "semantic_hash": "4ffd169c4d404dd4d96b7c378011b0b2"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/transforms/ai/translate.js": {
+    "mtime": 1777507943.154562,
+    "ast_hash": "bce342aa7d797296e596de23885c35b9",
+    "semantic_hash": "bce342aa7d797296e596de23885c35b9"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/ai/matte-ops.js": {
+    "mtime": 1776464299.7237463,
+    "ast_hash": "15e4b33d37ff7a717e69c8576c024a01",
+    "semantic_hash": "15e4b33d37ff7a717e69c8576c024a01"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/ai/lama.js": {
+    "mtime": 1778675568.720959,
+    "ast_hash": "94a10dd7a428553d39a0ad54ead47580",
+    "semantic_hash": "94a10dd7a428553d39a0ad54ead47580"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/ai/inspyrenet.js": {
+    "mtime": 1776464299.7236798,
+    "ast_hash": "11cad140f88f7fc00630e865283617f4",
+    "semantic_hash": "11cad140f88f7fc00630e865283617f4"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/ai/vision-metadata.js": {
+    "mtime": 1776464299.7239132,
+    "ast_hash": "955cdb8d362974660152e090f6d67519",
+    "semantic_hash": "955cdb8d362974660152e090f6d67519"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/vendor/photon/photon_rs.d.ts": {
+    "mtime": 1775599223.0101511,
+    "ast_hash": "6d19dd0ed5ba72b9af74efbfa05d056a",
+    "semantic_hash": "6d19dd0ed5ba72b9af74efbfa05d056a"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/src/engine/vendor/photon/photon_rs.js": {
+    "mtime": 1775599223.010307,
+    "ast_hash": "a9677f965b6c4916d63c22e0163b8e58",
+    "semantic_hash": "a9677f965b6c4916d63c22e0163b8e58"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/claude-image-prompt.md": {
+    "mtime": 1776607624.2988236,
+    "ast_hash": "844a3bbb9ad59e6399cffd5b7627c1d0",
+    "semantic_hash": "844a3bbb9ad59e6399cffd5b7627c1d0"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/requirements.md": {
+    "mtime": 1776127218.3618698,
+    "ast_hash": "071aa7bbd85245dc2ca191849ee96eae",
+    "semantic_hash": "071aa7bbd85245dc2ca191849ee96eae"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/ROADMAP_WORKFLOW.md": {
+    "mtime": 1775732404.6066082,
+    "ast_hash": "433cd39cb814e413d98d8d038b45d946",
+    "semantic_hash": "433cd39cb814e413d98d8d038b45d946"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/photo-stitching-plan.md": {
+    "mtime": 1775599222.9812655,
+    "ast_hash": "8c97335bb63dcf21217e00a871d26ab7",
+    "semantic_hash": "8c97335bb63dcf21217e00a871d26ab7"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/re-brand.md": {
+    "mtime": 1778143893.3036642,
+    "ast_hash": "ad94f7c226f9ee46d128f3904538acfb",
+    "semantic_hash": "ad94f7c226f9ee46d128f3904538acfb"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/dependencies.md": {
+    "mtime": 1776127181.6024158,
+    "ast_hash": "ed799a75b6bdb253f9d8849af31731c9",
+    "semantic_hash": "ed799a75b6bdb253f9d8849af31731c9"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/claude-skill.md": {
+    "mtime": 1776416404.465007,
+    "ast_hash": "eba40c1adf9742b3704023002849a94e",
+    "semantic_hash": "eba40c1adf9742b3704023002849a94e"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/marketing-content.md": {
+    "mtime": 1776448213.6324809,
+    "ast_hash": "3f0273ecf15d1fc6a0980b2bc799933b",
+    "semantic_hash": "3f0273ecf15d1fc6a0980b2bc799933b"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/RECIPE_GUIDE.md": {
+    "mtime": 1776809142.5934408,
+    "ast_hash": "7a39449066d26993c10e26f9c08f8710",
+    "semantic_hash": "7a39449066d26993c10e26f9c08f8710"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/transformations.md": {
+    "mtime": 1778023037.6233714,
+    "ast_hash": "397601063efe4e952dcc0f2e61f42028",
+    "semantic_hash": "397601063efe4e952dcc0f2e61f42028"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/ai-enhancements.md": {
+    "mtime": 1776464299.7219408,
+    "ast_hash": "87e2a294e5f70d01e3bc57ca01a9c8ee",
+    "semantic_hash": "87e2a294e5f70d01e3bc57ca01a9c8ee"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/roadmap.md": {
+    "mtime": 1776953158.2722533,
+    "ast_hash": "0837ab24e6f39a315a49950cea7466ff",
+    "semantic_hash": "0837ab24e6f39a315a49950cea7466ff"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/FONT_ARCHITECTURE_PLAN.md": {
+    "mtime": 1777544212.986076,
+    "ast_hash": "44b7353da14ee819d5bd41c5f831e91c",
+    "semantic_hash": "44b7353da14ee819d5bd41c5f831e91c"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/product-requirements.md": {
+    "mtime": 1778110912.4577117,
+    "ast_hash": "bda295bf5648363d2d14747a9264d1e0",
+    "semantic_hash": "bda295bf5648363d2d14747a9264d1e0"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/ROADMAP_EXTERNAL_STORAGE.md": {
+    "mtime": 1776721340.4505434,
+    "ast_hash": "a5592c9cd619906629bc9e94e74eba8c",
+    "semantic_hash": "a5592c9cd619906629bc9e94e74eba8c"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/TOMORROW_PLAN.md": {
+    "mtime": 1778023645.390064,
+    "ast_hash": "83122092e60d913bbb5f9a21d3f7b92e",
+    "semantic_hash": "83122092e60d913bbb5f9a21d3f7b92e"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/HTML_IN_CANVAS_ROADMAP.md": {
+    "mtime": 1776720918.6956723,
+    "ast_hash": "f56ef2b09d786c2dd63cdf7e7ed055b3",
+    "semantic_hash": "f56ef2b09d786c2dd63cdf7e7ed055b3"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/promotional-video-script.md": {
+    "mtime": 1777369401.6858435,
+    "ast_hash": "dcd5a1e3352b2ea53fde022fe6c199db",
+    "semantic_hash": "dcd5a1e3352b2ea53fde022fe6c199db"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/timelin-editor-filtering-analysis.md": {
+    "mtime": 1778150556.301036,
+    "ast_hash": "0e3fc34468b9bf2b59ea09338b064ed2",
+    "semantic_hash": "0e3fc34468b9bf2b59ea09338b064ed2"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-use-cases.md": {
+    "mtime": 1777382078.3509037,
+    "ast_hash": "2025603baf4ed11fe22eeb4021e28e7b",
+    "semantic_hash": "2025603baf4ed11fe22eeb4021e28e7b"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/effects-roadmap.md": {
+    "mtime": 1778020081.7857366,
+    "ast_hash": "acab2a4f1bb5434a6887df8cf6e794d3",
+    "semantic_hash": "acab2a4f1bb5434a6887df8cf6e794d3"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/claude-recipe-prompt.md": {
+    "mtime": 1776809142.5929914,
+    "ast_hash": "2202774f189e845c39ef9491637e1224",
+    "semantic_hash": "2202774f189e845c39ef9491637e1224"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/SHOWCASE_PLAN.md": {
+    "mtime": 1776277981.0614824,
+    "ast_hash": "32feb1073083f88a887c88ee87c49a2e",
+    "semantic_hash": "32feb1073083f88a887c88ee87c49a2e"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/Transitional-Video-Effects-plan.md": {
+    "mtime": 1776322049.2748005,
+    "ast_hash": "6ccf3a3e0c739b7dbb220f63f891a4c8",
+    "semantic_hash": "6ccf3a3e0c739b7dbb220f63f891a4c8"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/05-aggregate.md": {
+    "mtime": 1777370415.2325952,
+    "ast_hash": "2c600587ccdb497a9db0643de0d5669c",
+    "semantic_hash": "2c600587ccdb497a9db0643de0d5669c"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/04-annotate.md": {
+    "mtime": 1777370411.117006,
+    "ast_hash": "12bf89c539ec96fd761dab7c49236369",
+    "semantic_hash": "12bf89c539ec96fd761dab7c49236369"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/07-organise.md": {
+    "mtime": 1777370442.367298,
+    "ast_hash": "27d6203441b8c5a3f859a3da1778484d",
+    "semantic_hash": "27d6203441b8c5a3f859a3da1778484d"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/02-analyse.md": {
+    "mtime": 1777370396.0469904,
+    "ast_hash": "e61b83835d0c4abe8e0cbeb5a6ff237a",
+    "semantic_hash": "e61b83835d0c4abe8e0cbeb5a6ff237a"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/00-main-explainer.md": {
+    "mtime": 1777370357.048676,
+    "ast_hash": "6a31b7822b65c49258acb5fde4879cf7",
+    "semantic_hash": "6a31b7822b65c49258acb5fde4879cf7"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/03-amend.md": {
+    "mtime": 1777370408.1931129,
+    "ast_hash": "5a5711d8efaf99c532e618347c036c7f",
+    "semantic_hash": "5a5711d8efaf99c532e618347c036c7f"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/06-create.md": {
+    "mtime": 1777370428.821251,
+    "ast_hash": "00d3702a72a65829fc7a2f86c9682539",
+    "semantic_hash": "00d3702a72a65829fc7a2f86c9682539"
+  },
+  "/Users/amithcabraal/code/personal/pic-machina/app/docs/getting-started-videos/01-process.md": {
+    "mtime": 1777370385.699815,
+    "ast_hash": "0a66dca89cb1a2d5477b9e3d11063bf7",
+    "semantic_hash": "0a66dca89cb1a2d5477b9e3d11063bf7"
+  }
+}

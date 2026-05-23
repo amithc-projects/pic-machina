@@ -1,4 +1,4 @@
-# PicMachina — Transform Library Reference
+# Zumilabs Studio — Transform Library Reference
 
 Complete catalogue of all transform nodes available in the Recipe Builder and Node Editor.
 All transforms are registered by their `transformId` string.

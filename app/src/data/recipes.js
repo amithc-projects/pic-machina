@@ -216,7 +216,7 @@ export async function getRecipeBundle(recipeId) {
   }
 
   return {
-    type: 'PicMachinaRecipeBundle',
+    type: 'ZumilabsStudioRecipeBundle',
     version: 1,
     recipe,
     blocks
@@ -227,7 +227,9 @@ export async function getRecipeBundle(recipeId) {
  * Imports a recipe bundle, saving blocks first then the recipe.
  */
 export async function saveRecipeBundle(bundle) {
-  if (bundle.type !== 'PicMachinaRecipeBundle') throw new Error('Invalid recipe bundle format');
+  if (bundle.type !== 'ZumilabsStudioRecipeBundle' && bundle.type !== 'PicMachinaRecipeBundle') {
+    throw new Error('Invalid recipe bundle format');
+  }
 
   const { saveBlock } = await import('./blocks.js');
 

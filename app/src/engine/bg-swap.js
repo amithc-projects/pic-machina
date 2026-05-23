@@ -1,5 +1,5 @@
 /**
- * PicMachina — Background Swap compositor
+ * Zumilabs Studio — Background Swap compositor
  *
  * Called from batch.js after the per-image pipeline has already run ai-remove-bg
  * on the subject images. This module just handles the compositing:

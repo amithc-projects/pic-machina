@@ -1,5 +1,5 @@
 /**
- * PicMachina — Built-in System Blocks
+ * Zumilabs Studio — Built-in System Blocks
  *
  * Reusable node sequences seeded into IndexedDB on app start.
  * Users can clone them to create their own editable copies.

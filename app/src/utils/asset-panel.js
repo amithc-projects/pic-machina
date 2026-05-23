@@ -1,5 +1,5 @@
 /**
- * PicMachina — Asset Metadata Panel
+ * Zumilabs Studio — Asset Metadata Panel
  *
  * Renders a read/edit panel for an asset's stored metadata.
  * Call renderAssetPanel(file) → returns a DOM element.

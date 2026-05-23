@@ -1,4 +1,4 @@
-# Pic-Machina Effects & Filters Roadmap
+# Zumilabs Studio Effects & Filters Roadmap
 
 ## Phase 1: Quick Wins & Foundational Additions (Low Complexity)
 *Status: Complete*

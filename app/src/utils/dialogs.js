@@ -1,5 +1,5 @@
 /**
- * PicMachina — Dialog Utilities
+ * Zumilabs Studio — Dialog Utilities
  *
  * Provides premium, Aurora-styled custom dialogs (confirm/alert) 
  * using the native HTML5 <dialog> element.

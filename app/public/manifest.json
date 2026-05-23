@@ -1,7 +1,7 @@
 {
-  "name": "PicMachina",
-  "short_name": "PicMachina",
-  "description": "Pro Studio Batch Image & Video Processor — local-first, no uploads.",
+  "name": "Zumilabs Studio",
+  "short_name": "Zumilabs Studio",
+  "description": "Pro Studio Batch Media Processor — local-first, no uploads.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -38,7 +38,7 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "PicMachina"
+      "label": "Zumilabs Studio"
     }
   ],
   "categories": ["photo", "productivity", "utilities"]

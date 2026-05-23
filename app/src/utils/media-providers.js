@@ -1,5 +1,5 @@
 /**
- * Pic-Machina — Stock Media Provider Registry
+ * Zumilabs Studio — Stock Media Provider Registry
  *
  * Central registry of stock media sources used by the Get Media screen.
  * Adding a new provider: create src/utils/<name>.js exporting the

@@ -1,5 +1,5 @@
 /**
- * PicMachina — Shared param field renderer
+ * Zumilabs Studio — Shared param field renderer
  *
  * Provides renderParamField() and collectParams() for rendering
  * typed form fields from a param definition array.
@@ -79,6 +79,146 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
   const varActive = supportsVarBind && isVarRef(val);
 
   switch (param.type) {
+    case 'curves': {
+      const defaultCurves = { master: [[0,0],[255,255]], r: null, g: null, b: null };
+      let curvesData = { ...defaultCurves };
+      try { if (val) curvesData = { ...defaultCurves, ...JSON.parse(val) }; } catch(e) {}
+      const curvesJson = escHtml(JSON.stringify(curvesData));
+      return `
+        <div class="ned-field ned-curves-field${overrideClass}">
+          <label class="ned-field-label">${renderLabelHtml(param.label, id, param)}</label>
+          <input type="hidden" id="${id}" name="${param.name}" value="${curvesJson}">
+          <div style="display:flex;gap:3px;margin-bottom:6px;align-items:center">
+            <button class="btn-secondary ned-curves-ch-btn ned-curves-ch-btn--active" data-ch="master" data-for="${id}" style="flex:1;font-size:11px;padding:2px 0">All</button>
+            <button class="btn-secondary ned-curves-ch-btn" data-ch="r" data-for="${id}" style="flex:1;font-size:11px;padding:2px 0;color:#f87171">R</button>
+            <button class="btn-secondary ned-curves-ch-btn" data-ch="g" data-for="${id}" style="flex:1;font-size:11px;padding:2px 0;color:#4ade80">G</button>
+            <button class="btn-secondary ned-curves-ch-btn" data-ch="b" data-for="${id}" style="flex:1;font-size:11px;padding:2px 0;color:#60a5fa">B</button>
+            <button class="btn-secondary ned-curves-reset-btn" data-for="${id}" style="font-size:10px;padding:2px 6px;margin-left:4px">↺</button>
+          </div>
+          <canvas class="ned-curves-canvas" data-for="${id}" width="200" height="200"
+            style="width:100%;aspect-ratio:1;border:1px solid var(--ps-border);border-radius:4px;cursor:crosshair;display:block;touch-action:none"></canvas>
+          <div style="font-size:10px;color:var(--ps-text-muted);margin-top:3px">Click to add • Drag to adjust • Dbl-click to remove</div>
+        </div>`;
+    }
+
+    case 'levels': {
+      const defaultLevels = { inBlack: 0, inWhite: 255, gamma: 1, outBlack: 0, outWhite: 255 };
+      let levelsData = { ...defaultLevels };
+      try { if (val) levelsData = { ...defaultLevels, ...JSON.parse(val) }; } catch(e) {}
+      const levJson = escHtml(JSON.stringify(levelsData));
+      return `
+        <div class="ned-field ned-levels-field${overrideClass}">
+          <label class="ned-field-label">${renderLabelHtml(param.label, id, param)}</label>
+          <input type="hidden" id="${id}" name="${param.name}" value="${levJson}">
+          <canvas class="ned-levels-histogram" data-for="${id}" width="200" height="52"
+            style="width:100%;height:52px;border:1px solid var(--ps-border);border-radius:4px 4px 0 0;display:block;background:#111"></canvas>
+          <div style="padding:8px 0 2px;font-size:10px;color:var(--ps-text-muted);text-transform:uppercase;letter-spacing:.05em">Input</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
+            <div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Black <span class="ned-levels-in-black-val">${levelsData.inBlack}</span></div>
+              <input type="range" class="ic-range ned-levels-in-black" data-for="${id}" min="0" max="253" step="1" value="${levelsData.inBlack}">
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Gamma <span class="ned-levels-gamma-val">${levelsData.gamma}</span></div>
+              <input type="range" class="ic-range ned-levels-gamma" data-for="${id}" min="0.1" max="9.99" step="0.01" value="${levelsData.gamma}">
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">White <span class="ned-levels-in-white-val">${levelsData.inWhite}</span></div>
+              <input type="range" class="ic-range ned-levels-in-white" data-for="${id}" min="2" max="255" step="1" value="${levelsData.inWhite}">
+            </div>
+          </div>
+          <div style="padding:2px 0;font-size:10px;color:var(--ps-text-muted);text-transform:uppercase;letter-spacing:.05em">Output</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Shadow <span class="ned-levels-out-black-val">${levelsData.outBlack}</span></div>
+              <input type="range" class="ic-range ned-levels-out-black" data-for="${id}" min="0" max="254" step="1" value="${levelsData.outBlack}">
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Highlight <span class="ned-levels-out-white-val">${levelsData.outWhite}</span></div>
+              <input type="range" class="ic-range ned-levels-out-white" data-for="${id}" min="1" max="255" step="1" value="${levelsData.outWhite}">
+            </div>
+          </div>
+        </div>`;
+    }
+
+    case 'hsl': {
+      const hslRanges = ['reds','oranges','yellows','greens','cyans','blues','purples','magentas'];
+      const hslColors = { reds:'#f87171',oranges:'#fb923c',yellows:'#facc15',greens:'#4ade80',cyans:'#22d3ee',blues:'#60a5fa',purples:'#c084fc',magentas:'#f472b6' };
+      let hslData = {};
+      try { if (val) hslData = JSON.parse(val); } catch(e) {}
+      const hslJson = escHtml(JSON.stringify(hslData));
+      const d0 = hslData[hslRanges[0]] || { h: 0, s: 0, l: 0 };
+      return `
+        <div class="ned-field ned-hsl-field${overrideClass}">
+          <label class="ned-field-label">${renderLabelHtml(param.label, id, param)}</label>
+          <input type="hidden" id="${id}" name="${param.name}" value="${hslJson}">
+          <div class="ned-hsl-tabs" style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">
+            ${hslRanges.map((r, i) => `<button class="btn-secondary ned-hsl-tab${i===0?' ned-hsl-tab--active':''}" data-range="${r}" data-for="${id}"
+              style="padding:2px 6px;font-size:10px;color:${hslColors[r]};border-color:${hslColors[r]}60"
+              >${r[0].toUpperCase()+r.slice(1,3)}</button>`).join('')}
+          </div>
+          <div class="ned-hsl-sliders" data-for="${id}" data-active-range="${hslRanges[0]}">
+            <div style="margin-bottom:6px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Hue</span><span class="ned-hsl-h-val">${d0.h||0}</span></div>
+              <input type="range" class="ic-range ned-hsl-h" data-for="${id}" min="-180" max="180" step="1" value="${d0.h||0}">
+            </div>
+            <div style="margin-bottom:6px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Saturation</span><span class="ned-hsl-s-val">${d0.s||0}</span></div>
+              <input type="range" class="ic-range ned-hsl-s" data-for="${id}" min="-100" max="100" step="1" value="${d0.s||0}">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Luminance</span><span class="ned-hsl-l-val">${d0.l||0}</span></div>
+              <input type="range" class="ic-range ned-hsl-l" data-for="${id}" min="-100" max="100" step="1" value="${d0.l||0}">
+            </div>
+          </div>
+        </div>`;
+    }
+
+    case 'mask':
+      return `
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label">${renderLabelHtml(param.label, id, param)}</label>
+          <input type="hidden" id="${id}" name="${param.name}" value="${val || ''}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-secondary ned-mask-edit-btn" style="flex:1" data-param-id="${id}">
+              <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">brush</span>
+              ${val ? 'Edit Mask' : 'Draw Mask'}
+            </button>
+            ${val ? `<span style="color:#4ade80;font-size:11px;white-space:nowrap">&#10003; Painted</span>` : ''}
+          </div>
+        </div>`;
+
+    case 'path-points': {
+      let ptsCount = 0;
+      try { ptsCount = JSON.parse(val || '[]').length; } catch(e) {}
+      return `
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label">${renderLabelHtml(param.label, id, param)}</label>
+          <input type="hidden" id="${id}" name="${param.name}" value="${val || '[]'}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-secondary ned-path-edit-btn" style="flex:1" data-param-id="${id}">
+              <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">gesture</span>
+              Edit Path Points
+            </button>
+            <span class="ned-path-points-count" id="${id}-count" style="font-size:11px;color:var(--ps-text-muted);white-space:nowrap">${ptsCount} points</span>
+          </div>
+        </div>`;
+    }
+
+    case 'paint':
+      return `
+        <div class="ned-field${overrideClass}">
+          <label class="ned-field-label">${renderLabelHtml(param.label, id, param)}</label>
+          <input type="hidden" id="${id}" name="${param.name}" value="${val || ''}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-secondary ned-paint-edit-btn" style="flex:1" data-param-id="${id}">
+              <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">brush</span>
+              ${val ? 'Edit Paint' : 'Start Painting'}
+            </button>
+            ${val ? `<span style="color:#4ade80;font-size:11px;white-space:nowrap">&#10003; Painted</span>` : ''}
+          </div>
+        </div>`;
+
     case 'boolean':
       return `
         <div class="ned-field${overrideClass}">
@@ -366,8 +506,292 @@ export function injectParamFieldStyles() {
     .ned-file-browse-label { display:flex; align-items:center; gap:4px; cursor:pointer; }
     .ned-file-clear-btn { display:flex; align-items:center; color:var(--ps-text-muted); }
     .ned-file-clear-btn:hover { color:var(--ps-red, #ef4444); }
+    .ned-curves-ch-btn--active { background:var(--ps-blue) !important; color:#fff !important; border-color:var(--ps-blue) !important; }
+    .ned-hsl-tab--active { background:rgba(255,255,255,0.15) !important; }
   `;
   document.head.appendChild(s);
+}
+
+// ── Curves editor ────────────────────────────────────────────
+function _bindCurvesField(container, id) {
+  const hidden = container.querySelector(`#${id}`);
+  const canvas = container.querySelector(`.ned-curves-canvas[data-for="${id}"]`);
+  const chBtns = container.querySelectorAll(`.ned-curves-ch-btn[data-for="${id}"]`);
+  const resetBtn = container.querySelector(`.ned-curves-reset-btn[data-for="${id}"]`);
+  if (!hidden || !canvas) return;
+
+  let data = { master: [[0,0],[255,255]], r: null, g: null, b: null };
+  try { data = { ...data, ...JSON.parse(hidden.value) }; } catch(e) {}
+  let activeCh = 'master';
+  let dragging = null;
+
+  const chColors = { master: '#ffffff', r: '#f87171', g: '#4ade80', b: '#60a5fa' };
+
+  const getPts = () => data[activeCh] || [[0,0],[255,255]];
+  const setPts = (pts) => {
+    data[activeCh] = pts.length <= 2 && pts[0][0] === 0 && pts[0][1] === 0 && pts[1][0] === 255 && pts[1][1] === 255
+      ? (activeCh === 'master' ? pts : null)
+      : pts;
+    hidden.value = JSON.stringify(data);
+    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  const buildLUT = (pts) => {
+    const sorted = [...pts].sort((a,b) => a[0]-b[0]);
+    const lut = new Float32Array(256);
+    for (let x = 0; x < 256; x++) {
+      let i = 1;
+      while (i < sorted.length - 1 && sorted[i][0] <= x) i++;
+      const [x0,y0] = sorted[i-1], [x1,y1] = sorted[i];
+      const t = x1 > x0 ? (x - x0) / (x1 - x0) : 0;
+      lut[x] = Math.max(0, Math.min(255, y0 + t * (y1 - y0)));
+    }
+    return lut;
+  };
+
+  const draw = () => {
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      ctx.beginPath(); ctx.moveTo(W*i/4, 0); ctx.lineTo(W*i/4, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, H*i/4); ctx.lineTo(W, H*i/4); ctx.stroke();
+    }
+    // Diagonal
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(W, 0); ctx.stroke();
+
+    // Curve
+    const pts = getPts();
+    if (pts && pts.length >= 2) {
+      const lut = buildLUT(pts);
+      ctx.strokeStyle = chColors[activeCh]; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let x = 0; x < 256; x++) {
+        const px = x / 255 * W, py = H - lut[x] / 255 * H;
+        x === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Control points
+      pts.forEach(([px, py]) => {
+        const cx2 = px / 255 * W, cy2 = H - py / 255 * H;
+        ctx.beginPath(); ctx.arc(cx2, cy2, 5, 0, Math.PI*2);
+        ctx.fillStyle = chColors[activeCh]; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+      });
+    }
+  };
+
+  const canvasPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const scaleX = 255 / r.width, scaleY = 255 / r.height;
+    const touch = e.touches?.[0] || e;
+    return [
+      Math.max(0, Math.min(255, Math.round((touch.clientX - r.left) * scaleX))),
+      Math.max(0, Math.min(255, Math.round(255 - (touch.clientY - r.top) * scaleY)))
+    ];
+  };
+
+  const hitTest = (pts, x, y) => {
+    let best = -1, bestD = 12;
+    pts.forEach(([px, py], i) => {
+      const d = Math.hypot(px - x, py - y) * (canvas.getBoundingClientRect().width / 255);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
+  };
+
+  canvas.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const [x, y] = canvasPos(e);
+    const pts = getPts() || [[0,0],[255,255]];
+    const hit = hitTest(pts, x, y);
+    if (hit >= 0) {
+      dragging = hit;
+    } else {
+      const newPts = [...pts, [x, y]].sort((a,b) => a[0]-b[0]);
+      dragging = newPts.findIndex(p => p[0] === x && p[1] === y);
+      setPts(newPts);
+    }
+    draw();
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (dragging === null) return;
+    e.preventDefault();
+    const [x, y] = canvasPos(e);
+    const pts = [...(getPts() || [[0,0],[255,255]])];
+    pts[dragging] = [x, y];
+    pts.sort((a,b) => a[0]-b[0]);
+    dragging = pts.findIndex(p => p[0] === x && p[1] === y);
+    setPts(pts);
+    draw();
+  });
+
+  window.addEventListener('mouseup', () => { dragging = null; });
+
+  canvas.addEventListener('dblclick', (e) => {
+    const [x, y] = canvasPos(e);
+    const pts = getPts() || [[0,0],[255,255]];
+    const hit = hitTest(pts, x, y);
+    if (hit >= 0 && pts.length > 2) {
+      setPts(pts.filter((_, i) => i !== hit));
+      draw();
+    }
+  });
+
+  chBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      chBtns.forEach(b => b.classList.remove('ned-curves-ch-btn--active'));
+      btn.classList.add('ned-curves-ch-btn--active');
+      activeCh = btn.dataset.ch;
+      draw();
+    });
+  });
+
+  resetBtn?.addEventListener('click', () => {
+    data[activeCh] = activeCh === 'master' ? [[0,0],[255,255]] : null;
+    hidden.value = JSON.stringify(data);
+    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+    draw();
+  });
+
+  draw();
+  // Redraw when canvas becomes visible (e.g. first render)
+  requestAnimationFrame(draw);
+}
+
+// ── Levels editor ────────────────────────────────────────────
+function _bindLevelsField(container, id) {
+  const hidden = container.querySelector(`#${id}`);
+  if (!hidden) return;
+
+  let data = { inBlack: 0, inWhite: 255, gamma: 1, outBlack: 0, outWhite: 255 };
+  try { data = { ...data, ...JSON.parse(hidden.value) }; } catch(e) {}
+
+  const histCanvas = container.querySelector(`.ned-levels-histogram[data-for="${id}"]`);
+  const inBlackEl  = container.querySelector(`.ned-levels-in-black[data-for="${id}"]`);
+  const inWhiteEl  = container.querySelector(`.ned-levels-in-white[data-for="${id}"]`);
+  const gammaEl    = container.querySelector(`.ned-levels-gamma[data-for="${id}"]`);
+  const outBlackEl = container.querySelector(`.ned-levels-out-black[data-for="${id}"]`);
+  const outWhiteEl = container.querySelector(`.ned-levels-out-white[data-for="${id}"]`);
+
+  const valEls = {
+    inBlack: container.querySelector(`.ned-levels-in-black-val`),
+    inWhite: container.querySelector(`.ned-levels-in-white-val`),
+    gamma:   container.querySelector(`.ned-levels-gamma-val`),
+    outBlack: container.querySelector(`.ned-levels-out-black-val`),
+    outWhite: container.querySelector(`.ned-levels-out-white-val`),
+  };
+
+  const drawHistogram = (imageData) => {
+    if (!histCanvas || !imageData) return;
+    const W = histCanvas.width, H = histCanvas.height;
+    const ctx = histCanvas.getContext('2d');
+    const hist = new Uint32Array(256);
+    const d = imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      hist[Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2])]++;
+    }
+    const max = Math.max(...hist);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#888';
+    for (let i = 0; i < 256; i++) {
+      const h = (hist[i] / max) * H;
+      ctx.fillRect(i * W / 256, H - h, W / 256 + 1, h);
+    }
+  };
+
+  // Draw placeholder histogram
+  if (histCanvas) {
+    const W = histCanvas.width, H = histCanvas.height;
+    const ctx = histCanvas.getContext('2d');
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#555'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Histogram updates on preview', W/2, H/2 + 3);
+  }
+
+  const save = () => {
+    data.inBlack  = parseFloat(inBlackEl?.value  ?? data.inBlack);
+    data.inWhite  = parseFloat(inWhiteEl?.value  ?? data.inWhite);
+    data.gamma    = parseFloat(gammaEl?.value    ?? data.gamma);
+    data.outBlack = parseFloat(outBlackEl?.value ?? data.outBlack);
+    data.outWhite = parseFloat(outWhiteEl?.value ?? data.outWhite);
+    if (valEls.inBlack)  valEls.inBlack.textContent  = data.inBlack;
+    if (valEls.inWhite)  valEls.inWhite.textContent  = data.inWhite;
+    if (valEls.gamma)    valEls.gamma.textContent    = parseFloat(data.gamma).toFixed(2);
+    if (valEls.outBlack) valEls.outBlack.textContent = data.outBlack;
+    if (valEls.outWhite) valEls.outWhite.textContent = data.outWhite;
+    hidden.value = JSON.stringify(data);
+    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  [inBlackEl, inWhiteEl, gammaEl, outBlackEl, outWhiteEl].forEach(el => {
+    el?.addEventListener('input', save);
+  });
+}
+
+// ── HSL editor ───────────────────────────────────────────────
+function _bindHslField(container, id) {
+  const hidden = container.querySelector(`#${id}`);
+  if (!hidden) return;
+
+  let data = {};
+  try { if (hidden.value) data = JSON.parse(hidden.value); } catch(e) {}
+
+  const tabs    = container.querySelectorAll(`.ned-hsl-tab[data-for="${id}"]`);
+  const sliders = container.querySelector(`.ned-hsl-sliders[data-for="${id}"]`);
+  const hEl = container.querySelector(`.ned-hsl-h[data-for="${id}"]`);
+  const sEl = container.querySelector(`.ned-hsl-s[data-for="${id}"]`);
+  const lEl = container.querySelector(`.ned-hsl-l[data-for="${id}"]`);
+  const hVal = container.querySelector(`.ned-hsl-h-val`);
+  const sVal = container.querySelector(`.ned-hsl-s-val`);
+  const lVal = container.querySelector(`.ned-hsl-l-val`);
+
+  const getRange = () => sliders?.dataset.activeRange || 'reds';
+
+  const loadRange = (range) => {
+    const d = data[range] || { h: 0, s: 0, l: 0 };
+    if (hEl) hEl.value = d.h || 0;
+    if (sEl) sEl.value = d.s || 0;
+    if (lEl) lEl.value = d.l || 0;
+    if (hVal) hVal.textContent = d.h || 0;
+    if (sVal) sVal.textContent = d.s || 0;
+    if (lVal) lVal.textContent = d.l || 0;
+  };
+
+  const save = () => {
+    const range = getRange();
+    data[range] = {
+      h: parseFloat(hEl?.value || 0),
+      s: parseFloat(sEl?.value || 0),
+      l: parseFloat(lEl?.value || 0),
+    };
+    if (hVal) hVal.textContent = data[range].h;
+    if (sVal) sVal.textContent = data[range].s;
+    if (lVal) lVal.textContent = data[range].l;
+    hidden.value = JSON.stringify(data);
+    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('ned-hsl-tab--active'));
+      tab.classList.add('ned-hsl-tab--active');
+      if (sliders) sliders.dataset.activeRange = tab.dataset.range;
+      loadRange(tab.dataset.range);
+    });
+  });
+
+  [hEl, sEl, lEl].forEach(el => el?.addEventListener('input', save));
 }
 
 /**
@@ -419,6 +843,18 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
       const input = container.querySelector(`#${id}`);
       const disp  = container.querySelector(`#${id}-val`);
       if (input && disp) input.addEventListener('input', () => { disp.textContent = input.value; });
+    }
+
+    if (p.type === 'curves') {
+      _bindCurvesField(container, id);
+    }
+
+    if (p.type === 'levels') {
+      _bindLevelsField(container, id);
+    }
+
+    if (p.type === 'hsl') {
+      _bindHslField(container, id);
     }
 
     if (p.type === 'color') {

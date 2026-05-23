@@ -1,4 +1,4 @@
-# PicMachina — AI Recipe Generation Guide
+# Zumilabs Studio — AI Recipe Generation Guide
 
 > Feed this document to any AI assistant to enable it to answer questions like
 > *"I want to apply an infrared film effect and output an animated slideshow"*
@@ -7,9 +7,9 @@
 
 ---
 
-## 1. What is PicMachina?
+## 1. What is Zumilabs Studio?
 
-PicMachina is a local-first, browser-based batch image processing app. Users define **Recipes** — ordered sequences of transform nodes — and run them against a folder of images. All processing happens on-device (no cloud uploads). Outputs are saved to a local subfolder.
+Zumilabs Studio is a local-first, browser-based batch image processing app. Users define **Recipes** — ordered sequences of transform nodes — and run them against a folder of images. All processing happens on-device (no cloud uploads). Outputs are saved to a local subfolder.
 
 Key concepts:
 - **Recipe**: a named list of nodes that processes every image in a batch
@@ -315,23 +315,43 @@ Floyd-Steinberg error-diffusion dithering to a limited colour palette.
 ### 3.3 Overlays & Typography (`overlay-*`)
 
 #### `overlay-rich-text` — Rich Text
-| Param | Type | Default |
-|---|---|---|
-| `content` | text | `"{{filename}}"` |
-| `font` | text | `"Inter"` |
-| `size` | number | `32` |
+Supports two positioning modes controlled by `positionMode`:
+- **Anchor mode** (default): positions text relative to a 9-point anchor grid with pixel offsets
+- **Free mode**: drag a bounding box anywhere on the image in NED; text reflows to fit the box
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `content` | text | `"{{filename}}"` | Supports `{{variable}}` tokens |
+| `font` | text | `"Inter"` | |
+| `size` | number | `32` | |
 | `sizeMode` | select | `"px"` | `"px"` \| `"pct-width"` \| `"pct-height"` |
-| `color` | color | `"#ffffff"` |
-| `opacity` | range 0–100 | `100` |
-| `anchor` | select | `"bottom-right"` | `"top-left"` \| `"top-center"` \| `"top-right"` \| `"center-left"` \| `"center"` \| `"center-right"` \| `"bottom-left"` \| `"bottom-center"` \| `"bottom-right"` |
-| `offsetX`, `offsetY` | number | `20` |
+| `color` | color | `"#ffffff"` | |
+| `opacity` | range 0–100 | `100` | |
+| `positionMode` | select | `"anchor"` | `"anchor"` = 9-point grid; `"free"` = drag box in NED |
+| `anchor` | select | `"bottom-right"` | Used when `positionMode="anchor"`. `"top-left"` \| `"top-center"` \| `"top-right"` \| `"center-left"` \| `"center"` \| `"center-right"` \| `"bottom-left"` \| `"bottom-center"` \| `"bottom-right"` |
+| `offsetX`, `offsetY` | number | `20` | Used when `positionMode="anchor"` |
+| `boxX`, `boxY` | range 0–100 | `50` | Centre % of text box — used when `positionMode="free"` |
+| `boxW` | range 1–100 | `80` | Box width % — used when `positionMode="free"` |
+| `boxH` | range 1–100 | `20` | Box height % — used when `positionMode="free"` |
 | `bgBox` | select | `"none"` | `"none"` \| `"wrap"` \| `"full-width"` |
-| `bgColor` | color | `"#000000"` |
-| `bgOpacity` | range 0–100 | `60` |
-| `bgPadding` | number | `8` |
-| `shadow` | boolean | `true` |
+| `bgColor` | color | `"#000000"` | |
+| `bgOpacity` | range 0–100 | `60` | |
+| `bgPadding` | number | `8` | |
+| `shadow` | boolean | `true` | |
 | `weight` | select | `"400"` | `"300"` \| `"400"` \| `"700"` |
-| `blendMode` | select | `"source-over"` | `"source-over"` \| `"multiply"` \| `"screen"` |
+| `blendMode` | select | `"source-over"` | `"source-over"` \| `"multiply"` \| `"screen"` \| `"destination-in"` \| `"destination-out"` |
+
+#### `overlay-draw-mask` — Draw Mask
+Freehand-painted alpha mask. Used to restrict where the previous step is visible. Typically used with `flow-save` / `flow-load` to create selective adjustments (see §7 Example F).
+
+**Invert off**: image is visible only *inside* the painted area (transparent outside).  
+**Invert on**: image is visible everywhere *except* inside the painted area.
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `maskData` | mask | `""` | Base64 PNG painted in NED via the "Draw Mask" button |
+| `feather` | range 0–40 | `0` | Blur the mask edge in px for soft transitions |
+| `invert` | boolean | `false` | Swap keep/remove regions |
 
 #### `overlay-watermark` — Diagonal Watermark
 | Param | Type | Default |
@@ -506,10 +526,14 @@ Detect and classify people using body pose landmarks and face detection. Stores 
 | `maxPoses` | range 1–10 | `5` |
 
 #### `ai-clipping-mask` — Clipping Mask
-| Param | Type | Default |
-|---|---|---|
+| Param | Type | Default | Notes |
+|---|---|---|---|
 | `shape` | select | `"Circle"` | `"Circle"` \| `"RoundedRect"` \| `"Diamond"` |
-| `feathering` | range 0–50 | `0` |
+| `feathering` | range 0–50 | `0` | |
+| `cx` | range 0–100 | `50` | Centre X % — drag in NED to reposition |
+| `cy` | range 0–100 | `50` | Centre Y % — drag in NED to reposition |
+| `scaleW` | range 1–200 | `100` | Width % of image — drag corner handle in NED |
+| `scaleH` | range 1–200 | `100` | Height % of image — drag corner handle in NED |
 
 ---
 
@@ -523,11 +547,18 @@ Every recipe must end with at least one `flow-export` (or it auto-exports JPEG a
 | `format` | select | `"image/jpeg"` | `"image/jpeg"` \| `"image/png"` \| `"image/webp"` |
 | `quality` | range 1–100 | `90` |
 
-#### `flow-save` / `flow-load` — Canvas State Memory
-Save the current canvas state to a named slot, then restore it later. Useful for multi-panel compositions.
+#### `flow-save` — Save Canvas State
+Snapshot the current canvas into a named slot. Slots persist for the lifetime of the batch run and are per-image (not shared across images).
 | Param | Type | Default |
 |---|---|---|
 | `label` | text | `"state-1"` |
+
+#### `flow-load` — Load Canvas State
+Restore a previously saved canvas state, optionally compositing it over or under the current canvas instead of fully replacing it.
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `label` | text | `"state-1"` | Must match the label used in `flow-save` |
+| `blendMode` | select | `"replace"` | `"replace"` = full restore; `"destination-over"` = saved state drawn *behind* current (use after Draw Mask); `"source-over"` = saved state drawn *on top*; `"multiply"` \| `"screen"` \| `"overlay"` = blend modes |
 
 #### `flow-compose-grid` — Compose Grid from Saved States
 Assembles named saved states into a grid (e.g. a 2×2 Warhol-style panel).
@@ -1090,18 +1121,143 @@ Use the built-in `sys-8bit` recipe, or build:
 
 ---
 
+### Example F: Selective Adjustment (Blur Background Only)
+
+**User intent**: "Blur the background but keep the subject sharp — I'll paint the area to blur."
+
+Uses `flow-save` + `overlay-draw-mask` + `flow-load` (destination-over) to create a selective adjustment layer.
+
+```json
+{
+  "name": "Selective Background Blur",
+  "nodes": [
+    {
+      "id": "s-1", "type": "transform",
+      "transformId": "flow-save",
+      "label": "Snapshot original",
+      "params": { "label": "original" }
+    },
+    {
+      "id": "s-2", "type": "transform",
+      "transformId": "filter-advanced",
+      "label": "Blur whole image",
+      "params": { "blurRadius": 12 }
+    },
+    {
+      "id": "s-3", "type": "transform",
+      "transformId": "overlay-draw-mask",
+      "label": "Paint area to blur",
+      "params": {
+        "maskData": "",
+        "feather": 8,
+        "invert": false
+      }
+    },
+    {
+      "id": "s-4", "type": "transform",
+      "transformId": "flow-load",
+      "label": "Restore original behind mask",
+      "params": { "label": "original", "blendMode": "destination-over" }
+    },
+    {
+      "id": "s-5", "type": "transform",
+      "transformId": "flow-export",
+      "params": { "suffix": "_selective", "format": "image/jpeg", "quality": 92 }
+    }
+  ]
+}
+```
+
+> **Key**: open the `overlay-draw-mask` node in NED and paint the background area. The blur only shows inside the painted region; the original is restored behind it via `destination-over`.  
+> **Invert tip**: enable `invert: true` to paint the *subject* instead — everything you don't paint gets blurred automatically.
+
+---
+
+### Example G: Text Between Layers (Subject in Front of Text)
+
+**User intent**: "Add text over the background but have the person appear in front of it — like a 3D depth effect."
+
+Uses AI background removal to extract the subject, then layers: original → text → subject cutout.
+
+```json
+{
+  "name": "Text Between Layers",
+  "nodes": [
+    {
+      "id": "l-1", "type": "transform",
+      "transformId": "flow-save",
+      "label": "① Snapshot original",
+      "params": { "label": "original" }
+    },
+    {
+      "id": "l-2", "type": "transform",
+      "transformId": "ai-remove-bg",
+      "label": "② Cut out subject",
+      "params": { "mode": "Transparent", "edgeSmoothing": 60 }
+    },
+    {
+      "id": "l-3", "type": "transform",
+      "transformId": "flow-save",
+      "label": "③ Snapshot subject cutout",
+      "params": { "label": "person" }
+    },
+    {
+      "id": "l-4", "type": "transform",
+      "transformId": "flow-load",
+      "label": "④ Restore original",
+      "params": { "label": "original", "blendMode": "replace" }
+    },
+    {
+      "id": "l-5", "type": "transform",
+      "transformId": "overlay-rich-text",
+      "label": "⑤ Text layer",
+      "params": {
+        "content": "YOUR TEXT HERE",
+        "sizeMode": "pct-width",
+        "size": 8,
+        "color": "#ffffff",
+        "weight": "700",
+        "shadow": true,
+        "positionMode": "anchor",
+        "anchor": "center",
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    {
+      "id": "l-6", "type": "transform",
+      "transformId": "flow-load",
+      "label": "⑥ Composite subject on top",
+      "params": { "label": "person", "blendMode": "source-over" }
+    },
+    {
+      "id": "l-7", "type": "transform",
+      "transformId": "flow-export",
+      "params": { "suffix": "_layered", "format": "image/jpeg", "quality": 92 }
+    }
+  ]
+}
+```
+
+> **Layer order**: background photo → text (step 5) → subject cutout (step 6) — the subject appears in front of the text.  
+> You can insert any number of additional effects between steps 4 and 6: colour grade the background, add a gradient overlay, etc. The subject will always composite on top.
+
+---
+
 ## 8. Design Rules for AI Recipe Generation
 
 1. **Always end every output path with `flow-export`** — or use an aggregation node (`flow-animate-stack`, `flow-create-gif`, etc.) as the terminal node.
 2. **Never combine `flow-export` and an aggregation node** on the same execution path — aggregation nodes ARE the output.
 3. **AI transforms** (`ai-*`) work fine in recipes but cause the batch to run on the main thread (slower). Avoid them if the goal doesn't require AI.
-4. **`flow-save` / `flow-load`** are for multi-panel compositions within a single image (e.g. Warhol). Don't use them for cross-image state.
+4. **`flow-save` / `flow-load`** are for per-image compositing (state is per-image, not shared across the batch). Use them for layer stacking and selective adjustments within a single image.
 5. **`flow-animate-stack` requires all frames to have the same dimensions** — apply `geo-resize` and/or `overlay-polaroid-frame` before it.
 6. **Aggregation nodes are per-recipe singletons** — only one `flow-animate-stack` (or `flow-create-gif`, etc.) per recipe.
 7. **`{{recipe.X}}` tokens** only resolve if a `params` array declares a param named `X`.
 8. **`overlap` in `flow-animate-stack`** controls how much each new photo overlaps the stack of previous ones (0 = no overlap, 90 = heavy stacking). Start at 20–40 for a natural look.
 9. **`deskColor` in stack nodes** is the background colour of the animation canvas — dark brown (`#3d2b1a`) looks like a wooden desk; try `#1a1a2e` for a dark surface.
 10. **For existing intents**, prefer recommending a system recipe with cloning over building from scratch. Cloned recipes are fully editable in the Builder screen.
+11. **Layer stacking pattern** — `flow-save` → [effects] → `flow-load (destination-over)` is the standard pattern for compositing a modified layer back over the original. The `destination-over` blend draws the saved state *behind* the current canvas, so only transparent areas show through. Always use `overlay-draw-mask` or `ai-remove-bg` to create transparency before the `flow-load (destination-over)` step.
+12. **`overlay-draw-mask` requires a painted mask** stored as `maskData`. Without it the node is a pass-through. The mask must be painted interactively in the NED editor; it cannot be generated programmatically in a recipe JSON.
 
 ---
 

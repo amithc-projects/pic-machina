@@ -83,7 +83,7 @@ async function navigate(hash) {
 
   if (screenId === 'pow' || screenId === 'bup') {
     if (!isPro) {
-      window.AuroraToast?.show({ variant: 'error', title: 'Pro Required', description: 'This section requires a Pic-Machina Pro license.' });
+      window.AuroraToast?.show({ variant: 'error', title: 'Pro Required', description: 'This section requires a Zumilabs Studio Pro license.' });
       if (currentScreen) location.hash = `#${currentScreen}`;
       else location.hash = `#${DEFAULT_SCREEN}`;
       return;

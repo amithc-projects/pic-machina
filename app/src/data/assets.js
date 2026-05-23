@@ -1,5 +1,5 @@
 /**
- * PicMachina — Asset Metadata Store
+ * Zumilabs Studio — Asset Metadata Store
  *
  * Persists per-file metadata (EXIF, geocode, OCR, vision, user sidecar) in
  * the 'assets' IndexedDB store, keyed by a stable SHA-256 content hash.

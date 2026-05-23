@@ -1,5 +1,5 @@
 /**
- * PicMachina — Video Wall
+ * Zumilabs Studio — Video Wall
  *
  * Composites multiple input video files into a single MP4 output using
  * configurable layout templates.

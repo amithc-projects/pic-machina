@@ -1,5 +1,5 @@
 /**
- * PicMachina — Node Utilities
+ * Zumilabs Studio — Node Utilities
  *
  * Shared logic for tree traversal, flattening, and counting of recipe nodes.
  */

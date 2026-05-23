@@ -1,5 +1,5 @@
 /**
- * PicMachina — Scanner Worker
+ * Zumilabs Studio — Scanner Worker
  * OpenCV processing pipeline safely isolated off the main thread.
  */
 

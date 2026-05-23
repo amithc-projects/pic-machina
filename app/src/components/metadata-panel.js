@@ -17,7 +17,7 @@
  *   Architecture    L2  building analysis (hidden when absent)
  *   Gen. Prompts    L2  short / detailed / negative + copy buttons
  *   DAM Notes       L2  contentSensitivity, releases, limitations
- *   Computed        L2  scalar values from Pic-Machina transforms
+ *   Computed        L2  scalar values from Zumilabs Studio transforms
  *   Vision (legacy) L2  asset-panel extracted data (fallback)
  * [File, Camera & EXIF]  L1 (async)
  * [Processing Log]       L1

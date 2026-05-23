@@ -1,5 +1,5 @@
 /**
- * Pic-Machina — Get Media Screen
+ * Zumilabs Studio — Get Media Screen
  *
  * Search and download free stock photos and videos from Pexels and
  * Unsplash. Source is switchable via the Source dropdown. Both

@@ -1,6 +1,6 @@
 # Typography & Font Architecture Plan
 
-This document outlines the architecture for unifying font management and text styling across the Pic-Machina application.
+This document outlines the architecture for unifying font management and text styling across the Zumilabs Studio application.
 
 ## Feasibility of Variable Fonts in HTML5 Canvas
 Variable fonts are fully supported by HTML/CSS and SVG rendering (using `font-variation-settings`). However, HTML5 Canvas `ctx.font` does not directly accept variation settings. The standard workaround we will use is dynamically generating an `@font-face` rule in the DOM, applying the `font-variation-settings` inside that rule, and giving it a unique `font-family` alias (e.g., `"Brand Heading Font"`). Canvas can then use `ctx.font = '48px "Brand Heading Font"'` and the variable axes will render correctly.
