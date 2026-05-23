@@ -40,7 +40,14 @@ registry.register({
     { name: 'bgOpacity',   label: 'Box Opacity (%)',type: 'range',   min: 0, max: 100, defaultValue: 60, textStyleOverride: true },
     { name: 'bgPadding',   label: 'Box Padding (px)',type: 'number', defaultValue: 8, textStyleOverride: true },
     
-    { name: 'opacity',     label: 'Overlay Opacity (%)',  type: 'range',  min: 0, max: 100, defaultValue: 100 },
+    { name: 'opacity',       label: 'Overlay Opacity (%)',  type: 'range',  min: 0, max: 100, defaultValue: 100 },
+    { name: 'positionMode', label: 'Position Mode', type: 'select',
+      options: [{ label: 'Anchor Point', value: 'anchor' }, { label: 'Free Position (drag)', value: 'free' }],
+      defaultValue: 'anchor' },
+    { name: 'boxX',  label: 'Box X (%)',      type: 'range', min: 0,  max: 100, defaultValue: 50 },
+    { name: 'boxY',  label: 'Box Y (%)',      type: 'range', min: 0,  max: 100, defaultValue: 50 },
+    { name: 'boxW',  label: 'Box Width (%)',  type: 'range', min: 1,  max: 100, defaultValue: 80 },
+    { name: 'boxH',  label: 'Box Height (%)', type: 'range', min: 1,  max: 100, defaultValue: 20 },
     { name: 'anchor',      label: 'Anchor',       type: 'select',
       options: [
         { label: 'Top Left',      value: 'top-left' },
@@ -104,20 +111,25 @@ registry.register({
     else if (p.sizeMode === 'pct-height') size = Math.max(1, Math.round(H * (p.size || 3) / 100));
     else size = p.size || 32;
 
+    // Box mode (free position) vs anchor mode
+    const useBox = p.positionMode === 'free';
     const ox     = p.offsetX ?? 20;
     const oy     = p.offsetY ?? 20;
-    const maxW   = W - (ox * 2); // Keep padding on both edges
+    const maxW   = useBox ? (p.boxW / 100) * W : W - (ox * 2);
+    const boxOriginX = useBox ? (p.boxX / 100) * W - maxW / 2 : null;
+    const boxOriginY = useBox ? (p.boxY / 100) * H - ((p.boxH / 100) * H) / 2 : null;
+    const maxBoxH    = useBox ? (p.boxH / 100) * H : Infinity;
 
     ctx.save();
     ctx.globalAlpha = (p.opacity ?? 100) / 100;
     ctx.globalCompositeOperation = p.blendMode || 'source-over';
-    
+
     let currentSize = size;
     ctx.font = `${p.weight || 400} ${currentSize}px ${p.font || 'Inter'}, sans-serif`;
     ctx.textBaseline = 'alphabetic';
 
     const paragraphs = text.split('\n');
-    
+
     // Scale Down: Ensure the longest unbroken word fits within maxW
     let longestWordW = 0;
     for (const pText of paragraphs) {
@@ -127,7 +139,7 @@ registry.register({
         if (wWidth > longestWordW) longestWordW = wWidth;
       }
     }
-    
+
     if (longestWordW > maxW && maxW > 0) {
       const scaleBy = maxW / longestWordW;
       currentSize = Math.floor(currentSize * scaleBy);
@@ -156,32 +168,37 @@ registry.register({
     const ascent  = metrics.actualBoundingBoxAscent  || currentSize;
     const descent = metrics.actualBoundingBoxDescent || currentSize * 0.2;
     const lineHeight = ascent + descent + (currentSize * 0.2);
-    
-    const blockHeight = (lines.length * lineHeight) - (currentSize * 0.2);
-    
+
+    // In box mode, clip lines to fit within box height
+    const maxLines = useBox ? Math.max(1, Math.floor(maxBoxH / lineHeight)) : Infinity;
+    const visibleLines = lines.slice(0, maxLines);
+
+    const blockHeight = (visibleLines.length * lineHeight) - (currentSize * 0.2);
+
     let tw = 0;
     const lineMetrics = [];
-    for (const line of lines) {
+    for (const line of visibleLines) {
       const lw = ctx.measureText(line).width;
       if (lw > tw) tw = lw;
       lineMetrics.push({ text: line, width: lw });
     }
 
-    const anchor = p.anchor || 'bottom-right';
-    const [va, ha]   = anchor.split('-');
-    const hPart      = ha || va;
-
-    // Horizontal block origin
-    let blockX;
-    if (anchor === 'center' || hPart === 'center') blockX = (W - tw) / 2;
-    else if (hPart === 'right') blockX = W - tw - ox;
-    else blockX = ox;
-
-    // Vertical block origin
-    let blockY;
-    if (anchor === 'center' || va === 'center') blockY = (H - blockHeight) / 2;
-    else if (va === 'bottom') blockY = H - blockHeight - oy;
-    else blockY = oy;
+    let blockX, blockY;
+    if (useBox) {
+      // Box mode: top-left of text block = boxOriginX, boxOriginY
+      blockX = boxOriginX;
+      blockY = boxOriginY;
+    } else {
+      const anchor = p.anchor || 'bottom-right';
+      const [va, ha] = anchor.split('-');
+      const hPart    = ha || va;
+      if (anchor === 'center' || hPart === 'center') blockX = (W - tw) / 2;
+      else if (hPart === 'right') blockX = W - tw - ox;
+      else blockX = ox;
+      if (anchor === 'center' || va === 'center') blockY = (H - blockHeight) / 2;
+      else if (va === 'bottom') blockY = H - blockHeight - oy;
+      else blockY = oy;
+    }
 
     // -- Setup rendering target --
     const isMask = p.blendMode === 'destination-in' || p.blendMode === 'destination-out';
@@ -228,10 +245,13 @@ registry.register({
     }
     
     let currentY = blockY + ascent;
+    const _anchor = useBox ? 'top-left' : (p.anchor || 'bottom-right');
+    const [_va, _ha] = _anchor.split('-');
+    const _hPart     = _ha || _va;
     for (const lm of lineMetrics) {
       let lineX;
-      if (anchor === 'center' || hPart === 'center') lineX = blockX + (tw - lm.width) / 2;
-      else if (hPart === 'right') lineX = blockX + (tw - lm.width);
+      if (_anchor === 'center' || _hPart === 'center') lineX = blockX + (tw - lm.width) / 2;
+      else if (_hPart === 'right') lineX = blockX + (tw - lm.width);
       else lineX = blockX;
       
       targetCtx.fillText(lm.text, lineX, currentY);
@@ -1226,12 +1246,52 @@ registry.register({
          if (!context._resolvedHtml) {
              context._resolvedHtml = String(p.htmlContent || '');
          }
+
+         // ─── Resolve relative URLs against an in-template <base href="..."> ──
+         //
+         // Hyperframe templates often reference local assets — fonts, images,
+         // stylesheets — via relative paths.  Since we inject the HTML inline
+         // into our host document, "fonts/X.woff2" would resolve against the
+         // host page's URL and 404.
+         //
+         // The fix: if the template authors include a <base href="…"> tag, we
+         // extract the URL and rewrite every relative `src`, `href`, `srcset`,
+         // and CSS `url(...)` reference to an absolute URL against that base.
+         // We then strip the <base> tag itself (browser behaviour for a <base>
+         // inside an arbitrary <div> is unreliable; explicit rewriting is robust).
+         const baseMatch = context._resolvedHtml.match(/<base[^>]*\shref\s*=\s*["']([^"']+)["'][^>]*\/?>/i);
+         if (baseMatch) {
+             const baseUrl = baseMatch[1];
+             const isAbsolute = (u) => /^([a-z][a-z0-9+.-]*:|\/\/|data:|blob:|#)/i.test(u);
+             const toAbs = (u) => {
+                 if (!u || isAbsolute(u)) return u;
+                 try { return new URL(u, baseUrl).href; } catch { return u; }
+             };
+             // Remove the <base> tag itself
+             let html = context._resolvedHtml.replace(baseMatch[0], '');
+             // Rewrite src="...", href="...", srcset="..."  (with single or double quotes)
+             html = html.replace(/\b(src|href)\s*=\s*(["'])([^"']+)\2/gi,
+                 (m, attr, q, url) => `${attr}=${q}${toAbs(url)}${q}`);
+             html = html.replace(/\bsrcset\s*=\s*(["'])([^"']+)\1/gi, (m, q, set) => {
+                 const rewritten = set.split(',').map(part => {
+                     const [u, ...rest] = part.trim().split(/\s+/);
+                     return [toAbs(u), ...rest].join(' ');
+                 }).join(', ');
+                 return `srcset=${q}${rewritten}${q}`;
+             });
+             // Rewrite CSS url(...) — handles unquoted, single-, or double-quoted forms
+             html = html.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi,
+                 (m, q, url) => `url(${q}${toAbs(url)}${q})`);
+             context._resolvedHtml = html;
+             context._resolvedBaseUrl = baseUrl;
+             console.log(`[Hyperframe] Resolved relative URLs against base="${baseUrl}"`);
+         }
      }
      
      const W = ctx.canvas.width;
      const H = ctx.canvas.height;
      const ts = context.timestampSec || 0;
-     
+
      // Dynamically ensure GSAP is loaded BEFORE injecting scripts that rely on it
      if (!window.gsap && !context._gsapLoaded) {
          await new Promise((resolve, reject) => {
@@ -1243,29 +1303,75 @@ registry.register({
          });
          context._gsapLoaded = true;
      }
-     
-     if (!ctx.canvas.parentNode) {
-         ctx.canvas.style.position = 'absolute';
-         ctx.canvas.style.left = '-9999px';
-         ctx.canvas.style.top = '-9999px';
-         ctx.canvas.style.pointerEvents = 'none';
-         document.body.appendChild(ctx.canvas);
+
+     // ─── Native drawElementImage approach (on-screen canvas) ─────────────
+     //
+     // Chrome's `drawElementImage` only works when the source element has a
+     // "cached paint record" — i.e. Chrome has actually painted it.  Off-screen
+     // elements (top:-9999px) are culled and never get a paint record, which is
+     // why our earlier attempts failed with "No cached paint record for element".
+     //
+     // The fix: position the canvas ON-SCREEN, so it ends up in the viewport
+     // and gets painted.  To minimise visual disruption we shrink it with a CSS
+     // transform — `transform: scale(0.0005)` makes a 1920×1080 canvas occupy
+     // roughly 1×1px visually, while keeping its FULL natural size in layout
+     // (so Chrome paints all of it and drawElementImage has a complete paint
+     // record to work with).
+     //
+     // Notes:
+     //  - Transform does NOT trigger off-screen culling; the element is still
+     //    "on screen" as far as the rendering pipeline is concerned.
+     //  - We avoid `opacity` — it has been observed to corrupt drawElementImage
+     //    output (transparent / black frames).
+     //  - The canvas is sized to the template's natural dimensions (read from
+     //    data-width/data-height on the root element).  We then scale the
+     //    resulting bitmap to the encode canvas size when compositing.
+
+     // Detect the template's native render dimensions from data-width/data-height
+     // so the layout matches what the author authored against.  Fall back to the
+     // encode canvas size if not specified.
+     let nativeW = W, nativeH = H;
+     const widthMatch  = (context._resolvedHtml || '').match(/data-width=["'](\d+)["']/);
+     const heightMatch = (context._resolvedHtml || '').match(/data-height=["'](\d+)["']/);
+     if (widthMatch && heightMatch) {
+         nativeW = parseInt(widthMatch[1], 10);
+         nativeH = parseInt(heightMatch[1], 10);
      }
-     
+
+     if (!context._hfCanvas || context._hfW !== nativeW || context._hfH !== nativeH) {
+         if (context._hfCanvas?.parentNode) context._hfCanvas.parentNode.removeChild(context._hfCanvas);
+         const hfCanvas = document.createElement('canvas');
+         hfCanvas.width = nativeW;
+         hfCanvas.height = nativeH;
+         // ON-SCREEN positioning so Chrome paints the canvas and its children
+         // (a prerequisite for `drawElementImage` working).  Scale-down to ~1px
+         // visually so the user barely notices.
+         hfCanvas.style.cssText = [
+            'position:fixed',
+            'top:0',
+            'left:0',
+            'transform:scale(0.0005)',
+            'transform-origin:top left',
+            'pointer-events:none',
+            'z-index:2147483647',  // on top, but it's only ~1px so unobtrusive
+         ].join(';');
+         hfCanvas.setAttribute('layoutsubtree', '');
+         document.body.appendChild(hfCanvas);
+         context._hfCanvas = hfCanvas;
+         context._hfCtx = hfCanvas.getContext('2d');
+         context._hfW = nativeW;
+         context._hfH = nativeH;
+         context._hfContainer = null; // force rebuild below
+     }
+
      if (!context._hfContainer) {
          const container = document.createElement('div');
-         container.style.width = W + 'px';
-         container.style.height = H + 'px';
-         container.style.overflow = 'hidden';
-         
+         container.style.cssText = `width:${nativeW}px;height:${nativeH}px;overflow:hidden;background:transparent;`;
          container.innerHTML = context._resolvedHtml || '';
          context._hfContainer = container;
+         context._hfCanvas.appendChild(container);
+         window.__timelines = {};
 
-         // Ensure container is an immediate child of the canvas (WICG requirement)
-         ctx.canvas.appendChild(context._hfContainer);
-         
-         window.__timelines = {}; // Clear previous timelines globally once per hyperframe instantiation
-         
          const scripts = container.querySelectorAll('script');
          for (const s of scripts) {
              if (s.src && !s.src.includes('gsap.min.js')) {
@@ -1285,52 +1391,74 @@ registry.register({
                 }
              }
          }
-         
-         // Force a paint cycle so WICG drawElement has a valid layout tree
+         // Scripts have done their job (the GSAP timeline now lives on window.__timelines).
+         // Remove them from the DOM — otherwise XMLSerializer includes them in the
+         // SVG-foreignObject fallback, and JavaScript content (`<`, `>`, `&`) breaks
+         // XML parsing, causing the data: URI image to silently fail to load.
+         for (const s of scripts) s.remove();
+
+         // Initial layout flush
          await new Promise(r => requestAnimationFrame(r));
      }
-     
-     // Ensure the container is an IMMEDIATE child of the CURRENT context's canvas
-     if (context._hfContainer.parentNode !== ctx.canvas) {
-         ctx.canvas.appendChild(context._hfContainer);
-     }
-     
-     // Force layout and paint tick so GSAP style updates are captured by WICG drawElement
-     await new Promise(r => requestAnimationFrame(r));
-     
-     // Synchronously force layout tree calculation
-     ctx.canvas.offsetHeight;
-     
-     // Seek the GSAP timeline (now running in the main window context)
+
+     // Pause + seek the GSAP timeline to the target frame time
      if (window.__timelines) {
          const tlKey = Object.keys(window.__timelines)[0];
          const tl = window.__timelines[tlKey];
          if (tl) {
              tl.pause();
-             tl.seek(ts);
-             
-             if (ts >= tl.duration()) {
-                 return;
-             }
+             const clampedTs = Math.min(ts, Math.max(0, tl.duration() - 0.001));
+             tl.seek(clampedTs);
          }
      }
-     
-     // Force layout and paint tick so GSAP style updates are captured by WICG drawElement
-     await new Promise(r => requestAnimationFrame(r));
-     
+
+     // ─── Clip visibility from data-start / data-duration / data-end ────────
+     //
+     // Template authors can place clips on a "timeline" using the convention:
+     //   <div data-start="0.5" data-duration="3.5">…</div>     ← visible 0.5–4.0s
+     //   <div data-start="4.5" data-end="8">…</div>            ← visible 4.5–8.0s
+     //
+     // The GSAP timeline typically only animates the *entrance* of each clip.
+     // We're the ones responsible for hiding clips outside their time window,
+     // otherwise every clip accumulates on screen as the timeline progresses.
+     //
+     // We only act on elements that have BOTH data-start AND (data-duration OR
+     // data-end) — that pairing is the explicit opt-in.  Elements with just
+     // data-start (e.g. the root composition element) are left alone.
+     const clipEls = context._hfContainer.querySelectorAll(
+         '[data-start][data-duration], [data-start][data-end]'
+     );
+     for (const clip of clipEls) {
+         const start = parseFloat(clip.dataset.start);
+         const end = clip.dataset.end != null
+             ? parseFloat(clip.dataset.end)
+             : start + parseFloat(clip.dataset.duration);
+         if (Number.isNaN(start) || Number.isNaN(end)) continue;
+         const visible = ts >= start && ts < end;
+         clip.style.display = visible ? '' : 'none';
+     }
+
+     // Force a layout flush so GSAP's CSS updates are applied
+     void context._hfCanvas.offsetHeight;
+
+     // Try the native drawElementImage path first.  This requires the canvas to
+     // be on-screen with a paint record (we ensured that above via the on-screen
+     // scaled positioning).  If for some reason it still fails (e.g. user's
+     // Chrome doesn't have the flag enabled), we fall back to SVG-foreignObject.
+     const hfCtx = context._hfCtx;
      const element = context._hfContainer;
-     
-     // Attempt to use WICG HTML-in-Canvas API natively, but fallback if headless/no layout
      let drawnNatively = false;
+
      try {
-         if (ctx.drawElement) {
-             ctx.drawElement(element, 0, 0);
+         hfCtx.clearRect(0, 0, context._hfW, context._hfH);
+         if (hfCtx.drawElement) {
+             hfCtx.drawElement(element, 0, 0);
              drawnNatively = true;
-         } else if (ctx.drawHTML) {
-             ctx.drawHTML(element, 0, 0);
+         } else if (hfCtx.drawHTML) {
+             hfCtx.drawHTML(element, 0, 0);
              drawnNatively = true;
-         } else if (ctx.drawElementImage) {
-             ctx.drawElementImage(element, 0, 0);
+         } else if (hfCtx.drawElementImage) {
+             hfCtx.drawElementImage(element, 0, 0);
              drawnNatively = true;
          }
      } catch (err) {
@@ -1340,18 +1468,81 @@ registry.register({
          }
          drawnNatively = false;
      }
-     
+
+     if (drawnNatively) {
+         // createImageBitmap awaits any pending draws on the source canvas before
+         // returning, giving us a stable snapshot.  We then composite the result
+         // onto the encode canvas, scaling to fit if the native size differs.
+         try {
+             const bmp = await createImageBitmap(context._hfCanvas);
+             ctx.drawImage(bmp, 0, 0, W, H);  // scales native size to encode size
+             bmp.close();
+             context._nativeOkCount = (context._nativeOkCount || 0) + 1;
+             if (context._nativeOkCount <= 3 || context._nativeOkCount % 30 === 0) {
+                 console.log(`[Hyperframe Native] Frame #${context._nativeOkCount} OK (native ${context._hfW}×${context._hfH} → encode ${W}×${H})`);
+             }
+         } catch (err) {
+             if (!context._loggedBitmapError) {
+                 console.warn('[Hyperframe] createImageBitmap failed:', err.message);
+                 context._loggedBitmapError = true;
+             }
+             drawnNatively = false;  // fall through to SVG fallback
+         }
+     }
+
+     context._svgFrameCount = (context._svgFrameCount || 0) + 1;
+
      if (!drawnNatively) {
-         // SVG foreignObject Fallback
+         // SVG foreignObject Fallback.
+         //
+         // To let the video frame show through, we strip backgrounds from any
+         // element that acts as a *full-screen backdrop* (e.g. <div style="inset:0;
+         // background:#000">), but leave smaller decorative backgrounds intact
+         // (cards, chips, cursors, badges — anywhere the author put a colour
+         // specifically as visual content).
+         //
+         // Heuristic: an element is a "backdrop" if its rendered box covers
+         // ≥ 85% of the canvas area.  We then null out its background via inline
+         // style so the override is captured by serialisation.
+         element.setAttribute('data-hf-svg-root', '');
+
+         const minBackdropW = W * 0.85;
+         const minBackdropH = H * 0.85;
+         const all = element.querySelectorAll('*');
+         const restoreList = []; // [element, originalStyleAttr] so we can revert
+         for (const el of all) {
+             const tag = el.tagName && el.tagName.toLowerCase();
+             if (tag === 'script' || tag === 'style') continue;
+             const rect = el.getBoundingClientRect();
+             if (rect.width >= minBackdropW && rect.height >= minBackdropH) {
+                 restoreList.push([el, el.getAttribute('style') || '']);
+                 el.style.setProperty('background', 'transparent', 'important');
+                 el.style.setProperty('background-color', 'transparent', 'important');
+                 el.style.setProperty('background-image', 'none', 'important');
+             }
+         }
+
          const serializer = new XMLSerializer();
          let safeHtml = serializer.serializeToString(element);
-         
+
+         // Restore original inline styles so GSAP's continued seeking on the
+         // live DOM isn't disturbed by our temporary backdrop-stripping.
+         for (const [el, originalStyle] of restoreList) {
+             if (originalStyle) el.setAttribute('style', originalStyle);
+             else el.removeAttribute('style');
+         }
+
          if (!safeHtml.includes('xmlns=')) {
              safeHtml = safeHtml.replace(/^<div/, '<div xmlns="http://www.w3.org/1999/xhtml"');
          }
+
+         // Safety net: also clear html/body backgrounds in the SVG context
+         const transparencyCss = `<style>html,body{background:transparent !important;background-color:transparent !important;}</style>`;
+
          const svg = `
            <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
              <foreignObject width="100%" height="100%">
+               ${transparencyCss}
                ${safeHtml}
              </foreignObject>
            </svg>
@@ -1359,20 +1550,226 @@ registry.register({
          const dataUri = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg.trim())));
          await new Promise((resolve) => {
              const img = new Image();
-             img.onload = () => { 
-                 ctx.drawImage(img, 0, 0); 
-                 resolve(); 
+             img.onload = () => {
+                 ctx.drawImage(img, 0, 0);
+                 context._svgOkCount = (context._svgOkCount || 0) + 1;
+                 if (context._svgFrameCount <= 3 || context._svgFrameCount % 30 === 0) {
+                     console.log(`[Hyperframe SVG] Frame #${context._svgFrameCount} OK (total ok=${context._svgOkCount}) bytes=${dataUri.length}`);
+                 }
+                 resolve();
              };
              img.onerror = (e) => {
-                 if (!context._loggedSvgError) {
-                     console.error('[Hyperframe] SVG Fallback Image failed to load:', e);
-                     context._loggedSvgError = true;
+                 context._svgErrCount = (context._svgErrCount || 0) + 1;
+                 if (context._svgErrCount <= 3 || context._svgErrCount % 30 === 0) {
+                     console.error(`[Hyperframe SVG] Frame #${context._svgFrameCount} FAILED (total errors=${context._svgErrCount}) bytes=${dataUri.length}`);
                  }
-                 resolve(); 
+                 resolve();
              };
              img.src = dataUri;
          });
      }
+  }
+});
+
+// ─── Transparent Video Overlay (alpha WebM) ──────────────────
+//
+// Composites a transparent video (typically a WebM with alpha channel produced
+// by `npx hyperframes render --format webm`) on top of the underlying video
+// frame.  The transparent areas of the overlay reveal the video underneath.
+//
+// Why this exists: rendering HTML+GSAP animations live during the encode is
+// fragile (paint-record issues, CORS, font loading races, etc.).  Pre-rendering
+// the animation to a transparent WebM in a dedicated tool, then compositing it
+// here as a regular video overlay, is dramatically more reliable.
+//
+// How it works:
+//   1. On first call, instantiate a hidden <video> element, point it at the
+//      data-URL stored in the `videoFile` param, and wait for `loadeddata`.
+//   2. For each output frame, compute the video-local time relative to the
+//      effect's start, seek the <video> element, then drawImage it onto the
+//      output canvas at the requested position/scale.
+//   3. The default `source-over` composite operation honours the WebM's alpha
+//      channel — fully-transparent pixels in the overlay let the underlying
+//      video show through unchanged.
+registry.register({
+  id: 'overlay-transparent-video',
+  name: 'Transparent Video Overlay',
+  category: 'Overlays & Typography',
+  categoryKey: 'video-effect',
+  timeline: 'compatible',
+  icon: 'movie_filter',
+  description: 'Overlay a transparent (alpha-channel) WebM on top of the video. Ideal for compositing pre-rendered Hyperframes animations, lower thirds, and motion graphics. The overlay\'s transparent areas reveal the underlying video.',
+  requires: [], // pure canvas API; no Chrome experimental flags required
+  params: [
+    { name: 'videoFile', label: 'Overlay Video (.webm)', type: 'file', accept: 'video/webm,video/mp4,video/*', defaultValue: '' },
+    { name: 'fit', label: 'Fit',
+      type: 'select',
+      options: [
+        { label: 'Cover canvas (preserve aspect, crop)', value: 'cover' },
+        { label: 'Contain (preserve aspect, letterbox)', value: 'contain' },
+        { label: 'Stretch (ignore aspect)',              value: 'stretch' },
+        { label: 'Native size (no scaling)',             value: 'native' },
+      ],
+      defaultValue: 'contain' },
+    { name: 'anchor', label: 'Position',
+      type: 'select',
+      options: [
+        { label: 'Centre',       value: 'center' },
+        { label: 'Top Left',     value: 'top-left' },
+        { label: 'Top Centre',   value: 'top-center' },
+        { label: 'Top Right',    value: 'top-right' },
+        { label: 'Bottom Left',  value: 'bottom-left' },
+        { label: 'Bottom Centre',value: 'bottom-center' },
+        { label: 'Bottom Right', value: 'bottom-right' },
+      ],
+      defaultValue: 'center' },
+    { name: 'scale',   label: 'Scale (%)',   type: 'range', min: 10, max: 200, step: 1, defaultValue: 100 },
+    { name: 'offsetX', label: 'Offset X (px)', type: 'number', defaultValue: 0 },
+    { name: 'offsetY', label: 'Offset Y (px)', type: 'number', defaultValue: 0 },
+    { name: 'opacity', label: 'Opacity (%)', type: 'range', min: 0, max: 100, step: 1, defaultValue: 100 },
+    { name: 'loop',    label: 'Loop overlay (if shorter than time range)', type: 'boolean', defaultValue: false },
+  ],
+  async applyPerFrame(ctx, p, context) {
+     if (!p.videoFile) return; // nothing to overlay
+
+     // Lazily set up the hidden <video> element once per render context.
+     // We keep the source on the context so subsequent frames reuse the same
+     // decoder/cache.
+     if (!context._ovVideo || context._ovVideoSrc !== p.videoFile) {
+         // Tear down previous instance if the source changed
+         if (context._ovVideo) {
+             try { context._ovVideo.pause(); } catch (_) {}
+             if (context._ovVideo.parentNode) context._ovVideo.parentNode.removeChild(context._ovVideo);
+         }
+
+         const video = document.createElement('video');
+         video.crossOrigin = 'anonymous';
+         video.muted = true;
+         video.playsInline = true;
+         video.preload = 'auto';
+         // Off-screen but in DOM so the decoder is live
+         video.style.cssText = 'position:fixed;top:-99999px;left:-99999px;width:1px;height:1px;pointer-events:none;';
+         video.src = p.videoFile;
+         document.body.appendChild(video);
+
+         await new Promise((resolve) => {
+             const onReady = () => { video.removeEventListener('loadeddata', onReady); resolve(); };
+             const onError = () => {
+                 console.warn('[overlay-transparent-video] Failed to load overlay video');
+                 video.removeEventListener('error', onError);
+                 resolve();
+             };
+             if (video.readyState >= 2) resolve();
+             else {
+                 video.addEventListener('loadeddata', onReady);
+                 video.addEventListener('error', onError);
+             }
+         });
+
+         context._ovVideo = video;
+         context._ovVideoSrc = p.videoFile;
+     }
+
+     const video = context._ovVideo;
+     if (!video || video.readyState < 2) return;
+
+     // Compute video-local time.  When this transform has a timeRange set, the
+     // pipeline's strength gating already handles "is this effect active right
+     // now?" — by the time applyPerFrame is called for a frame, we know it
+     // should be visible.  We just need the offset within the overlay clip.
+     //
+     // The pipeline gives us `context.timestampSec` (absolute video time) and
+     // `context.stepTimeRange` (the effect's time-range envelope, including
+     // start).  We subtract the effect's start time so the overlay always
+     // plays from t=0 when it first appears.
+     const stepStart = context.stepTimeRange?.start ?? 0;
+     let localTs = (context.timestampSec || 0) - stepStart;
+
+     const dur = video.duration || 0;
+     if (dur > 0) {
+         if (p.loop) {
+             localTs = ((localTs % dur) + dur) % dur;
+         } else {
+             // If the overlay has finished playing and we're not looping, stop
+             // drawing — the underlying video frame should pass through unchanged.
+             // We use a small epsilon so the very last frame still renders.
+             if (localTs >= dur - 1e-3) return;
+             if (localTs < 0) return;
+         }
+     }
+
+     // Seek the overlay video.  We await `seeked` so the next-drawn frame is
+     // actually the one at localTs, not whatever was last decoded.  This is
+     // critical for frame-accurate compositing.
+     if (Math.abs(video.currentTime - localTs) > 0.001) {
+         await new Promise((resolve) => {
+             const onSeeked = () => { video.removeEventListener('seeked', onSeeked); resolve(); };
+             video.addEventListener('seeked', onSeeked);
+             try { video.currentTime = localTs; } catch (e) { resolve(); }
+             // Safety: don't hang forever if seek somehow doesn't fire
+             setTimeout(() => { video.removeEventListener('seeked', onSeeked); resolve(); }, 200);
+         });
+     }
+
+     // Work out where to draw the overlay on the canvas
+     const W = ctx.canvas.width, H = ctx.canvas.height;
+     const vw = video.videoWidth, vh = video.videoHeight;
+     if (!vw || !vh) return;
+
+     const userScale = (p.scale ?? 100) / 100;
+     let drawW, drawH;
+     switch (p.fit) {
+         case 'cover': {
+             const s = Math.max(W / vw, H / vh);
+             drawW = vw * s; drawH = vh * s;
+             break;
+         }
+         case 'stretch':
+             drawW = W; drawH = H;
+             break;
+         case 'native':
+             drawW = vw; drawH = vh;
+             break;
+         case 'contain':
+         default: {
+             const s = Math.min(W / vw, H / vh);
+             drawW = vw * s; drawH = vh * s;
+             break;
+         }
+     }
+     drawW *= userScale;
+     drawH *= userScale;
+
+     // Anchor positioning
+     let x = 0, y = 0;
+     switch (p.anchor) {
+         case 'top-left':      x = 0;             y = 0;             break;
+         case 'top-center':    x = (W - drawW)/2; y = 0;             break;
+         case 'top-right':     x = W - drawW;     y = 0;             break;
+         case 'bottom-left':   x = 0;             y = H - drawH;     break;
+         case 'bottom-center': x = (W - drawW)/2; y = H - drawH;     break;
+         case 'bottom-right':  x = W - drawW;     y = H - drawH;     break;
+         case 'center':
+         default:              x = (W - drawW)/2; y = (H - drawH)/2; break;
+     }
+     x += (p.offsetX || 0);
+     y += (p.offsetY || 0);
+
+     // Composite onto the encode canvas.  Default `source-over` blending +
+     // the alpha channel of a transparent WebM means the underlying video
+     // frame shows through wherever the overlay is transparent.
+     const opacity = (p.opacity ?? 100) / 100;
+     const priorAlpha = ctx.globalAlpha;
+     ctx.globalAlpha = priorAlpha * opacity;
+     try {
+         ctx.drawImage(video, x, y, drawW, drawH);
+     } catch (err) {
+         if (!context._loggedOvDrawError) {
+             console.warn('[overlay-transparent-video] drawImage failed:', err.message);
+             context._loggedOvDrawError = true;
+         }
+     }
+     ctx.globalAlpha = priorAlpha;
   }
 });
 
@@ -1513,7 +1910,7 @@ registry.register({
 registry.register({
   id: 'overlay-craquelure', name: 'Craquelure', category: 'Overlays & Typography', categoryKey: 'overlay',
   timeline: 'compatible',
-  icon: 'shatter',
+  icon: 'broken_image',
   description: 'Procedural fine-crack network. Mimics the surface texture of an aged oil painting (cracked varnish / paint layer).',
   params: [
     { name: 'intensity',  label: 'Intensity (%)',        type: 'range',   min: 0,  max: 100, defaultValue: 35 },
@@ -1629,3 +2026,33 @@ registry.register({
   }
 });
 
+// ─── Draw Mask ────────────────────────────────────────────
+registry.register({
+  id: 'overlay-draw-mask', name: 'Draw Mask', category: 'Overlays & Typography', categoryKey: 'overlay',
+  timeline: 'compatible',
+  icon: 'brush',
+  description: 'Paint a freehand mask that restricts where the previous step is visible.',
+  params: [
+    { name: 'maskData', label: 'Mask',          type: 'mask',    defaultValue: '' },
+    { name: 'feather',  label: 'Feather (px)',   type: 'range',   min: 0, max: 40, defaultValue: 0 },
+    { name: 'invert',   label: 'Invert Mask',    type: 'boolean', defaultValue: false },
+  ],
+  async apply(ctx, p) {
+    if (!p.maskData) return;
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const img = new Image();
+    img.src = p.maskData;
+    await img.decode().catch(() => {});
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = W; maskCanvas.height = H;
+    const mc = maskCanvas.getContext('2d');
+    if (p.feather > 0) mc.filter = `blur(${p.feather}px)`;
+    mc.drawImage(img, 0, 0, W, H);
+    mc.filter = 'none';
+    // destination-in = keep only where painted; destination-out = remove where painted (invert)
+    ctx.save();
+    ctx.globalCompositeOperation = p.invert ? 'destination-out' : 'destination-in';
+    ctx.drawImage(maskCanvas, 0, 0);
+    ctx.restore();
+  }
+});

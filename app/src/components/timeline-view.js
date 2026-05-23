@@ -58,11 +58,16 @@ export class TimelineView {
                     
                     <!-- Track Headers -->
                     <div class="timeline-headers" style="width: ${this.options.trackHeaderWidth}px; flex-shrink: 0; position: sticky; left: 0; background: var(--ps-bg-surface, #1e1e1e); z-index: 10; border-right: 1px solid var(--ps-border, #333);">
-                        <div class="timeline-corner" style="height: 30px; border-bottom: 1px solid var(--ps-border, #333);"></div>
-                        <div class="timeline-header-list"></div>
-                        <div style="padding: 16px; text-align: center;">
-                            <button class="tl-btn-add-track" style="background: none; border: 1px dashed #666; color: #aaa; padding: 8px; width: 100%; cursor: pointer; border-radius: 4px;">+ Add Track</button>
+                        <div class="timeline-corner" style="height: 30px; border-bottom: 1px solid var(--ps-border, #333); display: flex; align-items: center; justify-content: center; padding: 0 6px;">
+                            <button class="tl-btn-add-track" title="Add a video, FX, or audio track"
+                                style="background: none; border: 1px dashed #666; color: #ccc; padding: 2px 8px; height: 22px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1; transition: border-color 0.15s, color 0.15s, background 0.15s;"
+                                onmouseenter="this.style.borderColor='#3b82f6';this.style.color='#fff';this.style.background='rgba(59,130,246,0.1)';"
+                                onmouseleave="this.style.borderColor='#666';this.style.color='#ccc';this.style.background='none';">
+                                <span class="material-symbols-outlined" style="font-size: 14px;">add</span>
+                                <span>Add Track</span>
+                            </button>
                         </div>
+                        <div class="timeline-header-list"></div>
                     </div>
 
                     <!-- Tracks Content -->

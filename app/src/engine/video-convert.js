@@ -1,5 +1,5 @@
 /**
- * PicMachina — Video Conversion Utilities
+ * Zumilabs Studio — Video Conversion Utilities
  *
  * Powered by Mediabunny (https://mediabunny.dev) for the format/codec
  * operations (convert, trim, compress, change-fps).
@@ -203,7 +203,9 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
       process: async (sample) => {
         if (frameCount === 0) {
           startTime = Date.now();
-          if (sample.duration > 0) estimatedTotal = Math.round(totalDuration / (sample.duration / 1_000_000));
+          // Mediabunny's sample.duration is in seconds (same units as totalDuration),
+          // so divide directly — no unit conversion needed.
+          if (sample.duration > 0) estimatedTotal = Math.round(totalDuration / sample.duration);
           const dimStr = outW !== rawW || outH !== rawH
             ? `${rawW}×${rawH}→${outW}×${outH}`
             : `${rawW}×${rawH}`;
@@ -230,6 +232,7 @@ export async function processVideoEffect(file, applyFnOrSteps, params = {}, {
             }
             const p = scaleParams(step.params || {}, strengthParamStr, strength);
             fileContext.timestampSec = timestampSec;
+            fileContext.stepTimeRange = stepTimeRange;
             await step.fn(ctx, p, fileContext);
             ctx.restore();
           }
@@ -399,6 +402,9 @@ async function processVideoEffectFreeze(file, applyFnOrSteps, params, {
             }
             const p = scaleParams(step.params || {}, effectiveStrengthParam, strength);
             fileContext.timestampSec = start + t;
+            // For freeze mode, the effect's start within the inserted segment
+            // is always 0 (the insertion plays from its beginning).
+            fileContext.stepTimeRange = { start: 0, end: insertDuration };
             await step.fn(ctx, p, fileContext);
             ctx.restore();
           }

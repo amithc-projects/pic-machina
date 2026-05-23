@@ -9,7 +9,9 @@ export function createEmptyTimeline(name = 'Untitled Project') {
     height: 1080,
     updatedAt: Date.now(),
     mediaPool: [],
-    videoTrack: [],
+    videoTracks: [
+      { id: 'v1', name: 'V1', blocks: [], disabled: false }
+    ],
     effectTracks: [
       { id: 'fx1', name: 'FX 1', blocks: [] }
     ],

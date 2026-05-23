@@ -44,6 +44,39 @@ function injectTmeStyles() {
     }
     .ned-toggle input:checked + .ned-toggle-track { background:var(--ps-blue); border-color:var(--ps-blue); }
     .ned-toggle input:checked + .ned-toggle-track::after { transform:translateX(16px); }
+    
+    #tme-fsa-browser-panel .ic-mb-list-row {
+      grid-template-columns: 32px 1fr 40px !important;
+      gap: 8px !important;
+      padding: 4px 8px !important;
+    }
+    #tme-fsa-browser-panel .ic-mb-list-row > div:nth-child(3),
+    #tme-fsa-browser-panel .ic-mb-list-row > div:nth-child(4) {
+      display: none !important;
+    }
+    #tme-fsa-browser-panel .ic-mb-list-thumb {
+      width: 24px !important;
+      height: 24px !important;
+    }
+    #tme-fsa-browser-panel .ic-mb-list-thumb span {
+      font-size: 16px !important;
+    }
+    
+    #tme-fsa-browser-panel .ic-mb-grid {
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+      gap: 8px !important;
+      padding: 8px !important;
+    }
+    #tme-fsa-browser-panel .ic-mb-cell {
+      padding: 4px !important;
+      gap: 4px !important;
+    }
+    #tme-fsa-browser-panel .ic-mb-name {
+      font-size: 10px !important;
+    }
+    #tme-fsa-browser-panel .ic-mb-grid-action button span {
+      font-size: 16px !important;
+    }
   `;
   document.head.appendChild(s);
 }
@@ -217,6 +250,10 @@ export async function render(container) {
                            h = await h.getDirectoryHandle(parts[i]);
                         }
                         item.fileHandle = await h.getFileHandle(parts[parts.length - 1]);
+                        if (item.type === 'image') {
+                           const file = await item.fileHandle.getFile();
+                           item.thumbnail = URL.createObjectURL(file);
+                        }
                      } catch(e) { console.error('Missing media:', item.filename); }
                   }
                }
@@ -232,9 +269,54 @@ export async function render(container) {
 
   // Fallbacks for older schemas
   if (!currentTimeline.mediaPool || !Array.isArray(currentTimeline.mediaPool)) currentTimeline.mediaPool = [];
-  if (!currentTimeline.videoTrack) currentTimeline.videoTrack = [];
+
+  // Schema migration: legacy `videoTrack` (flat array of clips) → `videoTracks`
+  // (array of track objects, same shape as effectTracks / audioTracks).  This
+  // unlocks multi-video-track support (e.g. overlay tracks for transparent WebMs).
+  if (!currentTimeline.videoTracks) {
+    currentTimeline.videoTracks = [{
+      id: 'v1',
+      name: 'V1',
+      blocks: Array.isArray(currentTimeline.videoTrack) ? currentTimeline.videoTrack : [],
+      disabled: !!currentTimeline.videoTrackDisabled
+    }];
+  }
+  // Strip the legacy fields so they can't drift out of sync
+  delete currentTimeline.videoTrack;
+  delete currentTimeline.videoTrackDisabled;
+
   if (!currentTimeline.effectTracks) currentTimeline.effectTracks = [{ id: 'fx1', name: 'FX 1', blocks: [] }];
   if (!currentTimeline.audioTracks) currentTimeline.audioTracks = [{ id: 'a1', name: 'A1', blocks: [] }];
+
+  // ── Helpers for video-track operations ──
+  // Find which video track contains a given clip (returns null if not found)
+  function findVideoTrackForClipId(clipId) {
+    return currentTimeline.videoTracks.find(t => t.blocks.some(b => b.id === clipId)) || null;
+  }
+  // Convenience: return the first (primary) video track — used when an operation
+  // doesn't specify which track (e.g. legacy "add clip" with no target track).
+  function getPrimaryVideoTrack() {
+    if (!currentTimeline.videoTracks.length) {
+      currentTimeline.videoTracks.push({ id: 'v1', name: 'V1', blocks: [], disabled: false });
+    }
+    return currentTimeline.videoTracks[0];
+  }
+  // Convenience: flatten every video clip across all video tracks (read-only ops
+  // like "what's the timeline duration" or "find clip by id" don't care which
+  // track it lives on).
+  function getAllVideoClips() {
+    const out = [];
+    for (const t of currentTimeline.videoTracks) {
+      if (t.disabled) continue;
+      for (const b of t.blocks) out.push(b);
+    }
+    return out;
+  }
+  function getAllVideoClipsIncludingDisabled() {
+    const out = [];
+    for (const t of currentTimeline.videoTracks) for (const b of t.blocks) out.push(b);
+    return out;
+  }
 
   container.innerHTML = `
     <div class="screen">
@@ -267,7 +349,7 @@ export async function render(container) {
           <!-- Left Sidebar: Asset Browser & Media Pool -->
           <div class="panel-left" style="width: 320px; border-right: 1px solid var(--ps-border); display: flex; flex-direction: column;">
             
-            <div id="tme-fsa-browser-panel" style="flex: 2; min-height: 400px; display: none; flex-direction: column; border-bottom: 1px solid var(--ps-border);"></div>
+            <div id="tme-fsa-browser-panel" style="flex: 3.5; min-height: 480px; display: none; flex-direction: column; border-bottom: 1px solid var(--ps-border);"></div>
 
             <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
               <span class="panel-header-title">Media Pool</span>
@@ -348,7 +430,9 @@ export async function render(container) {
     if ((e.key === 'Backspace' || e.key === 'Delete') && timelineView && timelineView.selectedClips.size > 0) {
         if (!(await showDialog({ title: 'Delete Items', message: 'Are you sure you want to delete the selected items?' }))) return;
         
-        currentTimeline.videoTrack = currentTimeline.videoTrack.filter(c => !timelineView.selectedClips.has(c.id));
+        currentTimeline.videoTracks.forEach(t => {
+            t.blocks = t.blocks.filter(b => !timelineView.selectedClips.has(b.id));
+        });
         currentTimeline.effectTracks.forEach(t => {
             t.blocks = t.blocks.filter(b => !timelineView.selectedClips.has(b.id));
         });
@@ -384,7 +468,8 @@ export async function render(container) {
     }
 
     // Determine which pool items are used in the timeline
-    const usedPoolIds = new Set(currentTimeline.videoTrack.map(clip => clip.poolId));
+    const usedPoolIds = new Set();
+    currentTimeline.videoTracks.forEach(t => t.blocks.forEach(c => usedPoolIds.add(c.poolId)));
     if (currentTimeline.audioTracks) {
       currentTimeline.audioTracks.forEach(t => t.blocks.forEach(b => usedPoolIds.add(b.poolId)));
     }
@@ -481,13 +566,16 @@ export async function render(container) {
       el.addEventListener('dblclick', async () => {
         const duration = item.meta?.duration || 4.0;
         if (item.type === 'video' || item.type === 'image') {
+          // Pick a target video track: a selected one if any, else the primary (V1)
+          let targetVTrack = currentTimeline.videoTracks.find(t => timelineView && timelineView.selectedTracks?.has(t.id));
+          if (!targetVTrack) targetVTrack = getPrimaryVideoTrack();
           let maxT = 0;
           if (timelineView && timelineView.isMagnetic) {
-             maxT = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+             maxT = targetVTrack.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
           } else {
              maxT = playheadTime;
           }
-          currentTimeline.videoTrack.push({
+          targetVTrack.blocks.push({
             id: generateId(), poolId: item.id, timelineStart: maxT, duration: duration, sourceStart: 0, transitionOut: null
           });
         } else if (item.type === 'audio') {
@@ -722,7 +810,11 @@ export async function render(container) {
 
     // --- VIDEO CLIP PROPERTIES ---
     if (selectedItemType === 'video') {
-      const vBlock = currentTimeline.videoTrack.find(c => c.id === selectedItemId);
+      let vBlock = null;
+      currentTimeline.videoTracks.forEach(t => {
+        const b = t.blocks.find(c => c.id === selectedItemId);
+        if (b) vBlock = b;
+      });
       if (!vBlock) return;
       
       const poolItem = currentTimeline.mediaPool.find(m => m.id === vBlock.poolId);
@@ -998,7 +1090,9 @@ export async function render(container) {
          const type = btn.dataset.trackType;
          const idx = parseInt(btn.dataset.trackIdx);
          if (type === 'video') {
-           currentTimeline.videoTrackDisabled = !currentTimeline.videoTrackDisabled;
+           if (currentTimeline.videoTracks[idx]) {
+             currentTimeline.videoTracks[idx].disabled = !currentTimeline.videoTracks[idx].disabled;
+           }
          } else if (type === 'fx') {
            currentTimeline.effectTracks[idx].disabled = !currentTimeline.effectTracks[idx].disabled;
          } else if (type === 'audio') {
@@ -1028,12 +1122,14 @@ export async function render(container) {
       let changed = false;
       const tThreshold = clickTime - 0.01;
       
-      if (currentTimeline.videoTrack) {
-        currentTimeline.videoTrack.forEach(clip => {
-          if (clip.timelineStart >= tThreshold) {
-            clip.timelineStart += gap;
-            changed = true;
-          }
+      if (currentTimeline.videoTracks) {
+        currentTimeline.videoTracks.forEach(track => {
+          track.blocks.forEach(clip => {
+            if (clip.timelineStart >= tThreshold) {
+              clip.timelineStart += gap;
+              changed = true;
+            }
+          });
         });
       }
       
@@ -1153,15 +1249,19 @@ export async function render(container) {
             timelineView.selectedClips.add(clipId);
           }
           selectedItemId = timelineView.selectedClips.size === 1 ? [...timelineView.selectedClips][0] : null;
-          selectedItemType = trackId === 'v1' ? 'video' : (trackId.startsWith('audio_') || trackId.startsWith('a') || trackId.startsWith('A') ? 'audio' : 'fx');
+          // Identify track type from currentTimeline structure rather than ID guessing
+          if (currentTimeline.videoTracks.some(t => t.id === trackId)) selectedItemType = 'video';
+          else if (currentTimeline.audioTracks.some(t => t.id === trackId)) selectedItemType = 'audio';
+          else selectedItemType = 'fx';
           renderPropertiesPanel();
           renderTimelineTracks();
         },
         onTrackSelect: (trackId, event) => {
           timelineView.selectedClips.clear();
           let trackClips = [];
-          if (trackId === 'v1') {
-             trackClips = currentTimeline.videoTrack;
+          const videoTrack = currentTimeline.videoTracks.find(x => x.id === trackId);
+          if (videoTrack) {
+             trackClips = videoTrack.blocks;
              selectedItemType = 'video';
           } else {
              const audioTrack = currentTimeline.audioTracks.find(x => x.id === trackId);
@@ -1185,24 +1285,54 @@ export async function render(container) {
           const dialog = document.createElement('div');
           dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:#fff;';
           dialog.innerHTML = `
-            <div style="background:var(--ps-bg-surface);border:1px solid var(--ps-border);border-radius:8px;padding:20px;width:300px;">
-              <h3 style="margin-bottom:16px;">Add Track</h3>
-              <select id="tme-add-track-type" class="ic-input" style="width:100%;margin-bottom:16px;">
-                <option value="audio">Audio Track</option>
-                <option value="fx">Effect (FX) Track</option>
-              </select>
+            <div style="background:var(--ps-bg-surface);border:1px solid var(--ps-border);border-radius:8px;padding:20px;width:340px;">
+              <h3 style="margin:0 0 12px 0;font-size:16px;">Add Track</h3>
+              <p style="margin:0 0 16px 0;font-size:12px;color:var(--ps-text-muted);">Choose the type of track to add:</p>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+                <button class="tme-add-track-choice" data-type="video"
+                  style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
+                  <span class="material-symbols-outlined" style="color:#3b82f6;">videocam</span>
+                  <div>
+                    <div style="font-weight:500;">Video Track</div>
+                    <div style="font-size:11px;color:var(--ps-text-muted);">Layer videos on top of the base track (e.g. transparent overlays)</div>
+                  </div>
+                </button>
+                <button class="tme-add-track-choice" data-type="fx"
+                  style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
+                  <span class="material-symbols-outlined" style="color:#10b981;">auto_awesome</span>
+                  <div>
+                    <div style="font-weight:500;">Effect (FX) Track</div>
+                    <div style="font-size:11px;color:var(--ps-text-muted);">Apply timed effects, transforms, and animations</div>
+                  </div>
+                </button>
+                <button class="tme-add-track-choice" data-type="audio"
+                  style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
+                  <span class="material-symbols-outlined" style="color:#f472b6;">graphic_eq</span>
+                  <div>
+                    <div style="font-weight:500;">Audio Track</div>
+                    <div style="font-size:11px;color:var(--ps-text-muted);">Add music, narration, or sound effects</div>
+                  </div>
+                </button>
+              </div>
               <div style="display:flex;justify-content:flex-end;gap:8px;">
                 <button id="tme-btn-cancel-add-track" class="btn-ghost">Cancel</button>
-                <button id="tme-btn-confirm-add-track" class="btn-primary">Add Track</button>
               </div>
             </div>
           `;
           document.body.appendChild(dialog);
-          
-          dialog.querySelector('#tme-btn-cancel-add-track').onclick = () => document.body.removeChild(dialog);
-          dialog.querySelector('#tme-btn-confirm-add-track').onclick = async () => {
-              const type = dialog.querySelector('#tme-add-track-type').value;
-              if (type === 'audio') {
+
+          const close = () => { if (document.body.contains(dialog)) document.body.removeChild(dialog); };
+          dialog.querySelector('#tme-btn-cancel-add-track').onclick = close;
+          // Close on background click
+          dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
+
+          dialog.querySelectorAll('.tme-add-track-choice').forEach(btn => {
+            btn.onclick = async () => {
+              const type = btn.dataset.type;
+              if (type === 'video') {
+                  const idx = currentTimeline.videoTracks.length + 1;
+                  currentTimeline.videoTracks.push({ id: generateId(), name: `V${idx}`, blocks: [], disabled: false });
+              } else if (type === 'audio') {
                   const idx = currentTimeline.audioTracks.length + 1;
                   currentTimeline.audioTracks.push({ id: generateId(), name: `A${idx}`, blocks: [] });
               } else if (type === 'fx') {
@@ -1211,8 +1341,9 @@ export async function render(container) {
               }
               await saveTimeline(currentTimeline, currentProjectDirHandle);
               renderTimelineTracks();
-              document.body.removeChild(dialog);
-          };
+              close();
+            };
+          });
         },
         onClipContextMenu: (clip, e) => {
             if (!timelineView.selectedClips.has(clip.id)) {
@@ -1222,6 +1353,7 @@ export async function render(container) {
             selectedItemId = timelineView.selectedClips.size === 1 ? [...timelineView.selectedClips][0] : null;
             
             let trackType = 'video';
+            if (currentTimeline.videoTracks.some(t => t.blocks.find(b => b.id === clip.id))) trackType = 'video';
             if (currentTimeline.effectTracks.some(t => t.blocks.find(b => b.id === clip.id))) trackType = 'fx';
             if (currentTimeline.audioTracks.some(t => t.blocks.find(b => b.id === clip.id))) trackType = 'audio';
             selectedItemType = trackType;
@@ -1301,16 +1433,20 @@ export async function render(container) {
                 const splitTime = clip.timelineStart + splitOffsetSec;
 
                 if (trackType === 'video') {
-                  const clipIndex = currentTimeline.videoTrack.findIndex(c => c.id === clip.id);
-                  if (clipIndex !== -1) {
-                    const c = currentTimeline.videoTrack[clipIndex];
-                    const splitOffset = splitTime - c.timelineStart;
-                    const newDuration2 = c.duration - splitOffset;
-                    c.duration = splitOffset;
-                    currentTimeline.videoTrack.splice(clipIndex + 1, 0, {
-                      ...c, id: generateId(), timelineStart: splitTime, duration: newDuration2, sourceStart: (c.sourceStart || 0) + splitOffset
-                    });
-                    splitHappened = true;
+                  // Find which video track this clip lives in, then split within that track
+                  const owningTrack = findVideoTrackForClipId(clip.id);
+                  if (owningTrack) {
+                    const clipIndex = owningTrack.blocks.findIndex(c => c.id === clip.id);
+                    if (clipIndex !== -1) {
+                      const c = owningTrack.blocks[clipIndex];
+                      const splitOffset = splitTime - c.timelineStart;
+                      const newDuration2 = c.duration - splitOffset;
+                      c.duration = splitOffset;
+                      owningTrack.blocks.splice(clipIndex + 1, 0, {
+                        ...c, id: generateId(), timelineStart: splitTime, duration: newDuration2, sourceStart: (c.sourceStart || 0) + splitOffset
+                      });
+                      splitHappened = true;
+                    }
                   }
                 } else if (trackType === 'fx') {
                   currentTimeline.effectTracks.forEach(t => {
@@ -1361,20 +1497,22 @@ export async function render(container) {
             setTimeout(() => document.addEventListener('click', closeMenu), 10);
         },
         onClipDrag: (clipId, newTimeSec) => {
-           // Find the clip and update its timelineStart
-           let c = currentTimeline.videoTrack.find(x => x.id === clipId);
-           if (c) c.timelineStart = newTimeSec;
-           
+           // Find the clip across any track type and update its timelineStart
+           currentTimeline.videoTracks.forEach(t => {
+             let c = t.blocks.find(x => x.id === clipId);
+             if (c) c.timelineStart = newTimeSec;
+           });
+
            currentTimeline.audioTracks.forEach(t => {
              let ac = t.blocks.find(x => x.id === clipId);
              if (ac) ac.timelineStart = newTimeSec;
            });
-           
+
            currentTimeline.effectTracks.forEach(t => {
              let fc = t.blocks.find(x => x.id === clipId);
              if (fc) fc.timelineStart = newTimeSec;
            });
-           
+
            renderFrame();
         },
         onTrackDrop: async (track, offsetX, event) => {
@@ -1400,12 +1538,14 @@ export async function render(container) {
                        const poolItem = currentTimeline.mediaPool.find(p => p.id === id);
                        if (poolItem) {
                          if (track.type === 'video' && (poolItem.type === 'video' || poolItem.type === 'image')) {
+                           // Find the specific video track being dropped onto
+                           const targetVT = currentTimeline.videoTracks.find(vt => vt.id === track.id) || getPrimaryVideoTrack();
                            const duration = poolItem.meta?.duration || 4.0;
                             let dropTime = currentTime;
                             if (typeof timelineView !== 'undefined' && timelineView.isMagnetic) {
-                               dropTime = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+                               dropTime = targetVT.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
                             }
-                            currentTimeline.videoTrack.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0, transitionOut: null });
+                            targetVT.blocks.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0, transitionOut: null });
                             currentTime = dropTime;
                            currentTime += (typeof duration !== 'undefined' ? duration : 4.0);
                            dropped = true;
@@ -1441,7 +1581,9 @@ export async function render(container) {
         },
         onDeleteSelected: async () => {
            if (timelineView.selectedClips.size === 0) return;
-           currentTimeline.videoTrack = currentTimeline.videoTrack.filter(c => !timelineView.selectedClips.has(c.id));
+           currentTimeline.videoTracks.forEach(t => {
+               t.blocks = t.blocks.filter(b => !timelineView.selectedClips.has(b.id));
+           });
            currentTimeline.effectTracks.forEach(t => {
                t.blocks = t.blocks.filter(b => !timelineView.selectedClips.has(b.id));
            });
@@ -1459,23 +1601,26 @@ export async function render(container) {
           let splitHappened = false;
 
           if (selectedItemType === 'video') {
-            const clipIndex = currentTimeline.videoTrack.findIndex(c => c.id === selectedItemId);
-            if (clipIndex !== -1) {
-              const clip = currentTimeline.videoTrack[clipIndex];
-              if (playheadTime > clip.timelineStart && playheadTime < clip.timelineStart + clip.duration) {
-                const splitOffset = playheadTime - clip.timelineStart;
-                const newDuration2 = clip.duration - splitOffset;
-                clip.duration = splitOffset;
-                
-                const newClip = {
-                  ...clip,
-                  id: generateId(),
-                  timelineStart: playheadTime,
-                  duration: newDuration2,
-                  sourceStart: (clip.sourceStart || 0) + splitOffset
-                };
-                currentTimeline.videoTrack.splice(clipIndex + 1, 0, newClip);
-                splitHappened = true;
+            const owningTrack = findVideoTrackForClipId(selectedItemId);
+            if (owningTrack) {
+              const clipIndex = owningTrack.blocks.findIndex(c => c.id === selectedItemId);
+              if (clipIndex !== -1) {
+                const clip = owningTrack.blocks[clipIndex];
+                if (playheadTime > clip.timelineStart && playheadTime < clip.timelineStart + clip.duration) {
+                  const splitOffset = playheadTime - clip.timelineStart;
+                  const newDuration2 = clip.duration - splitOffset;
+                  clip.duration = splitOffset;
+
+                  const newClip = {
+                    ...clip,
+                    id: generateId(),
+                    timelineStart: playheadTime,
+                    duration: newDuration2,
+                    sourceStart: (clip.sourceStart || 0) + splitOffset
+                  };
+                  owningTrack.blocks.splice(clipIndex + 1, 0, newClip);
+                  splitHappened = true;
+                }
               }
             }
           } else if (selectedItemType === 'fx') {
@@ -1577,7 +1722,8 @@ export async function render(container) {
                 btnToggle.onclick = async (e) => {
                     e.stopPropagation();
                     if (track.type === 'video') {
-                        currentTimeline.videoTrackDisabled = !currentTimeline.videoTrackDisabled;
+                        const vt = currentTimeline.videoTracks.find(t => t.id === track.id);
+                        if (vt) vt.disabled = !vt.disabled;
                     } else if (track.type === 'audio') {
                         const at = currentTimeline.audioTracks.find(t => t.id === track.id);
                         if (at) at.disabled = !at.disabled;
@@ -1620,11 +1766,12 @@ export async function render(container) {
                     
                     const duration = poolItem.meta?.duration || 4.0;
                     if (track.type === 'video' && (poolItem.type === 'video' || poolItem.type === 'image')) {
+                      const targetVT = currentTimeline.videoTracks.find(vt => vt.id === track.id) || getPrimaryVideoTrack();
                       let dropTime = currentTime;
                       if (timelineView && timelineView.isMagnetic) {
-                         dropTime = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+                         dropTime = targetVT.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
                       }
-                      currentTimeline.videoTrack.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0, transitionOut: null });
+                      targetVT.blocks.push({ id: generateId(), poolId: id, timelineStart: dropTime, duration: duration, sourceStart: 0, transitionOut: null });
                       currentTime = dropTime + duration;
                       dropped = true;
                     } else if (track.type === 'audio' && poolItem.type === 'audio') {
@@ -1793,17 +1940,19 @@ export async function render(container) {
     }
 
     const tracks = [];
-    
-    // Video Track
-    tracks.push({
-        id: 'v1',
-        name: 'V1 (Main)',
-        type: 'video',
-        color: '#3b82f6',
-        clips: currentTimeline.videoTrack,
-        disabled: currentTimeline.videoTrackDisabled
+
+    // Video Tracks (V1 is the base layer; V2+ render on top)
+    currentTimeline.videoTracks.forEach((t, i) => {
+        tracks.push({
+            id: t.id,
+            name: t.name || `V${i+1}`,
+            type: 'video',
+            color: '#3b82f6',
+            clips: t.blocks,
+            disabled: t.disabled
+        });
     });
-    
+
     // Effect Tracks
     currentTimeline.effectTracks.forEach((t, i) => {
         tracks.push({
@@ -1835,18 +1984,19 @@ export async function render(container) {
   const btnExport = container.querySelector('#tme-btn-export');
   if (btnExport) {
     btnExport.addEventListener('click', async () => {
+      const allVideoBlocks = getAllVideoClipsIncludingDisabled();
       const maxTime = Math.max(
-         ...currentTimeline.videoTrack.map(c => c.timelineStart + c.duration),
+         ...allVideoBlocks.map(c => c.timelineStart + c.duration),
          ...currentTimeline.effectTracks.flatMap(t => t.blocks.map(b => b.timelineStart + b.duration)),
          0
       );
       if (maxTime === 0) { window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: "Timeline is empty!" }); return; }
 
-      // Find the first video clip's resolution if available
+      // Find the first video clip's resolution (across all video tracks, V1 first)
       let defaultW = currentTimeline.width || 1920;
       let defaultH = currentTimeline.height || 1080;
-      if (currentTimeline.videoTrack && currentTimeline.videoTrack.length > 0) {
-        const firstClip = [...currentTimeline.videoTrack].sort((a,b) => a.timelineStart - b.timelineStart)[0];
+      if (allVideoBlocks.length > 0) {
+        const firstClip = [...allVideoBlocks].sort((a,b) => a.timelineStart - b.timelineStart)[0];
         const poolItem = currentTimeline.mediaPool.find(m => m.id === firstClip.poolId);
         if (poolItem && poolItem.meta && poolItem.meta.width) {
           defaultW = poolItem.meta.width;
@@ -1946,7 +2096,7 @@ export async function render(container) {
           const offlineCtx = new window.OfflineAudioContext(2, Math.max(1, Math.ceil(sampleRate * exportDuration)), sampleRate);
           const allClips = [
             ...currentTimeline.audioTracks.flatMap(t => t.blocks),
-            ...currentTimeline.videoTrack
+            ...currentTimeline.videoTracks.flatMap(t => t.blocks)
           ];
           for (const clip of allClips) {
             if (cancelExport) break;
@@ -2131,8 +2281,18 @@ export async function render(container) {
       if (!fsaBrowserInstance && fsaPanelEl.style.display === 'flex') {
          fsaBrowserInstance = new FsaBrowser(fsaPanelEl, {
             onClose: () => { fsaPanelEl.style.display = 'none'; },
+            isAssetAdded: (name) => {
+               currentTimeline.mediaPool = currentTimeline.mediaPool || [];
+               return currentTimeline.mediaPool.some(p => p.name === name);
+            },
             onImportMedia: async (fileHandle) => {
                try {
+                 currentTimeline.mediaPool = currentTimeline.mediaPool || [];
+                 const isDuplicate = currentTimeline.mediaPool.some(p => p.name === fileHandle.name);
+                 if (isDuplicate) {
+                    window.AuroraToast?.show({ variant: 'info', title: 'Already In Pool', description: `${fileHandle.name} is already in the media pool.` });
+                    return;
+                 }
                  const file = await fileHandle.getFile();
                  const type = file.type.startsWith('video') ? 'video' : (file.type.startsWith('audio') ? 'audio' : 'image');
                  let thumbnail = null;
@@ -2142,7 +2302,6 @@ export async function render(container) {
                  else if (type === 'video') { thumbnail = await extractVideoThumbnail(file); }
                  
                  const filename = await importMediaToProject(fileHandle, currentProjectDirHandle);
-                 currentTimeline.mediaPool = currentTimeline.mediaPool || [];
                  currentTimeline.mediaPool.push({
                    id: generateId(),
                    type,
@@ -2163,7 +2322,10 @@ export async function render(container) {
             onImportMediaBatch: async (fileHandles) => {
                try {
                  let count = 0;
+                 currentTimeline.mediaPool = currentTimeline.mediaPool || [];
                  for (const fileHandle of fileHandles) {
+                   const isDuplicate = currentTimeline.mediaPool.some(p => p.name === fileHandle.name);
+                   if (isDuplicate) continue;
                    const file = await fileHandle.getFile();
                    const type = file.type.startsWith('video') ? 'video' : (file.type.startsWith('audio') ? 'audio' : 'image');
                    let thumbnail = null;
@@ -2173,7 +2335,6 @@ export async function render(container) {
                    else if (type === 'video') { thumbnail = await extractVideoThumbnail(file); }
                    
                    const filename = await importMediaToProject(fileHandle, currentProjectDirHandle);
-                   currentTimeline.mediaPool = currentTimeline.mediaPool || [];
                    currentTimeline.mediaPool.push({
                      id: generateId(),
                      type,
@@ -2194,6 +2355,8 @@ export async function render(container) {
                }
             }
          });
+      } else if (fsaBrowserInstance && fsaPanelEl.style.display === 'flex') {
+         fsaBrowserInstance.scanCurrent();
       }
     });
   }
@@ -2341,7 +2504,7 @@ export async function render(container) {
     const activeIds = new Set();
     const activeClips = [
       ...(currentTimeline.audioTracks?.filter(t => !t.disabled).flatMap(t => t.blocks) || []),
-      ...(currentTimeline.videoTrackDisabled ? [] : currentTimeline.videoTrack)
+      ...(currentTimeline.videoTracks?.filter(t => !t.disabled).flatMap(t => t.blocks) || [])
     ].filter(c => playheadTime >= c.timelineStart && playheadTime < c.timelineStart + c.duration);
 
     if (isPlaying) {
@@ -2579,26 +2742,46 @@ export async function render(container) {
       compositor = new WebGLCompositor(canvas.width, canvas.height);
     }
 
-    function drawSourceToCtx(frameSource, targetCtx) {
+    function drawSourceToCtx(frameSource, targetCtx, mode = 'cover') {
       const sourceW = frameSource.videoWidth || frameSource.width;
       const sourceH = frameSource.videoHeight || frameSource.height;
-      const scale = Math.max(canvas.width / sourceW, canvas.height / sourceH);
+      // 'cover' fills the canvas (may crop) — right for the base video track.
+      // 'contain' preserves aspect ratio and letterboxes — right for overlay tracks
+      // so we don't crop the edges of a non-canvas-sized transparent WebM.
+      const scale = mode === 'contain'
+        ? Math.min(canvas.width / sourceW, canvas.height / sourceH)
+        : Math.max(canvas.width / sourceW, canvas.height / sourceH);
       const x = (canvas.width / 2) - (sourceW / 2) * scale;
       const y = (canvas.height / 2) - (sourceH / 2) * scale;
       targetCtx.drawImage(frameSource, x, y, sourceW * scale, sourceH * scale);
     }
 
     // --- 1. VIDEO RENDERING ---
-    if (!currentTimeline.videoTrackDisabled) {
-      const activeClipIdx = currentTimeline.videoTrack.findIndex(c => 
+    // Render every video track in order: V1 first (base), V2+ layered on top.
+    // The default source-over compositing means alpha-aware overlays (e.g. transparent
+    // WebMs on V2) reveal whatever was drawn on V1 underneath.
+    //
+    // Scaling mode differs per layer:
+    //  - V1 (base):   'cover'   — fill the canvas, crop overflow.  Standard NLE behaviour.
+    //  - V2+ (above): 'contain' — preserve overlay aspect, letterbox if needed.
+    //                              This stops a non-canvas-sized transparent WebM from
+    //                              being cropped at the edges.
+    let trackIndex = 0;
+    for (const videoTrack of currentTimeline.videoTracks) {
+      const isBaseLayer = trackIndex === 0;
+      const scaleMode = isBaseLayer ? 'cover' : 'contain';
+      trackIndex++;
+      if (videoTrack.disabled) continue;
+      const trackBlocks = videoTrack.blocks;
+      const activeClipIdx = trackBlocks.findIndex(c =>
         playheadTime >= c.timelineStart && playheadTime < c.timelineStart + c.duration
       );
 
       if (activeClipIdx !== -1) {
-        const activeClip = currentTimeline.videoTrack[activeClipIdx];
+        const activeClip = trackBlocks[activeClipIdx];
         const tIn = activeClip.transitionIn || { style: 'none', duration: 0 };
         const tOut = activeClip.transitionOut || { style: 'none', duration: 0 };
-        
+
         const isTransIn = tIn.style !== 'none' && tIn.duration > 0 && playheadTime < activeClip.timelineStart + tIn.duration;
         const isTransOut = tOut.style !== 'none' && tOut.duration > 0 && playheadTime >= (activeClip.timelineStart + activeClip.duration) - tOut.duration;
 
@@ -2612,12 +2795,12 @@ export async function render(container) {
             progress = (playheadTime - activeClip.timelineStart) / tIn.duration;
             style = tIn.style;
             toClip = activeClip;
-            fromClip = activeClipIdx > 0 ? currentTimeline.videoTrack[activeClipIdx - 1] : null;
+            fromClip = activeClipIdx > 0 ? trackBlocks[activeClipIdx - 1] : null;
           } else {
             progress = (playheadTime - ((activeClip.timelineStart + activeClip.duration) - tOut.duration)) / tOut.duration;
             style = tOut.style;
             fromClip = activeClip;
-            toClip = activeClipIdx < currentTimeline.videoTrack.length - 1 ? currentTimeline.videoTrack[activeClipIdx + 1] : null;
+            toClip = activeClipIdx < trackBlocks.length - 1 ? trackBlocks[activeClipIdx + 1] : null;
           }
 
           const toFrameSrc = toClip ? await loadFrame(toClip, isTransOut ? toClip.timelineStart : playheadTime) : null;
@@ -2629,14 +2812,14 @@ export async function render(container) {
           if (toFrameSrc) {
              const tempC = new OffscreenCanvas(canvas.width, canvas.height);
              const tempCtx = tempC.getContext('2d');
-             drawSourceToCtx(toFrameSrc, tempCtx);
+             drawSourceToCtx(toFrameSrc, tempCtx, scaleMode);
              try { toBmp = await createImageBitmap(tempC); } catch(e) {}
              toTex = compositor.createTexture(toBmp || null);
           }
           if (fromFrameSrc) {
              const tempC = new OffscreenCanvas(canvas.width, canvas.height);
              const tempCtx = tempC.getContext('2d');
-             drawSourceToCtx(fromFrameSrc, tempCtx);
+             drawSourceToCtx(fromFrameSrc, tempCtx, scaleMode);
              try { fromBmp = await createImageBitmap(tempC); } catch(e) {}
              fromTex = compositor.createTexture(fromBmp || null);
           }
@@ -2659,7 +2842,7 @@ export async function render(container) {
         } else {
           const frameSource = await loadFrame(activeClip);
           if (frameSource) {
-            drawSourceToCtx(frameSource, tempCtx);
+            drawSourceToCtx(frameSource, tempCtx, scaleMode);
           }
         }
       }
@@ -2752,7 +2935,10 @@ export async function render(container) {
     playheadTime += dt;
     
     // Auto stop if we pass the end of the last clip or effect
-    let maxTime = currentTimeline.videoTrack.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), 0);
+    let maxTime = 0;
+    currentTimeline.videoTracks.forEach(t => {
+      maxTime = t.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), maxTime);
+    });
     if (currentTimeline.effectTracks) {
       currentTimeline.effectTracks.forEach(t => {
         maxTime = t.blocks.reduce((max, fx) => Math.max(max, fx.timelineStart + fx.duration), maxTime);

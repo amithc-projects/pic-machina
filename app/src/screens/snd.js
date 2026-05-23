@@ -558,7 +558,7 @@ export async function render(container) {
        // Project Cards
        projects.forEach((p, i) => {
          // Filter to audio projects, assume it's audio studio if it has mediaPoolMeta or masterFx (or if it's totally empty but titled for audio)
-         const isAudioStudio = p.projectData.mediaPoolMeta || p.projectData.masterFx || (p.projectData.tracks && p.projectData.tracks.length > 0 && !p.projectData.videoTrack);
+         const isAudioStudio = p.projectData.mediaPoolMeta || p.projectData.masterFx || (p.projectData.tracks && p.projectData.tracks.length > 0 && !p.projectData.videoTrack && !p.projectData.videoTracks);
          if (!isAudioStudio) return; // Skip video/speech projects
 
          const title = p.projectData.name || p.projectData.title || 'Untitled';
