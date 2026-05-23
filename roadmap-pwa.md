@@ -1,8 +1,8 @@
-# PWA Roadmap — PicMachina
+# PWA Roadmap — Zumilabs Studio
 
 ## Overview
 
-PicMachina can be packaged as a full Progressive Web App (PWA), installable on the user's desktop directly from the browser. All existing technology — Web Workers, File System Access API, IndexedDB, WebCodecs, MediaPipe, Canvas API, gif.js — is fully compatible with PWA installation. No architectural changes are required.
+Zumilabs Studio can be packaged as a full Progressive Web App (PWA), installable on the user's desktop directly from the browser. All existing technology — Web Workers, File System Access API, IndexedDB, WebCodecs, MediaPipe, Canvas API, gif.js — is fully compatible with PWA installation. No architectural changes are required.
 
 ---
 
@@ -73,8 +73,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
       },
       manifest: {
-        name: 'PicMachina',
-        short_name: 'PicMachina',
+        name: 'Zumilabs Studio',
+        short_name: 'ZumilabsStudio',
         description: 'Local-first batch image processing',
         theme_color: '#0077ff',
         background_color: '#121212',
@@ -118,7 +118,7 @@ All of these serve over HTTPS automatically.
 ### Step 5 — Test installation
 
 1. Open the deployed URL in Chrome or Edge
-2. Look for the install icon (⊕) in the address bar, or go to **⋮ → Install PicMachina**
+2. Look for the install icon (⊕) in the address bar, or go to **⋮ → Install Zumilabs Studio**
 3. Confirm installation — the app opens in a standalone window with no browser chrome
 4. Disconnect from the internet — the app should still load and function (except AI transforms on first use)
 5. Re-grant folder permissions if prompted — File System Access handles survive across sessions

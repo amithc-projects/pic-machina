@@ -1,4 +1,4 @@
-# PicMachina — Product Roadmap
+# Zumilabs Studio — Product Roadmap
 
 ## Architecture
 
@@ -71,7 +71,7 @@ The sidecar JSON schema:
 
 ## Out of Scope (handled by sidekick-manager)
 
-The following are fully provided by the embedded `<sidekick-manager>` component and do not need custom code in pic-machina screens:
+The following are fully provided by the embedded `<sidekick-manager>` component and do not need custom code in zumilabs-studio screens:
 
 - File grid / filmstrip / list views
 - Thumbnail generation and persistence
