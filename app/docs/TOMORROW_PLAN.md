@@ -7,7 +7,7 @@ Here is the checklist of tasks we outlined to tackle tomorrow:
 - [ ] **c) Voicecraft Review:** Double-check Voicecraft issues, specifically addressing problems with longer speech generation (more than 30 seconds).
 - [ ] **d) Final Branding - Jidokasa Studio:** Finalize the name change to "Jidokasa Studio", including creating/updating the new logo and application icons.
 - [ ] **e) Transitions Demo Recipe:** Create a comprehensive recipe with multiple clips demonstrating the various transition IN and OUT effects.
-- [ ] **f) Hyperframes Showcase:** Review Hyperframes examples, build one with a transparent background, and create additional showcase/promotional material.
+- [ ] **f) Hyperframes Showcase:** Build a HyperFrames composition rendered as a transparent WebM, then composite it onto a Pic Machina video using the existing `overlay-transparent-video` transform. No dedicated recipe step needed — HyperFrames integrates as an external post-process overlay.
 - [ ] **g) Backup & Deploy:** Securely back up the entire repository/project and successfully deploy it to the second MacBook.
 - [ ] **h) Blockbuilder Verification:** Check and verify that the blockbuilder tool is still fully functional.
 - [ ] **i) Branching Recipe:** Create a complex recipe that effectively demonstrates branching logic.

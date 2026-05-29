@@ -169,7 +169,7 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
   // Aggregation collector (GIF / video / contact sheet / zip)
   const aggregations = {};
   for (const node of flattenNodes(resolvedNodes)) {
-    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-video-fast-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph', 'flow-render-hyperframe'].includes(node.transformId)) {
+    if (['flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx', 'flow-create-zip', 'flow-video-stitcher', 'flow-video-fast-stitcher', 'flow-geo-timeline', 'flow-contact-sheet', 'flow-photo-stack', 'flow-animate-stack', 'flow-template-aggregator', 'flow-face-swap', 'flow-bg-swap', 'flow-face-morph'].includes(node.transformId)) {
       aggregations[node.id] = { node, blobs: [] };
     }
     if (node.transformId === 'flow-video-wall' || node.transformId === 'flow-video-pip') {
@@ -348,8 +348,7 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
       continue;
     }
 
-    // Note: flow-render-hyperframe generates content from scratch so it does not require input blobs
-    if (!agg.blobs.length && agg.node.transformId !== 'flow-render-hyperframe') continue;
+    if (!agg.blobs.length) continue;
     try {
       onLog('info', `Rendering aggregation: ${agg.node.transformId} (${agg.blobs.length} frames)`);
       const p = agg.node.params || {};
@@ -566,40 +565,6 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
               onLog('error', `  Failed for "${getBgName(i)}": ${e.message}`);
             }
           }
-        }
-      } else if (agg.node.transformId === 'flow-render-hyperframe') {
-        const { createStandaloneHyperframe } = await import('./hyperframe.js');
-        const { getTemplate } = await import('../data/templates.js');
-        let html = '';
-        if (p.templateId) {
-           const tpl = await getTemplate(p.templateId);
-           if (tpl && tpl.type === 'hyperframe') {
-              html = tpl.htmlContent || '';
-           }
-        }
-        if (!html) html = String(p.htmlContent || '');
-        onLog('info', `Rendering Standalone Hyperframe (FPS: ${p.fps || 30})...`);
-        try {
-          const blob = await createStandaloneHyperframe(html, {
-            fps: p.fps || 30,
-            width: p.width || 1920,
-            height: p.height || 1080,
-            durationFallback: p.duration || 5,
-            onProgress: (pct) => {
-              if (pct % 10 === 0) {
-                 onLog('info', `Rendering Hyperframe: ${pct}% complete`);
-                 onProgress(total, total, `Rendering Hyperframe: ${pct}%`, Math.round(((total + aggCount) / totalSteps) * 100));
-              }
-            }
-          });
-          
-          let fname = p.filename || 'hyperframe.mp4';
-          if (!fname.toLowerCase().endsWith('.mp4')) fname += '.mp4';
-          
-          await writeFile(subHandle, fname, blob);
-          onLog('ok', `Successfully generated standalone hyperframe: ${fname}`);
-        } catch (err) {
-          onLog('error', `Hyperframe render failed: ${err.message}`);
         }
       } else if (agg.node.transformId === 'flow-template-aggregator') {
         const { getTemplate } = await import('../data/templates.js');
