@@ -12,10 +12,10 @@ let tfClassifier = null;
 
 async function loadModels() {
   status.textContent = "Loading MediaPipe EfficientNet-Lite0...";
-  const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm');
+  const vision = await FilesetResolver.forVisionTasks('/models/wasm');
   mpClassifier = await ImageClassifier.createFromOptions(vision, {
     baseOptions: {
-      modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/float32/1/efficientnet_lite0.tflite',
+      modelAssetPath: '/models/tasks/efficientnet_lite0.tflite',
       delegate: 'GPU'
     },
     maxResults: 5,

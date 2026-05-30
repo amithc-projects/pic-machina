@@ -198,6 +198,29 @@ export async function render(container, hash) {
               </label>
             </section>
 
+            <!-- Usage Telemetry -->
+            <section style="display:flex; flex-direction:column; gap:12px;">
+              <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:var(--ps-text-faint);">${t('sys.telemetrySection')}</h4>
+              <div style="background:var(--ps-bg-app); padding:16px; border-radius:8px; border:1px solid var(--ps-border); display:flex; flex-direction:column; gap:12px;">
+                <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                  <input type="checkbox" id="cfg-telemetry-enabled" ${current.telemetry?.enabled !== false ? 'checked' : ''} style="margin-top:2px;" />
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="font-size:13px; font-weight:500; color:var(--ps-text);">${t('sys.telemetryEnabledLabel')}</span>
+                    <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">${t('sys.telemetryEnabledDesc')}</span>
+                  </div>
+                </label>
+                <div style="border-top:1px solid var(--ps-border); padding-top:12px; display:flex; flex-direction:column; gap:4px;">
+                  <label for="cfg-telemetry-endpoint" style="font-size:13px; font-weight:500; color:var(--ps-text);">${t('sys.telemetryEndpointLabel')}</label>
+                  <input type="url" id="cfg-telemetry-endpoint" class="ic-input"
+                    value="${current.telemetry?.endpoint || ''}"
+                    placeholder="https://telemetry.zumilabs.workers.dev"
+                    style="font-size:12px; font-family:var(--font-mono);"
+                  />
+                  <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px; line-height:1.4;">${t('sys.telemetryEndpointDesc')}</span>
+                </div>
+              </div>
+            </section>
+
             <!-- Custom Color Swatches -->
             <section style="display:flex; flex-direction:column; gap:12px;">
               <div style="display:flex; flex-direction:column;">
@@ -700,6 +723,10 @@ export async function render(container, hash) {
       },
       batch: {
         useInputForOutput: container.querySelector('#cfg-batch-sync').checked
+      },
+      telemetry: {
+        enabled: container.querySelector('#cfg-telemetry-enabled').checked,
+        endpoint: container.querySelector('#cfg-telemetry-endpoint').value.trim()
       },
       thumbnails: {
         smart: container.querySelector('#cfg-smart-thumbs').checked

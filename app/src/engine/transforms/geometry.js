@@ -326,14 +326,12 @@ registry.register({
   ],
   async apply(ctx, p, context) {
     const { FaceDetector, PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-    const vision = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
-    );
+    const vision = await FilesetResolver.forVisionTasks('/models/wasm');
     
     // 1. Try Face Detector
     const detector = await FaceDetector.createFromOptions(vision, {
       baseOptions: {
-        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+        modelAssetPath: '/models/tasks/blaze_face_short_range.tflite',
         delegate: 'CPU',
       },
       runningMode: 'IMAGE',
@@ -351,7 +349,7 @@ registry.register({
       // 2. Fallback to Pose Detection
       const pose = await PoseLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
+          modelAssetPath: '/models/tasks/pose_landmarker_full.task',
           delegate: 'CPU',
         },
         runningMode: 'IMAGE'
@@ -402,9 +400,9 @@ registry.register({
   ],
   async apply(ctx, p) {
     const { PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
+    const vision = await FilesetResolver.forVisionTasks('/models/wasm');
     const pose = await PoseLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task' },
+      baseOptions: { modelAssetPath: '/models/tasks/pose_landmarker_full.task' },
       runningMode: 'IMAGE'
     });
     const result = pose.detect(ctx.canvas);
@@ -464,9 +462,9 @@ registry.register({
   ],
   async apply(ctx, p) {
     const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
+    const vision = await FilesetResolver.forVisionTasks('/models/wasm');
     const fl = await FaceLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task' },
+      baseOptions: { modelAssetPath: '/models/tasks/face_landmarker.task' },
       runningMode: 'IMAGE', outputFaceBlendshapes: false, outputFacialTransformationMatrixes: false
     });
     const result = fl.detect(ctx.canvas);

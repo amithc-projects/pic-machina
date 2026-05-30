@@ -12,7 +12,7 @@
  */
 
 import { registry } from './registry.js';
-import { interpolate, resolveParams } from '../utils/variables.js';
+import { interpolate, resolveParams, resolveKey } from '../utils/variables.js';
 
 // ─── EXIF helpers ─────────────────────────────────────────
 async function injectExif(blob, context) {
@@ -78,6 +78,7 @@ function evalCondition(condition, ctx, canvas) {
   else if (field === 'MetaExists') return field in (ctx.exif || {}) || field in (ctx.meta || {});
   else if (field.startsWith('exif.')) actual = ctx.exif?.[field.slice(5)];
   else if (field.startsWith('meta.')) actual = ctx.meta?.[field.slice(5)];
+  else if (field.startsWith('sidecar.')) actual = resolveKey(field, ctx);
   else return false;
 
   if (operator === 'exists')   return actual != null;

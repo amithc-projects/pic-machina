@@ -18,6 +18,10 @@ const DEFAULT_SETTINGS = {
   batch: {
     useInputForOutput: true // Output directly inside Input directory
   },
+  telemetry: {
+    enabled: true,
+    endpoint: 'https://telemetry.zumilabs.workers.dev'
+  },
   thumbnails: {
     // Opt-in content-aware thumbnails. When true + the InSPyReNet model is
     // downloaded, recipe/showcase covers are cropped around the detected

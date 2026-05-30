@@ -72,17 +72,22 @@ registry.register({
     if (!context.meta)      context.meta      = {};
     if (!context.variables) context.variables = new Map();
 
-    // Use cached geo data from a previous run (saved to asset store as sidecar.geo)
-    if (context.sidecar?.geocodedAt) {
+    // Use cached geo data from a previous run or sidecar file
+    const sc = context.sidecar || {};
+    const geo = sc.geo || {};
+    const geocodedAt = geo.geocodedAt || sc.geocodedAt;
+    const hasCachedGeo = geocodedAt || geo.city || sc.city || geo.country || sc.country;
+
+    if (hasCachedGeo) {
       const cached = {
-        city:         context.sidecar.city         || '',
-        county:       context.sidecar.county        || '',
-        state:        context.sidecar.state         || '',
-        country:      context.sidecar.country       || '',
-        country_code: context.sidecar.country_code  || '',
-        postcode:     context.sidecar.postcode       || '',
-        suburb:       context.sidecar.suburb         || '',
-        road:         context.sidecar.road           || '',
+        city:         geo.city         || sc.city         || '',
+        county:       geo.county       || sc.county       || '',
+        state:        geo.state        || sc.state        || '',
+        country:      geo.country      || sc.country      || '',
+        country_code: geo.country_code || sc.country_code || geo.countryCode || sc.countryCode || '',
+        postcode:     geo.postcode     || sc.postcode     || '',
+        suburb:       geo.suburb       || sc.suburb       || '',
+        road:         geo.road         || sc.road         || '',
       };
       for (const [k, v] of Object.entries(cached)) {
         context.meta[k] = v;
@@ -99,6 +104,17 @@ registry.register({
         .replace('{road}',         cached.road);
       context.meta[p.targetField || 'location'] = location;
       context.variables.set(p.targetField || 'location', location);
+
+      // Expose immediately in context.sidecar for downstream nodes in this run
+      if (!context.sidecar) context.sidecar = {};
+      Object.assign(context.sidecar, cached, { location });
+      if (!context.sidecar.geo) context.sidecar.geo = {};
+      Object.assign(context.sidecar.geo, {
+        city: cached.city,
+        region: cached.state,
+        country: cached.country,
+        countryCode: cached.country_code
+      });
       return;
     }
 
@@ -148,6 +164,13 @@ registry.register({
         // Also expose immediately in context.sidecar for downstream nodes in this run
         if (!context.sidecar) context.sidecar = {};
         Object.assign(context.sidecar, components, { location });
+        if (!context.sidecar.geo) context.sidecar.geo = {};
+        Object.assign(context.sidecar.geo, {
+          city: components.city,
+          region: components.state,
+          country: components.country,
+          countryCode: components.country_code
+        });
       }
     } catch (err) {
       console.warn('[meta-geocode] failed:', err);

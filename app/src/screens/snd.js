@@ -1,5 +1,6 @@
 import * as Tone from 'https://cdn.jsdelivr.net/npm/tone@14.7.77/+esm';
 import JSZip from 'jszip';
+import { trackEvent } from '../utils/telemetry.js';
 import { TimelineView } from '../components/timeline-view.js';
 import { FsaBrowser } from '../components/fsa-browser.js';
 import { getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
@@ -215,6 +216,242 @@ function applyFade(buffer, type, durationSec) {
     return newBuf;
 }
 
+async function computeKWeightedBuffer(buffer) {
+    const ctx = getAudioCtx();
+    const offlineCtx = new OfflineAudioContext(
+        buffer.numberOfChannels,
+        buffer.length,
+        buffer.sampleRate
+    );
+    const source = offlineCtx.createBufferSource();
+    source.buffer = buffer;
+
+    const stage1 = offlineCtx.createBiquadFilter();
+    stage1.type = 'highshelf';
+    stage1.frequency.value = 1500;
+    stage1.gain.value = 4.0;
+
+    const stage2 = offlineCtx.createBiquadFilter();
+    stage2.type = 'highpass';
+    stage2.frequency.value = 38;
+    stage2.Q.value = 0.5;
+
+    source.connect(stage1);
+    stage1.connect(stage2);
+    stage2.connect(offlineCtx.destination);
+
+    source.start(0);
+    return await offlineCtx.startRendering();
+}
+
+async function calculateIntegratedLoudness(buffer) {
+    const kBuffer = await computeKWeightedBuffer(buffer);
+    const sr = buffer.sampleRate;
+    const numChannels = buffer.numberOfChannels;
+
+    const blockSize = Math.floor(sr * 0.400); 
+    const hopSize = Math.floor(sr * 0.100); 
+
+    const totalSamples = kBuffer.length;
+    if (totalSamples < blockSize) {
+        return -70;
+    }
+
+    const channelData = [];
+    for (let c = 0; c < numChannels; c++) {
+        channelData.push(kBuffer.getChannelData(c));
+    }
+
+    const blockPowers = []; 
+
+    for (let offset = 0; offset + blockSize <= totalSamples; offset += hopSize) {
+        let blockPower = 0;
+        for (let c = 0; c < numChannels; c++) {
+            const data = channelData[c];
+            let sumSq = 0;
+            for (let i = 0; i < blockSize; i++) {
+                const sample = data[offset + i];
+                sumSq += sample * sample;
+            }
+            const meanSq = sumSq / blockSize;
+            blockPower += meanSq;
+        }
+        blockPowers.push(blockPower);
+    }
+
+    if (blockPowers.length === 0) return -70;
+
+    const absGateLimit = Math.pow(10, (-70 + 0.691) / 10);
+    const absGatedPowers = blockPowers.filter(p => p >= absGateLimit);
+
+    if (absGatedPowers.length === 0) {
+        return -70;
+    }
+
+    const pRef = absGatedPowers.reduce((a, b) => a + b, 0) / absGatedPowers.length;
+    const lRef = -0.691 + 10 * Math.log10(pRef);
+
+    const relGateLimit = Math.pow(10, (lRef - 10 + 0.691) / 10);
+    const relGatedPowers = absGatedPowers.filter(p => p >= relGateLimit);
+
+    if (relGatedPowers.length === 0) {
+        return lRef;
+    }
+
+    const pFinal = relGatedPowers.reduce((a, b) => a + b, 0) / relGatedPowers.length;
+    return -0.691 + 10 * Math.log10(pFinal);
+}
+
+function scaleAudioBuffer(buffer, gain) {
+    const ctx = getAudioCtx();
+    const newBuf = ctx.createBuffer(
+        buffer.numberOfChannels,
+        buffer.length,
+        buffer.sampleRate
+    );
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+        const inputData = buffer.getChannelData(c);
+        const outputData = newBuf.getChannelData(c);
+        for (let i = 0; i < buffer.length; i++) {
+            outputData[i] = inputData[i] * gain;
+        }
+    }
+    return newBuf;
+}
+
+function applyNoiseReduction(buffer, thresholdDb, reductionDb) {
+    const ctx = getAudioCtx();
+    const sr = buffer.sampleRate;
+    const blockSize = Math.floor(sr * 0.05); 
+    const numChannels = buffer.numberOfChannels;
+    const len = buffer.length;
+
+    const thresholdLinear = Math.pow(10, thresholdDb / 20);
+    const attenuation = Math.pow(10, -Math.abs(reductionDb) / 20); 
+
+    const newBuf = ctx.createBuffer(numChannels, len, sr);
+    let currentGain = 1.0;
+
+    for (let offset = 0; offset < len; offset += blockSize) {
+        const size = Math.min(blockSize, len - offset);
+        
+        let sumSq = 0;
+        for (let c = 0; c < numChannels; c++) {
+            const data = buffer.getChannelData(c);
+            for (let i = 0; i < size; i++) {
+                const sample = data[offset + i];
+                sumSq += sample * sample;
+            }
+        }
+        const rms = Math.sqrt(sumSq / (size * numChannels + 1e-8));
+        const targetGain = (rms < thresholdLinear) ? attenuation : 1.0;
+
+        for (let i = 0; i < size; i++) {
+            const progress = i / size;
+            const gain = currentGain + (targetGain - currentGain) * progress;
+            for (let c = 0; c < numChannels; c++) {
+                newBuf.getChannelData(c)[offset + i] = buffer.getChannelData(c)[offset + i] * gain;
+            }
+        }
+        currentGain = targetGain;
+    }
+
+    return newBuf;
+}
+
+function applyAutoDucking(clip, controlTrack, thresholdDb, duckAmountDb, fadeDownTime, fadeUpTime) {
+    const controlClips = controlTrack.clips;
+    
+    let maxDuration = 0;
+    project.tracks.forEach(t => {
+        t.clips.forEach(c => {
+            maxDuration = Math.max(maxDuration, c.timelineStart + c.duration);
+        });
+    });
+    
+    const frameSizeSec = 0.05; 
+    const numFrames = Math.ceil(maxDuration / frameSizeSec);
+    const thresholdLinear = Math.pow(10, thresholdDb / 20);
+    const duckGain = Math.pow(10, duckAmountDb / 20);
+    
+    const isActive = new Uint8Array(numFrames);
+    
+    for (let k = 0; k < numFrames; k++) {
+        const t = k * frameSizeSec;
+        let maxRms = 0;
+        controlClips.forEach(cc => {
+            if (t >= cc.timelineStart && t <= cc.timelineStart + cc.duration) {
+                const offsetInClip = t - cc.timelineStart;
+                const ccBuf = cc.buffer || (cc.poolId ? project.mediaPool[cc.poolId] : null);
+                if (ccBuf) {
+                    const sr = ccBuf.sampleRate;
+                    const sampleOffset = Math.floor(offsetInClip * sr);
+                    const blockSize = Math.floor(frameSizeSec * sr);
+                    
+                    let sum = 0;
+                    const numChan = ccBuf.numberOfChannels;
+                    for (let c = 0; c < numChan; c++) {
+                        const data = ccBuf.getChannelData(c);
+                        const start = Math.min(sampleOffset, ccBuf.length - 1);
+                        const end = Math.min(sampleOffset + blockSize, ccBuf.length);
+                        for (let i = start; i < end; i++) {
+                            sum += data[i] * data[i];
+                        }
+                    }
+                    const rms = Math.sqrt(sum / (blockSize * numChan + 1e-8));
+                    maxRms = Math.max(maxRms, rms);
+                }
+            }
+        });
+        isActive[k] = (maxRms >= thresholdLinear) ? 1 : 0;
+    }
+    
+    const smoothedGain = new Float32Array(numFrames);
+    const maxDropPerFrame = ((1.0 - duckGain) / (fadeDownTime / frameSizeSec));
+    const maxRisePerFrame = ((1.0 - duckGain) / (fadeUpTime / frameSizeSec));
+    
+    let currentG = 1.0;
+    for (let k = 0; k < numFrames; k++) {
+        const target = isActive[k] ? duckGain : 1.0;
+        if (target < currentG) {
+            currentG = Math.max(target, currentG - maxDropPerFrame);
+        } else if (target > currentG) {
+            currentG = Math.min(target, currentG + maxRisePerFrame);
+        }
+        smoothedGain[k] = currentG;
+    }
+    
+    const buf = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
+    if (!buf) return null;
+    
+    const ctx = getAudioCtx();
+    const sr = buf.sampleRate;
+    const newBuf = ctx.createBuffer(buf.numberOfChannels, buf.length, sr);
+    
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+        const inData = buf.getChannelData(c);
+        const outData = newBuf.getChannelData(c);
+        for (let i = 0; i < buf.length; i++) {
+            const sampleTime = clip.timelineStart + (i / sr);
+            const frameIdx = sampleTime / frameSizeSec;
+            
+            const idx0 = Math.floor(frameIdx);
+            const idx1 = Math.min(idx0 + 1, numFrames - 1);
+            const frac = frameIdx - idx0;
+            
+            let g = 1.0;
+            if (idx0 < numFrames) {
+                const g0 = smoothedGain[idx0];
+                const g1 = smoothedGain[idx1];
+                g = g0 + (g1 - g0) * frac;
+            }
+            outData[i] = inData[i] * g;
+        }
+    }
+    return newBuf;
+}
+
+
 function drawWaveformToCanvas(canvas, buffer, color, displayWidth, displayHeight, sourceStart = 0, sourceDuration = null) {
     if (!buffer) return;
     if (sourceDuration === null) sourceDuration = buffer.duration;
@@ -260,6 +497,181 @@ function drawWaveformToCanvas(canvas, buffer, color, displayWidth, displayHeight
         const h = Math.max(1, (max - min) * amp);
         ctx.fillRect(i, y, 1, h);
     }
+}
+
+function startVisualizerLoop(canvas) {
+    if (visualizerAnimationId) {
+        cancelAnimationFrame(visualizerAnimationId);
+    }
+    
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    let peakHoldL = -60;
+    let peakHoldAgeL = 0;
+    
+    const draw = () => {
+        if (!document.body.contains(canvas)) {
+            visualizerAnimationId = null;
+            return;
+        }
+        
+        visualizerAnimationId = requestAnimationFrame(draw);
+        
+        // 1. Clear background
+        ctx.fillStyle = '#09090e';
+        ctx.fillRect(0, 0, width, height);
+        
+        // 2. Draw Grid (subtle gray)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1;
+        
+        // Vertical frequency grid
+        const freqs = [100, 500, 1000, 5000, 10000];
+        const logMin = Math.log10(20);
+        const logMax = Math.log10(20000);
+        
+        freqs.forEach(freq => {
+            const x = ((Math.log10(freq) - logMin) / (logMax - logMin)) * (width - 40);
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#475569';
+            ctx.font = '8px monospace';
+            const text = freq >= 1000 ? `${freq/1000}k` : `${freq}`;
+            ctx.fillText(text, x + 2, height - 4);
+        });
+        
+        // Horizontal dB grid
+        const dbs = [-10, -30, -50, -70];
+        dbs.forEach(dbVal => {
+            const y = height * (dbVal / -80);
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width - 40, y);
+            ctx.stroke();
+        });
+        
+        let maxVal = 0;
+        
+        // 3. Draw Frequency FFT Graph if analyser exists
+        if (masterAnalyserNode) {
+            const bufferLength = masterAnalyserNode.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            const timeDataArray = new Uint8Array(bufferLength);
+            
+            masterAnalyserNode.getByteFrequencyData(dataArray);
+            masterAnalyserNode.getByteTimeDomainData(timeDataArray);
+            
+            // Draw FFT Line
+            ctx.beginPath();
+            
+            // Create gorgeous gradient
+            const gradient = ctx.createLinearGradient(0, height, 0, 0);
+            gradient.addColorStop(0, '#22d3ee'); // cyan
+            gradient.addColorStop(0.5, '#a855f7'); // purple
+            gradient.addColorStop(1, '#f472b6'); // hot pink
+            
+            let first = true;
+            for (let i = 0; i < bufferLength; i++) {
+                const freq = (i * Tone.context.sampleRate) / (bufferLength * 2);
+                if (freq < 20 || freq > 20000) continue;
+                
+                const x = ((Math.log10(freq) - logMin) / (logMax - logMin)) * (width - 40);
+                const barHeight = (dataArray[i] / 255) * height;
+                const y = height - barHeight;
+                
+                if (first) {
+                    ctx.moveTo(x, y);
+                    first = false;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Fill area
+            ctx.lineTo(width - 40, height);
+            ctx.lineTo(0, height);
+            ctx.fillStyle = 'rgba(34, 211, 238, 0.05)';
+            ctx.fill();
+            
+            // Calculate VU levels from time data
+            for (let i = 0; i < bufferLength; i++) {
+                const val = (timeDataArray[i] - 128) / 128;
+                const abs = Math.abs(val);
+                if (abs > maxVal) maxVal = abs;
+            }
+        } else {
+            // Draw flat silent line
+            ctx.beginPath();
+            ctx.moveTo(0, height - 2);
+            ctx.lineTo(width - 40, height - 2);
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        
+        // 4. Draw VU Meter on the right
+        const vuX = width - 30;
+        const vuW = 10;
+        const vuH = height - 12;
+        
+        const currentDb = 20 * Math.log10(maxVal + 1e-6);
+        const level = Math.max(0, Math.min(1, (currentDb + 60) / 60));
+        
+        // Background track
+        ctx.fillStyle = '#0f0c24';
+        ctx.fillRect(vuX, 6, vuW, vuH);
+        
+        // Fill active meter
+        const activeBarH = level * vuH;
+        const activeBarY = 6 + vuH - activeBarH;
+        
+        const vuGrad = ctx.createLinearGradient(0, 6 + vuH, 0, 6);
+        vuGrad.addColorStop(0, '#22c55e'); // green
+        vuGrad.addColorStop(0.7, '#eab308'); // yellow
+        vuGrad.addColorStop(0.9, '#ef4444'); // red
+        
+        ctx.fillStyle = vuGrad;
+        ctx.fillRect(vuX, activeBarY, vuW, activeBarH);
+        
+        // Peak hold tick update
+        if (currentDb > peakHoldL) {
+            peakHoldL = currentDb;
+            peakHoldAgeL = 0;
+        } else {
+            peakHoldAgeL++;
+            if (peakHoldAgeL > 30) {
+                peakHoldL -= 0.5;
+            }
+        }
+        
+        // Draw peak hold tick
+        const peakLevel = Math.max(0, Math.min(1, (peakHoldL + 60) / 60));
+        const peakY = 6 + vuH - (peakLevel * vuH);
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(vuX - 1, peakY, vuW + 2, 2);
+        
+        // Draw decibel ticks and scale markers
+        ctx.fillStyle = '#64748b';
+        ctx.font = '7px monospace';
+        const ticks = [0, -6, -18, -36, -60];
+        ticks.forEach(tVal => {
+            const yTick = 6 + vuH - (((tVal + 60) / 60) * vuH);
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect(vuX - 3, yTick, 2, 1);
+            ctx.fillStyle = '#64748b';
+            ctx.fillText(`${tVal}`, vuX + vuW + 3, yTick + 3);
+        });
+    };
+    
+    draw();
 }
 
 // -------------- UI HELPERS --------------
@@ -339,9 +751,76 @@ function showPrompt(title) {
     });
 }
 
+function showCustomForm(title, fields, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'rgba(0,0,0,0.8)';
+    overlay.style.backdropFilter = 'blur(5px)';
+    overlay.style.zIndex = '99999';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+
+    const fieldsHtml = fields.map(field => {
+        if (field.type === 'select') {
+            const optionsHtml = field.options.map(opt => `<option value="${opt.value}" ${opt.value === field.value ? 'selected' : ''}>${opt.label}</option>`).join('');
+            return `
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="color: #94a3b8; font-size: 12px; font-weight: 600;">${field.label}</label>
+                    <select id="field-${field.id}" class="snd-select" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,15,25,0.8); color: white; outline: none; font-size: 14px;">
+                        ${optionsHtml}
+                    </select>
+                </div>
+            `;
+        } else {
+            return `
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="color: #94a3b8; font-size: 12px; font-weight: 600;">${field.label}</label>
+                    <input type="${field.type || 'text'}" id="field-${field.id}" value="${field.value !== undefined ? field.value : ''}" class="snd-input" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,15,25,0.8); color: white; outline: none; font-size: 14px;">
+                </div>
+            `;
+        }
+    }).join('');
+
+    overlay.innerHTML = `
+        <div style="background: rgba(20,20,30,0.98); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 28px; width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); display: flex; flex-direction: column; gap: 20px; font-family: system-ui, sans-serif;">
+           <h3 style="margin: 0; font-size: 18px; color: #f472b6; font-weight: 700; letter-spacing: -0.025em;">${title}</h3>
+           <div style="display: flex; flex-direction: column; gap: 16px;">
+              ${fieldsHtml}
+           </div>
+           <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px;">
+              <button class="snd-btn" id="dlg-cancel" style="padding: 10px 18px;">${i18n('snd.cancel')}</button>
+              <button class="snd-btn snd-btn-primary" id="dlg-confirm" style="padding: 10px 18px;">${i18n('snd.confirm')}</button>
+           </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#dlg-cancel').onclick = () => document.body.removeChild(overlay);
+    overlay.querySelector('#dlg-confirm').onclick = () => {
+        const result = {};
+        fields.forEach(f => {
+            const input = overlay.querySelector(`#field-${f.id}`);
+            if (f.type === 'number') {
+                result[f.id] = parseFloat(input.value);
+            } else {
+                result[f.id] = input.value;
+            }
+        });
+        document.body.removeChild(overlay);
+        if (onConfirm) onConfirm(result);
+    };
+}
+
 let activeCtxMenu = null;
+let activeCtxMenuCleanup = null;
+
 function showContextMenu(x, y, items) {
-    if (activeCtxMenu) document.body.removeChild(activeCtxMenu);
+    if (activeCtxMenuCleanup) {
+        activeCtxMenuCleanup();
+    }
     
     const menu = document.createElement('div');
     menu.style.position = 'fixed';
@@ -356,6 +835,21 @@ function showContextMenu(x, y, items) {
     menu.style.display = 'flex';
     menu.style.flexDirection = 'column';
     
+    const cleanup = () => {
+        if (document.body.contains(menu)) {
+            document.body.removeChild(menu);
+        }
+        if (activeCtxMenu === menu) activeCtxMenu = null;
+        if (activeCtxMenuCleanup === cleanup) activeCtxMenuCleanup = null;
+        document.removeEventListener('mousedown', handleOutsideClick);
+        document.removeEventListener('touchstart', handleOutsideClick);
+    };
+
+    const handleOutsideClick = (e) => {
+        if (menu.contains(e.target)) return;
+        cleanup();
+    };
+
     items.forEach(item => {
         const btn = document.createElement('button');
         btn.style.padding = '8px 16px';
@@ -377,8 +871,7 @@ function showContextMenu(x, y, items) {
         
         btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">${item.icon}</span> ${item.label}`;
         btn.onclick = () => {
-            document.body.removeChild(menu);
-            activeCtxMenu = null;
+            cleanup();
             item.action();
         };
         menu.appendChild(btn);
@@ -386,16 +879,65 @@ function showContextMenu(x, y, items) {
     
     document.body.appendChild(menu);
     activeCtxMenu = menu;
+    activeCtxMenuCleanup = cleanup;
     
     setTimeout(() => {
-        document.addEventListener('click', function onClickOutside() {
-            if (activeCtxMenu && document.body.contains(activeCtxMenu)) {
-                document.body.removeChild(activeCtxMenu);
-                activeCtxMenu = null;
-            }
-            document.removeEventListener('click', onClickOutside);
-        });
+        document.addEventListener('mousedown', handleOutsideClick);
+        document.addEventListener('touchstart', handleOutsideClick);
     }, 10);
+}
+
+class GraphicEQ {
+    constructor(context, params) {
+        // Band 1: Low-shelf at 100Hz
+        this.f100 = context.createBiquadFilter();
+        this.f100.type = 'lowshelf';
+        this.f100.frequency.value = 100;
+        this.f100.gain.value = params.low !== undefined ? params.low : 0;
+
+        // Band 2: Peaking at 300Hz
+        this.f300 = context.createBiquadFilter();
+        this.f300.type = 'peaking';
+        this.f300.frequency.value = 300;
+        this.f300.gain.value = params.midLow !== undefined ? params.midLow : 0;
+
+        // Band 3: Peaking at 1kHz
+        this.f1000 = context.createBiquadFilter();
+        this.f1000.type = 'peaking';
+        this.f1000.frequency.value = 1000;
+        this.f1000.gain.value = params.mid !== undefined ? params.mid : 0;
+
+        // Band 4: Peaking at 3kHz
+        this.f3000 = context.createBiquadFilter();
+        this.f3000.type = 'peaking';
+        this.f3000.frequency.value = 3000;
+        this.f3000.gain.value = params.midHigh !== undefined ? params.midHigh : 0;
+
+        // Band 5: High-shelf at 10kHz
+        this.f10k = context.createBiquadFilter();
+        this.f10k.type = 'highshelf';
+        this.f10k.frequency.value = 10000;
+        this.f10k.gain.value = params.high !== undefined ? params.high : 0;
+
+        // Chain them: f100 -> f300 -> f1000 -> f3000 -> f10k
+        this.f100.connect(this.f300);
+        this.f300.connect(this.f1000);
+        this.f1000.connect(this.f3000);
+        this.f3000.connect(this.f10k);
+
+        this.input = this.f100;
+        this.output = this.f10k;
+    }
+
+    connect(dest) {
+        this.output.connect(dest);
+        return this;
+    }
+
+    disconnect(dest) {
+        this.output.disconnect(dest);
+        return this;
+    }
 }
 
 // -------------- DATA MODEL --------------
@@ -407,12 +949,23 @@ const FX_CATALOG = {
         mid: { label: 'Mid (dB)', min: -24, max: 24, step: 0.1, default: 0 },
         high: { label: 'High (dB)', min: -24, max: 24, step: 0.1, default: 0 }
     }},
+    graphicEq: { name: 'Graphic EQ (5-Band)', type: 'graphicEq', params: {
+        low: { label: '100 Hz (dB)', min: -24, max: 24, step: 0.5, default: 0 },
+        midLow: { label: '300 Hz (dB)', min: -24, max: 24, step: 0.5, default: 0 },
+        mid: { label: '1 kHz (dB)', min: -24, max: 24, step: 0.5, default: 0 },
+        midHigh: { label: '3 kHz (dB)', min: -24, max: 24, step: 0.5, default: 0 },
+        high: { label: '10 kHz (dB)', min: -24, max: 24, step: 0.5, default: 0 }
+    }},
     compressor: { name: 'Compressor', type: 'compressor', params: {
         threshold: { label: 'Thresh (dB)', min: -60, max: 0, step: 1, default: -24 },
         ratio: { label: 'Ratio', min: 1, max: 20, step: 1, default: 4 }
     }},
     limiter: { name: 'Hard Limiter', type: 'limiter', params: {
         threshold: { label: 'Limit (dB)', min: -20, max: 0, step: 0.1, default: -1 }
+    }},
+    gate: { name: 'Noise Gate', type: 'gate', params: {
+        threshold: { label: 'Threshold (dB)', min: -80, max: 0, step: 1, default: -40 },
+        smoothing: { label: 'Smoothing (s)', min: 0.01, max: 1.0, step: 0.01, default: 0.1 }
     }},
     delay: { name: 'Delay', type: 'delay', params: {
         feedback: { label: 'Feedback', min: 0, max: 1, step: 0.05, default: 0.2 },
@@ -434,8 +987,10 @@ function createFxNode(fxDef) {
     switch(fxDef.type) {
         case 'volume': return new Tone.Volume(fxDef.params.volume);
         case 'eq3': return new Tone.EQ3(fxDef.params.low, fxDef.params.mid, fxDef.params.high);
+        case 'graphicEq': return new GraphicEQ(Tone.context, fxDef.params);
         case 'compressor': return new Tone.Compressor(fxDef.params.threshold, fxDef.params.ratio);
         case 'limiter': return new Tone.Limiter(fxDef.params.threshold);
+        case 'gate': return new Tone.Gate(fxDef.params.threshold, fxDef.params.smoothing);
         case 'delay': return new Tone.FeedbackDelay(0.25, fxDef.params.feedback).set({ wet: fxDef.params.wet });
         case 'distortion': return new Tone.Distortion(fxDef.params.distortion).set({ wet: fxDef.params.wet });
         case 'reverb': return new Tone.Freeverb({ roomSize: 0.8, dampening: 2000 }).set({ wet: fxDef.params.wet });
@@ -449,8 +1004,19 @@ function updateFxNodeParam(fxDef, paramName, value) {
     switch (fxDef.type) {
         case 'volume': n.volume.value = value; break;
         case 'eq3': n[paramName].value = value; break;
+        case 'graphicEq':
+            if (paramName === 'low') n.f100.gain.value = value;
+            if (paramName === 'midLow') n.f300.gain.value = value;
+            if (paramName === 'mid') n.f1000.gain.value = value;
+            if (paramName === 'midHigh') n.f3000.gain.value = value;
+            if (paramName === 'high') n.f10k.gain.value = value;
+            break;
         case 'compressor': n[paramName].value = value; break;
         case 'limiter': n.threshold.value = value; break;
+        case 'gate':
+            if (paramName === 'threshold') n.threshold.value = value;
+            if (paramName === 'smoothing') n.smoothing = value;
+            break;
         case 'delay': 
             if (paramName === 'feedback') n.feedback.value = value;
             if (paramName === 'wet') n.wet.value = value;
@@ -484,12 +1050,18 @@ let activeKeyframeIdx = -1;
 let pixelsPerSecond = 50;
 let isPlaying = false;
 
+let stagedFx = null;
+let editingFxIndex = -1;
+let originalFxParams = null;
+
 let activeToneNodes = [];
 let masterVolumeNode = null;
 let playLoopId = null;
 let currentProjectDirHandle = null;
 let timelineView = null;
 let sndKeydownHandler = null;
+let masterAnalyserNode = null;
+let visualizerAnimationId = null;
 
 // -------------- MAIN RENDER --------------
 
@@ -613,13 +1185,45 @@ export async function render(container) {
                 const ctx = getAudioCtx();
 
                 const data = p.projectData;
-                project = {
-                   name: data.name || 'Untitled',
-                   originalToneBuffer: null,
-                   tracks: data.tracks || [],
-                   masterFx: data.masterFx || [],
-                   mediaPool: {}
-                };
+                 project = {
+                    name: data.name || 'Untitled',
+                    originalToneBuffer: null,
+                    tracks: (data.tracks || []).map(t => {
+                        let kind = t.kind;
+                        if (!kind) {
+                            const hasFxClips = (t.clips || []).some(c => c.isFxBlock || (c.id && c.id.startsWith('fxb_')));
+                            kind = (hasFxClips || t.color === '#10b981') ? 'fx' : 'audio';
+                        }
+                        return {
+                            id: t.id,
+                            kind: kind,
+                            name: t.name,
+                            muted: t.muted,
+                            color: t.color,
+                            clips: (t.clips || []).map(c => {
+                                let isFxBlock = c.isFxBlock;
+                                if (isFxBlock === undefined) {
+                                    isFxBlock = (c.id && c.id.startsWith('fxb_')) || (kind === 'fx');
+                                }
+                                return {
+                                    id: c.id,
+                                    name: c.name,
+                                    isFxBlock: !!isFxBlock,
+                                    timelineStart: c.timelineStart,
+                                    duration: c.duration,
+                                    rate: c.rate,
+                                    poolId: c.poolId,
+                                    sourceStart: c.sourceStart,
+                                    fx: c.fx || [],
+                                    keyframes: c.keyframes || [],
+                                    appliedActions: c.appliedActions
+                                };
+                            })
+                        };
+                    }),
+                    masterFx: data.masterFx || [],
+                    mediaPool: {}
+                 };
 
                 if (data.mediaPoolMeta) {
                    const assetsDir = await p.dirHandle.getDirectoryHandle('assets', { create: true });
@@ -700,7 +1304,9 @@ export async function render(container) {
       
       .fx-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #64748b; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; }
       .snd-select { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; width: 100%; cursor: pointer; }
-      .fx-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; }
+      .fx-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; transition: all 0.2s; }
+      .fx-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
+      .fx-card.active-editing { border-color: #06b6d4 !important; background: rgba(6,182,212,0.05) !important; }
       .fx-head { background: rgba(0,0,0,0.3); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; }
       .fx-body { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
       .fx-param { display: flex; flex-direction: column; gap: 6px; }
@@ -897,6 +1503,7 @@ export async function render(container) {
                     <option value="">${i18n('snd.addEffect')}</option>
                     ${Object.keys(FX_CATALOG).map(k => `<option value="${k}">${FX_CATALOG[k].name}</option>`).join('')}
                 </select>
+                <div id="fx-editor-container" style="display: none; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 12px; margin-top: 8px; flex-direction: column; gap: 12px;"></div>
             </div>
 
           </div>
@@ -1032,6 +1639,7 @@ export async function render(container) {
               if (project.tracks.length === 0) {
                   project.tracks.push({
                       id: 'trk_' + Date.now(),
+                      kind: 'audio',
                       name: `Track 1`,
                       color: '#10b981',
                       clips: [],
@@ -1063,6 +1671,7 @@ export async function render(container) {
                   name: buf._name || 'Audio Clip',
                   buffer: null,
                   poolId: id,
+                  isFxBlock: false,
                   sourceStart: 0,
                   timelineStart: insertTime,
                   duration: buf.duration,
@@ -1087,6 +1696,110 @@ export async function render(container) {
   };
 
   // ---------------- RENDER UI ----------------
+
+  const isFxConfigured = (fx) => {
+      if (!fx) return false;
+      const params = fx.params;
+      switch(fx.type) {
+          case 'volume':
+              return params.volume !== 0;
+          case 'eq3':
+              return (params.low !== 0) || (params.mid !== 0) || (params.high !== 0);
+          case 'graphicEq':
+              return (params.low !== 0) || (params.midLow !== 0) || (params.mid !== 0) || (params.midHigh !== 0) || (params.high !== 0);
+          case 'pitch':
+              return params.pitch !== 0;
+          case 'delay':
+              return params.wet > 0;
+          case 'reverb':
+              return params.wet > 0;
+          case 'distortion':
+              return params.distortion > 0 || params.wet > 0;
+          default:
+              return true;
+      }
+  };
+
+  const startFxEditing = (idx) => {
+      const affectedClips = getAffectedClips();
+      const fxArr = affectedClips.length === 0 ? project.masterFx : affectedClips[0].fx;
+      const fx = fxArr[idx];
+      if (!fx) return;
+      
+      editingFxIndex = idx;
+      stagedFx = JSON.parse(JSON.stringify(fx));
+      
+      let paramsToSave = fx.params;
+      if (activeKeyframeIdx !== -1 && affectedClips.length === 1) {
+          const clip = affectedClips[0];
+          const kfObj = clip.keyframes[activeKeyframeIdx];
+          if (kfObj.fxParams && kfObj.fxParams[fx.id]) {
+              paramsToSave = kfObj.fxParams[fx.id];
+          }
+      }
+      originalFxParams = JSON.parse(JSON.stringify(paramsToSave));
+      
+      renderInspector();
+  };
+
+  const cancelFxEditing = () => {
+      if (editingFxIndex !== -1 && originalFxParams) {
+          const affectedClips = getAffectedClips();
+          const fxArr = affectedClips.length === 0 ? project.masterFx : affectedClips[0].fx;
+          const activeFx = fxArr[editingFxIndex];
+          
+          if (activeKeyframeIdx !== -1 && affectedClips.length === 1) {
+              const clip = affectedClips[0];
+              const kfObj = clip.keyframes[activeKeyframeIdx];
+              if (kfObj.fxParams && kfObj.fxParams[activeFx.id]) {
+                  kfObj.fxParams[activeFx.id] = originalFxParams;
+              }
+          } else {
+              activeFx.params = originalFxParams;
+              Object.keys(originalFxParams).forEach(pKey => {
+                  updateFxNodeParam(activeFx, pKey, originalFxParams[pKey]);
+              });
+          }
+      }
+      stagedFx = null;
+      editingFxIndex = -1;
+      originalFxParams = null;
+      rebuildPlayback();
+      renderInspector();
+  };
+
+  const submitFxStaging = () => {
+      if (!stagedFx) return;
+      const affectedClips = getAffectedClips();
+      const fxArr = affectedClips.length === 0 ? project.masterFx : affectedClips[0].fx;
+      
+      if (editingFxIndex !== -1) {
+          fxArr[editingFxIndex] = stagedFx;
+      } else {
+          fxArr.push(stagedFx);
+          
+          if (activeKeyframeIdx !== -1 && affectedClips.length === 1) {
+              const clip = affectedClips[0];
+              const kfObj = clip.keyframes[activeKeyframeIdx];
+              if (!kfObj.fxParams) kfObj.fxParams = {};
+              kfObj.fxParams[stagedFx.id] = {};
+              Object.keys(stagedFx.params).forEach(k => {
+                  kfObj.fxParams[stagedFx.id][k] = stagedFx.params[k];
+                  if (k === 'wet') stagedFx.params[k] = 0;
+                  if (k === 'pitch') stagedFx.params[k] = 0;
+                  if (k === 'distortion') stagedFx.params[k] = 0;
+              });
+          }
+      }
+      
+      stagedFx = null;
+      editingFxIndex = -1;
+      originalFxParams = null;
+      
+      rebuildPlayback();
+      renderInspector();
+      renderTimeline();
+  };
 
   const renderInspector = () => {
       const hdr = container.querySelector('#inspector-header');
@@ -1122,6 +1835,10 @@ export async function render(container) {
               <button class="snd-btn ${hasAction('fade-in') ? 'snd-btn-primary' : ''}" id="btn-fade-in">${i18n('snd.fadeIn1s')}</button>
               <button class="snd-btn ${hasAction('fade-out') ? 'snd-btn-primary' : ''}" id="btn-fade-out">${i18n('snd.fadeOut1s')}</button>
               <button class="snd-btn" id="btn-auto-split"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">content_cut</span> ${i18n('snd.autoSplit')}</button>
+              <button class="snd-btn" id="btn-auto-duck"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">volume_down</span> ${i18n('snd.autoDuck')}</button>
+              <button class="snd-btn" id="btn-noise-reduction"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">graphic_eq</span> ${i18n('snd.noiseReduction')}</button>
+              <button class="snd-btn" id="btn-loudness-norm"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">equalizer</span> ${i18n('snd.loudnessNorm')}</button>
+              <button class="snd-btn" id="btn-time-stretch"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">speed</span> ${i18n('snd.timeStretch')}</button>
           `;
           if (numTracks > 0) {
               actionsHtml += `<button class="snd-btn snd-btn-purple" id="btn-remove-gaps"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">compress</span> ${i18n('snd.removeGaps')}</button>`;
@@ -1148,64 +1865,67 @@ export async function render(container) {
           }
       } else {
           hdr.innerHTML = `<h2 style="font-size: 16px; margin: 0; color: #22d3ee;">${i18n('snd.masterBus')}</h2>
-                           <p style="font-size: 11px; margin: 4px 0 0; color: #94a3b8;">${i18n('snd.appliedToMixdown')}</p>`;
+                           <p style="font-size: 11px; margin: 4px 0 0; color: #94a3b8;">${i18n('snd.appliedToMixdown')}</p>
+                           <canvas id="master-visualizer" width="280" height="120" style="background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-top: 12px; width: 100%; height: 120px; display: block;"></canvas>`;
           tools.style.display = 'none';
+          
+          const canvas = hdr.querySelector('#master-visualizer');
+          if (canvas) {
+              startVisualizerLoop(canvas);
+          }
       }
       
       const renderFxListHtml = (fxArr, kfObj = null) => {
           return fxArr.map((fx, idx) => {
               const def = FX_CATALOG[fx.type];
-              const paramsHtml = Object.keys(def.params).map(pKey => {
-                  const pDef = def.params[pKey];
-                  // Determine value based on keyframe
-                  let val = fx.params[pKey];
-                  if (kfObj && kfObj.fxParams && kfObj.fxParams[fx.id] && kfObj.fxParams[fx.id][pKey] !== undefined) {
-                      val = kfObj.fxParams[fx.id][pKey];
-                  }
-                  
-                  return `
-                    <div class="fx-param">
-                       <div class="fx-param-label"><span>${pDef.label}</span> <span>${val}</span></div>
-                       <input type="range" class="snd-slider param-slider" data-fx-idx="${idx}" data-param="${pKey}" min="${pDef.min}" max="${pDef.max}" step="${pDef.step}" value="${val}">
-                    </div>
-                  `;
-              }).join('');
               return `
-                <div class="fx-card">
-                   <div class="fx-head">
+                <div class="fx-card ${editingFxIndex === idx ? 'active-editing' : ''}" data-fx-idx="${idx}" style="cursor: pointer; transition: all 0.2s; border: 1px solid ${editingFxIndex === idx ? '#06b6d4' : 'rgba(255,255,255,0.05)'}; background: ${editingFxIndex === idx ? 'rgba(6,182,212,0.05)' : 'rgba(255,255,255,0.03)'}; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;">
+                   <div class="fx-head" style="padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; background: rgba(0,0,0,0.2);">
                       <span style="color: #e2e8f0;">${def.name}</span>
-                      <button class="snd-btn fx-del-btn" data-fx-idx="${idx}" style="padding: 4px; background: transparent; border: none; color: #ef4444;"><span class="material-symbols-outlined" style="font-size: 14px;">close</span></button>
+                      <div style="display: flex; gap: 8px; align-items: center;">
+                         <button class="snd-btn fx-edit-btn" data-fx-idx="${idx}" style="padding: 4px; background: transparent; border: none; color: #3b82f6; cursor: pointer; display: flex; align-items: center;" title="${i18n('snd.edit') || 'Edit'}"><span class="material-symbols-outlined" style="font-size: 16px;">edit</span></button>
+                         <button class="snd-btn fx-del-btn" data-fx-idx="${idx}" style="padding: 4px; background: transparent; border: none; color: #ef4444; cursor: pointer; display: flex; align-items: center;" title="${i18n('snd.delete') || 'Delete'}"><span class="material-symbols-outlined" style="font-size: 16px;">close</span></button>
+                      </div>
                    </div>
-                   <div class="fx-body">${paramsHtml}</div>
+                   <div class="fx-body" style="padding: 10px 12px; font-size: 11px; color: #94a3b8; display: flex; flex-wrap: wrap; gap: 8px; line-height: 1.4;">
+                      ${Object.keys(def.params).map(pKey => {
+                          let val = fx.params[pKey];
+                          if (kfObj && kfObj.fxParams && kfObj.fxParams[fx.id] && kfObj.fxParams[fx.id][pKey] !== undefined) {
+                              val = kfObj.fxParams[fx.id][pKey];
+                          }
+                          return `<span>${def.params[pKey].label}: <b>${val}</b></span>`;
+                      }).join(' | ')}
+                   </div>
                 </div>
               `;
           }).join('');
       };
 
-      const bindFxSliders = (fxArr, kfObj = null) => {
-          fxList.querySelectorAll('.param-slider').forEach(slider => {
-              slider.addEventListener('input', e => {
-                  const idx = parseInt(e.target.dataset.fxIdx);
-                  const pKey = e.target.dataset.param;
-                  const val = parseFloat(e.target.value);
-                  e.target.previousElementSibling.children[1].textContent = val;
-                  
-                  if (kfObj) {
-                      if (!kfObj.fxParams) kfObj.fxParams = {};
-                      if (!kfObj.fxParams[fxArr[idx].id]) kfObj.fxParams[fxArr[idx].id] = {};
-                      kfObj.fxParams[fxArr[idx].id][pKey] = val;
-                  } else {
-                      fxArr[idx].params[pKey] = val;
-                      updateFxNodeParam(fxArr[idx], pKey, val); // update live node only for base
-                  }
+      const bindFxActions = (fxArr, kfObj = null) => {
+          fxList.querySelectorAll('.fx-card').forEach(card => {
+              card.addEventListener('click', e => {
+                  if (e.target.closest('.fx-del-btn') || e.target.closest('.fx-edit-btn')) return;
+                  const idx = parseInt(card.dataset.fxIdx);
+                  startFxEditing(idx);
               });
-              slider.addEventListener('change', () => {
-                  rebuildPlayback(); // Rebuild always to bake automation natively
+          });
+          fxList.querySelectorAll('.fx-edit-btn').forEach(btn => {
+              btn.addEventListener('click', e => {
+                  const idx = parseInt(e.currentTarget.dataset.fxIdx);
+                  startFxEditing(idx);
               });
           });
           fxList.querySelectorAll('.fx-del-btn').forEach(btn => {
               btn.addEventListener('click', e => {
+                  e.stopPropagation();
                   const idx = parseInt(e.currentTarget.dataset.fxIdx);
+                  if (editingFxIndex === idx) {
+                      stagedFx = null;
+                      editingFxIndex = -1;
+                      originalFxParams = null;
+                  } else if (editingFxIndex > idx) {
+                      editingFxIndex--;
+                  }
                   fxArr.splice(idx, 1);
                   rebuildPlayback();
                   renderInspector();
@@ -1226,18 +1946,18 @@ export async function render(container) {
                   kfLabel.textContent = i18n('snd.baseSettings');
                   kfDelBtn.style.display = 'none';
                   fxList.innerHTML = renderFxListHtml(clip.fx);
-                  bindFxSliders(clip.fx);
+                  bindFxActions(clip.fx);
               } else {
                   kfLabel.textContent = i18n('snd.keyframeOf', { num: activeKeyframeIdx + 1, total: clip.keyframes.length });
                   kfDelBtn.style.display = 'block';
                   fxList.innerHTML = renderFxListHtml(clip.fx, clip.keyframes[activeKeyframeIdx]);
-                  bindFxSliders(clip.fx, clip.keyframes[activeKeyframeIdx]);
+                  bindFxActions(clip.fx, clip.keyframes[activeKeyframeIdx]);
               }
           } else {
               kfNav.style.display = 'none';
               activeKeyframeIdx = -1;
               fxList.innerHTML = renderFxListHtml(clip.fx);
-              bindFxSliders(clip.fx);
+              bindFxActions(clip.fx);
           }
       } else if (isMulti) {
           kfNav.style.display = 'none';
@@ -1248,9 +1968,23 @@ export async function render(container) {
           const stagingArea = container.querySelector('#fx-staging-area');
           const applyBtn = container.querySelector('#btn-apply-fx-multi');
           if (stagedMultiFx) {
-              stagingArea.innerHTML = renderFxListHtml([stagedMultiFx]);
-              const delBtn = stagingArea.querySelector('.fx-del-btn');
-              if (delBtn) delBtn.style.display = 'none';
+              const def = FX_CATALOG[stagedMultiFx.type];
+              const paramsHtml = Object.keys(def.params).map(pKey => {
+                  const pDef = def.params[pKey];
+                  const val = stagedMultiFx.params[pKey];
+                  return `
+                    <div class="fx-param">
+                       <div class="fx-param-label"><span>${pDef.label}</span> <span>${val}</span></div>
+                       <input type="range" class="snd-slider param-slider" data-param="${pKey}" min="${pDef.min}" max="${pDef.max}" step="${pDef.step}" value="${val}">
+                    </div>
+                  `;
+              }).join('');
+              stagingArea.innerHTML = `
+                <div class="fx-card">
+                   <div class="fx-head"><span style="color: #e2e8f0;">${def.name}</span></div>
+                   <div class="fx-body">${paramsHtml}</div>
+                </div>
+              `;
               
               stagingArea.querySelectorAll('.param-slider').forEach(slider => {
                   slider.addEventListener('input', e => {
@@ -1270,7 +2004,93 @@ export async function render(container) {
           fxMultiMsg.style.display = 'none';
           fxList.style.display = 'flex';
           fxList.innerHTML = renderFxListHtml(project.masterFx);
-          bindFxSliders(project.masterFx);
+          bindFxActions(project.masterFx);
+      }
+      
+      const editorContainer = container.querySelector('#fx-editor-container');
+      if (editorContainer) {
+          if (stagedFx) {
+              editorContainer.style.display = 'flex';
+              const isEdit = editingFxIndex !== -1;
+              const def = FX_CATALOG[stagedFx.type];
+              const paramsHtml = Object.keys(def.params).map(pKey => {
+                  const pDef = def.params[pKey];
+                  const val = stagedFx.params[pKey];
+                  return `
+                    <div class="fx-param">
+                       <div class="fx-param-label"><span>${pDef.label}</span> <span>${val}</span></div>
+                       <input type="range" class="snd-slider editor-param-slider" data-param="${pKey}" min="${pDef.min}" max="${pDef.max}" step="${pDef.step}" value="${val}">
+                    </div>
+                  `;
+              }).join('');
+              
+              const configured = isFxConfigured(stagedFx);
+              
+              editorContainer.innerHTML = `
+                <div class="fx-title" style="margin: 0; border: none; padding: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; margin-bottom: 8px;">
+                    <span>${isEdit ? i18n('snd.editEffect') || 'Edit Effect' : i18n('snd.addEffect') || 'Add Effect'}: ${def.name}</span>
+                    <button class="btn-ghost" id="fx-editor-close" style="padding: 2px; color: #94a3b8; cursor: pointer; background: transparent; border: none; display: flex; align-items: center;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+                    </button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    ${paramsHtml}
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button class="snd-btn" id="fx-editor-cancel" style="flex: 1;">${i18n('snd.cancel') || 'Cancel'}</button>
+                    <button class="snd-btn snd-btn-primary" id="fx-editor-submit" style="flex: 1;" ${configured ? '' : 'disabled'}>${isEdit ? i18n('snd.update') || 'Update' : i18n('snd.add') || 'Add'}</button>
+                </div>
+              `;
+              
+              editorContainer.querySelector('#fx-editor-close').onclick = () => {
+                  cancelFxEditing();
+              };
+              editorContainer.querySelector('#fx-editor-cancel').onclick = () => {
+                  cancelFxEditing();
+              };
+              editorContainer.querySelector('#fx-editor-submit').onclick = () => {
+                  submitFxStaging();
+              };
+              
+              editorContainer.querySelectorAll('.editor-param-slider').forEach(slider => {
+                  slider.addEventListener('input', e => {
+                      const pKey = e.target.dataset.param;
+                      const val = parseFloat(e.target.value);
+                      e.target.previousElementSibling.children[1].textContent = val;
+                      stagedFx.params[pKey] = val;
+                      
+                      if (isEdit) {
+                          const affectedClips = getAffectedClips();
+                          const fxArr = affectedClips.length === 0 ? project.masterFx : affectedClips[0].fx;
+                          const activeFx = fxArr[editingFxIndex];
+                          
+                          if (activeKeyframeIdx !== -1 && affectedClips.length === 1) {
+                              const clip = affectedClips[0];
+                              const kfObj = clip.keyframes[activeKeyframeIdx];
+                              if (!kfObj.fxParams) kfObj.fxParams = {};
+                              if (!kfObj.fxParams[activeFx.id]) kfObj.fxParams[activeFx.id] = {};
+                              kfObj.fxParams[activeFx.id][pKey] = val;
+                          } else {
+                              activeFx.params[pKey] = val;
+                              updateFxNodeParam(activeFx, pKey, val);
+                          }
+                      }
+                      
+                      const submitBtn = editorContainer.querySelector('#fx-editor-submit');
+                      if (submitBtn) {
+                          submitBtn.disabled = !isFxConfigured(stagedFx);
+                      }
+                  });
+                  slider.addEventListener('change', () => {
+                      if (isEdit) {
+                          rebuildPlayback();
+                      }
+                  });
+              });
+          } else {
+              editorContainer.style.display = 'none';
+              editorContainer.innerHTML = '';
+          }
       }
   };
   const renderTimeline = () => {
@@ -1283,6 +2103,9 @@ export async function render(container) {
                   updatePlayheadDOM();
               },
               onClipSelect: (clipId, trackId, e) => {
+                  stagedFx = null;
+                  editingFxIndex = -1;
+                  originalFxParams = null;
                   if (e.shiftKey || e.metaKey) {
                       if (selectedItems.clips.has(clipId)) selectedItems.clips.delete(clipId);
                       else selectedItems.clips.add(clipId);
@@ -1395,6 +2218,7 @@ export async function render(container) {
                                           name: buf._name || 'Audio Clip',
                                           buffer: null,
                                           poolId: pid,
+                                          isFxBlock: false,
                                           sourceStart: 0,
                                           timelineStart: dropTime,
                                           duration: buf.duration,
@@ -1430,6 +2254,7 @@ export async function render(container) {
                                   name: clip.name + " (2)",
                                   buffer: null,
                                   poolId: clip.poolId,
+                                  isFxBlock: clip.isFxBlock,
                                   sourceStart: (clip.sourceStart || 0) + sourceOffset,
                                   timelineStart: clip.timelineStart + splitOffsetSec,
                                   duration: clip.duration - splitOffsetSec,
@@ -1527,6 +2352,7 @@ export async function render(container) {
                               name: clip.name + ' (2)',
                               buffer: null,
                               poolId: clip.poolId,
+                              isFxBlock: clip.isFxBlock,
                               sourceStart: (clip.sourceStart || 0) + sourceOffset,
                               appliedActions: new Set(clip.appliedActions || []),
                               timelineStart: clip.timelineStart + splitOffsetSec,
@@ -1547,6 +2373,40 @@ export async function render(container) {
                           rebuildPlayback();
                           renderTimeline();
                           renderInspector();
+                      }},
+                      { label: clip.isFxBlock ? (i18n('snd.deleteEffectBlock') || 'Delete Effect Block') : (i18n('snd.delete') || 'Delete'), icon: 'delete', action: () => {
+                          const track = project.tracks.find(t => t.clips.includes(clip));
+                          if (track) {
+                              track.clips = track.clips.filter(c => c.id !== clip.id);
+                              selectedItems.clips.delete(clip.id);
+                              rebuildPlayback();
+                              renderTimeline();
+                              renderInspector();
+                          }
+                      }}
+                  ]);
+              },
+              onTrackContextMenu: (track, offsetX, event) => {
+                  event.preventDefault();
+                  if (track.kind !== 'fx') return;
+                  const clickTime = Math.max(0, offsetX / pixelsPerSecond);
+                  showContextMenu(event.clientX, event.clientY, [
+                      { label: i18n('snd.addEffectBlockHere') || 'Add Effect Block Here', icon: 'add', action: () => {
+                          const block = {
+                              id: 'fxb_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                              name: i18n('snd.effectBlock') || 'Effect Block',
+                              isFxBlock: true,
+                              buffer: null, poolId: null, sourceStart: 0,
+                              timelineStart: clickTime, duration: 4, rate: 1,
+                              fx: [], keyframes: []
+                          };
+                          track.clips.push(block);
+                          selectedItems.tracks.clear();
+                          selectedItems.clips.clear();
+                          selectedItems.clips.add(block.id);
+                          rebuildPlayback();
+                          renderInspector();
+                          renderTimeline();
                       }}
                   ]);
               },
@@ -1566,6 +2426,9 @@ export async function render(container) {
                   }
                   hdr.onclick = (e) => {
                       if (e.target.closest('button')) return;
+                      stagedFx = null;
+                      editingFxIndex = -1;
+                      originalFxParams = null;
                       if (e.shiftKey || e.metaKey) {
                           if (selectedItems.tracks.has(track.id)) selectedItems.tracks.delete(track.id);
                           else selectedItems.tracks.add(track.id);
@@ -1581,6 +2444,36 @@ export async function render(container) {
                   const tControls = document.createElement('div');
                   tControls.style.display = 'flex';
                   tControls.style.gap = '4px';
+                  
+                  if (track.kind === 'fx') {
+                      const addBlockBtn = document.createElement('button');
+                      addBlockBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">add</span>`;
+                      addBlockBtn.style.background = 'none';
+                      addBlockBtn.style.border = 'none';
+                      addBlockBtn.style.color = '#10b981';
+                      addBlockBtn.style.cursor = 'pointer';
+                      addBlockBtn.title = i18n('snd.addEffectBlock') || 'Add Effect Block';
+                      addBlockBtn.onclick = (e) => {
+                          e.stopPropagation();
+                          const startTime = Tone.Transport.seconds || 0;
+                          const block = {
+                              id: 'fxb_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                              name: i18n('snd.effectBlock') || 'Effect Block',
+                              isFxBlock: true,
+                              buffer: null, poolId: null, sourceStart: 0,
+                              timelineStart: startTime, duration: 4, rate: 1,
+                              fx: [], keyframes: []
+                          };
+                          track.clips.push(block);
+                          selectedItems.tracks.clear();
+                          selectedItems.clips.clear();
+                          selectedItems.clips.add(block.id);
+                          rebuildPlayback();
+                          renderInspector();
+                          renderTimeline();
+                      };
+                      tControls.appendChild(addBlockBtn);
+                  }
                   
                   const muteBtn = document.createElement('button');
                   muteBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">${track.muted ? 'volume_off' : 'volume_up'}</span>`;
@@ -1632,28 +2525,31 @@ export async function render(container) {
                   if (clip.isFxBlock || (track && track.kind === 'fx')) {
                       el.style.background = 'repeating-linear-gradient(45deg, rgba(16,185,129,0.18), rgba(16,185,129,0.18) 8px, rgba(16,185,129,0.30) 8px, rgba(16,185,129,0.30) 16px)';
                       if (!isSelected) el.style.borderColor = '#10b981';
+                      const labelEl = el.querySelector('div');
+                      if (labelEl) {
+                          labelEl.style.paddingLeft = '24px';
+                      }
                       const icon = document.createElement('span');
                       icon.className = 'material-symbols-outlined';
                       icon.textContent = 'auto_awesome';
                       icon.style.cssText = 'position:absolute;top:4px;left:4px;font-size:14px;color:#d1fae5;z-index:3;pointer-events:none;';
                       el.appendChild(icon);
-                      return;
-                  }
-
-                  const w = Math.max(1, (clip.duration / (clip.rate||1)) * pixelsPerSecond);
-                  const cvs = document.createElement('canvas');
-                  cvs.style.width = '100%';
-                  cvs.style.height = '100%';
-                  cvs.style.position = 'absolute';
-                  cvs.style.inset = '0';
-                  cvs.style.pointerEvents = 'none';
-                  cvs.style.zIndex = '1';
-                  el.appendChild(cvs);
-                  
-                  const buffer = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
-                  const drawStart = clip.buffer ? 0 : (clip.sourceStart || 0);
-                  if (buffer) {
-                      drawWaveformToCanvas(cvs, buffer, isSelected ? '#f472b6' : (track ? track.color : '#10b981'), w, 80, drawStart, clip.duration);
+                  } else {
+                      const w = Math.max(1, (clip.duration / (clip.rate||1)) * pixelsPerSecond);
+                      const cvs = document.createElement('canvas');
+                      cvs.style.width = '100%';
+                      cvs.style.height = '100%';
+                      cvs.style.position = 'absolute';
+                      cvs.style.inset = '0';
+                      cvs.style.pointerEvents = 'none';
+                      cvs.style.zIndex = '1';
+                      el.appendChild(cvs);
+                      
+                      const buffer = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
+                      const drawStart = clip.buffer ? 0 : (clip.sourceStart || 0);
+                      if (buffer) {
+                          drawWaveformToCanvas(cvs, buffer, isSelected ? '#f472b6' : (track ? track.color : '#10b981'), w, 80, drawStart, clip.duration);
+                      }
                   }
                   
                   if (clip.keyframes && clip.keyframes.length > 0) {
@@ -1723,7 +2619,21 @@ export async function render(container) {
       activeToneNodes = [];
       
       if (masterVolumeNode) masterVolumeNode.dispose();
-      masterVolumeNode = new Tone.Volume(0).toDestination();
+      
+      if (!masterAnalyserNode) {
+          masterAnalyserNode = Tone.context.createAnalyser();
+          masterAnalyserNode.fftSize = 2048;
+          masterAnalyserNode.smoothingTimeConstant = 0.8;
+      }
+      
+      masterVolumeNode = new Tone.Volume(0);
+      masterVolumeNode.connect(masterAnalyserNode);
+      
+      try {
+          masterAnalyserNode.disconnect();
+      } catch (e) {}
+      masterAnalyserNode.connect(Tone.context.rawContext.destination);
+      
       activeToneNodes.push(masterVolumeNode);
       
       let masterIn = masterVolumeNode;
@@ -1811,6 +2721,7 @@ export async function render(container) {
                   project.mediaPool[poolId] = monoBuf;
                   project.tracks.push({
                       id: 'trk_' + i + '_' + Date.now(),
+                      kind: 'audio',
                       name: file.name + ` (Ch ${i+1})`,
                       color: i === 0 ? '#06b6d4' : '#f472b6',
                       muted: false,
@@ -1819,6 +2730,7 @@ export async function render(container) {
                           name: file.name,
                           buffer: null,
                           poolId: poolId,
+                          isFxBlock: false,
                           sourceStart: 0,
                           timelineStart: 0,
                           duration: monoBuf.duration,
@@ -1834,6 +2746,7 @@ export async function render(container) {
               project.tracks = [
                   {
                       id: 'trk_1',
+                      kind: 'audio',
                       name: 'Main Track',
                       color: '#06b6d4',
                       muted: false,
@@ -1842,6 +2755,7 @@ export async function render(container) {
                           name: file.name,
                           buffer: null,
                           poolId: poolId,
+                          isFxBlock: false,
                           sourceStart: 0,
                           timelineStart: 0,
                           duration: decodedBuffer.duration,
@@ -1896,6 +2810,14 @@ export async function render(container) {
               project.mediaPool[poolId] = decodedBuffer;
           }
           renderAudioPool();
+          trackEvent('audio_imported', {
+              component: 'daw',
+              properties: {
+                  duration: Math.round(decodedBuffer.duration * 10) / 10,
+                  channels: decodedBuffer.numberOfChannels,
+                  sample_rate: decodedBuffer.sampleRate
+              }
+          });
           window.AuroraToast?.show({ variant: 'success', title: i18n('snd.audioImported'), description: file.name });
       } catch (err) {
           console.error("Import failed:", err);
@@ -2249,12 +3171,14 @@ export async function render(container) {
               mediaPoolMeta: poolMeta,
               tracks: project.tracks.map(t => ({
                   id: t.id,
+                  kind: t.kind,
                   name: t.name,
                   muted: t.muted,
                   color: t.color,
                   clips: t.clips.map(c => {
                       return {
                           id: c.id,
+                          isFxBlock: !!c.isFxBlock,
                           name: c.name,
                           timelineStart: c.timelineStart,
                           duration: c.duration,
@@ -2446,6 +3370,33 @@ export async function render(container) {
   container.querySelector('#fx-add-select').addEventListener('change', e => {
       const type = e.target.value;
       if (!type) return;
+      
+      // If we have selected an FX track, and it has no clips, let's create a default block first!
+      if (selectedItems.tracks.size === 1 && selectedItems.clips.size === 0) {
+          const tId = Array.from(selectedItems.tracks)[0];
+          const track = project.tracks.find(x => x.id === tId);
+          if (track && track.kind === 'fx') {
+              if (track.clips.length === 0) {
+                  const startTime = Tone.Transport.seconds || 0;
+                  const block = {
+                      id: 'fxb_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                      name: i18n('snd.effectBlock') || 'Effect Block',
+                      isFxBlock: true,
+                      buffer: null, poolId: null, sourceStart: 0,
+                      timelineStart: startTime, duration: 4, rate: 1,
+                      fx: [], keyframes: []
+                  };
+                  track.clips.push(block);
+                  selectedItems.clips.add(block.id);
+                  rebuildPlayback();
+                  renderTimeline();
+              } else {
+                  // If it has clips, select the first clip
+                  selectedItems.clips.add(track.clips[0].id);
+              }
+          }
+      }
+      
       const def = FX_CATALOG[type];
       const newFx = { id: 'fx_' + Date.now(), type: type, params: {} };
       Object.keys(def.params).forEach(k => newFx.params[k] = def.params[k].default);
@@ -2454,32 +3405,11 @@ export async function render(container) {
       const isMulti = affectedClips.length > 1;
       
       if (!isMulti) {
-          if (affectedClips.length === 0) project.masterFx.push(newFx);
-          else {
-              affectedClips[0].fx.push(newFx);
-              
-              if (activeKeyframeIdx !== -1) {
-                  const clip = affectedClips[0];
-                  const kfObj = clip.keyframes[activeKeyframeIdx];
-                  
-                  if (!kfObj.fxParams) kfObj.fxParams = {};
-                  kfObj.fxParams[newFx.id] = {};
-                  
-                  Object.keys(def.params).forEach(k => {
-                      // Save active default to the keyframe
-                      kfObj.fxParams[newFx.id][k] = def.params[k].default;
-                      
-                      // Neutralize the base setting so it doesn't bleed everywhere
-                      if (k === 'wet') newFx.params[k] = 0;
-                      if (k === 'pitch') newFx.params[k] = 0;
-                      if (k === 'distortion') newFx.params[k] = 0;
-                  });
-              }
-          }
+          stagedFx = newFx;
+          editingFxIndex = -1;
+          originalFxParams = null;
           e.target.value = '';
-          rebuildPlayback();
           renderInspector();
-          renderTimeline();
       } else {
           stagedMultiFx = newFx;
           e.target.value = '';
@@ -2542,6 +3472,13 @@ export async function render(container) {
           if (c.appliedActions.has(actionId)) c.appliedActions.delete(actionId);
           else c.appliedActions.add(actionId);
           recomputeClipBuffer(c);
+      });
+      trackEvent('audio_clip_action_toggled', {
+          component: 'daw',
+          properties: {
+              action: actionId,
+              clip_count: clips.length
+          }
       });
       rebuildPlayback();
       renderInspector();
@@ -2621,6 +3558,192 @@ export async function render(container) {
       if (id === 'btn-inv') toggleClipAction(affectedClips, 'inv');
       if (id === 'btn-fade-in') toggleClipAction(affectedClips, 'fade-in');
       if (id === 'btn-fade-out') toggleClipAction(affectedClips, 'fade-out');
+
+      if (id === 'btn-loudness-norm') {
+          showCustomForm(i18n('snd.loudnessNorm'), [
+              { id: 'targetLoudness', label: i18n('snd.targetLoudness'), type: 'number', value: -16 }
+          ], async (results) => {
+              const target = results.targetLoudness;
+              if (isNaN(target) || target > 0 || target < -70) {
+                  alert("Target loudness must be between -70 and 0 LUFS.");
+                  return;
+              }
+              
+              for (const c of affectedClips) {
+                  let currentBuffer = c.buffer || (c.poolId ? project.mediaPool[c.poolId] : null);
+                  if (c.originalBuffer) {
+                      currentBuffer = c.originalBuffer;
+                  }
+                  if (!currentBuffer) continue;
+
+                  const currentLUFS = await calculateIntegratedLoudness(currentBuffer);
+                  const deltaDb = target - currentLUFS;
+                  const gain = Math.pow(10, deltaDb / 20);
+                  const normalizedBuffer = scaleAudioBuffer(currentBuffer, gain);
+                  
+                  c.originalBuffer = normalizedBuffer;
+                  c.poolId = null;
+                  c.sourceStart = 0;
+                  recomputeClipBuffer(c);
+              }
+              
+              trackEvent('audio_loudness_normalized', {
+                  component: 'daw',
+                  properties: {
+                      target_lufs: target,
+                      clip_count: affectedClips.length
+                  }
+              });
+              
+              rebuildPlayback();
+              renderInspector();
+              renderTimeline();
+          });
+      }
+
+      if (id === 'btn-noise-reduction') {
+          showCustomForm(i18n('snd.noiseReduction'), [
+              { id: 'noiseThreshold', label: i18n('snd.noiseThreshold'), type: 'number', value: -45 },
+              { id: 'reductionAmount', label: i18n('snd.reductionAmount'), type: 'number', value: 12 }
+          ], (results) => {
+              const thresh = results.noiseThreshold;
+              const reduction = results.reductionAmount;
+              if (isNaN(thresh) || isNaN(reduction)) return;
+              
+              affectedClips.forEach(c => {
+                  let currentBuffer = c.buffer || (c.poolId ? project.mediaPool[c.poolId] : null);
+                  if (c.originalBuffer) {
+                      currentBuffer = c.originalBuffer;
+                  }
+                  if (!currentBuffer) return;
+                  
+                  const processedBuffer = applyNoiseReduction(currentBuffer, thresh, reduction);
+                  c.originalBuffer = processedBuffer;
+                  c.poolId = null;
+                  c.sourceStart = 0;
+                  recomputeClipBuffer(c);
+              });
+              
+              trackEvent('audio_noise_reduction_applied', {
+                  component: 'daw',
+                  properties: {
+                      threshold_db: thresh,
+                      reduction_db: reduction,
+                      clip_count: affectedClips.length
+                  }
+              });
+              
+              rebuildPlayback();
+              renderInspector();
+              renderTimeline();
+          });
+      }
+
+      if (id === 'btn-auto-duck') {
+          const trackOptions = project.tracks.map((t, idx) => ({
+              label: t.name || `Track ${idx + 1}`,
+              value: idx.toString()
+          }));
+          
+          if (trackOptions.length === 0) {
+              alert("No tracks found to use as control track.");
+              return;
+          }
+          
+          showCustomForm(i18n('snd.autoDuck'), [
+              { id: 'controlTrackIdx', label: i18n('snd.controlTrack'), type: 'select', options: trackOptions, value: '0' },
+              { id: 'thresholdDb', label: i18n('snd.noiseThreshold') + ' (dB)', type: 'number', value: -30 },
+              { id: 'duckAmountDb', label: i18n('snd.duckAmount'), type: 'number', value: -12 },
+              { id: 'fadeDownTime', label: i18n('snd.fadeDownTime'), type: 'number', value: 0.5 },
+              { id: 'fadeUpTime', label: i18n('snd.fadeUpTime'), type: 'number', value: 0.5 }
+          ], (results) => {
+              const trackIdx = parseInt(results.controlTrackIdx);
+              const thresh = results.thresholdDb;
+              const duckAmt = results.duckAmountDb;
+              const fadeDown = results.fadeDownTime;
+              const fadeUp = results.fadeUpTime;
+              
+              if (isNaN(trackIdx) || isNaN(thresh) || isNaN(duckAmt) || isNaN(fadeDown) || isNaN(fadeUp)) return;
+              
+              const controlTrack = project.tracks[trackIdx];
+              if (!controlTrack) return;
+              
+              affectedClips.forEach(c => {
+                  const duckedBuffer = applyAutoDucking(c, controlTrack, thresh, duckAmt, fadeDown, fadeUp);
+                  if (duckedBuffer) {
+                      c.originalBuffer = duckedBuffer;
+                      c.poolId = null;
+                      c.sourceStart = 0;
+                      recomputeClipBuffer(c);
+                  }
+              });
+              
+              trackEvent('audio_auto_duck_applied', {
+                  component: 'daw',
+                  properties: {
+                      control_track: controlTrack.name,
+                      threshold_db: thresh,
+                      duck_amount_db: duckAmt,
+                      fade_down_time: fadeDown,
+                      fade_up_time: fadeUp,
+                      clip_count: affectedClips.length
+                  }
+              });
+              
+              rebuildPlayback();
+              renderInspector();
+              renderTimeline();
+          });
+      }
+
+      if (id === 'btn-time-stretch') {
+          const currentRate = affectedClips[0].rate || 1.0;
+          
+          showCustomForm(i18n('snd.timeStretch'), [
+              { id: 'speedFactor', label: i18n('snd.speedFactor'), type: 'number', value: currentRate }
+          ], (results) => {
+              const speed = results.speedFactor;
+              if (speed === null || isNaN(speed) || speed < 0.2 || speed > 5.0) {
+                  alert("Speed factor must be between 0.2 and 5.0.");
+                  return;
+              }
+              
+              affectedClips.forEach(c => {
+                  c.rate = speed;
+                  const semitones = 12 * Math.log2(1 / speed);
+                  
+                  if (!c.fx) c.fx = [];
+                  let pitchNode = c.fx.find(fx => fx.id === 'time-stretch-pitch-shift');
+                  
+                  if (Math.abs(speed - 1.0) < 0.01) {
+                      c.fx = c.fx.filter(fx => fx.id !== 'time-stretch-pitch-shift');
+                  } else {
+                      if (pitchNode) {
+                          pitchNode.params.pitch = semitones;
+                      } else {
+                          c.fx.push({
+                              id: 'time-stretch-pitch-shift',
+                              type: 'pitch',
+                              params: { pitch: semitones }
+                          });
+                      }
+                  }
+                  recomputeClipBuffer(c);
+              });
+              
+              trackEvent('audio_time_stretch_applied', {
+                  component: 'daw',
+                  properties: {
+                      speed_factor: speed,
+                      clip_count: affectedClips.length
+                  }
+              });
+              
+              rebuildPlayback();
+              renderInspector();
+              renderTimeline();
+          });
+      }
       
       if (id === 'btn-delete') {
           showDialog(i18n('snd.deleteSelectedTitle'), i18n('snd.deleteSelectedBody', { count: affectedClips.length }), true, () => {
@@ -2631,6 +3754,12 @@ export async function render(container) {
               renderInspector();
               renderTimeline();
               rebuildPlayback();
+              trackEvent('audio_clips_deleted', {
+                  component: 'daw',
+                  properties: {
+                      clip_count: affectedClips.length
+                  }
+              });
           });
       }
       
@@ -2690,6 +3819,12 @@ export async function render(container) {
           renderTimeline();
           rebuildPlayback();
           renderInspector();
+          trackEvent('audio_clip_auto_split', {
+              component: 'daw',
+              properties: {
+                  clip_count: clipsToSplit.length
+              }
+          });
       }
       
             
@@ -2780,6 +3915,13 @@ export async function render(container) {
                   renderTimeline();
                   rebuildPlayback();
                   renderInspector();
+                  trackEvent('audio_diarization_completed', {
+                      component: 'daw',
+                      properties: {
+                          segment_count: result.length,
+                          speaker_count: Object.keys(speakerTracks).length
+                      }
+                  });
               } catch (err) {
                   mdl.style.display = 'none';
                   window.AuroraToast?.show({ variant: 'error', title: i18n('snd.diarizationFailed'), description: err.message });
@@ -2798,6 +3940,12 @@ export async function render(container) {
           });
           renderTimeline();
           rebuildPlayback();
+          trackEvent('audio_gaps_removed', {
+              component: 'daw',
+              properties: {
+                  track_count: project.tracks.filter(t => selectedItems.tracks.has(t.id)).length
+              }
+          });
       }
   });
 
@@ -2859,6 +4007,15 @@ export async function render(container) {
           const projectNameSafe = (project.name || 'audio_export').replace(/[^a-z0-9_\- ]/gi, '').trim().replace(/ +/g, '_').toLowerCase();
           a.download = projectNameSafe + '_' + Date.now() + '.' + format;
           a.click();
+          trackEvent('audio_export', {
+              component: 'daw',
+              properties: {
+                  format: format,
+                  duration: Math.round(maxTime * 10) / 10,
+                  track_count: project.tracks.length,
+                  clip_count: project.tracks.reduce((acc, t) => acc + t.clips.length, 0)
+              }
+          });
       } catch (err) {
           window.AuroraToast?.show({ variant: 'error', title: i18n('snd.exportFailed'), description: err.message });
       } finally {

@@ -33,9 +33,9 @@ let _landmarker = null;
 export async function extractHeadLandmarks(bmp) {
   if (!_landmarker) {
     const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-    const vision = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm');
+    const vision = await FilesetResolver.forVisionTasks('/models/wasm');
     _landmarker = await FaceLandmarker.createFromOptions(vision, {
-      baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task' },
+      baseOptions: { modelAssetPath: '/models/tasks/face_landmarker.task' },
       runningMode: 'IMAGE',
       numFaces: 1
     });

@@ -20,7 +20,8 @@ export class TimelineView {
             onClipDrop: (clipId) => {},
             onRenderTrackHeader: (track, element) => {},
             onTrackDrop: (track, offsetX, event) => {},
-            onTrackDoubleClick: (track, offsetX, event) => {}
+            onTrackDoubleClick: (track, offsetX, event) => {},
+            onTrackContextMenu: (track, offsetX, event) => {}
         }, options);
 
         this.pixelsPerSecond = this.options.pixelsPerSecond;
@@ -240,17 +241,23 @@ export class TimelineView {
                 e.preventDefault();
                 body.style.background = 'transparent';
                 const rect = body.getBoundingClientRect();
-                const scrollLeft = this.dom.tracksBody.parentElement.scrollLeft;
-                const offsetX = e.clientX - rect.left + scrollLeft;
+                const offsetX = e.clientX - rect.left;
                 this.options.onTrackDrop(track, offsetX, e);
             });
 
             body.addEventListener('dblclick', e => {
                 if (e.target.closest('[data-clip-el]')) return; // ignore dbl-clicks on clips
                 const rect = body.getBoundingClientRect();
-                const scrollLeft = this.dom.tracksBody.parentElement.scrollLeft;
-                const offsetX = e.clientX - rect.left + scrollLeft;
+                const offsetX = e.clientX - rect.left;
                 this.options.onTrackDoubleClick(track, offsetX, e);
+            });
+
+            body.addEventListener('contextmenu', e => {
+                if (e.target.closest('[data-clip-el]')) return; // ignore context clicks on clips
+                e.preventDefault();
+                const rect = body.getBoundingClientRect();
+                const offsetX = e.clientX - rect.left;
+                this.options.onTrackContextMenu(track, offsetX, e);
             });
 
             (track.clips || []).forEach(clip => {

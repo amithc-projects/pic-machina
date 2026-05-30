@@ -47,7 +47,7 @@ function resolveExpr(expr, ctx) {
   return value ?? `{{${expr}}}`;
 }
 
-function resolveKey(key, ctx) {
+export function resolveKey(key, ctx) {
   if (key === 'br' || key === 'break' || key === 'newline') return '\n';
   if (key === 'filename') return ctx.filename ?? '';
   if (key === 'ext')      return ctx.ext ?? '';
@@ -79,9 +79,36 @@ function resolveKey(key, ctx) {
     const parts = field.split('.');
     let val = ctx.sidecar;
     for (const p of parts) {
-      if (val == null || typeof val !== 'object') return null;
+      if (val == null || typeof val !== 'object') {
+        val = null;
+        break;
+      }
       val = val[p];
     }
+    
+    // If not found, check if it's a flat alias (only 1 level deep, e.g. sidecar.city)
+    if (val === null || val === undefined) {
+      if (parts.length === 1) {
+        const key = parts[0];
+        const sc = ctx.sidecar || {};
+        if (sc[key] !== undefined && sc[key] !== null) {
+          val = sc[key];
+        } else if (sc.geo?.[key] !== undefined && sc.geo?.[key] !== null) {
+          val = sc.geo[key];
+        } else if (sc.annotation?.[key] !== undefined && sc.annotation?.[key] !== null) {
+          val = sc.annotation[key];
+        } else if (sc.asset?.[key] !== undefined && sc.asset?.[key] !== null) {
+          val = sc.asset[key];
+        } else if (sc.analysis?.computed?.[key] !== undefined && sc.analysis?.computed?.[key] !== null) {
+          val = sc.analysis.computed[key];
+        } else if (sc.computed?.[key] !== undefined && sc.computed?.[key] !== null) {
+          val = sc.computed[key];
+        } else if (sc.source?.[key] !== undefined && sc.source?.[key] !== null) {
+          val = sc.source[key];
+        }
+      }
+    }
+
     if (Array.isArray(val)) return val.join(', ');
     return val != null ? String(val) : null;
   }

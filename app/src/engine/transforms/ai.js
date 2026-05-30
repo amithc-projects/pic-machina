@@ -45,11 +45,9 @@ registry.register({
     }
     try {
       const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision');
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
-      );
+      const vision = await FilesetResolver.forVisionTasks('/models/wasm');
       const detector = await FaceDetector.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite', delegate: 'CPU' },
+        baseOptions: { modelAssetPath: '/models/tasks/blaze_face_short_range.tflite', delegate: 'CPU' },
         runningMode: 'IMAGE',
         minDetectionConfidence: (p.confidence || 30) / 100,
       });
@@ -163,13 +161,11 @@ registry.register({
 
     try {
       const { ImageSegmenter, FilesetResolver } = await import('@mediapipe/tasks-vision');
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
-      );
+      const vision = await FilesetResolver.forVisionTasks('/models/wasm');
 
       const segmenter = await ImageSegmenter.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
+          modelAssetPath: '/models/tasks/selfie_segmenter.tflite',
           delegate: 'CPU'
         },
         runningMode: 'IMAGE',
@@ -1038,9 +1034,7 @@ registry.register({
     }
 
     const { FilesetResolver } = await import('@mediapipe/tasks-vision');
-    const vision = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
-    );
+    const vision = await FilesetResolver.forVisionTasks('/models/wasm');
 
     let faceCount  = 0;
     let personCount = 0;
@@ -1051,7 +1045,7 @@ registry.register({
       const { PoseLandmarker } = await import('@mediapipe/tasks-vision');
       const landmarker = await PoseLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+          modelAssetPath: '/models/tasks/pose_landmarker_lite.task',
           delegate: 'CPU',
         },
         runningMode: 'IMAGE',
@@ -1102,7 +1096,7 @@ registry.register({
       const { FaceDetector } = await import('@mediapipe/tasks-vision');
       const detector = await FaceDetector.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+          modelAssetPath: '/models/tasks/blaze_face_short_range.tflite',
           delegate: 'CPU',
         },
         runningMode: 'IMAGE',
@@ -1180,12 +1174,10 @@ registry.register({
     }
     try {
       const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
-      );
+      const vision = await FilesetResolver.forVisionTasks('/models/wasm');
       const landmarker = await FaceLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task',
+          modelAssetPath: '/models/tasks/face_landmarker.task',
           delegate: 'CPU',
         },
         runningMode: 'IMAGE',

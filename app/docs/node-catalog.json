@@ -42,6 +42,150 @@
     ]
   },
   {
+    "id": "ai-portrait-bokeh",
+    "name": "Portrait Bokeh",
+    "category": "AI & Composition",
+    "description": "Large-aperture lens simulation: keeps the subject sharp and blurs the background. Requires the InSPyReNet model (#mdl).",
+    "icon": "blur_circular",
+    "params": [
+      {
+        "name": "blurRadius",
+        "label": "Blur Strength",
+        "type": "range",
+        "defaultValue": 15
+      },
+      {
+        "name": "edgeFeather",
+        "label": "Edge Feather",
+        "type": "range",
+        "defaultValue": 8
+      },
+      {
+        "name": "falloff",
+        "label": "Depth Falloff",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-drop-shadow",
+    "name": "Subject Drop Shadow",
+    "category": "AI & Composition",
+    "description": "Cast a soft shadow behind the detected subject. Works on both transparent cut-outs and photos (shadow darkens visible background). Requires the InSPyReNet model (#mdl).",
+    "icon": "filter_drama",
+    "params": [
+      {
+        "name": "offsetX",
+        "label": "Offset X (px)",
+        "type": "range",
+        "defaultValue": 12
+      },
+      {
+        "name": "offsetY",
+        "label": "Offset Y (px)",
+        "type": "range",
+        "defaultValue": 18
+      },
+      {
+        "name": "blur",
+        "label": "Shadow Blur",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 55
+      },
+      {
+        "name": "color",
+        "label": "Shadow Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      }
+    ]
+  },
+  {
+    "id": "ai-sticker-outline",
+    "name": "Sticker Outline",
+    "category": "AI & Composition",
+    "description": "Cut out the detected subject with a solid border, like a sticker. Optional second ring for a double-outline look. Requires the InSPyReNet model (#mdl).",
+    "icon": "filter_frames",
+    "params": [
+      {
+        "name": "thickness",
+        "label": "Outline Thickness (px)",
+        "type": "range",
+        "defaultValue": 8
+      },
+      {
+        "name": "color",
+        "label": "Outline Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "doubleOutline",
+        "label": "Double Outline",
+        "type": "boolean",
+        "defaultValue": false
+      },
+      {
+        "name": "secondColor",
+        "label": "Second Outline Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "bgMode",
+        "label": "Background",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-subject-vignette",
+    "name": "Subject Vignette",
+    "category": "AI & Composition",
+    "description": "Darken everything except the detected subject. Matte-driven vignette that stays locked to the subject. Requires the InSPyReNet model (#mdl).",
+    "icon": "vignette",
+    "params": [
+      {
+        "name": "strength",
+        "label": "Strength",
+        "type": "range",
+        "defaultValue": 60
+      },
+      {
+        "name": "softness",
+        "label": "Softness",
+        "type": "range",
+        "defaultValue": 70
+      },
+      {
+        "name": "color",
+        "label": "Vignette Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      }
+    ]
+  },
+  {
+    "id": "ai-subject-sharpen",
+    "name": "Subject Sharpen",
+    "category": "AI & Composition",
+    "description": "Sharpen (or denoise) only the detected subject, leaving the background untouched. Requires the InSPyReNet model (#mdl).",
+    "icon": "deblur",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
     "id": "ai-silhouette",
     "name": "Silhouette",
     "category": "AI & Composition",
@@ -164,6 +308,47 @@
     ]
   },
   {
+    "id": "ai-subject-glow",
+    "name": "Subject Glow",
+    "category": "AI & Composition",
+    "description": "Adds a soft colour bloom around the detected subject \u2014 neon halos, dreamy glows, or subtle edge lighting. Uses additive blending so the glow brightens without muddying the background. Requires the InSPyReNet model (#mdl).",
+    "icon": "flare",
+    "params": [
+      {
+        "name": "spread",
+        "label": "Spread (px)",
+        "type": "range",
+        "defaultValue": 24
+      },
+      {
+        "name": "intensity",
+        "label": "Intensity (%)",
+        "type": "range",
+        "defaultValue": 70
+      },
+      {
+        "name": "color",
+        "label": "Glow Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      }
+    ]
+  },
+  {
+    "id": "ai-export-matte",
+    "name": "Export Matte",
+    "category": "AI & Composition",
+    "description": "Replaces the canvas with the raw InSPyReNet saliency matte so you can export it as a PNG for use in Photoshop, After Effects, or other compositing tools. Pair with a Save File node (PNG format). Requires the InSPyReNet model (#mdl).",
+    "icon": "invert_colors",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Output Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
     "id": "ai-clipping-mask",
     "name": "Clipping Mask",
     "category": "AI & Composition",
@@ -176,6 +361,57 @@
         "type": "select"
       }
     ]
+  },
+  {
+    "id": "ai-chroma-key",
+    "name": "Chroma Key (Green Screen)",
+    "category": "AI & Composition",
+    "description": "Remove a solid-colour background (green/blue screen) via pixel-level hue matching, with optional AI edge refinement using InSPyReNet.",
+    "icon": "theater_comedy",
+    "params": [
+      {
+        "name": "keyColor",
+        "label": "Key Colour",
+        "type": "color",
+        "defaultValue": "#00b140"
+      },
+      {
+        "name": "tolerance",
+        "label": "",
+        "type": "text"
+      },
+      {
+        "name": "softness",
+        "label": "Softness (feather width)",
+        "type": "range",
+        "defaultValue": 12
+      },
+      {
+        "name": "spillSuppression",
+        "label": "Spill Suppression (%)",
+        "type": "range",
+        "defaultValue": 60
+      },
+      {
+        "name": "aiRefine",
+        "label": "AI Edge Refinement (InSPyReNet)",
+        "type": "toggle",
+        "defaultValue": false
+      },
+      {
+        "name": "bgFill",
+        "label": "Background Fill",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-magic-eraser",
+    "name": "Magic Eraser (LaMa)",
+    "category": "AI & Composition",
+    "description": "Interactively select and remove unwanted objects from an image using the LaMa AI inpainting model.",
+    "icon": "ink_eraser",
+    "params": []
   },
   {
     "id": "flow-export",
@@ -199,6 +435,26 @@
         "name": "format",
         "label": "Format",
         "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-export-variable",
+    "name": "Export Variable",
+    "category": "Flow Control",
+    "description": "Saves the contents of an engine variable (like autoCaptions) directly to the root output folder alongside your images/videos.",
+    "icon": "text_snippet",
+    "params": [
+      {
+        "name": "variableName",
+        "label": "Internal Variable Name",
+        "type": "text",
+        "defaultValue": "autoCaptions"
+      },
+      {
+        "name": "fileName",
+        "label": "",
+        "type": "text"
       }
     ]
   },
@@ -229,6 +485,11 @@
         "label": "Label",
         "type": "text",
         "defaultValue": "state-1"
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
       }
     ]
   },
@@ -349,6 +610,21 @@
     ]
   },
   {
+    "id": "flow-video-fast-stitcher",
+    "name": "Fast Video Stitcher",
+    "category": "Flow Control",
+    "description": "Fast concatenation (transmuxing) of video blobs without re-encoding. Inputs must share identical codecs/dimensions.",
+    "icon": "animation",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "fast_stitched.mp4"
+      }
+    ]
+  },
+  {
     "id": "flow-geo-timeline",
     "name": "Geotemporal Timeline",
     "category": "Flow Control",
@@ -427,7 +703,7 @@
       {
         "name": "fontFamily",
         "label": "Font Family",
-        "type": "text",
+        "type": "font-select",
         "defaultValue": "Inter"
       },
       {
@@ -605,6 +881,26 @@
     ]
   },
   {
+    "id": "flow-video-pip",
+    "name": "Video PiP",
+    "category": "Flow Control",
+    "description": "Composite a Picture-in-Picture overlay (e.g. talking head) onto a background video. Requires exactly 2 input videos (alphabetically sorted: 1st = background, 2nd = PiP).",
+    "icon": "picture_in_picture",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "video-pip.mp4"
+      },
+      {
+        "name": "layout",
+        "label": "PiP Position",
+        "type": "select"
+      }
+    ]
+  },
+  {
     "id": "flow-template-aggregator",
     "name": "Template Render",
     "category": "Flow Control",
@@ -628,6 +924,12 @@
         "label": "Quality (0-100)",
         "type": "range",
         "defaultValue": 90
+      },
+      {
+        "name": "isolateSubject",
+        "label": "Isolate Subject (AI cut-out)",
+        "type": "boolean",
+        "defaultValue": false
       }
     ]
   },
@@ -712,6 +1014,33 @@
     ]
   },
   {
+    "id": "flow-face-morph",
+    "name": "Face Morph",
+    "category": "Flow Control",
+    "description": "Morphs across two or more aligned faces using 478-point mesh warping. Place a Face Align step before this. Produces an MP4 video.",
+    "icon": "animation",
+    "params": [
+      {
+        "name": "filename",
+        "label": "Output Filename",
+        "type": "text",
+        "defaultValue": "face-morph.mp4"
+      },
+      {
+        "name": "duration",
+        "label": "Duration per transition (seconds)",
+        "type": "number",
+        "defaultValue": 4
+      },
+      {
+        "name": "fps",
+        "label": "Frames per second",
+        "type": "number",
+        "defaultValue": 30
+      }
+    ]
+  },
+  {
     "id": "flow-create-zip",
     "name": "Create ZIP",
     "category": "Flow Control",
@@ -771,13 +1100,45 @@
     "id": "flow-video-compress",
     "name": "Video: Compress",
     "category": "Flow Control",
-    "description": "Reduce video file size by lowering the output bitrate. Skips non-video files.",
+    "description": "Reduce video file size by lowering the output bitrate and optionally resizing the dimensions. Skips non-video files.",
     "icon": "compress",
     "params": [
       {
         "name": "quality",
         "label": "Quality Preset",
         "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-speed",
+    "name": "Video: Change Speed",
+    "category": "Flow Control",
+    "description": "Speed up or slow down a segment of a video. Audio in the segment is silenced; before/after play normally. Skips non-video files.",
+    "icon": "slow_motion_video",
+    "params": [
+      {
+        "name": "speedFactor",
+        "label": "",
+        "type": "text"
+      },
+      {
+        "name": "segStart",
+        "label": "Segment Start \u2014 seconds (leave blank for beginning of video)",
+        "type": "number",
+        "defaultValue": ""
+      },
+      {
+        "name": "segEnd",
+        "label": "Segment End \u2014 seconds (leave blank for end of video)",
+        "type": "number",
+        "defaultValue": ""
+      },
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": "_speed"
       }
     ]
   },
@@ -839,39 +1200,6 @@
     ]
   },
   {
-    "id": "flow-video-speed",
-    "name": "Video: Change Speed",
-    "category": "Flow Control",
-    "description": "Speed up or slow down a segment of a video. The segment before and after plays at normal speed; audio in the affected segment is silenced. Leave segStart/segEnd blank to apply to the whole video. Skips non-video files.",
-    "icon": "slow_motion_video",
-    "params": [
-      {
-        "name": "speedFactor",
-        "label": "Speed Factor (e.g. 0.5 = half speed, 2 = double speed)",
-        "type": "number",
-        "defaultValue": 2
-      },
-      {
-        "name": "segStart",
-        "label": "Segment Start (seconds — leave blank for beginning of video)",
-        "type": "number",
-        "defaultValue": ""
-      },
-      {
-        "name": "segEnd",
-        "label": "Segment End (seconds — leave blank for end of video)",
-        "type": "number",
-        "defaultValue": ""
-      },
-      {
-        "name": "suffix",
-        "label": "Filename Suffix",
-        "type": "text",
-        "defaultValue": "_speed"
-      }
-    ]
-  },
-  {
     "id": "flow-video-concat",
     "name": "Video: Concatenate",
     "category": "Flow Control",
@@ -907,6 +1235,55 @@
         "label": "Bitrate (bps)",
         "type": "number",
         "defaultValue": 8000000
+      },
+      {
+        "name": "transitionMode",
+        "label": "Transition Effect",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-scroll",
+    "name": "Video: Scroll Animation",
+    "category": "Flow Control",
+    "description": "Animate a long/tall screenshot or panorama into a smooth scrolling video.",
+    "icon": "swap_vert",
+    "params": [
+      {
+        "name": "width",
+        "label": "Output Width (px)",
+        "type": "number",
+        "defaultValue": 1080
+      },
+      {
+        "name": "height",
+        "label": "Output Height (px)",
+        "type": "number",
+        "defaultValue": 1920
+      },
+      {
+        "name": "duration",
+        "label": "Duration (sec)",
+        "type": "number",
+        "defaultValue": 10
+      },
+      {
+        "name": "startPause",
+        "label": "Start Pause (sec)",
+        "type": "number",
+        "defaultValue": 1
+      },
+      {
+        "name": "endPause",
+        "label": "End Pause (sec)",
+        "type": "number",
+        "defaultValue": 2
+      },
+      {
+        "name": "easing",
+        "label": "Easing",
+        "type": "select"
       }
     ]
   },
@@ -949,7 +1326,7 @@
         "name": "template",
         "label": "Combined template",
         "type": "text",
-        "defaultValue": "{city}, {country}"
+        "defaultValue": "'{city"
       },
       {
         "name": "targetField",
@@ -963,7 +1340,7 @@
     "id": "meta-dominant-color",
     "name": "Extract Dominant Color",
     "category": "Metadata",
-    "description": "Quickly analyses the image to extract the top 3 dominant colors and maps them to semantic keywords for searching or variable injection. Sets {{dominantColors.0}} and {{dominantHex.0}}.",
+    "description": "Quickly analyses the image to extract the top 3 dominant colors. Can ignore near-transparent edges and solid black/white backgrounds.",
     "icon": "palette",
     "params": [
       {
@@ -977,6 +1354,39 @@
         "label": "Min Opacity (0-255)",
         "type": "range",
         "defaultValue": 250
+      }
+    ]
+  },
+  {
+    "id": "meta-blur-detect",
+    "name": "Detect Blur / Sharpness",
+    "category": "Metadata",
+    "description": "",
+    "icon": "blur_on",
+    "params": [
+      {
+        "name": "sampleSize",
+        "label": "Sample Resolution",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "meta-sidecar-write",
+    "name": "Write Sidecar Field",
+    "category": "Metadata",
+    "description": "Write a value into the sidecar JSON file\\",
+    "icon": "edit_note",
+    "params": [
+      {
+        "name": "key",
+        "label": "Field name",
+        "type": "text"
+      },
+      {
+        "name": "value",
+        "label": "Value",
+        "type": "text"
       }
     ]
   },
@@ -1010,6 +1420,44 @@
         "label": "Invert",
         "type": "boolean",
         "defaultValue": false
+      }
+    ]
+  },
+  {
+    "id": "color-curves",
+    "name": "Curves",
+    "category": "Color & Tone",
+    "description": "Interactive tone curve per channel (All / R / G / B).",
+    "icon": "show_chart",
+    "params": []
+  },
+  {
+    "id": "color-levels",
+    "name": "Levels",
+    "category": "Color & Tone",
+    "description": "Set black point, white point and gamma for precise tonal control.",
+    "icon": "equalizer",
+    "params": [
+      {
+        "name": "levels",
+        "label": "Levels",
+        "type": "levels",
+        "defaultValue": "JSON.stringify({ inBlack: 0"
+      }
+    ]
+  },
+  {
+    "id": "color-hsl",
+    "name": "HSL / Colour Mixer",
+    "category": "Color & Tone",
+    "description": "Adjust hue, saturation and luminance per colour range.",
+    "icon": "palette",
+    "params": [
+      {
+        "name": "hsl",
+        "label": "HSL",
+        "type": "hsl",
+        "defaultValue": "'{"
       }
     ]
   },
@@ -1348,6 +1796,95 @@
     ]
   },
   {
+    "id": "filter-blur",
+    "name": "Gaussian Blur",
+    "category": "Color & Tone",
+    "description": "Whole-image Gaussian blur with a controllable radius. Subtle radii (1\u20133px) soften skin and edges (sfumato); larger radii produce dreamy / out-of-focus looks.",
+    "icon": "blur_on",
+    "params": [
+      {
+        "name": "radius",
+        "label": "Radius (px)",
+        "type": "range",
+        "defaultValue": 4
+      }
+    ]
+  },
+  {
+    "id": "filter-directional-blur",
+    "name": "Directional Blur",
+    "category": "Color & Tone",
+    "description": "Applies a linear motion blur along a specific angle.",
+    "icon": "motion_blur",
+    "params": [
+      {
+        "name": "length",
+        "label": "Blur Length (px)",
+        "type": "range",
+        "defaultValue": 30
+      },
+      {
+        "name": "angle",
+        "label": "Angle (degrees)",
+        "type": "range",
+        "defaultValue": 45
+      }
+    ]
+  },
+  {
+    "id": "filter-radial-blur",
+    "name": "Radial Blur",
+    "category": "Color & Tone",
+    "description": "Zoom blur radiating from a center point.",
+    "icon": "motion_blur",
+    "params": [
+      {
+        "name": "amount",
+        "label": "Amount (%)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "centerX",
+        "label": "Center X (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "centerY",
+        "label": "Center Y (%)",
+        "type": "range",
+        "defaultValue": 50
+      }
+    ]
+  },
+  {
+    "id": "filter-gradient-ramp",
+    "name": "Gradient Ramp",
+    "category": "Color & Tone",
+    "description": "Overlay a linear or radial gradient over the image.",
+    "icon": "gradient",
+    "params": [
+      {
+        "name": "color1",
+        "label": "Start Color",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "color2",
+        "label": "End Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "type",
+        "label": "Ramp Shape",
+        "type": "select"
+      }
+    ]
+  },
+  {
     "id": "filter-bloom",
     "name": "Bloom / Glow",
     "category": "Color & Tone",
@@ -1531,6 +2068,194 @@
       {
         "name": "palette",
         "label": "Palette",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "ai-selective-grade",
+    "name": "Selective Color Grade",
+    "category": "AI & Composition",
+    "description": "Grade the subject and background independently \u2014 saturation, temperature and exposure per scope. Requires the InSPyReNet model (#mdl).",
+    "icon": "palette",
+    "params": [
+      {
+        "name": "subjectSaturation",
+        "label": "Subject Saturation",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "subjectTemperature",
+        "label": "Subject Temperature",
+        "type": "range",
+        "defaultValue": 10
+      },
+      {
+        "name": "subjectExposure",
+        "label": "Subject Exposure",
+        "type": "range",
+        "defaultValue": 5
+      },
+      {
+        "name": "backgroundSaturation",
+        "label": "Background Saturation",
+        "type": "range",
+        "defaultValue": -30
+      },
+      {
+        "name": "backgroundTemperature",
+        "label": "Background Temperature",
+        "type": "range",
+        "defaultValue": -15
+      },
+      {
+        "name": "backgroundExposure",
+        "label": "Background Exposure",
+        "type": "range",
+        "defaultValue": -10
+      },
+      {
+        "name": "edgeFeather",
+        "label": "Edge Feather",
+        "type": "range",
+        "defaultValue": 6
+      }
+    ]
+  },
+  {
+    "id": "color-lumetri",
+    "name": "Cinematic Grade",
+    "category": "Color & Tone",
+    "description": "Pro-level color grading engine. Adjust exposure, contrast, temperature, and shadows using a WebGL shader pipeline for maximum performance.",
+    "icon": "camera",
+    "params": [
+      {
+        "name": "exposure",
+        "label": "Exposure (f-stops)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "contrast",
+        "label": "Contrast",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "highlights",
+        "label": "Highlights",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "shadows",
+        "label": "Shadows",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "temperature",
+        "label": "Temperature",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "tint",
+        "label": "Tint",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "saturation",
+        "label": "Saturation (%)",
+        "type": "range",
+        "defaultValue": 100
+      },
+      {
+        "name": "vibrance",
+        "label": "Vibrance",
+        "type": "range",
+        "defaultValue": 0
+      }
+    ]
+  },
+  {
+    "id": "filter-rain",
+    "name": "Rain on Lens",
+    "category": "Color & Tone",
+    "description": "Procedural hardware-accelerated Rain on Lens effect. Includes physical refraction, trails, and clearing fog.",
+    "icon": "water_drop",
+    "params": [
+      {
+        "name": "density",
+        "label": "Rain Intensity",
+        "type": "range",
+        "defaultValue": 10
+      },
+      {
+        "name": "sizeMin",
+        "label": "Min Drop Size",
+        "type": "range",
+        "defaultValue": 0.5
+      },
+      {
+        "name": "sizeMax",
+        "label": "Max Drop Size",
+        "type": "range",
+        "defaultValue": 1.5
+      },
+      {
+        "name": "fogging",
+        "label": "Lens Fogging",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "speed",
+        "label": "Drip Velocity",
+        "type": "range",
+        "defaultValue": 1.0
+      },
+      {
+        "name": "offset",
+        "label": "Time Offset (s)",
+        "type": "number",
+        "defaultValue": 0
+      }
+    ]
+  },
+  {
+    "id": "ai-transcribe",
+    "name": "Auto-Transcribe (Whisper)",
+    "category": "Audio & Video",
+    "description": "Evaluates the primary audio track natively using WebAssembly & Transformers.js. Generates perfectly timed SRT captions and outputs them to a recipe variable.",
+    "icon": "graphic_eq",
+    "params": [
+      {
+        "name": "outputVariable",
+        "label": "Output Variable Name",
+        "type": "text",
+        "defaultValue": "autoCaptions"
+      }
+    ]
+  },
+  {
+    "id": "flow-audio-tts",
+    "name": "Generate Audio (Kokoro TTS)",
+    "category": "Audio & Video",
+    "description": "Translates text or precisely timed SRT captions into lifelike speech audio. Outputs to a variable that can be injected via the Replace Audio step.",
+    "icon": "record_voice_over",
+    "params": [
+      {
+        "name": "inputVariable",
+        "label": "Input Text/SRT Variable",
+        "type": "text",
+        "defaultValue": "autoCaptions"
+      },
+      {
+        "name": "voice",
+        "label": "Voice Profile (Speaker 1)",
         "type": "select"
       }
     ]
@@ -1921,6 +2646,90 @@
     ]
   },
   {
+    "id": "video-mesh-warp",
+    "name": "Video Mesh Warp",
+    "category": "Video Effects",
+    "description": "Distort the video frame using WebGL mesh warping (bulge/pinch and wave distortions).",
+    "icon": "waves",
+    "params": [
+      {
+        "name": "bulgeAmount",
+        "label": "Bulge / Pinch",
+        "type": "range",
+        "defaultValue": 0.5
+      },
+      {
+        "name": "bulgeRadius",
+        "label": "Bulge Radius (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "waveAmplitude",
+        "label": "Wave Amplitude",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "waveFrequency",
+        "label": "Wave Frequency",
+        "type": "range",
+        "defaultValue": 10
+      },
+      {
+        "name": "waveSpeed",
+        "label": "Wave Speed",
+        "type": "range",
+        "defaultValue": 2
+      }
+    ]
+  },
+  {
+    "id": "video-pose-landmarks",
+    "name": "Video Pose Landmarks",
+    "category": "Video Effects",
+    "description": "Overlay body pose skeleton (lines + keypoints) tracked across every video frame using MediaPipe.",
+    "icon": "accessibility_new",
+    "params": [
+      {
+        "name": "lineColor",
+        "label": "Line Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "lineWidth",
+        "label": "Line Width (px)",
+        "type": "range",
+        "defaultValue": 3
+      },
+      {
+        "name": "showKeypoints",
+        "label": "Show Keypoints",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "keypointColor",
+        "label": "Keypoint Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "keypointRadius",
+        "label": "Keypoint Radius (px)",
+        "type": "range",
+        "defaultValue": 4
+      },
+      {
+        "name": "minVisibility",
+        "label": "Min Visibility (%)",
+        "type": "range",
+        "defaultValue": 30
+      }
+    ]
+  },
+  {
     "id": "video-watermark",
     "name": "Video Watermark",
     "category": "Video Effects",
@@ -1947,9 +2756,93 @@
         "type": "text"
       },
       {
+        "name": "textStyle",
+        "label": "Text Style",
+        "type": "text-style-select",
+        "defaultValue": "none"
+      },
+      {
         "name": "font",
         "label": "Font Family",
+        "type": "font-select",
+        "defaultValue": "Inter"
+      },
+      {
+        "name": "size",
+        "label": "Font Size (px)",
+        "type": "number",
+        "defaultValue": 48
+      },
+      {
+        "name": "color",
+        "label": "Text Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "weight",
+        "label": "Font Weight",
         "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "flow-video-replace-audio",
+    "name": "Video: Replace Audio",
+    "category": "Flow Control",
+    "description": "Replaces the entire audio track of a video with a custom audio file or generated audio from a variable (e.g. {{ttsAudio}}).",
+    "icon": "queue_music",
+    "params": [
+      {
+        "name": "audioSource",
+        "label": "Audio Source (Variable or File)",
+        "type": "file",
+        "defaultValue": "'{{ttsAudio"
+      },
+      {
+        "name": "bitrate",
+        "label": "Video Bitrate (bps)",
+        "type": "number",
+        "defaultValue": 8000000
+      },
+      {
+        "name": "audioBitrate",
+        "label": "Audio Bitrate (bps)",
+        "type": "number",
+        "defaultValue": 128000
+      }
+    ]
+  },
+  {
+    "id": "flow-video-to-gif",
+    "name": "Video: Convert to GIF",
+    "category": "Flow Control",
+    "description": "Convert a full video into an animated GIF. Automatically resizes and samples frames to keep file sizes manageable.",
+    "icon": "gif",
+    "params": [
+      {
+        "name": "fps",
+        "label": "Frame Rate (FPS)",
+        "type": "number",
+        "defaultValue": 12
+      },
+      {
+        "name": "width",
+        "label": "Max Width (px)",
+        "type": "number",
+        "defaultValue": 480
+      },
+      {
+        "name": "loop",
+        "label": "Loop",
+        "type": "boolean",
+        "defaultValue": true
+      },
+      {
+        "name": "suffix",
+        "label": "Filename Suffix",
+        "type": "text",
+        "defaultValue": ""
       }
     ]
   },
@@ -1966,8 +2859,20 @@
         "type": "text"
       },
       {
+        "name": "textStyle",
+        "label": "Text Style",
+        "type": "text-style-select",
+        "defaultValue": "none"
+      },
+      {
         "name": "font",
         "label": "Font Family",
+        "type": "font-select",
+        "defaultValue": "Inter"
+      },
+      {
+        "name": "sizeMode",
+        "label": "Size Mode",
         "type": "select"
       }
     ]
@@ -2205,6 +3110,202 @@
     ]
   },
   {
+    "id": "overlay-device-mockup",
+    "name": "Device Mockup",
+    "category": "Overlays & Typography",
+    "description": "Wrap your image realistically inside a physical device frame with dynamic bezels and glare.",
+    "icon": "devices",
+    "params": [
+      {
+        "name": "family",
+        "label": "Device Family",
+        "type": "device-family-select",
+        "defaultValue": ""
+      },
+      {
+        "name": "model",
+        "label": "Device Model",
+        "type": "device-model-select",
+        "defaultValue": ""
+      },
+      {
+        "name": "variant",
+        "label": "Color Variant",
+        "type": "device-variant-select",
+        "defaultValue": ""
+      }
+    ]
+  },
+  {
+    "id": "overlay-timer",
+    "name": "Animated Timer (HTML)",
+    "category": "Overlays & Typography",
+    "description": "Render a buttery-smooth live countdown or countup timer using DOM-to-Canvas via SVG foreignObject.",
+    "icon": "timer",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-html-block",
+    "name": "Raw HTML & Styles",
+    "category": "Overlays & Typography",
+    "description": "Inject direct HTML strings with inline CSS styling directly onto the visual canvas. Supports multiple paragraphs, layout tags, and absolute positioning constraints. Natively leverages timeRange to act as an insertable title card when Freeze logic is enabled.",
+    "icon": "html",
+    "params": [
+      {
+        "name": "htmlContent",
+        "label": "HTML Content",
+        "type": "textarea",
+        "defaultValue": "<div style=\"color: white; font-size: 64px; text-align: center; margin-top: 100px;\">\\\\n  Hello <b>World</b>\\\\n</div>"
+      },
+      {
+        "name": "fontFamily",
+        "label": "Base Font Family",
+        "type": "font-select",
+        "defaultValue": "Inter"
+      },
+      {
+        "name": "globalScale",
+        "label": "Global Font Scale",
+        "type": "range",
+        "defaultValue": 1
+      },
+      {
+        "name": "justifyLayout",
+        "label": "Box Justification",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-transparent-video",
+    "name": "Transparent Video Overlay",
+    "category": "Overlays & Typography",
+    "description": "Overlay a transparent (alpha-channel) WebM on top of the video. Ideal for compositing pre-rendered Hyperframes animations, lower thirds, and motion graphics. The overlay\\",
+    "icon": "movie_filter",
+    "params": [
+      {
+        "name": "videoFile",
+        "label": "Overlay Video (.webm)",
+        "type": "file",
+        "defaultValue": ""
+      },
+      {
+        "name": "fit",
+        "label": "Fit",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-subtitles",
+    "name": "Add Subtitles (.SRT)",
+    "category": "Overlays & Typography",
+    "description": "Dynamically parses external SRT or WEBVTT subtitle tracks and stamps active captions over the video at their specified timestamps.",
+    "icon": "subtitles",
+    "params": [
+      {
+        "name": "subtitleFile",
+        "label": "Subtitle Track (.srt / .vtt)",
+        "type": "file-text"
+      },
+      {
+        "name": "fontFamily",
+        "label": "Font Family",
+        "type": "font-select",
+        "defaultValue": "Inter"
+      },
+      {
+        "name": "fontSize",
+        "label": "Base Font Size",
+        "type": "range",
+        "defaultValue": 48
+      },
+      {
+        "name": "textColor",
+        "label": "Default Text Color",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      }
+    ]
+  },
+  {
+    "id": "overlay-craquelure",
+    "name": "Craquelure",
+    "category": "Overlays & Typography",
+    "description": "Procedural fine-crack network. Mimics the surface texture of an aged oil painting (cracked varnish / paint layer).",
+    "icon": "broken_image",
+    "params": [
+      {
+        "name": "intensity",
+        "label": "Intensity (%)",
+        "type": "range",
+        "defaultValue": 35
+      },
+      {
+        "name": "density",
+        "label": "Density",
+        "type": "range",
+        "defaultValue": 220
+      },
+      {
+        "name": "thickness",
+        "label": "Crack Thickness",
+        "type": "range",
+        "defaultValue": 2
+      },
+      {
+        "name": "darkness",
+        "label": "Crack Darkness (%)",
+        "type": "range",
+        "defaultValue": 70
+      },
+      {
+        "name": "seed",
+        "label": "Seed (0 = random)",
+        "type": "number",
+        "defaultValue": 0
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "overlay-draw-mask",
+    "name": "Draw Mask",
+    "category": "Overlays & Typography",
+    "description": "Paint a freehand mask that restricts where the previous step is visible.",
+    "icon": "brush",
+    "params": [
+      {
+        "name": "maskData",
+        "label": "Mask",
+        "type": "mask",
+        "defaultValue": ""
+      },
+      {
+        "name": "feather",
+        "label": "Feather (px)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "invert",
+        "label": "Invert Mask",
+        "type": "boolean",
+        "defaultValue": false
+      }
+    ]
+  },
+  {
     "id": "geo-resize",
     "name": "Resize",
     "category": "Geometric & Framing",
@@ -2438,10 +3539,30 @@
         "defaultValue": true
       },
       {
+        "name": "standardizeEyes",
+        "label": "Standardize Eye Distance (Best for Morph)",
+        "type": "boolean",
+        "defaultValue": false
+      },
+      {
         "name": "targetScale",
         "label": "Face Scale (%)",
         "type": "range",
         "defaultValue": 100
+      }
+    ]
+  },
+  {
+    "id": "ai-subject-crop",
+    "name": "Subject Crop",
+    "category": "Geometric & Framing",
+    "description": "Crop to a target aspect ratio while keeping the detected subject composed correctly. Uses InSPyReNet saliency (requires the model \u2014 see #mdl). Falls back to centre-crop if the model is unavailable.",
+    "icon": "center_focus_strong",
+    "params": [
+      {
+        "name": "aspectRatio",
+        "label": "Aspect Ratio",
+        "type": "select"
       }
     ]
   },
@@ -2461,38 +3582,313 @@
     ]
   },
   {
-    "id": "ai-transcribe",
-    "name": "Auto-Transcribe (Whisper)",
-    "description": "Evaluates the primary audio track natively using WebAssembly & Transformers.js. Generates perfectly timed SRT captions and outputs them to a recipe variable.",
-    "category": "Audio & Video",
-    "icon": "graphic_eq",
+    "id": "gen-checkerboard",
+    "name": "Checkerboard",
+    "category": "Geometric & Framing",
+    "description": "Generate a checkerboard pattern. Can be used as a background or overlay.",
+    "icon": "grid_on",
     "params": [
       {
-        "name": "outputVariable",
-        "label": "Output Variable Name",
-        "type": "text",
-        "defaultValue": "autoCaptions"
+        "name": "size",
+        "label": "Square Size (px)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "color1",
+        "label": "Color 1",
+        "type": "color",
+        "defaultValue": "#000000"
+      },
+      {
+        "name": "color2",
+        "label": "Color 2",
+        "type": "color",
+        "defaultValue": "#ffffff"
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 100
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
       }
     ]
   },
   {
-    "id": "flow-export-variable",
-    "name": "Export Variable",
-    "description": "Saves the contents of an engine variable (like autoCaptions) directly to the root output folder alongside your images/videos.",
-    "category": "Flow Control",
-    "icon": "text_snippet",
+    "id": "gen-circle",
+    "name": "Circle",
+    "category": "Geometric & Framing",
+    "description": "Generate a solid or stroked circle.",
+    "icon": "radio_button_unchecked",
     "params": [
       {
-        "name": "variableName",
-        "label": "Internal Variable Name",
-        "type": "text",
-        "defaultValue": "autoCaptions"
+        "name": "x",
+        "label": "Center X (%)",
+        "type": "range",
+        "defaultValue": 50
       },
       {
-        "name": "fileName",
-        "label": "Output Filename ({{vars}} supported)",
-        "type": "text",
-        "defaultValue": "{{filename | sanitized}}.srt"
+        "name": "y",
+        "label": "Center Y (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "radius",
+        "label": "Radius (%)",
+        "type": "range",
+        "defaultValue": 25
+      },
+      {
+        "name": "color",
+        "label": "Color",
+        "type": "color",
+        "defaultValue": "#ff0000"
+      },
+      {
+        "name": "style",
+        "label": "Style",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "gen-rect",
+    "name": "Rectangle",
+    "category": "Geometric & Framing",
+    "description": "Generate a solid or stroked rectangle/square.",
+    "icon": "rectangle",
+    "params": [
+      {
+        "name": "x",
+        "label": "Center X (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "y",
+        "label": "Center Y (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "width",
+        "label": "Width (%)",
+        "type": "range",
+        "defaultValue": 40
+      },
+      {
+        "name": "height",
+        "label": "Height (%)",
+        "type": "range",
+        "defaultValue": 30
+      },
+      {
+        "name": "color",
+        "label": "Color",
+        "type": "color",
+        "defaultValue": "#ff0000"
+      },
+      {
+        "name": "style",
+        "label": "Style",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "gen-ellipse",
+    "name": "Ellipse",
+    "category": "Geometric & Framing",
+    "description": "Generate a solid or stroked ellipse.",
+    "icon": "circle",
+    "params": [
+      {
+        "name": "x",
+        "label": "Center X (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "y",
+        "label": "Center Y (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "radiusX",
+        "label": "Radius X (%)",
+        "type": "range",
+        "defaultValue": 20
+      },
+      {
+        "name": "radiusY",
+        "label": "Radius Y (%)",
+        "type": "range",
+        "defaultValue": 15
+      },
+      {
+        "name": "color",
+        "label": "Color",
+        "type": "color",
+        "defaultValue": "#ff0000"
+      },
+      {
+        "name": "style",
+        "label": "Style",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "gen-path",
+    "name": "Vector Path",
+    "category": "Geometric & Framing",
+    "description": "Generate straight lines, polylines, or polygons.",
+    "icon": "gesture",
+    "params": []
+  },
+  {
+    "id": "gen-paint",
+    "name": "Freehand Paint",
+    "category": "Geometric & Framing",
+    "description": "Paint directly on top of the image canvas.",
+    "icon": "brush",
+    "params": [
+      {
+        "name": "paintData",
+        "label": "Paint Layer",
+        "type": "paint",
+        "defaultValue": ""
+      },
+      {
+        "name": "opacity",
+        "label": "Opacity (%)",
+        "type": "range",
+        "defaultValue": 100
+      },
+      {
+        "name": "blendMode",
+        "label": "Blend Mode",
+        "type": "select"
+      }
+    ]
+  },
+  {
+    "id": "geo-magnify",
+    "name": "Magnify",
+    "category": "Geometric & Framing",
+    "description": "Creates a flat magnifying glass effect.",
+    "icon": "zoom_in",
+    "params": [
+      {
+        "name": "x",
+        "label": "Center X (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "y",
+        "label": "Center Y (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "radius",
+        "label": "Radius (%)",
+        "type": "range",
+        "defaultValue": 25
+      },
+      {
+        "name": "magnification",
+        "label": "Magnification",
+        "type": "range",
+        "defaultValue": 2
+      }
+    ]
+  },
+  {
+    "id": "geo-lens",
+    "name": "Lens Distortion",
+    "category": "Geometric & Framing",
+    "description": "Spherical bulge/pinch distortion (CC Lens effect).",
+    "icon": "lens",
+    "params": [
+      {
+        "name": "x",
+        "label": "Center X (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "y",
+        "label": "Center Y (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "radius",
+        "label": "Radius (%)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "strength",
+        "label": "Strength",
+        "type": "range",
+        "defaultValue": 50
+      }
+    ]
+  },
+  {
+    "id": "geo-turbulent-displace",
+    "name": "Turbulent Displace",
+    "category": "Geometric & Framing",
+    "description": "Organic displacement using Simplex noise. Great for water, heat distortion, or glitch effects.",
+    "icon": "waves",
+    "params": [
+      {
+        "name": "amount",
+        "label": "Amount (px)",
+        "type": "range",
+        "defaultValue": 50
+      },
+      {
+        "name": "size",
+        "label": "Size",
+        "type": "range",
+        "defaultValue": 100
+      },
+      {
+        "name": "evolution",
+        "label": "Evolution (Phase)",
+        "type": "range",
+        "defaultValue": 0
+      },
+      {
+        "name": "complexity",
+        "label": "Complexity (Octaves)",
+        "type": "range",
+        "defaultValue": 1
+      }
+    ]
+  },
+  {
+    "id": "geo-liquify",
+    "name": "Liquify (Pinch/Swirl)",
+    "category": "Geometric & Framing",
+    "description": "Apply pinch, bloat, or swirl distortions to an area.",
+    "icon": "waves",
+    "params": [
+      {
+        "name": "mode",
+        "label": "Mode",
+        "type": "select"
       }
     ]
   }

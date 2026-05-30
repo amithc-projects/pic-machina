@@ -1,6 +1,7 @@
 import { dbGet, dbPut } from '../data/db.js';
 import { isModelDownloaded } from '../data/models.js';
 import { t as i18n } from '../i18n/index.js';
+import { trackEvent } from '../utils/telemetry.js';
 import { createProject, openProject, saveProject, resolveMediaUrl, revokeMediaUrl, addRecentProject, getRecentProjects, openProjectFromHandle, getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
 
 function showDialog(options) {
@@ -699,6 +700,12 @@ export async function render(container, hash) {
       
       currentAudioProject.voices.push({ id: newId, name, filename: 'voices/' + targetFileName });
       await saveProject(currentAudioProjectDirHandle, currentAudioProject);
+      trackEvent('custom_voice_added', {
+          component: 'voice-studio',
+          properties: {
+              duration: Math.round(audioBuffer.duration * 10) / 10
+          }
+      });
       loadCustomVoices();
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -1232,6 +1239,14 @@ export async function render(container, hash) {
       generateBtn.disabled = true;
       generateBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm mr-2">refresh</span> ${i18n('aud.generatingShort')}`;
       genStatusEl.textContent = '';
+      
+      trackEvent('speech_generation_started', {
+          component: 'voice-studio',
+          properties: {
+              segment_count: parsedSegments.length,
+              speaker_count: detectedSpeakers.length
+          }
+      });
 
       const speakerVoiceMap = {};
       const speakerEmotionMap = {};
@@ -1442,6 +1457,27 @@ export async function render(container, hash) {
       // seekable waveform player for every item.
       audioHistory = currentAudioProject.history;
       await renderHistory();
+      
+      const enginesUsed = Array.from(new Set(parsedSegments.map(s => {
+          const voice = speakerVoiceMap[s.speaker] || '';
+          if (voice.startsWith('kk_')) return 'kokoro';
+          if (voice.startsWith('cb_')) return 'chatterbox';
+          if (voice.startsWith('pt_')) return 'pocket_tts';
+          if (voice.startsWith('pp_')) return 'pocket_tts_preset';
+          if (voice.startsWith('el_')) return 'elevenlabs';
+          if (voice.startsWith('local_')) return 'local_gateway';
+          return 'unknown';
+      }))).join(',');
+
+      trackEvent('speech_generation_completed', {
+          component: 'voice-studio',
+          properties: {
+              duration: parseFloat(durationSecs) || 0.0,
+              segment_count: parsedSegments.length,
+              speaker_count: detectedSpeakers.length,
+              engines: enginesUsed
+          }
+      });
 
       setGenProgress(null, i18n('aud.done'));
     } catch (e) {

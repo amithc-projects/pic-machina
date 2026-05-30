@@ -531,12 +531,10 @@ registry.register({
     // we load the model and wasm once per video, not once per frame.
     if (!context._poseLandmarker) {
       const { PoseLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision');
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
-      );
+      const vision = await FilesetResolver.forVisionTasks('/models/wasm');
       context._poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
+          modelAssetPath: '/models/tasks/pose_landmarker_full.task',
         },
         runningMode: 'VIDEO',
         numPoses: 1,
