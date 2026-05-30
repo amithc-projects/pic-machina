@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio Service Worker
+ * ZumiLabs Studio Service Worker
  *
  * Strategy: network-first with no aggressive caching.
  *

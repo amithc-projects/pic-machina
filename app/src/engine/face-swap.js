@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Face Swap Engine (Machina-Swap)
+ * ZumiLabs Studio — Face Swap Engine (Machina-Swap)
  *
  * Cross-mesh affine face warping between a source and a target image.
  *

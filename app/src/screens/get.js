@@ -2,10 +2,11 @@
  * ImageChef — Getting Started Screen
  *
  * An introductory page that explains the use cases and capabilities
- * of the Zumilabs Studio platform.
+ * of the ZumiLabs Studio platform.
  */
 
 import { navigate } from '../main.js';
+import { t } from '../i18n/index.js';
 
 export async function render(container) {
   container.innerHTML = `
@@ -13,17 +14,16 @@ export async function render(container) {
       <!-- Hero Section -->
       <section class="get-hero">
         <div class="get-hero__content">
-          <h1 class="get-hero__title">Imagine the Outcome.<br>Automate the Rest.</h1>
+          <h1 class="get-hero__title">${t('get.heroTitle')}</h1>
           <p class="get-hero__subtitle">
-            Local-first, high-performance batch media processing with a visual node engine.
-            Professional automation for creative workflows.
+            ${t('get.heroSubtitle')}
           </p>
           <div class="get-hero__actions">
             <button class="btn-primary btn-lg" id="btn-get-start">
-               <span class="material-symbols-outlined">add</span> Create New Recipe
+               <span class="material-symbols-outlined">add</span> ${t('get.createRecipe')}
             </button>
             <button class="btn-secondary btn-lg" id="btn-get-library">
-               <span class="material-symbols-outlined">library_books</span> Browse Library
+               <span class="material-symbols-outlined">library_books</span> ${t('get.browseLibrary')}
             </button>
           </div>
         </div>
@@ -35,14 +35,14 @@ export async function render(container) {
           <video class="get-video" controls poster="/branding/brand-pack/social/twitter-card-1200x600.png">
             <!-- Placeholder for actual video source -->
             <source src="#" type="video/mp4">
-            Your browser does not support the video tag.
+            ${t('get.videoUnsupported')}
           </video>
         </div>
       </section>
 
       <!-- Core Capabilities Grid -->
       <section class="get-core-section">
-        <h2 class="get-section-title">What can Zumilabs Studio do?</h2>
+        <h2 class="get-section-title">${t('get.coreTitle')}</h2>
         <div class="pm-feature-grid" id="capabilities-grid">
           
           <div class="pm-feature-card" tabindex="0">
@@ -50,23 +50,23 @@ export async function render(container) {
             <div class="pm-feature-header">
               <div class="pm-feature-title-group">
                 <span class="material-symbols-outlined pm-feature-icon" style="color: #3b82f6;">data_object</span>
-                <h3 class="pm-feature-title">Process</h3>
+                <h3 class="pm-feature-title">${t('get.cap1Title')}</h3>
               </div>
               <div class="pm-feature-toggle"><span class="material-symbols-outlined">add</span></div>
             </div>
-            <p class="pm-feature-desc">Extract and parse metadata effortlessly from thousands of files.</p>
+            <p class="pm-feature-desc">${t('get.cap1Desc')}</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Zumilabs Studio reads EXIF data, GPS coordinates, and embedded dates at lightning speed. Use this data to power your workflows automatically.</p>
+                <p>${t('get.cap1Detail')}</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
-                    <span class="pm-ba-label">Before</span>
-                    <div class="pm-ba-content">Raw Files</div>
+                    <span class="pm-ba-label">${t('get.before')}</span>
+                    <div class="pm-ba-content">${t('get.cap1Before')}</div>
                   </div>
                   <div class="pm-ba-divider"><span class="material-symbols-outlined">arrow_right_alt</span></div>
                   <div class="pm-ba-side pm-ba-after" style="--accent: #3b82f6;">
-                    <span class="pm-ba-label">After</span>
-                    <div class="pm-ba-content">Rich Extracted Data</div>
+                    <span class="pm-ba-label">${t('get.after')}</span>
+                    <div class="pm-ba-content">${t('get.cap1After')}</div>
                   </div>
                 </div>
               </div>
@@ -78,23 +78,23 @@ export async function render(container) {
             <div class="pm-feature-header">
               <div class="pm-feature-title-group">
                 <span class="material-symbols-outlined pm-feature-icon" style="color: #8b5cf6;">psychology</span>
-                <h3 class="pm-feature-title">Analyse</h3>
+                <h3 class="pm-feature-title">${t('get.cap2Title')}</h3>
               </div>
               <div class="pm-feature-toggle"><span class="material-symbols-outlined">add</span></div>
             </div>
-            <p class="pm-feature-desc">Utilise built-in local AI models to understand your content.</p>
+            <p class="pm-feature-desc">${t('get.cap2Desc')}</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Scan images for faces, automatically remove backgrounds, or detect blurry photos without sending your files to the cloud. Total privacy, total power.</p>
+                <p>${t('get.cap2Detail')}</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
-                    <span class="pm-ba-label">Before</span>
-                    <div class="pm-ba-content">Standard Photo</div>
+                    <span class="pm-ba-label">${t('get.before')}</span>
+                    <div class="pm-ba-content">${t('get.cap2Before')}</div>
                   </div>
                   <div class="pm-ba-divider"><span class="material-symbols-outlined">arrow_right_alt</span></div>
                   <div class="pm-ba-side pm-ba-after" style="--accent: #8b5cf6;">
-                    <span class="pm-ba-label">After</span>
-                    <div class="pm-ba-content">Background Removed</div>
+                    <span class="pm-ba-label">${t('get.after')}</span>
+                    <div class="pm-ba-content">${t('get.cap2After')}</div>
                   </div>
                 </div>
               </div>
@@ -106,23 +106,23 @@ export async function render(container) {
             <div class="pm-feature-header">
               <div class="pm-feature-title-group">
                 <span class="material-symbols-outlined pm-feature-icon" style="color: #10b981;">tune</span>
-                <h3 class="pm-feature-title">Amend</h3>
+                <h3 class="pm-feature-title">${t('get.cap3Title')}</h3>
               </div>
               <div class="pm-feature-toggle"><span class="material-symbols-outlined">add</span></div>
             </div>
-            <p class="pm-feature-desc">Apply high-end filters, color grading, and structural transformations.</p>
+            <p class="pm-feature-desc">${t('get.cap3Desc')}</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Apply cinematic color grading, adjust contrast, and execute pixel-perfect crops across thousands of images in seconds.</p>
+                <p>${t('get.cap3Detail')}</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
-                    <span class="pm-ba-label">Before</span>
-                    <div class="pm-ba-content">Dull Colors</div>
+                    <span class="pm-ba-label">${t('get.before')}</span>
+                    <div class="pm-ba-content">${t('get.cap3Before')}</div>
                   </div>
                   <div class="pm-ba-divider"><span class="material-symbols-outlined">arrow_right_alt</span></div>
                   <div class="pm-ba-side pm-ba-after" style="--accent: #10b981;">
-                    <span class="pm-ba-label">After</span>
-                    <div class="pm-ba-content">Vibrant & Graded</div>
+                    <span class="pm-ba-label">${t('get.after')}</span>
+                    <div class="pm-ba-content">${t('get.cap3After')}</div>
                   </div>
                 </div>
               </div>
@@ -134,23 +134,23 @@ export async function render(container) {
             <div class="pm-feature-header">
               <div class="pm-feature-title-group">
                 <span class="material-symbols-outlined pm-feature-icon" style="color: #f59e0b;">title</span>
-                <h3 class="pm-feature-title">Annotate</h3>
+                <h3 class="pm-feature-title">${t('get.cap4Title')}</h3>
               </div>
               <div class="pm-feature-toggle"><span class="material-symbols-outlined">add</span></div>
             </div>
-            <p class="pm-feature-desc">Add dynamic captions, watermarks, and titles mapped to data.</p>
+            <p class="pm-feature-desc">${t('get.cap4Desc')}</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Turn metadata into beautiful overlays. Drop the location name and date onto every single photo from your travel folder automatically.</p>
+                <p>${t('get.cap4Detail')}</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
-                    <span class="pm-ba-label">Before</span>
-                    <div class="pm-ba-content">Blank Photo</div>
+                    <span class="pm-ba-label">${t('get.before')}</span>
+                    <div class="pm-ba-content">${t('get.cap4Before')}</div>
                   </div>
                   <div class="pm-ba-divider"><span class="material-symbols-outlined">arrow_right_alt</span></div>
                   <div class="pm-ba-side pm-ba-after" style="--accent: #f59e0b;">
-                    <span class="pm-ba-label">After</span>
-                    <div class="pm-ba-content">"Paris, 2024" Overlay</div>
+                    <span class="pm-ba-label">${t('get.after')}</span>
+                    <div class="pm-ba-content">${t('get.cap4After')}</div>
                   </div>
                 </div>
               </div>
@@ -162,23 +162,23 @@ export async function render(container) {
             <div class="pm-feature-header">
               <div class="pm-feature-title-group">
                 <span class="material-symbols-outlined pm-feature-icon" style="color: #ec4899;">table_rows_narrow</span>
-                <h3 class="pm-feature-title">Aggregate</h3>
+                <h3 class="pm-feature-title">${t('get.cap5Title')}</h3>
               </div>
               <div class="pm-feature-toggle"><span class="material-symbols-outlined">add</span></div>
             </div>
-            <p class="pm-feature-desc">Combine multiple inputs into powerful single outputs.</p>
+            <p class="pm-feature-desc">${t('get.cap5Desc')}</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Stitch hundreds of photos into a seamless timelapse video, a dynamic PowerPoint presentation, or an animated GIF with minimal effort.</p>
+                <p>${t('get.cap5Detail')}</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
-                    <span class="pm-ba-label">Before</span>
-                    <div class="pm-ba-content">Hundreds of JPGs</div>
+                    <span class="pm-ba-label">${t('get.before')}</span>
+                    <div class="pm-ba-content">${t('get.cap5Before')}</div>
                   </div>
                   <div class="pm-ba-divider"><span class="material-symbols-outlined">arrow_right_alt</span></div>
                   <div class="pm-ba-side pm-ba-after" style="--accent: #ec4899;">
-                    <span class="pm-ba-label">After</span>
-                    <div class="pm-ba-content">One Flawless Video</div>
+                    <span class="pm-ba-label">${t('get.after')}</span>
+                    <div class="pm-ba-content">${t('get.cap5After')}</div>
                   </div>
                 </div>
               </div>
@@ -190,23 +190,23 @@ export async function render(container) {
             <div class="pm-feature-header">
               <div class="pm-feature-title-group">
                 <span class="material-symbols-outlined pm-feature-icon" style="color: #f97316;">auto_awesome</span>
-                <h3 class="pm-feature-title">Create</h3>
+                <h3 class="pm-feature-title">${t('get.cap6Title')}</h3>
               </div>
               <div class="pm-feature-toggle"><span class="material-symbols-outlined">add</span></div>
             </div>
-            <p class="pm-feature-desc">Generate production-ready deliverables from the ground up.</p>
+            <p class="pm-feature-desc">${t('get.cap6Desc')}</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Produce finished portfolios, contact sheets, and marketing materials directly from the app, tailored exactly to your brand.</p>
+                <p>${t('get.cap6Detail')}</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
-                    <span class="pm-ba-label">Before</span>
-                    <div class="pm-ba-content">Scattered Assets</div>
+                    <span class="pm-ba-label">${t('get.before')}</span>
+                    <div class="pm-ba-content">${t('get.cap6Before')}</div>
                   </div>
                   <div class="pm-ba-divider"><span class="material-symbols-outlined">arrow_right_alt</span></div>
                   <div class="pm-ba-side pm-ba-after" style="--accent: #f97316;">
-                    <span class="pm-ba-label">After</span>
-                    <div class="pm-ba-content">Print-Ready PDF</div>
+                    <span class="pm-ba-label">${t('get.after')}</span>
+                    <div class="pm-ba-content">${t('get.cap6After')}</div>
                   </div>
                 </div>
               </div>
@@ -218,23 +218,23 @@ export async function render(container) {
             <div class="pm-feature-header">
               <div class="pm-feature-title-group">
                 <span class="material-symbols-outlined pm-feature-icon" style="color: #14b8a6;">folder_managed</span>
-                <h3 class="pm-feature-title">Organise</h3>
+                <h3 class="pm-feature-title">${t('get.cap7Title')}</h3>
               </div>
               <div class="pm-feature-toggle"><span class="material-symbols-outlined">add</span></div>
             </div>
-            <p class="pm-feature-desc">Route files dynamically into intelligent folder structures.</p>
+            <p class="pm-feature-desc">${t('get.cap7Desc')}</p>
             <div class="pm-feature-details">
               <div class="pm-feature-details-inner">
-                <p>Tired of manually sorting files? Let Zumilabs Studio move your landscape photos into one folder, and portraits into another, automatically.</p>
+                <p>${t('get.cap7Detail')}</p>
                 <div class="pm-ba-showcase">
                   <div class="pm-ba-side pm-ba-before">
-                    <span class="pm-ba-label">Before</span>
-                    <div class="pm-ba-content">One Messy Folder</div>
+                    <span class="pm-ba-label">${t('get.before')}</span>
+                    <div class="pm-ba-content">${t('get.cap7Before')}</div>
                   </div>
                   <div class="pm-ba-divider"><span class="material-symbols-outlined">arrow_right_alt</span></div>
                   <div class="pm-ba-side pm-ba-after" style="--accent: #14b8a6;">
-                    <span class="pm-ba-label">After</span>
-                    <div class="pm-ba-content">Ranked & Sorted</div>
+                    <span class="pm-ba-label">${t('get.after')}</span>
+                    <div class="pm-ba-content">${t('get.cap7After')}</div>
                   </div>
                 </div>
               </div>
@@ -244,18 +244,18 @@ export async function render(container) {
         </div>
       </section>
 
-      <!-- Who uses Zumilabs Studio Section (Bento Design) -->
+      <!-- Who uses ZumiLabs Studio Section (Bento Design) -->
       <section class="get-users-section bento-section">
-        <h2 class="get-section-title">Who uses Zumilabs Studio?</h2>
+        <h2 class="get-section-title">${t('get.usersTitle')}</h2>
         <div class="gu-bento-grid">
           
           <div class="gu-bento-card gu-span-5 gu-individuals" tabindex="0">
             <div class="gu-bento-inner">
                <div class="gu-bento-head">
                   <div class="gu-bento-icon teal-bg"><span class="material-symbols-outlined">person</span></div>
-                  <h3>Individuals</h3>
+                  <h3>${t('get.userIndividuals')}</h3>
                </div>
-               <p>Auto-categorize messy photo dumps, compile vacation memories into simple timelapses, and efficiently format images for sharing or archiving without needing complex editing software.</p>
+               <p>${t('get.userIndividualsDesc')}</p>
             </div>
           </div>
 
@@ -263,9 +263,9 @@ export async function render(container) {
             <div class="gu-bento-inner">
                <div class="gu-bento-head">
                   <div class="gu-bento-icon orange-bg"><span class="material-symbols-outlined">camera_alt</span></div>
-                  <h3>Photographers</h3>
+                  <h3>${t('get.userPhotographers')}</h3>
                </div>
-               <p>Batch process exports, apply uniform watermarks, auto-generate client contact sheets, extract EXIF data for cataloging, and standardise color profiles across large shoots.</p>
+               <p>${t('get.userPhotographersDesc')}</p>
             </div>
           </div>
 
@@ -273,9 +273,9 @@ export async function render(container) {
             <div class="gu-bento-inner">
                <div class="gu-bento-head">
                   <div class="gu-bento-icon pink-bg"><span class="material-symbols-outlined">video_camera_front</span></div>
-                  <h3>Content Creators</h3>
+                  <h3>${t('get.userCreators')}</h3>
                </div>
-               <p>Adapt singular media into various formats for Instagram, TikTok, and YouTube. Automatically overlay branding, slice highlights, and convert snippets into engaging GIFs.</p>
+               <p>${t('get.userCreatorsDesc')}</p>
             </div>
           </div>
 
@@ -283,9 +283,9 @@ export async function render(container) {
             <div class="gu-bento-inner">
                <div class="gu-bento-head">
                   <div class="gu-bento-icon blue-bg"><span class="material-symbols-outlined">business</span></div>
-                  <h3>Enterprise Users</h3>
+                  <h3>${t('get.userEnterprise')}</h3>
                </div>
-               <p>Build robust product photography pipelines, clear backgrounds via local AI, standardise margins for thousands of SKUs, and strip sensitive metadata for compliance.</p>
+               <p>${t('get.userEnterpriseDesc')}</p>
             </div>
           </div>
 
@@ -296,12 +296,12 @@ export async function render(container) {
       <section class="get-automation-section">
         <div class="get-automation-card">
           <div class="get-automation-content">
-            <h2 class="get-automation-title">Smart Automation, Made Simple.</h2>
+            <h2 class="get-automation-title">${t('get.automationTitle')}</h2>
             <p class="get-automation-desc">
-              Think of Zumilabs Studio as your tireless creative assistant. You can set simple rules—like "skip blurry photos" or "only process landscapes"—and let it do the heavy lifting on thousands of images at once.
+              ${t('get.automationDesc1')}
             </p>
             <p class="get-automation-desc" style="margin-top: 15px;">
-              <strong>Just Ask Claude:</strong> Describe what you want in plain English, and our AI will instantly build the perfect editing workflow for you. No technical skills required.
+              ${t('get.automationDesc2')}
             </p>
           </div>
           <div class="get-automation-icon">

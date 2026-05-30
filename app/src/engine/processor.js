@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Image Processor
+ * ZumiLabs Studio — Image Processor
  *
  * Executes a recipe's node tree against a single image.
  * Supports:

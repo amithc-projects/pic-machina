@@ -9,6 +9,7 @@ import { getRecipe }        from '../data/recipes.js';
 import { navigate }         from '../main.js';
 import { ImageProcessor } from '../engine/index.js';
 import { extractExif }      from '../engine/exif-reader.js';
+import { t }                from '../i18n/index.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -29,7 +30,7 @@ export async function render(container, hash) {
           </button>
           <div class="screen-title">
             <span class="material-symbols-outlined">compare</span>
-            ${recipe ? escHtml(recipe.name) : 'Comparison'}
+            ${recipe ? escHtml(recipe.name) : t('cmp.title')}
           </div>
         </div>
       </div>
@@ -39,15 +40,15 @@ export async function render(container, hash) {
 
       <div id="cmp-footer" class="cmp-footer" style="display:none">
         <div class="cmp-footer-left">
-          <span class="ic-badge">Before</span>
+          <span class="ic-badge">${t('cmp.before')}</span>
           <span id="cmp-before-info" class="mono text-sm text-muted"></span>
         </div>
         <div class="cmp-footer-right">
-          <span class="ic-badge ic-badge--blue">After</span>
+          <span class="ic-badge ic-badge--blue">${t('cmp.after')}</span>
           <span id="cmp-after-info" class="mono text-sm text-muted"></span>
           <button class="btn-secondary" id="cmp-btn-save" style="margin-left:8px">
             <span class="material-symbols-outlined">download</span>
-            Save After
+            ${t('cmp.saveAfter')}
           </button>
         </div>
       </div>
@@ -104,8 +105,8 @@ export async function render(container, hash) {
       return {
         beforeUrl,
         afterUrl,
-        beforeLabel: 'Original',
-        afterLabel: recipe ? recipe.name : 'Result',
+        beforeLabel: t('cmp.original'),
+        afterLabel: recipe ? recipe.name : t('cmp.result'),
         context
       };
     }

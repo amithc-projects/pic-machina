@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Time Range Strip Component (Phase 6)
+ * ZumiLabs Studio — Time Range Strip Component (Phase 6)
  *
  * Renders an interactive time-range editor for video-effect nodes in NED.
  * Includes mode toggle (Standard/Freeze), numeric fields, easing selector,
@@ -7,6 +7,7 @@
  */
 
 import { extractVideoFilmstrip } from './video-frame.js';
+import { t as i18n } from '../i18n/index.js';
 
 // ── HTML ─────────────────────────────────────────────────────────────────────
 
@@ -27,16 +28,16 @@ export function renderTimeRangeSection(node, def) {
   const easing   = tr.easing || 'linear';
   const strengthLabel = def.strengthParam
     ? (def.params || []).find(p => p.name === def.strengthParam)?.label || def.strengthParam
-    : '(binary on/off)';
+    : i18n('trs.binaryOnOff');
 
   return `
     <div class="ned-section-title" style="margin-top:16px">
       <span class="material-symbols-outlined" style="font-size:14px">timeline</span>
-      Time Range
+      ${i18n('trs.timeRange')}
     </div>
     <div class="ned-fields">
       <div class="ned-field">
-        <label class="ned-field-label">Enable Time Range</label>
+        <label class="ned-field-label">${i18n('trs.enableTimeRange')}</label>
         <label class="ned-toggle">
           <input type="checkbox" id="ned-tr-enabled" ${enabled ? 'checked' : ''}>
           <span class="ned-toggle-track"></span>
@@ -46,21 +47,21 @@ export function renderTimeRangeSection(node, def) {
       <div id="ned-tr-controls" style="display:${enabled ? 'flex' : 'none'};flex-direction:column;gap:10px">
         <!-- Mode -->
         <div class="ned-field">
-          <label class="ned-field-label">Mode</label>
+          <label class="ned-field-label">${i18n('trs.mode')}</label>
           <select id="ned-tr-mode" class="ic-input">
-            <option value="standard" ${mode === 'standard' ? 'selected' : ''}>Standard — modulate existing frames</option>
-            <option value="freeze" ${mode === 'freeze' ? 'selected' : ''}>Freeze — insert new frames</option>
+            <option value="standard" ${mode === 'standard' ? 'selected' : ''}>${i18n('trs.modeStandard')}</option>
+            <option value="freeze" ${mode === 'freeze' ? 'selected' : ''}>${i18n('trs.modeFreeze')}</option>
           </select>
         </div>
 
         <!-- Standard fields -->
         <div id="ned-tr-standard-fields" style="display:${mode === 'standard' ? 'flex' : 'none'};flex-direction:column;gap:10px">
           <div class="ned-field">
-            <label class="ned-field-label">Start (s)</label>
+            <label class="ned-field-label">${i18n('trs.startS')}</label>
             <input type="number" id="ned-tr-start" class="ic-input" value="${start}" min="0" step="0.1">
           </div>
           <div class="ned-field">
-            <label class="ned-field-label">End (s)</label>
+            <label class="ned-field-label">${i18n('trs.endS')}</label>
             <input type="number" id="ned-tr-end" class="ic-input" value="${end}" min="0" step="0.1">
           </div>
         </div>
@@ -68,36 +69,36 @@ export function renderTimeRangeSection(node, def) {
         <!-- Freeze fields -->
         <div id="ned-tr-freeze-fields" style="display:${mode === 'freeze' ? 'flex' : 'none'};flex-direction:column;gap:10px">
           <div class="ned-field">
-            <label class="ned-field-label">Capture Frame At (s)</label>
+            <label class="ned-field-label">${i18n('trs.captureFrameAtS')}</label>
             <input type="number" id="ned-tr-freeze-at" class="ic-input" value="${start}" min="0" step="0.1">
           </div>
           <div class="ned-field">
-            <label class="ned-field-label">Insert Duration (s)</label>
+            <label class="ned-field-label">${i18n('trs.insertDurationS')}</label>
             <input type="number" id="ned-tr-insert-dur" class="ic-input" value="${insertDur}" min="0.1" step="0.1">
           </div>
         </div>
 
         <!-- Fade / Easing -->
         <div class="ned-field">
-          <label class="ned-field-label">Fade In (s)</label>
+          <label class="ned-field-label">${i18n('trs.fadeInS')}</label>
           <input type="number" id="ned-tr-fade-in" class="ic-input" value="${fadeIn}" min="0" step="0.1">
         </div>
         <div class="ned-field">
-          <label class="ned-field-label">Fade Out (s)</label>
+          <label class="ned-field-label">${i18n('trs.fadeOutS')}</label>
           <input type="number" id="ned-tr-fade-out" class="ic-input" value="${fadeOut}" min="0" step="0.1">
         </div>
         <div class="ned-field">
-          <label class="ned-field-label">Easing</label>
+          <label class="ned-field-label">${i18n('trs.easing')}</label>
           <select id="ned-tr-easing" class="ic-input">
-            <option value="linear"   ${easing === 'linear'   ? 'selected' : ''}>Linear</option>
-            <option value="ease-in"  ${easing === 'ease-in'  ? 'selected' : ''}>Ease In (accelerate)</option>
-            <option value="ease-out" ${easing === 'ease-out' ? 'selected' : ''}>Ease Out (decelerate)</option>
+            <option value="linear"   ${easing === 'linear'   ? 'selected' : ''}>${i18n('trs.easingLinear')}</option>
+            <option value="ease-in"  ${easing === 'ease-in'  ? 'selected' : ''}>${i18n('trs.easingEaseIn')}</option>
+            <option value="ease-out" ${easing === 'ease-out' ? 'selected' : ''}>${i18n('trs.easingEaseOut')}</option>
           </select>
         </div>
 
         <!-- Animated param badge -->
         <div class="ned-field" style="opacity:0.65">
-          <label class="ned-field-label">Animated Parameter</label>
+          <label class="ned-field-label">${i18n('trs.animatedParameter')}</label>
           <span class="ned-tr-badge">${strengthLabel}</span>
         </div>
 
@@ -106,8 +107,8 @@ export function renderTimeRangeSection(node, def) {
           <div class="ned-tr-strip" id="ned-tr-strip">
             <div class="ned-tr-strip-filmstrip" id="ned-tr-filmstrip"></div>
             <div class="ned-tr-strip-overlay" id="ned-tr-overlay"></div>
-            <div class="ned-tr-handle ned-tr-handle-start" id="ned-tr-handle-start" title="Drag to set start"></div>
-            <div class="ned-tr-handle ned-tr-handle-end"   id="ned-tr-handle-end"   title="Drag to set end"></div>
+            <div class="ned-tr-handle ned-tr-handle-start" id="ned-tr-handle-start" title="${i18n('trs.dragToSetStart')}"></div>
+            <div class="ned-tr-handle ned-tr-handle-end"   id="ned-tr-handle-end"   title="${i18n('trs.dragToSetEnd')}"></div>
           </div>
           <div class="ned-tr-strip-labels" id="ned-tr-strip-labels">
             <span>0s</span>

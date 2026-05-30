@@ -13,6 +13,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/branding/brand-pack/favicons/favicon-16.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/branding/brand-pack/favicons/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="48x48" href="/branding/brand-pack/favicons/favicon-48.png" />
+  <link rel="icon" type="image/svg+xml" href="/branding/brand-pack/favicons/favicon.svg" />
 
   <!-- Apple Touch Icon -->
   <link rel="apple-touch-icon" sizes="180x180" href="/branding/brand-pack/app-icons/apple-touch-icon.png" />
@@ -23,12 +24,12 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="ZumilabsStudio" />
+  <meta name="apple-mobile-web-app-title" content="ZumiLabs Studio" />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zumilabs-studio.netlify.app/" />
-  <meta property="og:title" content="Zumilabs Studio — Pro Studio Batch Media Processor" />
+  <meta property="og:title" content="ZumiLabs Studio — Pro Studio Batch Media Processor" />
   <meta property="og:description"
     content="Local-first, high-performance batch media processing with a visual node engine." />
   <meta property="og:image"
@@ -37,7 +38,7 @@
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://zumilabs-studio.netlify.app/" />
-  <meta property="twitter:title" content="Zumilabs Studio — Pro Studio Batch Media Processor" />
+  <meta property="twitter:title" content="ZumiLabs Studio — Pro Studio Batch Media Processor" />
   <meta property="twitter:description"
     content="Local-first, high-performance batch media processing with a visual node engine." />
   <meta property="twitter:image"
@@ -56,7 +57,7 @@
   <!-- Pro Studio Theme (overrides Aurora tokens) -->
 
   <!-- App-level layout & utilities -->
-  <script type="module" crossorigin src="/assets/index-CPgbY6Gu.js"></script>
+  <script type="module" crossorigin src="/assets/index-mehaNZGJ.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/ai-bgremoval-CLcXU_4U.js">
   <link rel="stylesheet" crossorigin href="/assets/index-8lb7KIGM.css">
 </head>
@@ -67,149 +68,149 @@
   <div id="app-shell" class="app-shell">
 
     <!-- Left Navigation Rail -->
-    <nav id="app-nav" class="app-nav" aria-label="Main navigation">
+    <nav id="app-nav" class="app-nav" aria-label="Main navigation" data-i18n-aria-label="nav.mainNavigation">
       <div class="app-nav__brand">
-        <div class="app-nav__logo" aria-label="Zumilabs Studio">
+        <div class="app-nav__logo" aria-label="ZumiLabs Studio">
           <img src="/branding/logo.svg" alt="" style="width:24px;height:24px;display:block" />
         </div>
-        <span class="app-nav__wordmark">Zumilabs Studio</span>
+        <span class="app-nav__wordmark">ZumiLabs Studio</span>
       </div>
 
       <ul class="app-nav__items" role="list">
 
         <!-- Discover -->
         <li>
-          <a href="#gsd" class="app-nav__item" data-screen="gsd" title="Get Started">
+          <a href="#gsd" class="app-nav__item" data-screen="gsd" title="Get Started" data-i18n-title="nav.getStartedTitle">
             <span class="material-symbols-outlined">rocket_launch</span>
-            <span class="app-nav__label">Get Started</span>
+            <span class="app-nav__label" data-i18n="nav.getStarted">Get Started</span>
           </a>
         </li>
         <li>
-          <a href="#shc" class="app-nav__item" data-screen="shc" title="Showcase">
+          <a href="#shc" class="app-nav__item" data-screen="shc" title="Showcase" data-i18n-title="nav.showcaseTitle">
             <span class="material-symbols-outlined">star</span>
-            <span class="app-nav__label">Showcase</span>
+            <span class="app-nav__label" data-i18n="nav.showcase">Showcase</span>
           </a>
         </li>
 
         <li class="app-nav__divider"></li>
 
         <!-- Create -->
-        <li class="app-nav__subheader">Create</li>
+        <li class="app-nav__subheader" data-i18n="nav.create">Create</li>
         <li>
-          <a href="#ime" class="app-nav__item" data-screen="ime" title="Image Editor — apply transforms to a single image">
+          <a href="#ime" class="app-nav__item" data-screen="ime" title="Image Editor — apply transforms to a single image" data-i18n-title="nav.imageEditorTitle">
             <span class="material-symbols-outlined app-nav__icon">photo_filter</span>
-            <span class="app-nav__label">Image Editor</span>
+            <span class="app-nav__label" data-i18n="nav.imageEditor">Image Editor</span>
           </a>
         </li>
         <li>
-          <a href="#tme" class="app-nav__item" data-screen="tme" title="Video Timeline Editor">
+          <a href="#tme" class="app-nav__item" data-screen="tme" title="Video Timeline Editor" data-i18n-title="nav.videoTimelineTitle">
             <span class="material-symbols-outlined">view_timeline</span>
-            <span class="app-nav__label">Video Timeline</span>
+            <span class="app-nav__label" data-i18n="nav.videoTimeline">Video Timeline</span>
           </a>
         </li>
         <li>
-          <a href="#aud" class="app-nav__item" data-screen="aud" title="Voice Studio — AI voice narration">
+          <a href="#aud" class="app-nav__item" data-screen="aud" title="Voice Studio — AI voice narration" data-i18n-title="nav.voiceStudioTitle">
             <span class="material-symbols-outlined app-nav__icon">record_voice_over</span>
-            <span class="app-nav__label">Voice Studio</span>
+            <span class="app-nav__label" data-i18n="nav.voiceStudio">Voice Studio</span>
           </a>
         </li>
         <li>
-          <a href="#snd" class="app-nav__item" data-screen="snd" title="Audio Studio — mix and edit audio tracks">
+          <a href="#snd" class="app-nav__item" data-screen="snd" title="Sound Studio — mix and edit audio tracks" data-i18n-title="nav.audioStudioTitle">
             <span class="material-symbols-outlined app-nav__icon">graphic_eq</span>
-            <span class="app-nav__label">Audio Studio</span>
+            <span class="app-nav__label" data-i18n="nav.audioStudio">Sound Studio</span>
           </a>
         </li>
 
         <li class="app-nav__divider"></li>
 
         <!-- Batch Processing -->
-        <li class="app-nav__subheader">Batch Processing</li>
+        <li class="app-nav__subheader" data-i18n="nav.batchProcessing">Batch Processing</li>
         <li>
-          <a href="#lib" class="app-nav__item" data-screen="lib" title="Recipe Library — saved batch processing recipes">
+          <a href="#lib" class="app-nav__item" data-screen="lib" title="Recipe Library — saved batch processing recipes" data-i18n-title="nav.recipeLibraryTitle">
             <span class="material-symbols-outlined">library_books</span>
-            <span class="app-nav__label">Recipe Library</span>
+            <span class="app-nav__label" data-i18n="nav.recipeLibrary">Recipe Library</span>
           </a>
         </li>
         <li>
-          <a href="#bkb" class="app-nav__item" data-screen="bkb" title="Block Builder — create reusable transform blocks">
+          <a href="#bkb" class="app-nav__item" data-screen="bkb" title="Block Builder — create reusable transform blocks" data-i18n-title="nav.blockBuilderTitle">
             <span class="material-symbols-outlined">widgets</span>
-            <span class="app-nav__label">Block Builder</span>
+            <span class="app-nav__label" data-i18n="nav.blockBuilder">Block Builder</span>
           </a>
         </li>
         <li>
-          <a href="#tpl" class="app-nav__item" data-screen="tpl" title="Template Editor — design output templates">
+          <a href="#tpl" class="app-nav__item" data-screen="tpl" title="Template Editor — design output templates" data-i18n-title="nav.templatesTitle">
             <span class="material-symbols-outlined">wallpaper</span>
-            <span class="app-nav__label">Templates</span>
+            <span class="app-nav__label" data-i18n="nav.templates">Templates</span>
           </a>
         </li>
 
         <li class="app-nav__divider"></li>
 
         <!-- Media -->
-        <li class="app-nav__subheader">Media</li>
+        <li class="app-nav__subheader" data-i18n="nav.media">Media</li>
         <li>
-          <a href="#gmd" class="app-nav__item" data-screen="gmd" title="Import Media — search & download free photos and videos">
+          <a href="#gmd" class="app-nav__item" data-screen="gmd" title="Import Media — search & download free photos and videos" data-i18n-title="nav.importMediaTitle">
             <span class="material-symbols-outlined">cloud_download</span>
-            <span class="app-nav__label">Import Media</span>
+            <span class="app-nav__label" data-i18n="nav.importMedia">Import Media</span>
           </a>
         </li>
         <li>
-          <a href="#fld" class="app-nav__item" data-screen="fld" title="Media Browser — browse local folders">
+          <a href="#fld" class="app-nav__item" data-screen="fld" title="Media Browser — browse local folders" data-i18n-title="nav.mediaBrowserTitle">
             <span class="material-symbols-outlined">photo_library</span>
-            <span class="app-nav__label">Media Browser</span>
+            <span class="app-nav__label" data-i18n="nav.mediaBrowser">Media Browser</span>
           </a>
         </li>
         <li>
-          <a href="#out" class="app-nav__item" data-screen="out" title="Output History — previously processed files">
+          <a href="#out" class="app-nav__item" data-screen="out" title="Output History — previously processed files" data-i18n-title="nav.outputHistoryTitle">
             <span class="material-symbols-outlined">history</span>
-            <span class="app-nav__label">Output History</span>
+            <span class="app-nav__label" data-i18n="nav.outputHistory">Output History</span>
           </a>
         </li>
 
         <li class="app-nav__divider"></li>
 
         <!-- System -->
-        <li class="app-nav__subheader">System</li>
+        <li class="app-nav__subheader" data-i18n="nav.system">System</li>
         <li>
-          <a href="#mdl" class="app-nav__item" data-screen="mdl" title="AI Models — manage local AI model files">
+          <a href="#mdl" class="app-nav__item" data-screen="mdl" title="AI Models — manage local AI model files" data-i18n-title="nav.aiModelsTitle">
             <span class="material-symbols-outlined">smart_toy</span>
-            <span class="app-nav__label">AI Models</span>
+            <span class="app-nav__label" data-i18n="nav.aiModels">AI Models</span>
           </a>
         </li>
         <li>
-          <a href="#pow" class="app-nav__item" data-screen="pow" title="Power Users — engine internals & node reference"
+          <a href="#pow" class="app-nav__item" data-screen="pow" title="Power Users — engine internals & node reference" data-i18n-title="nav.powerUsersTitle"
             style="padding-right:12px;">
             <span class="material-symbols-outlined">bolt</span>
-            <span class="app-nav__label">Power Users</span>
+            <span class="app-nav__label" data-i18n="nav.powerUsers">Power Users</span>
             <span class="ic-badge ic-badge--amber nav-premium-badge"
               style="font-size:9px; margin-left:auto; padding:1px 4px; box-shadow:0 0 0 1px var(--ps-border)">PRO</span>
           </a>
         </li>
         <li>
-          <a href="#bup" class="app-nav__item" data-screen="bup" id="nav-db-backup" title="Config Sync — backup & restore settings"
+          <a href="#bup" class="app-nav__item" data-screen="bup" id="nav-db-backup" title="Config Sync — backup & restore settings" data-i18n-title="nav.configSyncTitle"
             style="padding-right:12px;">
             <span class="material-symbols-outlined">settings_backup_restore</span>
-            <span class="app-nav__label">Config Sync</span>
+            <span class="app-nav__label" data-i18n="nav.configSync">Config Sync</span>
             <span class="ic-badge ic-badge--amber nav-premium-badge"
               style="font-size:9px; margin-left:auto; padding:1px 4px; box-shadow:0 0 0 1px var(--ps-border)">PRO</span>
           </a>
         </li>
         <li>
-          <a href="#sys" class="app-nav__item" data-screen="sys" id="nav-settings" title="Global Preferences">
+          <a href="#sys" class="app-nav__item" data-screen="sys" id="nav-settings" title="Global Preferences" data-i18n-title="nav.settingsTitle">
             <span class="material-symbols-outlined">settings</span>
-            <span class="app-nav__label">Settings</span>
+            <span class="app-nav__label" data-i18n="nav.settings">Settings</span>
           </a>
         </li>
         <li>
-          <a href="#lic" class="app-nav__item" data-screen="lic" id="nav-license" title="Subscription & License">
+          <a href="#lic" class="app-nav__item" data-screen="lic" id="nav-license" title="Subscription & License" data-i18n-title="nav.licenseTitle">
             <span class="material-symbols-outlined">loyalty</span>
-            <span class="app-nav__label">License</span>
+            <span class="app-nav__label" data-i18n="nav.license">License</span>
           </a>
         </li>
         <li>
-          <a href="#hlp" class="app-nav__item" data-screen="hlp" id="nav-help" title="Tutorial & Documentation">
+          <a href="#hlp" class="app-nav__item" data-screen="hlp" id="nav-help" title="Tutorial & Documentation" data-i18n-title="nav.helpTitle">
             <span class="material-symbols-outlined">help</span>
-            <span class="app-nav__label">Help</span>
+            <span class="app-nav__label" data-i18n="nav.help">Help</span>
           </a>
         </li>
 
@@ -217,7 +218,7 @@
 
       <div class="app-nav__footer">
         <button class="app-nav__item app-nav__item--icon-only" id="btn-theme-toggle" title="Toggle theme"
-          aria-label="Toggle theme">
+          aria-label="Toggle theme" data-i18n-title="nav.toggleTheme" data-i18n-aria-label="nav.toggleTheme">
           <span class="material-symbols-outlined">contrast</span>
         </button>
       </div>
@@ -237,10 +238,10 @@
 
   <!-- Toast portal is created dynamically by Aurora toast.js -->
 
-  <!-- Sidekick file manager web component (loaded before the app so the custom element is defined) -->
-  <script src="/sidekick-manager.iife.js"></script>
+  <!-- ZumiLabs file browser web component (loaded before the app so the custom element is defined) -->
+  <script src="/zumilabs-file-browser.iife.js"></script>
 
-  <!-- Send-to-Cloud web component (used by the embedded sidekick file manager) -->
+  <!-- Send-to-Cloud web component (used by the embedded file browser) -->
   <script src="/send-to-cloud.js"></script>
 
   <!-- Entry point -->

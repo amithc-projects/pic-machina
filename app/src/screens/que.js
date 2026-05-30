@@ -4,6 +4,7 @@
 
 import { navigate } from '../main.js';
 import { showConfirm } from '../utils/dialogs.js';
+import { t } from '../i18n/index.js';
 
 export function render(container) {
   container.innerHTML = `
@@ -11,16 +12,16 @@ export function render(container) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">pending_actions</span>
-          Processing Queue
+          ${t('que.title')}
         </div>
         <div class="flex items-center gap-2">
           <span id="que-status-badge" class="ic-badge ic-badge--blue">
             <span class="material-symbols-outlined" style="font-size:13px;animation:spin 1s linear infinite">refresh</span>
-            Waiting…
+            ${t('que.waiting')}
           </span>
           <button class="btn-danger" id="btn-cancel-batch">
             <span class="material-symbols-outlined">stop</span>
-            Cancel
+            ${t('que.cancel')}
           </button>
         </div>
       </div>
@@ -34,14 +35,14 @@ export function render(container) {
             </svg>
             <div class="que-ring-center">
               <div class="que-percent" id="que-percent">0%</div>
-              <div class="que-ring-label" id="que-ring-label">Starting</div>
+              <div class="que-ring-label" id="que-ring-label">${t('que.starting')}</div>
             </div>
           </div>
           <div class="que-stats">
-            <div class="que-stat"><div class="que-stat-value" id="que-processed">0</div><div class="que-stat-label">Done</div></div>
-            <div class="que-stat"><div class="que-stat-value" id="que-total">—</div><div class="que-stat-label">Total</div></div>
-            <div class="que-stat"><div class="que-stat-value" style="color:var(--ps-success)" id="que-success">0</div><div class="que-stat-label">OK</div></div>
-            <div class="que-stat"><div class="que-stat-value" style="color:var(--ps-danger)" id="que-fail">0</div><div class="que-stat-label">Failed</div></div>
+            <div class="que-stat"><div class="que-stat-value" id="que-processed">0</div><div class="que-stat-label">${t('que.statDone')}</div></div>
+            <div class="que-stat"><div class="que-stat-value" id="que-total">—</div><div class="que-stat-label">${t('que.statTotal')}</div></div>
+            <div class="que-stat"><div class="que-stat-value" style="color:var(--ps-success)" id="que-success">0</div><div class="que-stat-label">${t('que.statOk')}</div></div>
+            <div class="que-stat"><div class="que-stat-value" style="color:var(--ps-danger)" id="que-fail">0</div><div class="que-stat-label">${t('que.statFailed')}</div></div>
           </div>
           <div class="que-current-file mono text-sm text-muted" id="que-current-file">—</div>
           <div style="margin-top:16px;width:100%;height:4px;border-radius:2px;overflow:hidden;background:var(--ps-bg-overlay)">
@@ -52,16 +53,16 @@ export function render(container) {
 
         <div class="que-log-panel">
           <div class="panel-header">
-            <span class="panel-header-title">Execution Log</span>
+            <span class="panel-header-title">${t('que.executionLog')}</span>
             <div class="flex items-center gap-2">
               <span id="que-elapsed" class="mono text-sm text-muted">00:00</span>
-              <button class="btn-ghost" id="btn-clear-log" title="Clear log">
+              <button class="btn-ghost" id="btn-clear-log" title="${t('que.clearLog')}">
                 <span class="material-symbols-outlined">delete_sweep</span>
               </button>
             </div>
           </div>
           <div class="terminal" id="que-terminal" style="flex:1;border-radius:0;border:none;border-top:1px solid var(--ps-border);font-size:11.5px;height:0;">
-            <div class="terminal-line--muted">[Zumilabs Studio] Ready — waiting for batch…</div>
+            <div class="terminal-line--muted">${t('que.ready')}</div>
           </div>
         </div>
       </div>
@@ -121,7 +122,7 @@ export function render(container) {
     if (!startTime) startElapsedTimer();
     setProgress(processed, total, overridePct);
     currentFile.textContent = filename;
-    ringLabel.textContent = 'Processing';
+    ringLabel.textContent = t('que.processing');
   };
 
   window._queLog = (level, msg) => {
@@ -136,14 +137,14 @@ export function render(container) {
   window._queComplete = (run) => {
     clearInterval(elapsedTimer);
     setProgress(run.imageCount, run.imageCount);
-    ringLabel.textContent = 'Complete';
-    statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px">check_circle</span> Done';
+    ringLabel.textContent = t('que.complete');
+    statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px">check_circle</span> ' + t('que.done');
     statusBadge.className = 'ic-badge ic-badge--green';
-    appendLog('ok', 'Batch complete — ' + run.successCount + ' succeeded, ' + run.failCount + ' failed');
-    currentFile.textContent = 'All done';
+    appendLog('ok', t('que.batchComplete', { success: run.successCount, fail: run.failCount }));
+    currentFile.textContent = t('que.allDone');
     const cancelBtn = container.querySelector('#btn-cancel-batch');
     if (cancelBtn) {
-      cancelBtn.innerHTML = '<span class="material-symbols-outlined">library_books</span> Library';
+      cancelBtn.innerHTML = '<span class="material-symbols-outlined">library_books</span> ' + t('que.library');
       cancelBtn.className = 'btn-secondary';
       cancelBtn.id = 'btn-que-library';
       cancelBtn.addEventListener('click', () => navigate('#lib'));
@@ -153,11 +154,11 @@ export function render(container) {
       const runAgainBtn = document.createElement('button');
       runAgainBtn.className = 'btn-secondary';
       runAgainBtn.style.cssText = 'width:100%;justify-content:center;margin-bottom:8px;border-color:var(--ps-blue);color:var(--ps-blue);';
-      runAgainBtn.innerHTML = '<span class="material-symbols-outlined">replay</span> Run Again';
+      runAgainBtn.innerHTML = '<span class="material-symbols-outlined">replay</span> ' + t('que.runAgain');
       runAgainBtn.addEventListener('click', () => {
         footerActs.innerHTML = '';
         terminal.innerHTML = '';
-        appendLog('info', 'Executing "Run Again" using previous batch configuration...');
+        appendLog('info', t('que.runAgainLog'));
         statOK.textContent = '0';
         statFail.textContent = '0';
         successCount = 0;
@@ -173,29 +174,29 @@ export function render(container) {
     const browseBtn = document.createElement('button');
     browseBtn.className = 'btn-primary';
     browseBtn.style.cssText = 'width:100%;justify-content:center;margin-bottom:8px';
-    browseBtn.innerHTML = '<span class="material-symbols-outlined">folder_open</span> Browse Output';
+    browseBtn.innerHTML = '<span class="material-symbols-outlined">folder_open</span> ' + t('que.browseOutput');
     browseBtn.addEventListener('click', () => navigate('#fld?run=' + run.id + '&from=que'));
     footerActs.appendChild(browseBtn);
 
     const histBtn = document.createElement('button');
     histBtn.className = 'btn-secondary';
     histBtn.style.cssText = 'width:100%;justify-content:center';
-    histBtn.innerHTML = '<span class="material-symbols-outlined">history</span> View Run History';
+    histBtn.innerHTML = '<span class="material-symbols-outlined">history</span> ' + t('que.viewHistory');
     histBtn.addEventListener('click', () => navigate('#out?run=' + run.id));
     footerActs.appendChild(histBtn);
   };
 
   window._queError = (msg) => {
     clearInterval(elapsedTimer);
-    statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px">error</span> Error';
+    statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px">error</span> ' + t('que.error');
     statusBadge.className = 'ic-badge ic-badge--red';
-    appendLog('error', 'FATAL: ' + msg);
+    appendLog('error', t('que.fatal', { msg }));
   };
 
   window._queInteractiveYield = (nodeId, snapshotCanvas) => {
     return new Promise((resolve) => {
-      appendLog('warn', `Recipe paused. Waiting for user interaction...`);
-      statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;animation:pulse 2s infinite">pan_tool</span> Yielded';
+      appendLog('warn', t('que.recipePaused'));
+      statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;animation:pulse 2s infinite">pan_tool</span> ' + t('que.yielded');
       statusBadge.className = 'ic-badge ic-badge--amber';
 
       const modal = document.createElement('dialog');
@@ -208,12 +209,12 @@ export function render(container) {
 
       modal.innerHTML = `
         <div class="modal__header">
-          <h2 class="modal__title">Interactive Eraser</h2>
+          <h2 class="modal__title">${t('que.eraserTitle')}</h2>
         </div>
         <div class="modal__body" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:16px; background:#1e1e1e;">
-          <p style="color:var(--ps-text-muted); font-size:13px; margin:0;">Draw over the object you want to erase, then click Confirm.</p>
+          <p style="color:var(--ps-text-muted); font-size:13px; margin:0;">${t('que.eraserHint')}</p>
           <div style="display:flex; align-items:center; gap:8px;">
-            <label style="color:var(--ps-text-muted); font-size:12px;">Brush Size:</label>
+            <label style="color:var(--ps-text-muted); font-size:12px;">${t('que.brushSize')}</label>
             <input type="range" id="yield-brush-size" min="5" max="100" value="30" style="width:150px;">
           </div>
           <div style="position:relative; border:1px solid var(--ps-border); border-radius:4px; overflow:hidden;">
@@ -222,7 +223,7 @@ export function render(container) {
           </div>
         </div>
         <div class="modal__footer" style="justify-content:flex-end;">
-          <button class="btn-primary" id="btn-yield-confirm">Confirm Mask</button>
+          <button class="btn-primary" id="btn-yield-confirm">${t('que.confirmMask')}</button>
         </div>
       `;
 
@@ -303,7 +304,7 @@ export function render(container) {
       modal.querySelector('#btn-yield-confirm').addEventListener('click', (e) => {
         const btn = e.target;
         btn.disabled = true;
-        btn.textContent = 'Processing...';
+        btn.textContent = t('que.processingBtn');
         btn.style.opacity = '0.7';
         
         // Give the browser a moment to repaint the button state before blocking the main thread
@@ -332,9 +333,9 @@ export function render(container) {
           modal.remove();
           
           // Reset status
-          statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;animation:spin 1s linear infinite">refresh</span> Processing';
+          statusBadge.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px;animation:spin 1s linear infinite">refresh</span> ' + t('que.processing');
           statusBadge.className = 'ic-badge ic-badge--blue';
-          appendLog('ok', `Mask received, resuming recipe...`);
+          appendLog('ok', t('que.maskReceived'));
           
           resolve(maskCanvas);
         }, 50);
@@ -346,9 +347,9 @@ export function render(container) {
     const ctrl = window._queRunControl;
     if (ctrl) {
       const confirmed = await showConfirm({
-        title: 'Cancel Batch?',
-        body: 'Are you sure you want to stop processing? Images already completed will be preserved.',
-        confirmText: 'Stop Batch',
+        title: t('que.cancelConfirmTitle'),
+        body: t('que.cancelConfirmBody'),
+        confirmText: t('que.stopBatch'),
         variant: 'danger',
         icon: 'cancel'
       });
@@ -356,8 +357,8 @@ export function render(container) {
 
       await ctrl.cancel();
       clearInterval(elapsedTimer);
-      appendLog('warn', 'Cancelled by user.');
-      statusBadge.textContent = 'Cancelled';
+      appendLog('warn', t('que.cancelledByUser'));
+      statusBadge.textContent = t('que.cancelled');
       statusBadge.className = 'ic-badge ic-badge--amber';
     } else {
       // No active batch (error state or batch never started) — go back to setup

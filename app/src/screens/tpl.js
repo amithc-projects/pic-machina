@@ -8,6 +8,7 @@ import { getAllTemplates, getTemplate, saveTemplate, deleteTemplate, createEmpty
 import { navigate, showToast } from '../main.js';
 import { uuid, now, formatDate } from '../utils/misc.js';
 import { showConfirm } from '../utils/dialogs.js';
+import { t } from '../i18n/index.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -20,11 +21,11 @@ async function renderList(container) {
   const emptyUser = templates.length === 0 ? `
     <div class="empty-state" style="padding-top:60px">
       <span class="material-symbols-outlined" style="font-size:48px">wallpaper</span>
-      <div class="empty-state-title">No templates yet</div>
-      <div class="empty-state-desc">Create your first perspective template to composite videos or images.</div>
+      <div class="empty-state-title">${t('tpl.noTemplates')}</div>
+      <div class="empty-state-desc">${t('tpl.noTemplatesDesc')}</div>
       <button class="btn-primary" id="tpl-empty-new">
         <span class="material-symbols-outlined">add</span>
-        Create Template
+        ${t('tpl.createTemplate')}
       </button>
     </div>` : '';
 
@@ -33,23 +34,23 @@ async function renderList(container) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">wallpaper</span>
-          Template Editor
+          ${t('tpl.title')}
         </div>
         <div class="flex gap-2">
           <button class="btn-secondary" id="tpl-btn-new-hf">
             <span class="material-symbols-outlined">animation</span>
-            New Hyperframe
+            ${t('tpl.newHyperframe')}
           </button>
           <button class="btn-primary" id="tpl-btn-new">
             <span class="material-symbols-outlined">add</span>
-            New Perspective
+            ${t('tpl.newPerspective')}
           </button>
         </div>
       </div>
 
       <div class="tpl-list-body">
         <div class="tpl-grid" id="tpl-grid">
-          ${templates.map(t => cardHTML(t)).join('')}
+          ${templates.map(tp => cardHTML(tp)).join('')}
         </div>
         ${emptyUser}
       </div>
@@ -69,15 +70,15 @@ async function renderList(container) {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
       const confirmed = await showConfirm({
-        title: 'Delete Template?',
-        body: 'This will permanently remove this template.',
-        confirmText: 'Delete',
+        title: t('tpl.deleteConfirmTitle'),
+        body: t('tpl.deleteConfirmBody'),
+        confirmText: t('tpl.delete'),
         variant: 'danger',
         icon: 'delete_forever'
       });
       if (!confirmed) return;
       await deleteTemplate(btn.dataset.id);
-      showToast?.({ variant: 'success', title: 'Template deleted' });
+      showToast?.({ variant: 'success', title: t('tpl.templateDeleted') });
       renderList(container); // re-render
     });
   });
@@ -102,7 +103,7 @@ function cardHTML(tpl) {
   const holdImg = isHF ? "linear-gradient(135deg, #181124 0%, #2e1e4a 100%)" : "linear-gradient(135deg, #111318 0%, #1e293b 100%)";
   const iconName = isHF ? 'animation' : 'wallpaper';
   const iconColor = isHF ? '#a855f7' : '#0ea5e9';
-  const descText = isHF ? 'HTML/GSAP Animation' : `${tpl.placeholders?.length || 0} Placeholder(s)`;
+  const descText = isHF ? t('tpl.htmlGsapAnim') : t('tpl.placeholderCount', { count: tpl.placeholders?.length || 0 });
   return `
     <article class="tpl-card" data-id="${tpl.id}" tabindex="0">
       <div class="tpl-card-icon" style="background: ${holdImg};">
@@ -116,10 +117,10 @@ function cardHTML(tpl) {
         </div>
       </div>
       <div class="tpl-card-actions">
-        <button class="btn-icon tpl-card-edit" data-id="${tpl.id}" title="Edit">
+        <button class="btn-icon tpl-card-edit" data-id="${tpl.id}" title="${t('tpl.edit')}">
           <span class="material-symbols-outlined">edit</span>
         </button>
-        <button class="btn-icon tpl-card-delete" data-id="${tpl.id}" title="Delete">
+        <button class="btn-icon tpl-card-delete" data-id="${tpl.id}" title="${t('tpl.delete')}">
           <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
         </button>
       </div>
@@ -142,44 +143,44 @@ async function renderEditor(container, tplId) {
         <div class="screen-header" style="flex-shrink:0;">
           <div class="flex items-center gap-2">
             <button class="btn-icon" id="tpl-back"><span class="material-symbols-outlined">arrow_back</span></button>
-            <div class="screen-title" style="font-size:16px;">Template</div>
+            <div class="screen-title" style="font-size:16px;">${t('tpl.template')}</div>
           </div>
         </div>
 
         <div style="padding:16px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:16px;">
           <div class="bld-config-form">
-            <label class="ic-label">Name</label>
+            <label class="ic-label">${t('tpl.name')}</label>
             <input type="text" id="tpl-name" class="ic-input" value="${escHtml(tpl.name)}">
 
-            <label class="ic-label" style="margin-top:12px;">Dimensions</label>
+            <label class="ic-label" style="margin-top:12px;">${t('tpl.dimensions')}</label>
             <div class="flex gap-2">
-               <input type="number" id="tpl-w" class="ic-input" value="${tpl.width}" style="flex:1" placeholder="Width">
+               <input type="number" id="tpl-w" class="ic-input" value="${tpl.width}" style="flex:1" placeholder="${t('tpl.width')}">
                <span style="align-self:center; color:var(--ps-text-faint)">×</span>
-               <input type="number" id="tpl-h" class="ic-input" value="${tpl.height}" style="flex:1" placeholder="Height">
+               <input type="number" id="tpl-h" class="ic-input" value="${tpl.height}" style="flex:1" placeholder="${t('tpl.height')}">
             </div>
 
-            <label class="ic-label" style="margin-top:16px;">Background Map</label>
+            <label class="ic-label" style="margin-top:16px;">${t('tpl.backgroundMap')}</label>
             <div class="flex gap-2">
               <button class="btn-secondary" id="tpl-btn-bg" style="flex:1; justify-content:center; padding: 6px;">
                 <span class="material-symbols-outlined">image</span>
-                Image
+                ${t('tpl.image')}
               </button>
               <button class="btn-secondary" id="tpl-btn-bg-video" style="flex:1; justify-content:center; padding: 6px;">
                 <span class="material-symbols-outlined">movie</span>
-                Video
+                ${t('tpl.video')}
               </button>
             </div>
-            <span class="text-xs text-muted" style="display:block;margin-top:6px;">Replaces current dimensions to match image.</span>
+            <span class="text-xs text-muted" style="display:block;margin-top:6px;">${t('tpl.replacesDimensions')}</span>
           </div>
 
           <hr style="border:none; border-top:1px solid var(--ps-border); margin:4px 0;">
 
           <div class="flex items-center justify-between">
-             <label class="ic-label" style="margin:0;">Placeholders</label>
-             <button class="btn-ghost" id="tpl-btn-add-ph" style="padding:2px 6px;font-size:12px;">+ Add Slot</button>
+             <label class="ic-label" style="margin:0;">${t('tpl.placeholders')}</label>
+             <button class="btn-ghost" id="tpl-btn-add-ph" style="padding:2px 6px;font-size:12px;">${t('tpl.addSlot')}</button>
           </div>
           <button class="btn-secondary" id="tpl-btn-auto-detect" style="width:100%; justify-content:center; border-color:var(--ps-blue); color:var(--ps-blue); margin-top:8px;">
-             <span class="material-symbols-outlined" style="font-size:16px;">magic_button</span> Auto-detect Slots
+             <span class="material-symbols-outlined" style="font-size:16px;">magic_button</span> ${t('tpl.autoDetect')}
           </button>
           
           <div id="tpl-ph-list" style="display:flex; flex-direction:column; gap:8px;"></div>
@@ -189,7 +190,7 @@ async function renderEditor(container, tplId) {
            <span id="tpl-save-status" class="text-sm text-muted"></span>
            <button class="btn-primary" id="tpl-save-btn">
              <span class="material-symbols-outlined">save</span>
-             Save
+             ${t('tpl.save')}
            </button>
         </div>
       </div>
@@ -224,7 +225,7 @@ async function renderEditor(container, tplId) {
   cvs.width = tpl.width;
   cvs.height = tpl.height;
 
-  function markDirty() { _isDirty = true; if(status) status.textContent = 'Unsaved…'; }
+  function markDirty() { _isDirty = true; if(status) status.textContent = t('tpl.unsaved'); }
 
   function renderList() {
     let html = '';
@@ -232,15 +233,15 @@ async function renderEditor(container, tplId) {
     if (candidatePlaceholders.length > 0) {
       html += `
         <div style="padding: 10px; background: rgba(50, 200, 100, 0.1); border: 1px solid rgba(50, 200, 100, 0.3); border-radius: 6px; margin-bottom: 8px;">
-           <div style="font-weight:600; color:#3ce16b; font-size:12px; margin-bottom:8px;">Candidate Slots (${candidatePlaceholders.length})</div>
+           <div style="font-weight:600; color:#3ce16b; font-size:12px; margin-bottom:8px;">${t('tpl.candidateSlots', { count: candidatePlaceholders.length })}</div>
            <div style="display:flex; gap:6px; margin-bottom: 8px;">
-              <button class="btn-secondary" id="tpl-btn-add-all-cand" style="flex:1; padding:2px; font-size:11px; height:24px;">Add All</button>
-              <button class="btn-secondary" id="tpl-btn-rej-all-cand" style="flex:1; padding:2px; font-size:11px; height:24px;">Discard All</button>
+              <button class="btn-secondary" id="tpl-btn-add-all-cand" style="flex:1; padding:2px; font-size:11px; height:24px;">${t('tpl.addAll')}</button>
+              <button class="btn-secondary" id="tpl-btn-rej-all-cand" style="flex:1; padding:2px; font-size:11px; height:24px;">${t('tpl.discardAll')}</button>
            </div>
            <div style="display:flex; flex-direction:column; gap:4px;">
               ${candidatePlaceholders.map((ph, i) => `
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 8px; background:rgba(0,0,0,0.2); border-radius:4px;">
-                  <span class="text-sm">Found ${i+1}</span>
+                  <span class="text-sm">${t('tpl.found', { num: i+1 })}</span>
                   <div style="display:flex; gap:2px;">
                     <button class="btn-icon tpl-cand-add" data-idx="${i}"><span class="material-symbols-outlined" style="font-size:16px; color:#3ce16b;">check</span></button>
                     <button class="btn-icon tpl-cand-del" data-idx="${i}"><span class="material-symbols-outlined" style="font-size:16px; color:var(--ps-red);">close</span></button>
@@ -261,16 +262,16 @@ async function renderEditor(container, tplId) {
         border:1px solid ${isSel ? '#ff9500' : 'var(--ps-border)'};
         border-radius:6px; cursor:pointer; gap:8px;">
         <div style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:0;">
-          <span class="text-sm" style="font-weight:600; color:${isSel ? '#ff9500' : 'inherit'}">Slot ${i + 1}${ph.label ? ` — ${escHtml(ph.label)}` : ''}</span>
+          <span class="text-sm" style="font-weight:600; color:${isSel ? '#ff9500' : 'inherit'}">${t('tpl.slot', { num: i + 1 })}${ph.label ? ` — ${escHtml(ph.label)}` : ''}</span>
           <input type="text" class="ic-input tpl-ph-label" data-idx="${i}"
-            placeholder="Label (optional)" value="${escHtml(ph.label || '')}"
+            placeholder="${t('tpl.labelOptional')}" value="${escHtml(ph.label || '')}"
             style="font-size:11px; padding:2px 6px; height:22px; color:var(--ps-text-muted);">
           <select class="ic-input tpl-ph-fitmode" data-idx="${i}" style="font-size:12px; padding:2px 6px; height:24px;">
-            <option value="stretch" ${(ph.fitMode === 'stretch' || !ph.fitMode) ? 'selected' : ''}>Stretch</option>
-            <option value="cover" ${ph.fitMode === 'cover' ? 'selected' : ''}>Cover (Crop)</option>
-            <option value="contain" ${ph.fitMode === 'contain' ? 'selected' : ''}>Contain</option>
-            <option value="smart-crop" ${ph.fitMode === 'smart-crop' ? 'selected' : ''}>Smart Crop</option>
-            <option value="face-crop" ${ph.fitMode === 'face-crop' ? 'selected' : ''}>Face Crop</option>
+            <option value="stretch" ${(ph.fitMode === 'stretch' || !ph.fitMode) ? 'selected' : ''}>${t('tpl.fitStretch')}</option>
+            <option value="cover" ${ph.fitMode === 'cover' ? 'selected' : ''}>${t('tpl.fitCover')}</option>
+            <option value="contain" ${ph.fitMode === 'contain' ? 'selected' : ''}>${t('tpl.fitContain')}</option>
+            <option value="smart-crop" ${ph.fitMode === 'smart-crop' ? 'selected' : ''}>${t('tpl.fitSmartCrop')}</option>
+            <option value="face-crop" ${ph.fitMode === 'face-crop' ? 'selected' : ''}>${t('tpl.fitFaceCrop')}</option>
           </select>
         </div>
         <button class="btn-icon tpl-del-ph" data-idx="${i}" style="width:24px; height:24px; flex-shrink:0;">
@@ -400,7 +401,7 @@ async function renderEditor(container, tplId) {
       // Label at center
       const cx = (ph.points[0].x + ph.points[1].x + ph.points[2].x + ph.points[3].x) / 4 * cvs.width;
       const cy = (ph.points[0].y + ph.points[1].y + ph.points[2].y + ph.points[3].y) / 4 * cvs.height;
-      const labelText = ph.label ? `Slot ${pIdx + 1} — ${ph.label}` : `Slot ${pIdx + 1}`;
+      const labelText = ph.label ? `${t('tpl.slot', { num: pIdx + 1 })} — ${ph.label}` : t('tpl.slot', { num: pIdx + 1 });
       ctx.fillStyle = isSel ? '#ff9500' : '#ffffff';
       ctx.font = `bold 24px sans-serif`;
       ctx.textAlign = 'center';
@@ -435,7 +436,7 @@ async function renderEditor(container, tplId) {
       ctx.font = 'bold 20px var(--font-primary)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`Found ${pIdx + 1}`, cx, cy);
+      ctx.fillText(t('tpl.found', { num: pIdx + 1 }), cx, cy);
     });
   }
 
@@ -502,27 +503,27 @@ async function renderEditor(container, tplId) {
 
   container.querySelector('#tpl-btn-auto-detect').addEventListener('click', async () => {
     if (!tpl.backgroundBlob) {
-      showToast?.({ variant: 'error', title: 'Upload Background', message: 'You must upload a background image to scan.' });
+      showToast?.({ variant: 'error', title: t('tpl.uploadBgTitle'), message: t('tpl.uploadBgMsg') });
       return;
     }
     const btn = container.querySelector('#tpl-btn-auto-detect');
-    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">hourglass_empty</span> Scanning...';
+    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;">hourglass_empty</span> ${t('tpl.scanning')}`;
     btn.disabled = true;
     try {
       const { detectQuadrilaterals } = await import('../utils/scanner.js');
       candidatePlaceholders = await detectQuadrilaterals(tpl.backgroundBlob);
       if (candidatePlaceholders.length === 0) {
-        showToast?.({ variant: 'info', title: 'No Slots Found', message: 'The scanner could not find distinct shapes. Please add manually.' });
+        showToast?.({ variant: 'info', title: t('tpl.noSlotsTitle'), message: t('tpl.noSlotsMsg') });
       } else {
-        showToast?.({ variant: 'success', title: `Found ${candidatePlaceholders.length} Potential Slots` });
+        showToast?.({ variant: 'success', title: t('tpl.foundSlots', { count: candidatePlaceholders.length }) });
       }
       renderList();
       drawCanvas();
     } catch (err) {
       console.error(err);
-      showToast?.({ variant: 'error', title: 'Scanner Error', message: err.message });
+      showToast?.({ variant: 'error', title: t('tpl.scannerError'), message: err.message });
     } finally {
-      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">magic_button</span> Auto-detect Slots';
+      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;">magic_button</span> ${t('tpl.autoDetect')}`;
       btn.disabled = false;
     }
   });
@@ -552,11 +553,11 @@ async function renderEditor(container, tplId) {
   container.querySelector('#tpl-btn-bg-video').addEventListener('click', async () => {
     try {
       if (!window.showOpenFilePicker) {
-        showToast?.({ variant: 'error', message: 'Video backgrounds require a browser supporting File System Access API.' });
+        showToast?.({ variant: 'error', message: t('tpl.videoNeedsFsApi') });
         return;
       }
       const handles = await window.showOpenFilePicker({
-        types: [{ description: 'Video Files', accept: {'video/*': ['.mp4', '.webm', '.mov']} }],
+        types: [{ description: t('tpl.videoFiles'), accept: {'video/*': ['.mp4', '.webm', '.mov']} }],
         multiple: false
       });
       const fileHandle = handles[0];
@@ -570,7 +571,7 @@ async function renderEditor(container, tplId) {
       document.body.appendChild(video);
       
       video.onloadedmetadata = () => { video.currentTime = 0; };
-      video.onerror = () => { showToast?.({ variant: 'error', message: 'Could not decode video file.'}); document.body.removeChild(video); };
+      video.onerror = () => { showToast?.({ variant: 'error', message: t('tpl.videoDecodeFailed')}); document.body.removeChild(video); };
       
       video.onseeked = async () => {
         if (bgBitmap) bgBitmap.close();
@@ -603,20 +604,20 @@ async function renderEditor(container, tplId) {
   container.querySelector('#tpl-h').addEventListener('change', e => { tpl.height=parseInt(e.target.value)||1080; cvs.height=tpl.height; drawCanvas(); markDirty(); });
 
   async function doSave() {
-    tpl.name = container.querySelector('#tpl-name').value || 'Untitled Template';
+    tpl.name = container.querySelector('#tpl-name').value || t('tpl.untitledTemplate');
     await saveTemplate(tpl);
     _isDirty = false;
-    if(status) status.textContent = 'Saved';
-    showToast?.({ variant: 'success', title: 'Template saved' });
+    if(status) status.textContent = t('tpl.saved');
+    showToast?.({ variant: 'success', title: t('tpl.templateSaved') });
   }
 
   async function confirmLeave() {
     if (!_isDirty) return true;
     return showConfirm({
-      title: 'Unsaved Changes',
-      body: 'You have unsaved changes in this template. They will be lost if you leave now.',
-      confirmText: 'Leave without saving',
-      cancelText: 'Stay',
+      title: t('tpl.unsavedTitle'),
+      body: t('tpl.unsavedBody'),
+      confirmText: t('tpl.leaveWithoutSaving'),
+      cancelText: t('tpl.stay'),
       variant: 'warning',
       icon: 'warning',
     });
@@ -658,7 +659,7 @@ async function renderEditor(container, tplId) {
 
 function renderHyperframeEditor(container, tpl) {
   let _isDirty = false;
-  function markDirty() { _isDirty = true; const st = container.querySelector('#tpl-save-status'); if(st) st.textContent = 'Unsaved…'; }
+  function markDirty() { _isDirty = true; const st = container.querySelector('#tpl-save-status'); if(st) st.textContent = t('tpl.unsaved'); }
 
   container.innerHTML = `
     <div class="screen tpl-screen" style="flex-direction:row">
@@ -666,26 +667,26 @@ function renderHyperframeEditor(container, tpl) {
         <div class="screen-header" style="flex-shrink:0;">
           <div class="flex items-center gap-2">
             <button class="btn-icon" id="tpl-back"><span class="material-symbols-outlined">arrow_back</span></button>
-            <div class="screen-title" style="font-size:16px;">Hyperframe Template</div>
+            <div class="screen-title" style="font-size:16px;">${t('tpl.hyperframeTemplate')}</div>
           </div>
         </div>
 
         <div style="padding:16px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:16px;">
           <div class="bld-config-form">
-            <label class="ic-label">Name</label>
+            <label class="ic-label">${t('tpl.name')}</label>
             <input type="text" id="tpl-name" class="ic-input" value="${escHtml(tpl.name)}">
 
-            <label class="ic-label" style="margin-top:12px;">Dimensions</label>
+            <label class="ic-label" style="margin-top:12px;">${t('tpl.dimensions')}</label>
             <div class="flex gap-2">
-               <input type="number" id="tpl-w" class="ic-input" value="${tpl.width}" style="flex:1" placeholder="Width">
+               <input type="number" id="tpl-w" class="ic-input" value="${tpl.width}" style="flex:1" placeholder="${t('tpl.width')}">
                <span style="align-self:center; color:var(--ps-text-faint)">×</span>
-               <input type="number" id="tpl-h" class="ic-input" value="${tpl.height}" style="flex:1" placeholder="Height">
+               <input type="number" id="tpl-h" class="ic-input" value="${tpl.height}" style="flex:1" placeholder="${t('tpl.height')}">
             </div>
 
-            <label class="ic-label" style="margin-top:16px;">HTML / GSAP Code</label>
+            <label class="ic-label" style="margin-top:16px;">${t('tpl.htmlGsapCode')}</label>
             <textarea id="tpl-html" class="ic-input" style="height:350px; font-family:monospace; font-size:12px; white-space:pre; resize:vertical; padding:12px;" placeholder="<!doctype html>...">${escHtml(tpl.htmlContent || '')}</textarea>
             <button class="btn-secondary" id="tpl-btn-preview" style="margin-top:8px; width:100%; justify-content:center;">
-              <span class="material-symbols-outlined">play_arrow</span> Preview Animation
+              <span class="material-symbols-outlined">play_arrow</span> ${t('tpl.previewAnimation')}
             </button>
           </div>
         </div>
@@ -694,7 +695,7 @@ function renderHyperframeEditor(container, tpl) {
            <span id="tpl-save-status" class="text-sm text-muted"></span>
            <button class="btn-primary" id="tpl-save-btn">
              <span class="material-symbols-outlined">save</span>
-             Save
+             ${t('tpl.save')}
            </button>
         </div>
       </div>
@@ -736,22 +737,22 @@ function renderHyperframeEditor(container, tpl) {
   container.querySelector('#tpl-html').addEventListener('input', markDirty);
 
   async function doSave() {
-    tpl.name = container.querySelector('#tpl-name').value || 'Untitled Hyperframe';
+    tpl.name = container.querySelector('#tpl-name').value || t('tpl.untitledHyperframe');
     tpl.htmlContent = container.querySelector('#tpl-html').value || '';
     await saveTemplate(tpl);
     _isDirty = false;
     const st = container.querySelector('#tpl-save-status');
-    if(st) st.textContent = 'Saved';
-    showToast?.({ variant: 'success', title: 'Hyperframe saved' });
+    if(st) st.textContent = t('tpl.saved');
+    showToast?.({ variant: 'success', title: t('tpl.hyperframeSaved') });
   }
 
   async function confirmLeave() {
     if (!_isDirty) return true;
     return showConfirm({
-      title: 'Unsaved Changes',
-      body: 'You have unsaved changes in this template. They will be lost if you leave now.',
-      confirmText: 'Leave without saving',
-      cancelText: 'Stay',
+      title: t('tpl.unsavedTitle'),
+      body: t('tpl.unsavedBody'),
+      confirmText: t('tpl.leaveWithoutSaving'),
+      cancelText: t('tpl.stay'),
       variant: 'warning',
       icon: 'warning',
     });

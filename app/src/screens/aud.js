@@ -1,5 +1,6 @@
 import { dbGet, dbPut } from '../data/db.js';
 import { isModelDownloaded } from '../data/models.js';
+import { t as i18n } from '../i18n/index.js';
 import { createProject, openProject, saveProject, resolveMediaUrl, revokeMediaUrl, addRecentProject, getRecentProjects, openProjectFromHandle, getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
 
 function showDialog(options) {
@@ -19,8 +20,8 @@ function showDialog(options) {
         <p style="margin-bottom:16px;color:var(--ps-text-muted);font-size:13px;line-height:1.4;">${message}</p>
         ${inputHtml}
         <div style="display:flex;justify-content:flex-end;gap:8px;">
-          <button id="aud-btn-dialog-cancel" class="btn-ghost">Cancel</button>
-          <button id="aud-btn-dialog-confirm" class="${type === 'confirm' ? 'btn-danger' : 'btn-primary'}">OK</button>
+          <button id="aud-btn-dialog-cancel" class="btn-ghost">${i18n('common.cancel')}</button>
+          <button id="aud-btn-dialog-confirm" class="${type === 'confirm' ? 'btn-danger' : 'btn-primary'}">${i18n('aud.dialogOk')}</button>
         </div>
       </div>
     `;
@@ -67,8 +68,8 @@ let customVoices = [];
 let audioHistory = [];
 
 // Module-level model caches (persisting across screen re-renders)
-let kokoroTts = null;
 let kokoroReady = false;
+let kokoroWorker = null;
 let cbWorker = null;
 let cbReady = false;
 let ptWorker = null;
@@ -103,8 +104,8 @@ export async function render(container, hash) {
     container.innerHTML = `
       <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%;">
         <div style="text-align:center;">
-           <h2 style="font-size:24px; margin-bottom:8px;">Voice Studio</h2>
-           <p class="text-muted" style="font-size:14px;">Select or create an audio project to get started.</p>
+           <h2 style="font-size:24px; margin-bottom:8px;">${i18n('aud.title')}</h2>
+           <p class="text-muted" style="font-size:14px;">${i18n('aud.selectOrCreate')}</p>
         </div>
         <div id="aud-workspace-root" style="width:100%; max-width:800px; display:flex; flex-direction:column; gap:16px;"></div>
       </div>
@@ -118,9 +119,9 @@ export async function render(container, hash) {
           rootEl.innerHTML = `
             <div style="display:flex; flex-direction:column; align-items:center; padding:48px; border:2px dashed var(--ps-border); border-radius:12px; background:var(--ps-surface);">
                <span class="material-symbols-outlined text-muted" style="font-size:48px; margin-bottom:16px;">folder_open</span>
-               <h3 style="margin-bottom:8px;">No Workspace Selected</h3>
-               <p class="text-muted" style="margin-bottom:24px; text-align:center;">A workspace is a local folder on your computer where all your audio projects will be stored.</p>
-               <button class="btn-primary" id="aud-btn-set-workspace">Select Workspace Folder</button>
+               <h3 style="margin-bottom:8px;">${i18n('aud.noWorkspace')}</h3>
+               <p class="text-muted" style="margin-bottom:24px; text-align:center;">${i18n('aud.workspaceDesc')}</p>
+               <button class="btn-primary" id="aud-btn-set-workspace">${i18n('aud.selectWorkspaceFolder')}</button>
             </div>
           `;
           rootEl.querySelector('#aud-btn-set-workspace').onclick = async () => {
@@ -134,21 +135,21 @@ export async function render(container, hash) {
        }
        
        if (!(await verifyPermission(workspaceHandle, true))) {
-          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">Permission required to access Workspace.</p><button class="btn-primary" id="aud-btn-grant">Grant Permission</button></div>`;
+          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">${i18n('aud.permissionRequired')}</p><button class="btn-primary" id="aud-btn-grant">${i18n('aud.grantPermission')}</button></div>`;
           rootEl.querySelector('#aud-btn-grant').onclick = async () => {
              if (await verifyPermission(workspaceHandle, true)) renderWorkspace();
           };
           return;
        }
        
-       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> Scanning workspace...</div>`;
+       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> ${i18n('aud.scanningWorkspace')}</div>`;
        const projects = await scanWorkspaceProjects(workspaceHandle);
        
        projects.sort((a,b) => (b.projectData.title || b.projectData.name || '').localeCompare(a.projectData.title || a.projectData.name || ''));
        
        let gridHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> Workspace: <b>${workspaceHandle.name}</b></div>
-         <button class="btn-ghost btn-sm" id="aud-btn-change-workspace" title="Change Workspace"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> ${i18n('aud.workspaceLabel')} <b>${workspaceHandle.name}</b></div>
+         <button class="btn-ghost btn-sm" id="aud-btn-change-workspace" title="${i18n('aud.changeWorkspace')}"><span class="material-symbols-outlined text-[16px]">edit</span></button>
        </div>`;
        
        gridHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">`;
@@ -157,7 +158,7 @@ export async function render(container, hash) {
        gridHtml += `
          <button id="aud-btn-new-project" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:rgba(255,255,255,0.02); border:2px dashed var(--ps-border); border-radius:12px; cursor:pointer; color:var(--ps-text-muted); transition:0.2s;" onmouseover="this.style.color='var(--ps-blue)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.color='var(--ps-text-muted)'; this.style.borderColor='var(--ps-border)';">
            <span class="material-symbols-outlined" style="font-size:32px; margin-bottom:8px;">add_circle</span>
-           <span style="font-size:14px; font-weight:600;">New Audio Project</span>
+           <span style="font-size:14px; font-weight:600;">${i18n('aud.newAudioProject')}</span>
          </button>
        `;
        
@@ -167,14 +168,14 @@ export async function render(container, hash) {
          const isAudio = p.projectData.voices || p.projectData.script !== undefined;
          if (!isAudio) return; // Skip video projects
 
-         const title = p.projectData.title || p.projectData.name || 'Untitled';
+         const title = p.projectData.title || p.projectData.name || i18n('aud.untitled');
          const thumb = `<div style="width:100%; height:120px; background:var(--ps-surface); border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;"><span class="material-symbols-outlined text-muted text-[32px]">record_voice_over</span></div>`;
          
          gridHtml += `
            <div class="aud-project-card" data-index="${i}" style="display:flex; flex-direction:column; padding:12px; background:var(--ps-surface); border:1px solid var(--ps-border); border-radius:12px; cursor:pointer; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.background='var(--ps-surface)'; this.style.borderColor='var(--ps-border)';">
               ${thumb}
               <span style="font-size:14px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${title}</span>
-              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${(p.projectData.history || []).length} items</span>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${i18n('aud.itemsCount', { count: (p.projectData.history || []).length })}</span>
            </div>
          `;
        });
@@ -191,7 +192,7 @@ export async function render(container, hash) {
        };
        
        rootEl.querySelector('#aud-btn-new-project').onclick = async () => {
-          const name = await showDialog({ type: 'prompt', title: 'New Project', message: 'Project Name:' });
+          const name = await showDialog({ type: 'prompt', title: i18n('aud.newProjectTitle'), message: i18n('aud.projectNameLabel') });
           if (!name) return;
           try {
              const initialData = {
@@ -225,7 +226,7 @@ export async function render(container, hash) {
                await dbPut('folders', { key: 'active_audio_project', handle: p.dirHandle });
                // Re-hydrate media handles if needed in future
                render(container, hash);
-             } catch(e) { alert('Could not open project.\nError: ' + e.message); }
+             } catch(e) { alert(i18n('aud.couldNotOpenProject', { error: e.message })); }
           };
        });
     };
@@ -243,16 +244,16 @@ export async function render(container, hash) {
         <div class="flex items-center gap-4">
           <div class="screen-title flex items-center gap-2">
             <span class="material-symbols-outlined text-[var(--ps-blue)]">record_voice_over</span>
-            <span>Voice Studio</span>
+            <span>${i18n('aud.title')}</span>
           </div>
           <div class="flex gap-2">
-            <button id="aud-tab-dialogue" class="btn-primary btn-sm">Dialogue Studio</button>
-            <button id="aud-tab-voicecraft" class="btn-secondary btn-sm">VoiceCraft (Custom Voices)</button>
+            <button id="aud-tab-dialogue" class="btn-primary btn-sm">${i18n('aud.tabDialogue')}</button>
+            <button id="aud-tab-voicecraft" class="btn-secondary btn-sm">${i18n('aud.tabVoicecraft')}</button>
           </div>
         </div>
         <button id="aud-btn-close-project" class="btn-secondary btn-sm" style="display: flex; align-items: center; gap: 4px;">
           <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
-          Close Project
+          ${i18n('aud.closeProject')}
         </button>
       </div>
       
@@ -262,36 +263,36 @@ export async function render(container, hash) {
         <!-- Left Panel: Engine Selection & Speaker Mapping -->
         <div class="panel-left" style="width: 320px; min-width: 320px; border-right: 1px solid var(--ps-border); background: var(--ps-bg-surface);">
           <div class="panel-header">
-            <span class="panel-header-title">1. Setup & Mapping</span>
+            <span class="panel-header-title">${i18n('aud.setupMapping')}</span>
           </div>
           <div class="panel-body flex flex-col gap-4 overflow-y-auto" style="padding: 16px;">
             <div>
-              <label class="ic-label">Project Title</label>
-              <input type="text" id="aud-input-title" class="ic-input" placeholder="e.g. Explainer Video Voiceover" style="margin-top: 4px;">
+              <label class="ic-label">${i18n('aud.projectTitle')}</label>
+              <input type="text" id="aud-input-title" class="ic-input" placeholder="${i18n('aud.projectTitlePlaceholder')}" style="margin-top: 4px;">
             </div>
 
             <div>
-              <label class="ic-label">Speech Engines</label>
+              <label class="ic-label">${i18n('aud.speechEngines')}</label>
               <div class="flex flex-col gap-2 mt-2">
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-kokoro" class="accent-[var(--ps-blue)]">
-                  <span>Kokoro TTS (Fast, standard)</span>
+                  <span>${i18n('aud.engineKokoro')}</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-cb" class="accent-[var(--ps-blue)]">
-                  <span>Chatterbox (Zero-shot cloning)</span>
+                  <span>${i18n('aud.engineCb')}</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-pt" class="accent-[var(--ps-blue)]">
-                  <span>Pocket TTS (Local clone, ~100MB)</span>
+                  <span>${i18n('aud.enginePt')}</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-el" class="accent-[var(--ps-blue)]">
-                  <span>Eleven Labs (Cloud, high-quality)</span>
+                  <span>${i18n('aud.engineEl')}</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer text-sm">
                   <input type="checkbox" id="aud-check-local" class="accent-[var(--ps-blue)]">
-                  <span>Local TTS Gateway (Self-hosted)</span>
+                  <span>${i18n('aud.engineLocal')}</span>
                 </label>
               </div>
               <div id="aud-engine-status" class="text-xs text-[var(--ps-blue)] mt-2 min-h-4"></div>
@@ -302,10 +303,10 @@ export async function render(container, hash) {
             <div style="border-top: 1px solid var(--ps-border); margin: 8px 0;"></div>
 
             <!-- Speaker Mapping -->
-            <div id="aud-section-mapping" class="opacity-50 pointer-events-none transition-opacity duration-300 flex-1 flex flex-col min-h-0">
-              <label class="ic-label mb-2">2. Speaker Mapping</label>
+            <div id="aud-section-mapping" class="flex-1 flex flex-col min-h-0">
+              <label class="ic-label mb-2">${i18n('aud.speakerMapping')}</label>
               <div id="aud-speaker-list" class="flex-1 flex flex-col gap-3 overflow-y-auto min-h-[100px] pr-1">
-                <div class="text-sm text-muted">Click 'Parse Speakers' to detect speakers.</div>
+                <div class="text-sm text-muted">${i18n('aud.enterScriptHint')}</div>
               </div>
             </div>
           </div>
@@ -314,38 +315,37 @@ export async function render(container, hash) {
         <!-- Center Panel: Large Transcript Editor -->
         <div class="panel-center" style="flex: 1; display: flex; flex-direction: column; background: var(--ps-bg-app); border-right: 1px solid var(--ps-border);">
           <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="panel-header-title">Script Editor</span>
+            <span class="panel-header-title">${i18n('aud.scriptEditor')}</span>
             <div class="flex gap-2">
-              <button id="aud-btn-load-sample" class="btn-ghost btn-sm" style="font-size: 11px;">Load Sample</button>
-              <button id="aud-btn-upload-script" class="btn-secondary btn-sm" style="font-size: 11px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span> Import Captions</button>
+              <button id="aud-btn-load-sample" class="btn-ghost btn-sm" style="font-size: 11px;">${i18n('aud.loadSample')}</button>
+              <button id="aud-btn-upload-script" class="btn-secondary btn-sm" style="font-size: 11px; display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span> ${i18n('aud.importCaptions')}</button>
             </div>
             <input type="file" id="aud-input-upload-script" style="display: none" accept=".txt,.srt,.vtt,.md">
           </div>
           <div class="panel-body flex flex-col gap-4" style="flex: 1; padding: 16px; min-height: 0; justify-content: space-between;">
             <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-              <textarea id="aud-input" class="ic-input" style="flex: 1; width: 100%; min-height: 250px; font-family: monospace; padding: 16px; font-size: 14px; line-height: 1.5; resize: vertical; background: var(--ps-bg-surface); border: 1px solid var(--ps-border);" placeholder="[Narrator]: Welcome to Voice Studio.&#10;[Dwight]: You can paste multiple speakers here!"></textarea>
+              <textarea id="aud-input" class="ic-input" style="flex: 1; width: 100%; min-height: 250px; font-family: monospace; padding: 16px; font-size: 14px; line-height: 1.5; resize: vertical; background: var(--ps-bg-surface); border: 1px solid var(--ps-border);" placeholder="${i18n('aud.scriptPlaceholder')}"></textarea>
             </div>
             
             <div class="flex flex-col gap-3 shrink-0 pt-2">
-              <button id="aud-btn-parse" class="btn-primary w-full" style="justify-content: center; height: 40px; font-weight: 600;">Parse Speakers</button>
-              
-              <div id="aud-generate-container" class="opacity-50 pointer-events-none transition-opacity duration-300">
-                <button id="aud-btn-generate" class="btn-primary w-full" style="justify-content: center; height: 44px; font-weight: 600;" disabled title="Waiting for models...">Generate Audio</button>
-                <div id="aud-generate-status" class="text-xs text-muted mt-2 text-center min-h-4"></div>
-                <progress id="aud-generate-progress" class="w-full hidden mt-2 h-1.5 rounded overflow-hidden" value="0" max="100"></progress>
+              <div id="aud-generate-container">
+                <button id="aud-btn-generate" class="btn-primary w-full" style="justify-content: center; height: 44px; font-weight: 600;" disabled title="${i18n('aud.titleParseFirst')}">${i18n('aud.generateAudio')}</button>
+                <!-- Status/progress are surfaced in the Output History item; these stay hidden. -->
+                <div id="aud-generate-status" class="hidden"></div>
+                <progress id="aud-generate-progress" class="hidden" value="0" max="100"></progress>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Right Panel: Output History -->
-        <div id="aud-section-output" class="panel-right opacity-50 pointer-events-none transition-opacity duration-300" style="width: 360px; min-width: 360px; background: var(--ps-bg-surface);">
+        <div id="aud-section-output" class="panel-right" style="width: 360px; min-width: 360px; background: var(--ps-bg-surface);">
           <div class="panel-header">
-            <span class="panel-header-title">3. Output History</span>
+            <span class="panel-header-title">${i18n('aud.outputHistory')}</span>
           </div>
           <div class="panel-body flex flex-col gap-4 overflow-y-auto" style="padding: 16px;">
             <div id="aud-history-list" class="flex-1 flex flex-col gap-4">
-              <div class="text-sm text-muted" id="aud-history-empty">No audio generated in this session yet.</div>
+              <div class="text-sm text-muted" id="aud-history-empty">${i18n('aud.noAudioYet')}</div>
             </div>
           </div>
         </div>
@@ -356,10 +356,10 @@ export async function render(container, hash) {
       <div id="aud-view-voicecraft" class="p-6" style="display: none; flex: 1; flex-direction: column; overflow-y: auto; min-height: 0; background-color: var(--ps-bg-surface, #1e1e1e);">
         <div class="flex justify-between items-center mb-6">
           <div>
-            <h2 class="text-xl font-bold mb-1">VoiceCraft</h2>
-            <div class="text-sm text-muted">Create custom zero-shot voices for the Chatterbox TTS engine. Upload clean, 10-15s samples (.wav or .mp3).</div>
+            <h2 class="text-xl font-bold mb-1">${i18n('aud.voicecraftTitle')}</h2>
+            <div class="text-sm text-muted">${i18n('aud.voicecraftDesc')}</div>
           </div>
-          <button id="aud-btn-add-voice" class="btn-primary"><span class="material-symbols-outlined text-sm mr-2">add</span>Add Character</button>
+          <button id="aud-btn-add-voice" class="btn-primary"><span class="material-symbols-outlined text-sm mr-2">add</span>${i18n('aud.addCharacter')}</button>
         </div>
         
         <div id="aud-custom-voices-grid" class="grid grid-cols-2 gap-4">
@@ -440,7 +440,7 @@ export async function render(container, hash) {
 
   async function renderHistory() {
      if (!audioHistory || audioHistory.length === 0) {
-        if(historyListEl) historyListEl.innerHTML = '<div class="text-sm text-muted" id="aud-history-empty">No audio generated in this session yet.</div>';
+        if(historyListEl) historyListEl.innerHTML = `<div class="text-sm text-muted" id="aud-history-empty">${i18n('aud.noAudioYet')}</div>`;
         return;
      }
      
@@ -452,18 +452,25 @@ export async function render(container, hash) {
          if (hist.mp3File) mp3Url = await resolveMediaUrl(hist.mp3File, currentAudioProjectDirHandle) || '';
          
          html += `
-           <div class="p-4 border border-[var(--ps-border)] rounded-lg bg-[var(--ps-bg)] flex flex-col gap-3" id="aud-hist-${hist.id}">
+           <div class="p-4 border border-[var(--ps-border)] rounded-lg bg-[var(--ps-bg)] flex flex-col gap-3 aud-hist-card" id="aud-hist-${hist.id}">
              <div class="flex justify-between items-center">
                <span class="font-bold text-[var(--ps-text)]">${hist.title}</span>
-               <span class="text-xs text-muted">${hist.durationSecs}s • ${hist.speakerCount} speaker(s)</span>
+               <span class="text-xs text-muted">${i18n('aud.durationSpeakers', { secs: hist.durationSecs, count: hist.speakerCount })}</span>
              </div>
-             <div class="flex gap-2 items-center">
-               ${wavUrl ? `<audio controls class="flex-1 h-10 outline-none" src="${wavUrl}"></audio>` : '<div class="text-xs text-danger">Missing file</div>'}
-               ${wavUrl ? `<canvas class="aud-hist-visualizer" width="80" height="40" style="border-radius: 4px; background: rgba(0,0,0,0.15); width: 80px; height: 40px; flex-shrink: 0;"></canvas>` : ''}
-             </div>
+             ${wavUrl ? `
+             <div class="flex items-center gap-3">
+               <button class="aud-wave-play btn btn-secondary flex items-center justify-center" title="${i18n('aud.playPause')}" style="width:36px;height:36px;min-width:36px;border-radius:50%;">
+                 <span class="material-symbols-outlined text-sm">play_arrow</span>
+               </button>
+               <div class="flex-1 min-w-0">
+                 <canvas class="aud-wave-canvas" width="600" height="48" style="width:100%;height:48px;display:block;cursor:pointer;border-radius:4px;background:rgba(0,0,0,0.15);"></canvas>
+                 <div class="aud-wave-time text-xs text-muted mt-1" style="font-variant-numeric:tabular-nums;">0:00 / 0:00</div>
+               </div>
+               <audio src="${wavUrl}" preload="metadata" style="display:none;"></audio>
+             </div>` : `<div class="text-xs text-danger">${i18n('aud.missingFile')}</div>`}
              <div class="flex gap-2 mt-1">
-               ${wavUrl ? `<a href="${wavUrl}" download="${hist.title}.wav" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .wav</a>` : ''}
-               ${mp3Url ? `<a href="${mp3Url}" download="${hist.title}.mp3" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .mp3</a>` : ''}
+               ${wavUrl ? `<a href="${wavUrl}" download="${hist.title}.wav" class="btn btn-secondary flex-1 justify-center text-center text-xs">${i18n('aud.downloadWav')}</a>` : ''}
+               ${mp3Url ? `<a href="${mp3Url}" download="${hist.title}.mp3" class="btn btn-secondary flex-1 justify-center text-center text-xs">${i18n('aud.downloadMp3')}</a>` : ''}
              </div>
            </div>
          `;
@@ -484,12 +491,12 @@ export async function render(container, hash) {
                } else if (res.type === 'progress') {
                    const prog = res.payload;
                    if (prog.status === 'download' || prog.status === 'downloading' || prog.status === 'progress') {
-                       const name = prog.name || prog.file || 'model weights';
-                       let text = `Downloading ${name}...`;
+                       const name = prog.name || prog.file || i18n('aud.modelWeights');
+                       let text = i18n('aud.downloading', { name });
                        if (prog.loaded && prog.total) {
                            const loadedMB = (prog.loaded / (1024 * 1024)).toFixed(1);
                            const totalMB = (prog.total / (1024 * 1024)).toFixed(1);
-                           text = `Downloading ${name} (${loadedMB} / ${totalMB} MB)...`;
+                           text = i18n('aud.downloadingProgress', { name, loaded: loadedMB, total: totalMB });
                        }
                        if (statusEl) statusEl.textContent = text;
                        if (progressEl) {
@@ -502,23 +509,23 @@ export async function render(container, hash) {
                        }
                    } else if (prog.status === 'loading_model') {
                        const file = prog.file || '';
-                       if (statusEl) statusEl.textContent = `Loading ${file} (${prog.loaded + 1} / ${prog.total})...`;
+                       if (statusEl) statusEl.textContent = i18n('aud.loadingFile', { file, loaded: prog.loaded + 1, total: prog.total });
                        if (progressEl && prog.total) {
                            progressEl.classList.remove('hidden');
                            progressEl.value = ((prog.loaded + 1) / prog.total) * 100;
                        }
                    } else if (prog.status === 'loading_config' || prog.status === 'loading_tokenizer' || prog.status === 'loading_bos') {
-                       if (statusEl) statusEl.textContent = `Initializing: ${prog.status.replace('loading_', '')}...`;
+                       if (statusEl) statusEl.textContent = i18n('aud.initializingStatus', { status: prog.status.replace('loading_', '') });
                    } else if (prog.status === 'done') {
-                       if (statusEl) statusEl.innerHTML = `<span class="animate-pulse" style="display: inline-block; background-color: #fbbf24; color: #000; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 0.75rem;">Loaded ${prog.name || ''}. Compiling sessions...</span>`;
+                       if (statusEl) statusEl.innerHTML = `<span class="animate-pulse" style="display: inline-block; background-color: #fbbf24; color: #000; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 0.75rem;">${i18n('aud.loadedCompiling', { name: prog.name || '' })}</span>`;
                        if (progressEl) {
                            progressEl.classList.remove('hidden');
                            progressEl.removeAttribute('value');
                        }
                    } else if (prog.status === 'encoding_speaker') {
-                       if (statusEl) statusEl.textContent = `Encoding speaker...`;
+                       if (statusEl) statusEl.textContent = i18n('aud.encodingSpeaker');
                    } else if (prog.status === 'generating') {
-                       if (statusEl) statusEl.textContent = `Generating audio...`;
+                       if (statusEl) statusEl.textContent = i18n('aud.generatingAudio');
                    } else if (prog.status === 'tokenizing' || prog.status === 'encoding_text' || prog.status === 'encoding_voice' || prog.status === 'synthesizing' || prog.status === 'decoding') {
                        if (statusEl) statusEl.textContent = `${prog.status.replace('_', ' ')}...`;
                    }
@@ -641,7 +648,7 @@ export async function render(container, hash) {
           </div>
           <button class="material-symbols-outlined text-muted hover:text-danger cursor-pointer text-sm" data-delete-id="${v.id}">close</button>
         </div>
-        <div class="text-xs text-muted mb-2">Voice Sample</div>
+        <div class="text-xs text-muted mb-2">${i18n('aud.voiceSample')}</div>
         <audio controls class="w-full h-8 outline-none rounded" src="${blobUrl}"></audio>
       </div>`;
     }
@@ -650,7 +657,7 @@ export async function render(container, hash) {
     customVoicesGrid.querySelectorAll('button[data-delete-id]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const id = e.target.getAttribute('data-delete-id');
-        if (await showDialog({ title: 'Delete Voice', message: 'Delete this custom voice?' })) {
+        if (await showDialog({ title: i18n('aud.deleteVoiceTitle'), message: i18n('aud.deleteVoiceMsg') })) {
           currentAudioProject.voices = currentAudioProject.voices.filter(v => v.id !== id);
           await saveProject(currentAudioProjectDirHandle, currentAudioProject);
           loadCustomVoices();
@@ -663,13 +670,13 @@ export async function render(container, hash) {
     try {
       const handles = await window.showOpenFilePicker({
         id: 'aud_voice_picker',
-        types: [{ description: 'Audio Files', accept: {'audio/*': ['.wav', '.mp3', '.mpeg']} }],
+        types: [{ description: i18n('aud.audioFiles'), accept: {'audio/*': ['.wav', '.mp3', '.mpeg']} }],
         multiple: false
       });
       if (!handles || handles.length === 0) return;
       const file = await handles[0].getFile();
-      
-      const name = await showDialog({ type: 'prompt', title: 'New Voice', message: 'Enter a name for this Character/Voice:' });
+
+      const name = await showDialog({ type: 'prompt', title: i18n('aud.newVoiceTitle'), message: i18n('aud.newVoiceMsg') });
       if (!name) return;
 
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -696,7 +703,7 @@ export async function render(container, hash) {
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error(err);
-        await showDialog({ title: 'Error', message: 'Failed to process audio file: ' + err.message, type: 'confirm' });
+        await showDialog({ title: i18n('aud.errorTitle'), message: i18n('aud.failedProcessAudio', { error: err.message }), type: 'confirm' });
       }
     }
   });
@@ -706,7 +713,7 @@ export async function render(container, hash) {
     try {
       const handles = await window.showOpenFilePicker({
         id: 'aud_script_picker',
-        types: [{ description: 'Text Files', accept: {'text/plain': ['.txt', '.srt', '.vtt']} }],
+        types: [{ description: i18n('aud.textFiles'), accept: {'text/plain': ['.txt', '.srt', '.vtt']} }],
         multiple: false
       });
       if (!handles || handles.length === 0) return;
@@ -749,11 +756,46 @@ export async function render(container, hash) {
     inputEl.dispatchEvent(new Event('input'));
   });
 
+  let parseDebounceId = null;
   inputEl.addEventListener('input', () => {
-    sectionMappingEl.classList.add('opacity-50', 'pointer-events-none');
-    if (generateContainerEl) generateContainerEl.classList.add('opacity-50', 'pointer-events-none');
-    generateBtn.disabled = true;
+    clearTimeout(parseDebounceId);
+    parseDebounceId = setTimeout(parseScript, 300);
   });
+
+  // Parse the script into speakers + segments. Runs automatically as the user
+  // types or loads text. If no [Speaker]: tags are present, everything maps to a
+  // single implicit "Single voice" speaker.
+  function parseScript() {
+    const text = inputEl.value.trim();
+    detectedSpeakers = [];
+    parsedSegments = [];
+    if (!text) {
+      renderSpeakerList();
+      updateGenerateButtonState();
+      return;
+    }
+    if (customVoices.length === 0) customVoices = currentAudioProject.voices || [];
+
+    const lines = text.split('\n');
+    let currentSpeaker = i18n('aud.singleVoice');
+    for (const line of lines) {
+      const tLine = line.trim();
+      if (!tLine) continue;
+      if (tLine.includes('-->') || /^\d+$/.test(tLine)) continue;
+      const speakerMatch = tLine.match(/^\[?([A-Za-z0-9 _-]+)\]?\s*:/);
+      let content = tLine;
+      if (speakerMatch) {
+        currentSpeaker = speakerMatch[1].trim();
+        content = tLine.substring(speakerMatch[0].length).trim();
+      }
+      if (content) {
+        if (!detectedSpeakers.includes(currentSpeaker)) detectedSpeakers.push(currentSpeaker);
+        parsedSegments.push({ speaker: currentSpeaker, text: content });
+      }
+    }
+    renderSpeakerList();
+    updateGenerateButtonState();
+  }
 
   // --- Dialogue Studio Logic ---
   function updateGenerateButtonState() {
@@ -763,22 +805,22 @@ export async function render(container, hash) {
     const isElChecked = checkEl.checked;
     const isLocalChecked = checkLocal.checked;
 
-    if (!isKokoroChecked && !isCbChecked && !isPtChecked && !isElChecked && !isLocalChecked) {
-      generateBtn.disabled = true;
-      generateBtn.title = "Select at least one engine above.";
-      return;
-    }
     if (parsedSegments.length === 0) {
       generateBtn.disabled = true;
-      generateBtn.title = "Parse some text first.";
+      generateBtn.title = i18n('aud.titleParseFirst');
+      return;
+    }
+    if (!isKokoroChecked && !isCbChecked && !isPtChecked && !isElChecked && !isLocalChecked) {
+      generateBtn.disabled = true;
+      generateBtn.title = i18n('aud.titleSelectEngine');
       return;
     }
 
     const requiresCustomVoiceOnly = (isCbChecked || isPtChecked) && !isKokoroChecked && !isElChecked && !isLocalChecked;
     if (requiresCustomVoiceOnly && customVoices.length === 0) {
       generateBtn.disabled = true;
-      generateBtn.title = "Chatterbox/Pocket TTS requires at least one custom voice. Add one in the VoiceCraft tab.";
-      generateBtn.textContent = "Voice Sample Required";
+      generateBtn.title = i18n('aud.titleRequiresCustom');
+      generateBtn.textContent = i18n('aud.voiceSampleRequired');
       return;
     }
 
@@ -791,27 +833,46 @@ export async function render(container, hash) {
 
     if (isWaiting) {
       generateBtn.disabled = true;
-      generateBtn.title = "Waiting for engines to finish compiling...";
-      generateBtn.textContent = "Waiting for model...";
-    } else {
-      generateBtn.disabled = false;
-      generateBtn.title = "";
-      generateBtn.textContent = "Generate Audio";
+      generateBtn.title = i18n('aud.titleWaitingCompile');
+      generateBtn.textContent = i18n('aud.waitingForModel');
+      return;
     }
+
+    // Mapping must be complete: every detected speaker needs an assigned voice.
+    const selects = [...container.querySelectorAll('.aud-voice-select')];
+    const mappingComplete = selects.length >= detectedSpeakers.length && selects.every(s => s.value);
+    if (!mappingComplete) {
+      generateBtn.disabled = true;
+      generateBtn.title = i18n('aud.titleAssignVoices');
+      generateBtn.textContent = i18n('aud.generateAudio');
+      return;
+    }
+
+    generateBtn.disabled = false;
+    generateBtn.title = "";
+    generateBtn.textContent = i18n('aud.generateAudio');
   }
 
   async function loadEngine(type) {
     try {
       engineProgressEl.classList.remove('hidden');
-      engineStatusEl.textContent = `Initializing ${type}...`;
+      engineStatusEl.textContent = i18n('aud.initializingEngine', { type });
 
       if (type === 'kokoro') {
-        if (!(await isModelDownloaded('kokoro-82m'))) throw new Error('Kokoro TTS model not downloaded.');
-        const { KokoroTTS } = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm');
-        kokoroTts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'q8' });
+        if (!(await isModelDownloaded('kokoro-82m'))) throw new Error(i18n('aud.errKokoroNotDownloaded'));
+        // Run Kokoro in a Web Worker so synthesis stays off the main thread
+        // (long scripts were freezing the page).
+        if (!kokoroWorker) {
+          kokoroWorker = new Worker(new URL('../workers/kokoro.worker.js', import.meta.url), { type: 'module' });
+          kokoroWorker.modelLoaded = false;
+        }
+        if (!kokoroWorker.modelLoaded) {
+          await executeWorkerTask(kokoroWorker, 'load', {}, engineStatusEl, engineProgressEl);
+          kokoroWorker.modelLoaded = true;
+        }
         kokoroReady = true;
       } else if (type === 'cb') {
-        if (!(await isModelDownloaded('chatterbox-tts'))) throw new Error('Chatterbox TTS model not downloaded.');
+        if (!(await isModelDownloaded('chatterbox-tts'))) throw new Error(i18n('aud.errCbNotDownloaded'));
         if (!cbWorker) {
             cbWorker = new Worker(new URL('../workers/chatterbox.worker.js', import.meta.url), { type: 'module' });
             cbWorker.modelLoaded = false;
@@ -823,7 +884,7 @@ export async function render(container, hash) {
         }
         cbReady = true;
       } else if (type === 'pt') {
-        if (!(await isModelDownloaded('pocket-tts'))) throw new Error('Pocket TTS model not downloaded. Go to Models to download it (~110 MB).');
+        if (!(await isModelDownloaded('pocket-tts'))) throw new Error(i18n('aud.errPtNotDownloaded'));
         if (!ptWorker) {
           ptWorker = new Worker(new URL('../workers/pocket-tts.worker.js', import.meta.url), { type: 'module' });
           ptWorker.modelLoaded = false;
@@ -838,13 +899,13 @@ export async function render(container, hash) {
         const { getSettings } = await import('../utils/settings.js');
         const s = getSettings();
         const apiKey = s.elevenlabs?.apiKey;
-        if (!apiKey) throw new Error('Eleven Labs API Key is not configured. Please add it in Settings.');
-        
-        engineStatusEl.textContent = 'Fetching Eleven Labs voices...';
+        if (!apiKey) throw new Error(i18n('aud.errElNoKey'));
+
+        engineStatusEl.textContent = i18n('aud.fetchingElVoices');
         const response = await fetch('https://api.elevenlabs.io/v1/voices', {
           headers: { 'xi-api-key': apiKey }
         });
-        if (!response.ok) throw new Error(`Eleven Labs HTTP error: ${response.status}`);
+        if (!response.ok) throw new Error(i18n('aud.errElHttp', { status: response.status }));
         const data = await response.json();
         elevenLabsVoices = data.voices || [];
         elReady = true;
@@ -852,11 +913,11 @@ export async function render(container, hash) {
         const { getSettings } = await import('../utils/settings.js');
         const s = getSettings();
         const gatewayUrl = s.localTts?.url?.trim();
-        if (!gatewayUrl) throw new Error('Local TTS Gateway URL is not configured. Please add it in Settings.');
+        if (!gatewayUrl) throw new Error(i18n('aud.errLocalNoUrl'));
 
-        engineStatusEl.textContent = 'Fetching local voices...';
+        engineStatusEl.textContent = i18n('aud.fetchingLocalVoices');
         const response = await fetch(`${gatewayUrl.endsWith('/') ? gatewayUrl : gatewayUrl + '/' }voices`);
-        if (!response.ok) throw new Error(`Local gateway HTTP error: ${response.status}`);
+        if (!response.ok) throw new Error(i18n('aud.errLocalHttp', { status: response.status }));
         const data = await response.json();
         localTtsVoices = data || [];
         localReady = true;
@@ -865,7 +926,7 @@ export async function render(container, hash) {
       engineStatusEl.textContent = '';
       engineProgressEl.classList.add('hidden');
     } catch (err) {
-      engineStatusEl.textContent = `Error loading ${type}: ${err.message}`;
+      engineStatusEl.textContent = i18n('aud.errLoadingEngine', { type, error: err.message });
       engineProgressEl.classList.add('hidden');
       if (type === 'kokoro') checkKokoro.checked = false;
       if (type === 'cb') checkCb.checked = false;
@@ -873,45 +934,60 @@ export async function render(container, hash) {
       if (type === 'el') checkEl.checked = false;
       if (type === 'local') checkLocal.checked = false;
     }
-    updateGenerateButtonState();
+    // Render the speaker selects FIRST, then evaluate the Generate button —
+    // mapping-completeness reads the .aud-voice-select elements.
     renderSpeakerList();
+    updateGenerateButtonState();
   }
 
   checkKokoro.addEventListener('change', () => {
     if (checkKokoro.checked && !kokoroReady) loadEngine('kokoro');
-    else { updateGenerateButtonState(); renderSpeakerList(); }
+    else { renderSpeakerList(); updateGenerateButtonState(); }
   });
 
   checkCb.addEventListener('change', () => {
     if (checkCb.checked && !cbReady) loadEngine('cb');
-    else { updateGenerateButtonState(); renderSpeakerList(); }
+    else { renderSpeakerList(); updateGenerateButtonState(); }
   });
 
   checkPt.addEventListener('change', () => {
     if (checkPt.checked && !ptReady) loadEngine('pt');
-    else { updateGenerateButtonState(); renderSpeakerList(); }
+    else { renderSpeakerList(); updateGenerateButtonState(); }
   });
 
   checkEl.addEventListener('change', () => {
     if (checkEl.checked && !elReady) loadEngine('el');
-    else { updateGenerateButtonState(); renderSpeakerList(); }
+    else { renderSpeakerList(); updateGenerateButtonState(); }
   });
 
   checkLocal.addEventListener('change', () => {
     if (checkLocal.checked && !localReady) loadEngine('local');
-    else { updateGenerateButtonState(); renderSpeakerList(); }
+    else { renderSpeakerList(); updateGenerateButtonState(); }
   });
 
+  // Initial parse for a project that already has a script loaded.
+  parseScript();
+
   function renderSpeakerList() {
-    if (detectedSpeakers.length === 0) return;
+    if (detectedSpeakers.length === 0) {
+      speakerListEl.innerHTML = `<div class="text-sm text-muted">${i18n('aud.enterScriptHint')}</div>`;
+      return;
+    }
 
     const isCbChecked = checkCb.checked;
     const isPtChecked = checkPt.checked;
     const isKokoroChecked = checkKokoro.checked;
     const isElChecked = checkEl.checked;
 
+    // No engine chosen yet: list the detected speakers as "Unassigned" and make
+    // it clear that a speech engine must be picked before voices can be mapped.
     if (!isCbChecked && !isPtChecked && !isKokoroChecked && !isElChecked && !checkLocal.checked) {
-      speakerListEl.innerHTML = `<div class="p-3 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded text-sm text-muted">Please select an engine above to map speakers.</div>`;
+      speakerListEl.innerHTML = detectedSpeakers.map(spk => `
+        <div class="flex items-center justify-between gap-2 p-3 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded">
+          <span class="font-bold text-sm text-[var(--ps-text)]">${spk}</span>
+          <span class="text-xs px-2 py-0.5 rounded" style="background:rgba(234,179,8,0.15); color:#eab308;">${i18n('aud.unassigned')}</span>
+        </div>`).join('') +
+        `<div class="text-xs text-muted mt-1 px-1 flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:14px;">arrow_upward</span>${i18n('aud.chooseEngineHint')}</div>`;
       return;
     }
 
@@ -921,11 +997,10 @@ export async function render(container, hash) {
         <div class="p-4 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded flex flex-col gap-2 m-1">
           <div class="flex items-center gap-2 text-[var(--ps-orange)] font-bold text-sm">
             <span class="material-symbols-outlined">warning</span>
-            <span>Custom Voice Required</span>
+            <span>${i18n('aud.customVoiceRequired')}</span>
           </div>
           <div class="text-xs text-[var(--ps-text)] leading-relaxed">
-            ${isCbChecked ? 'Chatterbox' : 'Pocket TTS'} requires at least one custom voice sample to clone.
-            Please add a voice sample in the <a href="#" class="aud-link-to-voicecraft text-[var(--ps-blue)] hover:underline font-semibold">VoiceCraft (Custom Voices) tab</a> first.
+            ${i18n('aud.customVoiceRequiredMsg', { engine: isCbChecked ? 'Chatterbox' : 'Pocket TTS' })}
           </div>
         </div>
       `;
@@ -1011,7 +1086,7 @@ export async function render(container, hash) {
       }
 
       if (!customOptionsHtml && !kokoroOptionsHtml && !elevenLabsOptionsHtml && !localOptionsHtml) {
-        return `<div class="p-3 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded text-sm text-muted">Please select an engine above to map speaker: <b>${spk}</b></div>`;
+        return `<div class="p-3 bg-[var(--ps-bg)] border border-[var(--ps-border)] rounded text-sm text-muted">${i18n('aud.selectEngineToMapSpeaker', { speaker: spk })}</div>`;
       }
 
       return `
@@ -1024,12 +1099,12 @@ export async function render(container, hash) {
               ${elevenLabsOptionsHtml}
               ${localOptionsHtml}
             </select>
-            <button class="aud-voice-preview-btn btn btn-secondary p-1 flex items-center justify-center" title="Preview Voice" data-speaker="${spk}" style="width: 28px; height: 28px; min-width: 28px; border-radius: 4px;">
+            <button class="aud-voice-preview-btn btn btn-secondary p-1 flex items-center justify-center" title="${i18n('aud.previewVoice')}" data-speaker="${spk}" style="width: 28px; height: 28px; min-width: 28px; border-radius: 4px;">
               <span class="material-symbols-outlined text-sm">volume_up</span>
             </button>
           </div>
           <div class="flex items-center gap-2 mt-1">
-             <span class="text-xs text-muted w-14">Emotion:</span>
+             <span class="text-xs text-muted w-14">${i18n('aud.emotion')}</span>
              <input type="range" class="aud-emotion-select flex-1" data-speaker="${spk}" min="0" max="1" step="0.05" value="0.5">
           </div>
         </div>
@@ -1076,7 +1151,7 @@ export async function render(container, hash) {
           previewAudio.onended = () => { URL.revokeObjectURL(blobUrl); };
           await previewAudio.play();
         } else {
-          throw new Error('No preview URL available for this Eleven Labs voice.');
+          throw new Error(i18n('aud.errNoElPreview'));
         }
       } else if (voiceId.startsWith('cb_') || voiceId.startsWith('pt_')) {
         const dbId = voiceId.substring(3);
@@ -1087,7 +1162,7 @@ export async function render(container, hash) {
           previewAudio.onended = () => { revokeMediaUrl(refBlobUrl); };
           await previewAudio.play();
         } else {
-          throw new Error('Custom voice reference file not found.');
+          throw new Error(i18n('aud.errCustomVoiceNotFound'));
         }
       } else if (voiceId.startsWith('pp_')) {
         const presetId = voiceId.substring(3);
@@ -1096,15 +1171,15 @@ export async function render(container, hash) {
           previewAudio = new Audio(preset.url);
           await previewAudio.play();
         } else {
-          throw new Error('Pocket TTS preset URL not found.');
+          throw new Error(i18n('aud.errPresetUrlNotFound'));
         }
       } else if (voiceId.startsWith('kk_')) {
-        if (!kokoroReady) {
-          throw new Error('Please enable and load the Kokoro engine first to preview this voice.');
+        if (!kokoroReady || !kokoroWorker) {
+          throw new Error(i18n('aud.errEnableKokoroFirst'));
         }
         const v = voiceId.substring(3);
-        const out = await kokoroTts.generate("Kokoro voice preview", { voice: v });
-        const wavBlob = audioBufferToWav(out.audio, 24000);
+        const { waveform } = await executeWorkerTask(kokoroWorker, 'generate', { text: "Kokoro voice preview", voice: v });
+        const wavBlob = audioBufferToWav(new Float32Array(waveform), 24000);
         const blobUrl = URL.createObjectURL(wavBlob);
         previewAudio = new Audio(blobUrl);
         previewAudio.onended = () => { URL.revokeObjectURL(blobUrl); };
@@ -1116,7 +1191,7 @@ export async function render(container, hash) {
           const { getSettings } = await import('../utils/settings.js');
           const s = getSettings();
           const gatewayUrl = s.localTts?.url?.trim();
-          if (!gatewayUrl) throw new Error('Local TTS Gateway URL is not configured.');
+          if (!gatewayUrl) throw new Error(i18n('aud.errLocalNoUrlShort'));
 
           let previewUrl = voice.preview_url;
           if (previewUrl && !previewUrl.startsWith('http://') && !previewUrl.startsWith('https://')) {
@@ -1134,10 +1209,10 @@ export async function render(container, hash) {
             previewAudio.onended = () => { URL.revokeObjectURL(blobUrl); };
             await previewAudio.play();
           } else {
-            throw new Error('No preview URL available for this local voice.');
+            throw new Error(i18n('aud.errNoLocalPreview'));
           }
         } else {
-          throw new Error('Local voice reference not found.');
+          throw new Error(i18n('aud.errLocalVoiceNotFound'));
         }
       }
     } catch (err) {
@@ -1149,62 +1224,14 @@ export async function render(container, hash) {
     }
   });
 
-  parseBtn.addEventListener('click', async () => {
-    const text = inputEl.value.trim();
-    if (!text) {
-        speakerListEl.innerHTML = '<div class="text-sm text-danger">Please enter some text first.</div>';
-        generateBtn.disabled = true;
-        return;
-    }
-
-    // Pre-load voices if we haven't
-    if (customVoices.length === 0) customVoices = currentAudioProject.voices || [];
-
-    const lines = text.split('\n');
-    detectedSpeakers = [];
-    parsedSegments = [];
-    let currentSpeaker = 'Default';
-    
-    for (const line of lines) {
-       const tLine = line.trim();
-       if (!tLine) continue;
-       if (tLine.includes('-->') || /^\d+$/.test(tLine)) continue;
-       
-       const speakerMatch = tLine.match(/^\[?([A-Za-z0-9 _-]+)\]?\s*:/);
-       let content = tLine;
-       if (speakerMatch) {
-         currentSpeaker = speakerMatch[1].trim();
-         content = tLine.substring(speakerMatch[0].length).trim();
-       }
-       
-       if (content) {
-         if (!detectedSpeakers.includes(currentSpeaker)) detectedSpeakers.push(currentSpeaker);
-         parsedSegments.push({ speaker: currentSpeaker, text: content });
-       }
-    }
-
-    if (parsedSegments.length === 0) {
-       speakerListEl.innerHTML = '<div class="text-sm text-danger">No speakable text found.</div>';
-       updateGenerateButtonState();
-       return;
-    }
-
-    sectionMappingEl.classList.remove('opacity-50', 'pointer-events-none');
-    if (generateContainerEl) generateContainerEl.classList.remove('opacity-50', 'pointer-events-none');
-    renderSpeakerList();
-    updateGenerateButtonState();
-  });
+  if (parseBtn) parseBtn.addEventListener('click', () => parseScript());
 
   generateBtn.addEventListener('click', async () => {
+    let historyId = null;
     try {
       generateBtn.disabled = true;
-      generateBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm mr-2">refresh</span> Generating...';
-      genProgressEl.classList.remove('hidden');
-      genProgressEl.value = 0;
-      genStatusEl.textContent = 'Preparing generation...';
-      
-      // Un-gray section 3
-      sectionOutputEl.classList.remove('opacity-50', 'pointer-events-none');
+      generateBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm mr-2">refresh</span> ${i18n('aud.generatingShort')}`;
+      genStatusEl.textContent = '';
 
       const speakerVoiceMap = {};
       const speakerEmotionMap = {};
@@ -1212,20 +1239,38 @@ export async function render(container, hash) {
       container.querySelectorAll('.aud-emotion-select').forEach(sel => { speakerEmotionMap[sel.dataset.speaker] = parseFloat(sel.value); });
 
       const inputTitle = inputTitleEl.value.trim() || 'Audio_Studio_Output';
-      
+
       if (audioHistory.length === 0) historyListEl.innerHTML = ''; // clear empty message
-      const historyId = generateId();
-      
-      // Insert placeholder immediately
+      historyId = generateId();
+
+      // Insert placeholder immediately — the progress bar lives here, in the
+      // output-history slot the finished item will occupy.
       const placeholderHtml = `
-        <div id="aud-hist-${historyId}" class="p-4 rounded-lg flex flex-col gap-3 animate-pulse" style="background-color: #1e3a8a; color: #fff;">
+        <div id="aud-hist-${historyId}" class="p-4 rounded-lg flex flex-col gap-2" style="background-color: #1e3a8a; color: #fff;">
           <div class="flex justify-between items-center">
             <span class="font-bold">${inputTitle}</span>
-            <span class="text-xs font-bold uppercase tracking-wider" style="color: #93c5fd;">Generating...</span>
+            <span class="text-xs font-bold uppercase tracking-wider aud-ph-phase" style="color: #93c5fd;">${i18n('aud.generatingShort')}</span>
           </div>
+          <progress class="aud-ph-progress w-full h-1.5 rounded overflow-hidden" value="0" max="100"></progress>
+          <div class="aud-ph-status text-xs font-medium" style="color:#dbeafe;">${i18n('aud.preparingGeneration')}</div>
+          <div class="aud-ph-substatus text-xs" style="color:#93c5fd; min-height: 1em;"></div>
         </div>
       `;
       historyListEl.insertAdjacentHTML('afterbegin', placeholderHtml);
+      const phProgressEl = container.querySelector(`#aud-hist-${historyId} .aud-ph-progress`);
+      const phStatusEl = container.querySelector(`#aud-hist-${historyId} .aud-ph-status`);
+      const phPhaseEl = container.querySelector(`#aud-hist-${historyId} .aud-ph-phase`);
+      const phSubStatusEl = container.querySelector(`#aud-hist-${historyId} .aud-ph-substatus`);
+      // Main phase line ("Segment 2 of 8") + progress bar. The sub-status line is
+      // driven separately by the worker (e.g. "synthesizing…") so the phase count
+      // is never clobbered.
+      const setGenProgress = (val, text) => {
+        if (phProgressEl && val != null) phProgressEl.value = val;
+        if (phStatusEl && text != null) phStatusEl.textContent = text;
+        if (phSubStatusEl) phSubStatusEl.textContent = ''; // new phase clears the sub-status
+        if (val != null) genProgressEl.value = val;
+        if (text != null) genStatusEl.textContent = text;
+      };
       
       // Force DOM repaint before starting heavy processing
       await new Promise(r => setTimeout(r, 50));
@@ -1235,25 +1280,28 @@ export async function render(container, hash) {
       let totalSamples = 0;
 
       for (let i = 0; i < parsedSegments.length; i++) {
-        genProgressEl.value = (i / parsedSegments.length) * 100;
         const seg = parsedSegments[i];
-        genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length}...`;
-        
+        setGenProgress((i / parsedSegments.length) * 100, i18n('aud.generatingSegment', { current: i + 1, total: parsedSegments.length }));
+        if (phPhaseEl) phPhaseEl.textContent = `${i + 1} / ${parsedSegments.length}`;
+
         const voiceId = speakerVoiceMap[seg.speaker] || 'kk_af_heart';
         const emotionVal = speakerEmotionMap[seg.speaker] || 0.5;
 
         let audioData = null;
 
         if (voiceId.startsWith('kk_')) {
-          if (!kokoroReady) throw new Error('Kokoro TTS engine is not ready.');
+          if (!kokoroReady || !kokoroWorker) throw new Error(i18n('aud.errKokoroNotReady'));
           const v = voiceId.substring(3);
-          const out = await kokoroTts.generate(seg.text, { voice: v });
-          audioData = out.audio; // Float32Array at 24kHz natively usually
+          const { waveform, sampleRate } = await executeWorkerTask(kokoroWorker, 'generate', { text: seg.text, voice: v }, phSubStatusEl, null);
+          audioData = new Float32Array(waveform);
+          if (sampleRate && sampleRate !== SAMPLE_RATE) {
+            audioData = await resampleFloat32(audioData, sampleRate, SAMPLE_RATE);
+          }
         } else if (voiceId.startsWith('cb_')) {
-          if (!cbReady) throw new Error('Chatterbox VoiceCraft engine is not ready.');
+          if (!cbReady) throw new Error(i18n('aud.errCbNotReady'));
           const dbId = voiceId.substring(3);
           const customRec = customVoices.find(c => c.id === dbId);
-          if (!customRec) throw new Error('Custom voice missing');
+          if (!customRec) throw new Error(i18n('aud.errCustomVoiceMissing'));
           
           // Decode the reference WAV stored in DB at 24000Hz for Chatterbox
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -1264,14 +1312,14 @@ export async function render(container, hash) {
           const refFloat32 = refAudioBuffer.getChannelData(0);
           await audioCtx.close();
           
-          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Chatterbox)...`;
+          setGenProgress(null, i18n('aud.generatingSegmentEngine', { current: i + 1, total: parsedSegments.length, engine: 'Chatterbox' }));
           
           const { waveform } = await executeWorkerTask(cbWorker, 'generate', {
               text: seg.text,
               refFloat32Array: refFloat32,
               speakerId: dbId,
               emotionVal: emotionVal
-          }, genStatusEl, genProgressEl);
+          }, phSubStatusEl, null);
           
           audioData = new Float32Array(waveform);
 
@@ -1281,10 +1329,10 @@ export async function render(container, hash) {
              audioData = await resampleFloat32(audioData, CB_RATE, SAMPLE_RATE);
           }
         } else if (voiceId.startsWith('pt_')) {
-          if (!ptReady) throw new Error('Pocket TTS engine is not ready.');
+          if (!ptReady) throw new Error(i18n('aud.errPtNotReady'));
           const dbId = voiceId.substring(3);
           const customRec = customVoices.find(c => c.id === dbId);
-          if (!customRec) throw new Error('Custom voice missing for Pocket TTS');
+          if (!customRec) throw new Error(i18n('aud.errCustomVoiceMissingPt'));
 
           // Decode reference audio at 24 kHz (same store as Chatterbox custom voices)
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -1295,50 +1343,50 @@ export async function render(container, hash) {
           const refFloat32 = refAudioBuffer.getChannelData(0);
           await audioCtx.close();
 
-          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Pocket TTS)...`;
+          setGenProgress(null, i18n('aud.generatingSegmentEngine', { current: i + 1, total: parsedSegments.length, engine: 'Pocket TTS' }));
 
           const { waveform } = await executeWorkerTask(ptWorker, 'generate', {
             text: seg.text,
             refFloat32Array: refFloat32,
             speakerId: dbId,
             sampleRate: 24000,
-          }, genStatusEl, genProgressEl);
+          }, phSubStatusEl, null);
 
           audioData = new Float32Array(waveform);
         } else if (voiceId.startsWith('pp_')) {
-          if (!ptReady) throw new Error('Pocket TTS engine is not ready.');
+          if (!ptReady) throw new Error(i18n('aud.errPtNotReady'));
           const presetId = voiceId.substring(3);
 
-          genStatusEl.textContent = `Loading preset voice "${presetId}"...`;
+          setGenProgress(null, i18n('aud.loadingPreset', { preset: presetId }));
           const refFloat32 = await getPocketTtsPreset(presetId);
 
-          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Pocket TTS preset)...`;
+          setGenProgress(null, i18n('aud.generatingSegmentEngine', { current: i + 1, total: parsedSegments.length, engine: 'Pocket TTS preset' }));
 
           const { waveform } = await executeWorkerTask(ptWorker, 'generate', {
             text: seg.text,
             refFloat32Array: refFloat32,
             speakerId: `preset_${presetId}`,
             sampleRate: 24000,
-          }, genStatusEl, genProgressEl);
+          }, phSubStatusEl, null);
 
           audioData = new Float32Array(waveform);
         } else if (voiceId.startsWith('el_')) {
-          if (!elReady) throw new Error('Eleven Labs engine is not ready.');
+          if (!elReady) throw new Error(i18n('aud.errElNotReady'));
           const { getSettings } = await import('../utils/settings.js');
           const s = getSettings();
           const apiKey = s.elevenlabs?.apiKey;
-          if (!apiKey) throw new Error('Eleven Labs API Key is not configured. Please add it in Settings.');
+          if (!apiKey) throw new Error(i18n('aud.errElNoKey'));
           const elVoiceId = voiceId.substring(3);
-          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Eleven Labs)...`;
+          setGenProgress(null, i18n('aud.generatingSegmentEngine', { current: i + 1, total: parsedSegments.length, engine: 'Eleven Labs' }));
           audioData = await generateElevenLabsAudio(seg.text, elVoiceId, apiKey);
         } else if (voiceId.startsWith('local_')) {
-          if (!localReady) throw new Error('Local TTS engine is not ready.');
+          if (!localReady) throw new Error(i18n('aud.errLocalNotReady'));
           const { getSettings } = await import('../utils/settings.js');
           const s = getSettings();
           const gatewayUrl = s.localTts?.url?.trim();
-          if (!gatewayUrl) throw new Error('Local TTS Gateway URL is not configured. Please add it in Settings.');
+          if (!gatewayUrl) throw new Error(i18n('aud.errLocalNoUrl'));
           const localVoiceId = voiceId.substring(6);
-          genStatusEl.textContent = `Generating segment ${i + 1} of ${parsedSegments.length} (Local TTS Gateway)...`;
+          setGenProgress(null, i18n('aud.generatingSegmentEngine', { current: i + 1, total: parsedSegments.length, engine: 'Local TTS Gateway' }));
           audioData = await generateLocalTtsAudio(seg.text, localVoiceId, gatewayUrl);
         }
 
@@ -1348,8 +1396,7 @@ export async function render(container, hash) {
         }
       }
 
-      genProgressEl.value = 100;
-      genStatusEl.textContent = 'Compiling final audio...';
+      setGenProgress(100, i18n('aud.compilingFinal'));
 
       const combinedAudio = new Float32Array(totalSamples);
       let offset = 0;
@@ -1371,7 +1418,7 @@ export async function render(container, hash) {
       await wavWritable.write(wavBlob);
       await wavWritable.close();
       
-      genStatusEl.textContent = 'Encoding MP3...';
+      setGenProgress(null, i18n('aud.encodingMp3'));
       const mp3Blob = await encodeMp3(combinedAudio, SAMPLE_RATE);
       const mp3Fh = await outputsDirHandle.getFileHandle(baseName + '.mp3', { create: true });
       const mp3Writable = await mp3Fh.createWritable();
@@ -1391,43 +1438,22 @@ export async function render(container, hash) {
       });
       await saveProject(currentAudioProjectDirHandle, currentAudioProject);
 
-      // Replace History Placeholder
-      const finalHtml = `
-        <div class="flex justify-between items-center">
-          <span class="font-bold text-[var(--ps-text)]">${inputTitle}</span>
-          <span class="text-xs text-muted">${durationSecs}s • ${detectedSpeakers.length} speaker(s)</span>
-        </div>
-        <div class="flex gap-2 items-center">
-          <audio controls class="flex-1 h-10 outline-none" src="${wavUrl}"></audio>
-          <canvas class="aud-hist-visualizer" width="80" height="40" style="border-radius: 4px; background: rgba(0,0,0,0.15); width: 80px; height: 40px; flex-shrink: 0;"></canvas>
-        </div>
-        <div class="flex gap-2 mt-1">
-          <a href="${wavUrl}" download="${inputTitle}.wav" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .wav</a>
-          <a href="${mp3Url}" download="${inputTitle}.mp3" class="btn btn-secondary flex-1 justify-center text-center text-xs">Download .mp3</a>
-        </div>
-      `;
-      
-      const placeholderEl = container.querySelector(`#aud-hist-${historyId}`);
-      if (placeholderEl) {
-        placeholderEl.className = "p-4 border border-[var(--ps-border)] rounded-lg bg-[var(--ps-bg)] flex flex-col gap-3";
-        placeholderEl.innerHTML = finalHtml;
-        initHistoryVisualizers();
-      }
-      
-      audioHistory.push({ id: historyId });
+      // Rebuild the history list (replaces the placeholder) with the new
+      // seekable waveform player for every item.
+      audioHistory = currentAudioProject.history;
+      await renderHistory();
 
-      genStatusEl.textContent = 'Done!';
+      setGenProgress(null, i18n('aud.done'));
     } catch (e) {
       console.error(e);
-      alert('Generation failed: ' + e.message);
-      genStatusEl.textContent = 'Error occurred.';
-      
+      alert(i18n('aud.generationFailed', { error: e.message }));
+
       // Remove or mark the placeholder as failed
       if (historyId) {
         const placeholderEl = container.querySelector(`#aud-hist-${historyId}`);
         if (placeholderEl) {
           placeholderEl.className = "p-4 border border-[var(--ps-red)] rounded-lg bg-[var(--ps-bg)] flex flex-col gap-3 opacity-50";
-          placeholderEl.innerHTML = `<div class="text-xs text-danger">Failed to generate: ${e.message}</div>`;
+          placeholderEl.innerHTML = `<div class="text-xs text-danger">${i18n('aud.failedToGenerate', { error: e.message })}</div>`;
         }
       }
     } finally {
@@ -1491,93 +1517,151 @@ export async function render(container, hash) {
     return float32;
   }
 
-  function setupVisualizer(audioEl, canvasEl) {
-    let audioCtx = null;
-    let analyser = null;
-    let source = null;
-    let animationFrameId = null;
-
-    const draw = () => {
-      if (!canvasEl) return;
-      const ctx = canvasEl.getContext('2d');
-      const width = canvasEl.width;
-      const height = canvasEl.height;
-      
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyser.getByteFrequencyData(dataArray);
-
-      ctx.clearRect(0, 0, width, height);
-
-      const barWidth = (width / bufferLength) * 2.5;
-      let barHeight;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        barHeight = (dataArray[i] / 255) * height;
-
-        const grad = ctx.createLinearGradient(0, height, 0, 0);
-        grad.addColorStop(0, 'var(--ps-blue)');
-        grad.addColorStop(1, '#3b82f6');
-        ctx.fillStyle = grad;
-        
-        ctx.fillRect(x, height - barHeight, barWidth - 1, barHeight);
-        x += barWidth;
-      }
-      
-      animationFrameId = requestAnimationFrame(draw);
-      activeVisualizerAnims.push(animationFrameId);
-    };
-
-    const onPlay = () => {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
-        source = audioCtx.createMediaElementSource(audioEl);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      cancelAnimationFrame(animationFrameId);
-      draw();
-    };
-
-    const onPause = () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-
-    audioEl.addEventListener('play', onPlay);
-    audioEl.addEventListener('pause', onPause);
-    audioEl.addEventListener('ended', onPause);
-    
-    return () => {
-      audioEl.removeEventListener('play', onPlay);
-      audioEl.removeEventListener('pause', onPause);
-      audioEl.removeEventListener('ended', onPause);
-      cancelAnimationFrame(animationFrameId);
-      if (audioCtx) {
-        audioCtx.close().catch(() => {});
-      }
-    };
-  }
-
   function initHistoryVisualizers() {
     cleanupVisualizers.forEach(cleanup => cleanup());
     cleanupVisualizers.length = 0;
     activeVisualizerAnims.forEach(id => cancelAnimationFrame(id));
     activeVisualizerAnims.length = 0;
 
-    container.querySelectorAll('.aud-hist-visualizer').forEach(canvasEl => {
-      const row = canvasEl.closest('[id^="aud-hist-"]');
-      if (!row) return;
-      const audioEl = row.querySelector('audio');
-      if (!audioEl) return;
-      const cleanup = setupVisualizer(audioEl, canvasEl);
-      cleanupVisualizers.push(cleanup);
+    container.querySelectorAll('.aud-hist-card').forEach(card => {
+      const cleanup = setupWaveformPlayer(card);
+      if (cleanup) cleanupVisualizers.push(cleanup);
     });
+  }
+
+  // Compute downsampled peak amplitudes (one value per bucket) for waveform drawing.
+  function computePeaks(channelData, buckets) {
+    const peaks = new Float32Array(buckets);
+    const blockSize = Math.max(1, Math.floor(channelData.length / buckets));
+    for (let b = 0; b < buckets; b++) {
+      const start = b * blockSize;
+      let max = 0;
+      for (let j = 0; j < blockSize; j++) {
+        const v = Math.abs(channelData[start + j] || 0);
+        if (v > max) max = v;
+      }
+      peaks[b] = max;
+    }
+    return peaks;
+  }
+
+  // Static, seekable waveform player for an output-history card.
+  function setupWaveformPlayer(card) {
+    const audioEl = card.querySelector('audio');
+    const canvas = card.querySelector('.aud-wave-canvas');
+    const playBtn = card.querySelector('.aud-wave-play');
+    const timeEl = card.querySelector('.aud-wave-time');
+    if (!audioEl || !canvas || !playBtn) return null;
+
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    let peaks = null;
+    let duration = 0;
+    let rafId = null;
+    let destroyed = false;
+
+    const fmt = (s) => {
+      if (!isFinite(s) || s < 0) s = 0;
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      const mid = H / 2;
+      const total = duration || audioEl.duration || 0;
+      const progress = total > 0 ? (audioEl.currentTime / total) : 0;
+      const playedX = progress * W;
+      if (peaks) {
+        const barW = Math.max(1, W / peaks.length);
+        for (let i = 0; i < peaks.length; i++) {
+          const x = i * barW;
+          const bh = Math.max(1, peaks[i] * (H - 4));
+          ctx.fillStyle = x <= playedX ? '#3b82f6' : 'rgba(148,163,184,0.5)';
+          ctx.fillRect(x, mid - bh / 2, Math.max(1, barW - 1), bh);
+        }
+      } else {
+        ctx.fillStyle = 'rgba(148,163,184,0.4)';
+        ctx.fillRect(0, mid - 1, W, 2);
+      }
+      // Playhead
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(Math.min(W - 1, playedX), 0, 2, H);
+      if (timeEl) timeEl.textContent = `${fmt(audioEl.currentTime)} / ${fmt(total)}`;
+    };
+
+    const loop = () => {
+      if (destroyed) return;
+      draw();
+      if (!audioEl.paused && !audioEl.ended) {
+        rafId = requestAnimationFrame(loop);
+        activeVisualizerAnims.push(rafId);
+      }
+    };
+
+    const seekFromEvent = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, (e.clientX ?? 0) - rect.left));
+      const total = duration || audioEl.duration || 0;
+      if (total > 0) { audioEl.currentTime = (x / rect.width) * total; draw(); }
+    };
+
+    let scrubbing = false;
+    const onDown = (e) => { scrubbing = true; seekFromEvent(e); };
+    const onMove = (e) => { if (scrubbing) seekFromEvent(e); };
+    const onUp = () => { scrubbing = false; };
+    canvas.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+
+    const onPlay = () => {
+      playBtn.querySelector('.material-symbols-outlined').textContent = 'pause';
+      loop();
+    };
+    const onPause = () => {
+      playBtn.querySelector('.material-symbols-outlined').textContent = 'play_arrow';
+      cancelAnimationFrame(rafId);
+      draw();
+    };
+    const onPlayClick = () => { if (audioEl.paused) audioEl.play().catch(() => {}); else audioEl.pause(); };
+    playBtn.addEventListener('click', onPlayClick);
+    audioEl.addEventListener('play', onPlay);
+    audioEl.addEventListener('pause', onPause);
+    audioEl.addEventListener('ended', onPause);
+    audioEl.addEventListener('loadedmetadata', () => { if (!duration) duration = audioEl.duration; draw(); });
+
+    // Decode for peaks, then draw.
+    (async () => {
+      try {
+        const resp = await fetch(audioEl.src);
+        const ab = await resp.arrayBuffer();
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = await ac.decodeAudioData(ab);
+        if (destroyed) { ac.close().catch(() => {}); return; }
+        duration = buf.duration;
+        peaks = computePeaks(buf.getChannelData(0), 200);
+        ac.close().catch(() => {});
+      } catch (err) {
+        // Fall back to a flat line + native duration.
+      }
+      draw();
+    })();
+
+    draw();
+
+    return () => {
+      destroyed = true;
+      cancelAnimationFrame(rafId);
+      canvas.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      playBtn.removeEventListener('click', onPlayClick);
+      audioEl.removeEventListener('play', onPlay);
+      audioEl.removeEventListener('pause', onPause);
+      audioEl.removeEventListener('ended', onPause);
+      try { audioEl.pause(); } catch (e) {}
+    };
   }
 
   // --- Helpers ---
@@ -1666,7 +1750,7 @@ export async function render(container, hash) {
     if (checkKokoro.checked || checkCb.checked || checkPt.checked || kokoroReady || cbReady || ptReady) {
       e.preventDefault();
       e.stopPropagation();
-      if (await showDialog({ title: 'Leave Page?', message: "Warning: You have loaded TTS engines. If you leave this page, you will need to re-compile them again later (which can take 60+ seconds). Are you sure you want to leave?" })) {
+      if (await showDialog({ title: i18n('aud.leavePageTitle'), message: i18n('aud.leavePageMsg') })) {
          window.removeEventListener('beforeunload', handleBeforeUnload);
          navItems.forEach(item => item.removeEventListener('click', handleNavClick, true));
          window.location.hash = e.currentTarget.getAttribute('href');

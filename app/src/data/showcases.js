@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Showcase CRUD
+ * ZumiLabs Studio — Showcase CRUD
  *
  * A Showcase captures a curated view of a run's output:
  * {

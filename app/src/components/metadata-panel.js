@@ -17,7 +17,7 @@
  *   Architecture    L2  building analysis (hidden when absent)
  *   Gen. Prompts    L2  short / detailed / negative + copy buttons
  *   DAM Notes       L2  contentSensitivity, releases, limitations
- *   Computed        L2  scalar values from Zumilabs Studio transforms
+ *   Computed        L2  scalar values from ZumiLabs Studio transforms
  *   Vision (legacy) L2  asset-panel extracted data (fallback)
  * [File, Camera & EXIF]  L1 (async)
  * [Processing Log]       L1
@@ -34,6 +34,7 @@ import {
 } from '../data/sidecar.js';
 import { extractExif } from '../engine/exif-reader.js';
 import { getSettings } from '../utils/settings.js';
+import { t as i18n } from '../i18n/index.js';
 
 // ── Style injection ────────────────────────────────────────────────────────────
 
@@ -518,12 +519,12 @@ export class MetadataPanel {
   clear() {
     this._file = null; this._sidecar = null;
     const titleEl = this._panelEl?.querySelector('.mp-header-title');
-    if (titleEl) titleEl.textContent = 'No image selected';
+    if (titleEl) titleEl.textContent = i18n('mp.noImageSelected');
     const body = this._panelEl?.querySelector('.mp-body');
     if (body) body.innerHTML = `
       <div class="mp-no-image">
         <span class="material-symbols-outlined">image_not_supported</span>
-        <div class="mp-no-image-text">Select an image to view its metadata</div>
+        <div class="mp-no-image-text">${i18n('mp.selectImageToView')}</div>
       </div>`;
     const footer = this._panelEl?.querySelector('.mp-footer');
     if (footer) footer.style.display = 'none';
@@ -548,27 +549,27 @@ export class MetadataPanel {
     el.innerHTML = `
       <div class="mp-header">
         <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-faint);flex-shrink:0">info</span>
-        <div class="mp-header-title">No image selected</div>
-        <button class="mp-collapse-btn" id="mp-collapse" title="Collapse panel">
+        <div class="mp-header-title">${i18n('mp.noImageSelected')}</div>
+        <button class="mp-collapse-btn" id="mp-collapse" title="${i18n('mp.collapsePanel')}">
           <span class="material-symbols-outlined mp-collapse-icon">chevron_right</span>
         </button>
       </div>
       <div class="mp-body">
         <div class="mp-no-image">
           <span class="material-symbols-outlined">image_not_supported</span>
-          <div class="mp-no-image-text">Select an image to view its metadata</div>
+          <div class="mp-no-image-text">${i18n('mp.selectImageToView')}</div>
         </div>
       </div>
       <div class="mp-footer" style="display:none">
         <div class="mp-footer-row">
           <label class="mp-writeback-label">
             <input type="checkbox" id="mp-writeback" checked>
-            Write to image EXIF
+            ${i18n('mp.writeToExif')}
           </label>
         </div>
         <div class="mp-save-row">
-          <button class="btn-secondary" id="mp-cancel">Cancel</button>
-          <button class="btn-primary"   id="mp-save">Save sidecar</button>
+          <button class="btn-secondary" id="mp-cancel">${i18n('mp.cancel')}</button>
+          <button class="btn-primary"   id="mp-save">${i18n('mp.saveSidecar')}</button>
         </div>
       </div>`;
 
@@ -615,7 +616,7 @@ export class MetadataPanel {
 
         <!-- Rating & Flag -->
         <div style="margin-bottom:8px">
-          <span class="mp-label">Rating &amp; Flag</span>
+          <span class="mp-label">${i18n('mp.ratingAndFlag')}</span>
           <div class="mp-rating-row">
             <div class="mp-stars" id="mp-stars">
               ${[1,2,3,4,5].map(n => `
@@ -623,56 +624,56 @@ export class MetadataPanel {
               `).join('')}
             </div>
             <div class="mp-flag-btns">
-              <button class="mp-flag-btn ${this._flag==='pick'   ?'active-pick':''}"   data-flag="pick">Pick</button>
-              <button class="mp-flag-btn ${this._flag==='reject' ?'active-reject':''}" data-flag="reject">Reject</button>
-              <button class="mp-flag-btn ${!this._flag           ?'active-unflag':''}" data-flag="">Unflag</button>
+              <button class="mp-flag-btn ${this._flag==='pick'   ?'active-pick':''}"   data-flag="pick">${i18n('mp.pick')}</button>
+              <button class="mp-flag-btn ${this._flag==='reject' ?'active-reject':''}" data-flag="reject">${i18n('mp.reject')}</button>
+              <button class="mp-flag-btn ${!this._flag           ?'active-unflag':''}" data-flag="">${i18n('mp.unflag')}</button>
             </div>
           </div>
           <!-- Content Rating -->
           <div class="mp-rating-row-2">
-            <button class="${crClass('general')}"  data-cr="general">General</button>
-            <button class="${crClass('mature')}"   data-cr="mature">Mature</button>
-            <button class="${crClass('explicit')}" data-cr="explicit">Explicit</button>
-            <span class="mp-cr-sep">content</span>
+            <button class="${crClass('general')}"  data-cr="general">${i18n('mp.general')}</button>
+            <button class="${crClass('mature')}"   data-cr="mature">${i18n('mp.mature')}</button>
+            <button class="${crClass('explicit')}" data-cr="explicit">${i18n('mp.explicit')}</button>
+            <span class="mp-cr-sep">${i18n('mp.content')}</span>
           </div>
         </div>
 
         <!-- Asset title -->
         <div style="margin-bottom:8px">
-          <span class="mp-label">Title</span>
+          <span class="mp-label">${i18n('mp.title')}</span>
           <input class="mp-input" id="mp-asset-title"
-            value="${_e(this._assetTitle)}" placeholder="Descriptive title…">
+            value="${_e(this._assetTitle)}" placeholder="${i18n('mp.descriptiveTitle')}">
         </div>
 
         <!-- Tags -->
         <div style="margin-bottom:8px">
-          <span class="mp-label">Tags</span>
+          <span class="mp-label">${i18n('mp.tags')}</span>
           <div class="mp-tag-wrap" id="mp-tag-wrap">
             ${this._tags.map(t => `
               <span class="mp-chip" data-tag="${_e(t)}">
                 ${_e(t)}<button class="mp-chip-remove" data-remove="${_e(t)}">×</button>
               </span>`).join('')}
-            <input class="mp-tag-input" id="mp-tag-input" placeholder="Add tag…" autocomplete="off">
+            <input class="mp-tag-input" id="mp-tag-input" placeholder="${i18n('mp.addTag')}" autocomplete="off">
           </div>
         </div>
 
         <!-- Usage scenarios -->
         <div style="margin-bottom:8px">
-          <span class="mp-label">Usage Scenarios</span>
+          <span class="mp-label">${i18n('mp.usageScenarios')}</span>
           <div class="mp-tag-wrap" id="mp-usage-wrap">
             ${this._usageScenarios.map(t => `
               <span class="mp-chip" data-usagetag="${_e(t)}">
                 ${_e(t)}<button class="mp-chip-remove" data-removeusage="${_e(t)}">×</button>
               </span>`).join('')}
-            <input class="mp-tag-input" id="mp-usage-input" placeholder="Add scenario…" autocomplete="off">
+            <input class="mp-tag-input" id="mp-usage-input" placeholder="${i18n('mp.addScenario')}" autocomplete="off">
           </div>
         </div>
 
         <!-- Caption -->
         <div style="margin-bottom:8px">
-          <span class="mp-label">Caption</span>
+          <span class="mp-label">${i18n('mp.caption')}</span>
           <textarea class="mp-textarea" id="mp-caption" rows="2"
-            placeholder="Add a caption…">${_e(ann.caption||'')}</textarea>
+            placeholder="${i18n('mp.addCaption')}">${_e(ann.caption||'')}</textarea>
         </div>
 
         <!-- Location -->
@@ -680,20 +681,20 @@ export class MetadataPanel {
           <summary class="mp-label"
             style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px">
             <span class="material-symbols-outlined" style="font-size:12px">expand_more</span>
-            Location
-            ${hasGPS ? '<span style="font-size:9px;color:var(--ps-text-faint);margin-left:auto">GPS ✓</span>' : ''}
+            ${i18n('mp.location')}
+            ${hasGPS ? `<span style="font-size:9px;color:var(--ps-text-faint);margin-left:auto">${i18n('mp.gpsOk')}</span>` : ''}
           </summary>
           <div style="padding:6px 0 0">
             ${hasGPS ? `<button class="mp-geocode-btn" id="mp-geocode">
-              <span class="material-symbols-outlined" style="font-size:12px">my_location</span>Fill from GPS
+              <span class="material-symbols-outlined" style="font-size:12px">my_location</span>${i18n('mp.fillFromGps')}
             </button>` : ''}
-            <span class="mp-label">City</span>
-            <input class="mp-input" id="mp-city" value="${_e(geo.city||'')}" placeholder="City">
-            <span class="mp-label">Region / State</span>
-            <input class="mp-input" id="mp-region" value="${_e(geo.region||'')}" placeholder="Region">
-            <span class="mp-label">Country</span>
-            <input class="mp-input" id="mp-country" value="${_e(geo.country||'')}" placeholder="Country">
-            <span class="mp-label">Code</span>
+            <span class="mp-label">${i18n('mp.city')}</span>
+            <input class="mp-input" id="mp-city" value="${_e(geo.city||'')}" placeholder="${i18n('mp.city')}">
+            <span class="mp-label">${i18n('mp.regionState')}</span>
+            <input class="mp-input" id="mp-region" value="${_e(geo.region||'')}" placeholder="${i18n('mp.region')}">
+            <span class="mp-label">${i18n('mp.country')}</span>
+            <input class="mp-input" id="mp-country" value="${_e(geo.country||'')}" placeholder="${i18n('mp.country')}">
+            <span class="mp-label">${i18n('mp.code')}</span>
             <input class="mp-input mp-input-sm" id="mp-cc" value="${_e(geo.countryCode||'')}" placeholder="GB">
             ${hasGPS
               ? `<div class="mp-readonly-val">📍 ${exifS.gpsLat?.toFixed(5)}, ${exifS.gpsLng?.toFixed(5)}</div>`
@@ -706,7 +707,7 @@ export class MetadataPanel {
       <div id="mp-sec-analysis" class="mp-section mp-sec-collapsed">
         <div class="mp-section-hdr" id="mp-analysis-hdr">
           <span class="mp-section-toggle">expand_more</span>
-          <span class="mp-section-title">AI Analysis</span>
+          <span class="mp-section-title">${i18n('mp.aiAnalysis')}</span>
           <span class="mp-section-badge" id="mp-analysis-badge"></span>
         </div>
         <div id="mp-seg-strip-host"></div>
@@ -721,7 +722,7 @@ export class MetadataPanel {
       <!-- ═══ Processing Log (Level 1) ═══════════════════════ -->
       ${this._renderProcessingLog(sidecar?.processing || [])}
 
-      ${!canSave ? '<div class="mp-no-save-note" style="padding:8px">Sidecar editing not available in this view</div>' : ''}
+      ${!canSave ? `<div class="mp-no-save-note" style="padding:8px">${i18n('mp.sidecarEditingUnavailable')}</div>` : ''}
     `;
 
     if (footer) footer.style.display = canSave ? 'flex' : 'none';
@@ -746,7 +747,7 @@ export class MetadataPanel {
         if (analysis.generatedAt) parts.push(_fmtDate(analysis.generatedAt));
         badge.textContent = parts.join(' · ');
       } else if (!hasAnalysis) {
-        badge.textContent = 'No analysis yet';
+        badge.textContent = i18n('mp.noAnalysisYet');
       }
     }
 
@@ -776,24 +777,24 @@ export class MetadataPanel {
         ctaHost.className = 'mp-ai-cta';
         ctaHost.innerHTML = `
           <span class="material-symbols-outlined mp-ai-cta-icon">auto_awesome</span>
-          <div class="mp-ai-cta-msg">No AI analysis yet.<br>Send this image to your AI endpoint to generate rich metadata.</div>
+          <div class="mp-ai-cta-msg">${i18n('mp.noAnalysisCta')}</div>
           <button class="mp-ai-cta-btn" id="mp-describe-btn">
             <span class="material-symbols-outlined">auto_awesome</span>
-            Describe Image with AI
+            ${i18n('mp.describeWithAi')}
           </button>`;
       } else {
         // Analysis exists — small re-analyse row
         ctaHost.className = 'mp-ai-reanalyze';
         ctaHost.innerHTML = `
-          <span style="font-size:10px;color:var(--ps-text-faint)">Analysis by ${_e(analysis.generatedBy || 'AI')}</span>
+          <span style="font-size:10px;color:var(--ps-text-faint)">${i18n('mp.analysisBy', { by: analysis.generatedBy || 'AI' })}</span>
           <button class="mp-ai-reanalyze-btn" id="mp-describe-btn">
-            <span class="material-symbols-outlined">refresh</span>Re-analyse
+            <span class="material-symbols-outlined">refresh</span>${i18n('mp.reanalyse')}
           </button>`;
       }
     } else {
       // No endpoint configured
       ctaHost.className = 'mp-ai-endpoint-note';
-      ctaHost.innerHTML = `<a id="mp-ai-settings-link">Configure AI endpoint</a> in Settings to enable AI image analysis`;
+      ctaHost.innerHTML = `<a id="mp-ai-settings-link">${i18n('mp.configureAiEndpoint')}</a> ${i18n('mp.inSettingsToEnable')}`;
       ctaHost.querySelector('#mp-ai-settings-link')?.addEventListener('click', async () => {
         const { navigate } = await import('../main.js');
         navigate('#sys');
@@ -842,7 +843,7 @@ export class MetadataPanel {
     analysisBody.appendChild(legacyHost);
 
     if (!hasAnalysis && !built) {
-      analysisBody.innerHTML = `<div style="padding:10px 24px;font-size:11px;color:var(--ps-text-faint);font-style:italic">No AI analysis data in sidecar</div>`;
+      analysisBody.innerHTML = `<div style="padding:10px 24px;font-size:11px;color:var(--ps-text-faint);font-style:italic">${i18n('mp.noAnalysisData')}</div>`;
     }
   }
 
@@ -890,9 +891,9 @@ export class MetadataPanel {
     if (!palette) return null;
     const body = document.createElement('div');
     const tiers = [
-      { key: 'dominant',  label: 'Dominant'  },
-      { key: 'secondary', label: 'Secondary' },
-      { key: 'accent',    label: 'Accent'    },
+      { key: 'dominant',  label: i18n('mp.dominant')  },
+      { key: 'secondary', label: i18n('mp.secondary') },
+      { key: 'accent',    label: i18n('mp.accent')    },
     ];
     tiers.forEach(({ key, label }) => {
       const items = palette[key];
@@ -921,14 +922,14 @@ export class MetadataPanel {
       body.appendChild(tier);
     });
     const count = (palette.dominant?.length||0) + (palette.secondary?.length||0) + (palette.accent?.length||0);
-    return this._subsec('palette', 'Colour Palette', `${count} colours`, body);
+    return this._subsec('palette', i18n('mp.colourPalette'), i18n('mp.coloursCount', { count }), body);
   }
 
   _buildAITags(tags, panelBody) {
     if (!tags?.length) return null;
     const body = document.createElement('div');
     body.innerHTML = `<div style="margin-bottom:6px;font-size:10px;color:var(--ps-text-faint)">
-      Click <strong>+</strong> to add to your tags</div>`;
+      ${i18n('mp.clickPlusToAdd')}</div>`;
     const wrap = document.createElement('div');
     wrap.className = 'mp-ai-tags-wrap';
     tags.forEach(tag => {
@@ -937,7 +938,7 @@ export class MetadataPanel {
       chip.dataset.aitag = tag;
       const alreadyOwned = this._tags.includes(tag);
       chip.innerHTML = `<span class="mp-ai-tag-label">${_e(tag)}</span>
-        <button class="mp-ai-promote" title="Add to my tags" ${alreadyOwned ? 'disabled' : ''}>+</button>`;
+        <button class="mp-ai-promote" title="${i18n('mp.addToMyTags')}" ${alreadyOwned ? 'disabled' : ''}>+</button>`;
       if (alreadyOwned) chip.classList.add('promoted');
       chip.querySelector('.mp-ai-promote').addEventListener('click', () => {
         if (this._tags.includes(tag)) return;
@@ -948,69 +949,69 @@ export class MetadataPanel {
       wrap.appendChild(chip);
     });
     body.appendChild(wrap);
-    return this._subsec('tag', 'AI Tags', `${tags.length}`, body);
+    return this._subsec('tag', i18n('mp.aiTags'), `${tags.length}`, body);
   }
 
   _buildScene(scene) {
     if (!scene) return null;
     const body = document.createElement('div');
     body.innerHTML = [
-      this._kv('Location type', scene.locationType),
-      this._kv('Indoor/outdoor', scene.indoorOutdoor),
-      this._kv('Time of day', scene.timeOfDay),
-      this._kv('Season', scene.season),
-      this._kv('Weather', scene.weather),
-      this._kv('Visibility', scene.visibility),
-      this._kv('Atmosphere', scene.atmosphere),
-      this._kv('Style', scene.style),
+      this._kv(i18n('mp.locationType'), scene.locationType),
+      this._kv(i18n('mp.indoorOutdoor'), scene.indoorOutdoor),
+      this._kv(i18n('mp.timeOfDay'), scene.timeOfDay),
+      this._kv(i18n('mp.season'), scene.season),
+      this._kv(i18n('mp.weather'), scene.weather),
+      this._kv(i18n('mp.visibility'), scene.visibility),
+      this._kv(i18n('mp.atmosphere'), scene.atmosphere),
+      this._kv(i18n('mp.style'), scene.style),
     ].join('');
     if (scene.settingDetails?.length) {
       const h = document.createElement('div');
       h.style.cssText = 'font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);padding:5px 0 2px';
-      h.textContent = 'Setting details';
+      h.textContent = i18n('mp.settingDetails');
       body.appendChild(h);
       body.insertAdjacentHTML('beforeend', this._bulletList(scene.settingDetails));
     }
-    return this._subsec('landscape', 'Scene', '', body);
+    return this._subsec('landscape', i18n('mp.scene'), '', body);
   }
 
   _buildSubjects(subjects) {
     if (!subjects) return null;
     const body = document.createElement('div');
     body.innerHTML = [
-      this._kv('Count', subjects.count),
-      this._kv('Arrangement', subjects.arrangement),
-      this._kv('Interaction', subjects.interaction),
-      this._kv('Emotion', subjects.emotion),
+      this._kv(i18n('mp.count'), subjects.count),
+      this._kv(i18n('mp.arrangement'), subjects.arrangement),
+      this._kv(i18n('mp.interaction'), subjects.interaction),
+      this._kv(i18n('mp.emotion'), subjects.emotion),
     ].join('');
 
     (subjects.items || []).forEach((subj, i) => {
       const card = document.createElement('div');
       card.className = 'mp-subject-card';
-      const label = subj.id || `Subject ${i + 1}`;
+      const label = subj.id || i18n('mp.subjectNum', { num: i + 1 });
       card.innerHTML = `<div class="mp-subject-card-hdr">
         <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-text-faint)">person</span>
         ${_e(label)}
         ${subj.position ? `<span class="mp-subject-pos">${_e(subj.position)}</span>` : ''}
       </div>` + [
-        this._kv('Gender pres.', subj.genderPresentation),
-        this._kv('Age range', subj.approximateAgeRange),
-        this._kv('Skin tone', subj.skinTone),
-        this._kv('Expression', subj.expression),
-        this._kv('Visibility', subj.visibility),
-        this._kv('Posture', subj.posture),
-        subj.hair  ? this._kv('Hair',  [subj.hair.color, subj.hair.length, subj.hair.style].filter(Boolean).join(', ')) : '',
-        subj.eyes  ? this._kv('Eyes',  [subj.eyes.color, subj.eyes.expression].filter(Boolean).join(', ')) : '',
-        subj.glasses ? this._kv('Glasses', [subj.glasses.frameStyle, subj.glasses.frameColor, subj.glasses.lens].filter(Boolean).join(', ')) : '',
-        subj.accessories?.length ? this._kv('Accessories', subj.accessories.join(', ')) : '',
+        this._kv(i18n('mp.genderPres'), subj.genderPresentation),
+        this._kv(i18n('mp.ageRange'), subj.approximateAgeRange),
+        this._kv(i18n('mp.skinTone'), subj.skinTone),
+        this._kv(i18n('mp.expression'), subj.expression),
+        this._kv(i18n('mp.visibility'), subj.visibility),
+        this._kv(i18n('mp.posture'), subj.posture),
+        subj.hair  ? this._kv(i18n('mp.hair'),  [subj.hair.color, subj.hair.length, subj.hair.style].filter(Boolean).join(', ')) : '',
+        subj.eyes  ? this._kv(i18n('mp.eyes'),  [subj.eyes.color, subj.eyes.expression].filter(Boolean).join(', ')) : '',
+        subj.glasses ? this._kv(i18n('mp.glasses'), [subj.glasses.frameStyle, subj.glasses.frameColor, subj.glasses.lens].filter(Boolean).join(', ')) : '',
+        subj.accessories?.length ? this._kv(i18n('mp.accessories'), subj.accessories.join(', ')) : '',
         subj.outfit && Object.keys(subj.outfit).length
-          ? this._kv('Outfit', Object.values(subj.outfit).join(', ')) : '',
+          ? this._kv(i18n('mp.outfit'), Object.values(subj.outfit).join(', ')) : '',
       ].join('');
       body.appendChild(card);
     });
 
     const count = subjects.count ?? subjects.items?.length ?? 0;
-    return this._subsec('group', 'Subjects', `${count} ${count === 1 ? 'person' : 'people'}`, body);
+    return this._subsec('group', i18n('mp.subjects'), i18n('mp.peopleCount', { count }), body);
   }
 
   _buildCompositionLighting(comp, light) {
@@ -1018,41 +1019,41 @@ export class MetadataPanel {
     if (comp) {
       const h = document.createElement('div');
       h.style.cssText = 'font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);padding:2px 0 3px';
-      h.textContent = 'Composition';
+      h.textContent = i18n('mp.composition');
       body.appendChild(h);
       body.insertAdjacentHTML('beforeend', [
-        this._kv('Shot type', comp.shotType),
-        this._kv('Framing', comp.framing),
-        this._kv('Camera angle', comp.cameraAngle),
-        this._kv('Perspective', comp.cameraPerspective),
-        this._kv('Viewpoint', comp.viewpoint),
-        this._kv('Foreground', comp.foreground),
-        this._kv('Midground', comp.midground),
-        this._kv('Background', comp.background),
-        this._kv('Horizon line', comp.horizonLine),
-        this._kv('Focus', comp.focus),
-        this._kv('Depth of field', comp.depthOfField),
-        this._kv('Capture type', comp.captureType),
+        this._kv(i18n('mp.shotType'), comp.shotType),
+        this._kv(i18n('mp.framing'), comp.framing),
+        this._kv(i18n('mp.cameraAngle'), comp.cameraAngle),
+        this._kv(i18n('mp.perspective'), comp.cameraPerspective),
+        this._kv(i18n('mp.viewpoint'), comp.viewpoint),
+        this._kv(i18n('mp.foreground'), comp.foreground),
+        this._kv(i18n('mp.midground'), comp.midground),
+        this._kv(i18n('mp.background'), comp.background),
+        this._kv(i18n('mp.horizonLine'), comp.horizonLine),
+        this._kv(i18n('mp.focus'), comp.focus),
+        this._kv(i18n('mp.depthOfField'), comp.depthOfField),
+        this._kv(i18n('mp.captureType'), comp.captureType),
       ].join(''));
     }
     if (light) {
       const h = document.createElement('div');
       h.style.cssText = 'font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);padding:8px 0 3px';
-      h.textContent = 'Lighting';
+      h.textContent = i18n('mp.lighting');
       body.appendChild(h);
       body.insertAdjacentHTML('beforeend', [
-        this._kv('Type', light.type),
-        this._kv('Primary source', light.primarySource),
-        this._kv('Secondary', light.secondarySource),
-        this._kv('Quality', light.quality),
-        this._kv('Sky condition', light.skyCondition),
-        this._kv('Highlights', light.highlights),
-        this._kv('Shadows', light.shadows),
-        this._kv('Colour temp', light.colorTemperatureK ? String(light.colorTemperatureK) + (typeof light.colorTemperatureK === 'number' ? 'K' : '') : null),
-        this._kv('Exposure note', light.exposureNote),
+        this._kv(i18n('mp.type'), light.type),
+        this._kv(i18n('mp.primarySource'), light.primarySource),
+        this._kv(i18n('mp.secondary'), light.secondarySource),
+        this._kv(i18n('mp.quality'), light.quality),
+        this._kv(i18n('mp.skyCondition'), light.skyCondition),
+        this._kv(i18n('mp.highlights'), light.highlights),
+        this._kv(i18n('mp.shadows'), light.shadows),
+        this._kv(i18n('mp.colourTemp'), light.colorTemperatureK ? String(light.colorTemperatureK) + (typeof light.colorTemperatureK === 'number' ? 'K' : '') : null),
+        this._kv(i18n('mp.exposureNote'), light.exposureNote),
       ].join(''));
     }
-    return this._subsec('camera', 'Composition & Lighting', '', body);
+    return this._subsec('camera', i18n('mp.compositionLighting'), '', body);
   }
 
   _buildIdentifiedLocation(loc) {
@@ -1071,12 +1072,12 @@ export class MetadataPanel {
       }
     }
     body.insertAdjacentHTML('beforeend', [
-      loc.country || loc.region ? this._kv('Location', [loc.municipality, loc.region, loc.country].filter(Boolean).join(', ')) : '',
-      this._kv('Period', loc.architecturalPeriod),
-      this._kv('Architect', loc.architect),
-      this._kv('Denomination', loc.denomination),
-      this._kv('Heritage', loc.heritageStatus),
-      loc.identificationConfidence ? this._kv('Confidence', loc.identificationConfidence, { badge: true }) : '',
+      loc.country || loc.region ? this._kv(i18n('mp.location'), [loc.municipality, loc.region, loc.country].filter(Boolean).join(', ')) : '',
+      this._kv(i18n('mp.period'), loc.architecturalPeriod),
+      this._kv(i18n('mp.architect'), loc.architect),
+      this._kv(i18n('mp.denomination'), loc.denomination),
+      this._kv(i18n('mp.heritage'), loc.heritageStatus),
+      loc.identificationConfidence ? this._kv(i18n('mp.confidence'), loc.identificationConfidence, { badge: true }) : '',
     ].join(''));
     if (loc.historicalSignificance) {
       body.insertAdjacentHTML('beforeend', `
@@ -1087,7 +1088,7 @@ export class MetadataPanel {
     if (loc.identificationBasis) {
       body.insertAdjacentHTML('beforeend', `
         <div style="font-size:9px;color:var(--ps-text-faint);margin-top:6px;font-style:italic">
-          Identified by: ${_e(loc.identificationBasis)}</div>`);
+          ${i18n('mp.identifiedBy', { basis: loc.identificationBasis })}</div>`);
     }
     if (loc.coordinatesApproximate?.latitude) {
       body.insertAdjacentHTML('beforeend',
@@ -1095,32 +1096,32 @@ export class MetadataPanel {
           📍 ~${loc.coordinatesApproximate.latitude.toFixed(4)}, ${loc.coordinatesApproximate.longitude.toFixed(4)}
         </div>`);
     }
-    return this._subsec('location_on', 'Identified Location', '', body);
+    return this._subsec('location_on', i18n('mp.identifiedLocation'), '', body);
   }
 
   _buildArchitecture(arch) {
     if (!arch) return null;
     const body = document.createElement('div');
     body.insertAdjacentHTML('beforeend', [
-      this._kv('Building type', arch.buildingType),
-      this._kv('Style', arch.style),
-      this._kv('Material', arch.constructionMaterial),
-      this._kv('Exterior colour', arch.exteriorColor),
-      this._kv('Roof', arch.roofMaterial),
-      this._kv('Condition', arch.condition),
+      this._kv(i18n('mp.buildingType'), arch.buildingType),
+      this._kv(i18n('mp.style'), arch.style),
+      this._kv(i18n('mp.material'), arch.constructionMaterial),
+      this._kv(i18n('mp.exteriorColour'), arch.exteriorColor),
+      this._kv(i18n('mp.roof'), arch.roofMaterial),
+      this._kv(i18n('mp.condition'), arch.condition),
     ].join(''));
 
     if (arch.components && Object.keys(arch.components).length) {
       const h = document.createElement('div');
       h.style.cssText = 'font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);padding:6px 0 2px';
-      h.textContent = 'Components';
+      h.textContent = i18n('mp.components');
       body.appendChild(h);
       Object.entries(arch.components).forEach(([name, detail]) => {
         const entry = document.createElement('div');
         entry.style.cssText = 'margin-bottom:4px';
         entry.innerHTML = `<div style="font-size:11px;font-weight:500;color:var(--ps-text);margin-bottom:1px">${_e(name)}</div>`;
-        if (detail.type)     entry.insertAdjacentHTML('beforeend', this._kv('Type', detail.type));
-        if (detail.position) entry.insertAdjacentHTML('beforeend', this._kv('Position', detail.position));
+        if (detail.type)     entry.insertAdjacentHTML('beforeend', this._kv(i18n('mp.type'), detail.type));
+        if (detail.position) entry.insertAdjacentHTML('beforeend', this._kv(i18n('mp.position'), detail.position));
         if (detail.features?.length) {
           entry.insertAdjacentHTML('beforeend', this._bulletList(detail.features));
         }
@@ -1131,12 +1132,12 @@ export class MetadataPanel {
     if (arch.distinctiveFeatures?.length) {
       const h = document.createElement('div');
       h.style.cssText = 'font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);padding:4px 0 2px';
-      h.textContent = 'Distinctive features';
+      h.textContent = i18n('mp.distinctiveFeatures');
       body.appendChild(h);
       body.insertAdjacentHTML('beforeend', this._bulletList(arch.distinctiveFeatures));
     }
 
-    return this._subsec('domain', 'Architecture', arch.buildingType || '', body);
+    return this._subsec('domain', i18n('mp.architecture'), arch.buildingType || '', body);
   }
 
   _buildGenPrompts(prompts) {
@@ -1152,39 +1153,39 @@ export class MetadataPanel {
         <div class="mp-prompt-label">
           ${_e(label)}
           <button class="mp-prompt-copy" id="${copyId}">
-            <span class="material-symbols-outlined">content_copy</span>Copy
+            <span class="material-symbols-outlined">content_copy</span>${i18n('mp.copy')}
           </button>
         </div>
         <div class="mp-prompt-text" id="${copyId}-txt">${_e(text)}</div>`;
       if (text.length > 180) {
         const expandBtn = document.createElement('button');
         expandBtn.className = 'mp-prompt-expand';
-        expandBtn.textContent = 'Show full ▾';
+        expandBtn.textContent = i18n('mp.showFull');
         const txtEl = block.querySelector(`#${copyId}-txt`);
         expandBtn.addEventListener('click', () => {
           txtEl.classList.toggle('mp-prompt-expanded');
           expandBtn.textContent = txtEl.classList.contains('mp-prompt-expanded')
-            ? 'Collapse ▴' : 'Show full ▾';
+            ? i18n('mp.collapse') : i18n('mp.showFull');
         });
         block.appendChild(expandBtn);
       }
       block.querySelector(`#${copyId}`).addEventListener('click', () => {
         navigator.clipboard.writeText(text).catch(() => {});
         const btn = block.querySelector(`#${copyId}`);
-        btn.innerHTML = `<span class="material-symbols-outlined">check</span>Copied`;
-        setTimeout(() => { btn.innerHTML = `<span class="material-symbols-outlined">content_copy</span>Copy`; }, 1500);
+        btn.innerHTML = `<span class="material-symbols-outlined">check</span>${i18n('mp.copied')}`;
+        setTimeout(() => { btn.innerHTML = `<span class="material-symbols-outlined">content_copy</span>${i18n('mp.copy')}`; }, 1500);
       });
       body.appendChild(block);
     };
 
-    addPrompt('Short prompt', prompts.short);
-    addPrompt('Detailed prompt', prompts.detailed);
-    addPrompt('Negative prompt', prompts.negativePrompt);
+    addPrompt(i18n('mp.shortPrompt'), prompts.short);
+    addPrompt(i18n('mp.detailedPrompt'), prompts.detailed);
+    addPrompt(i18n('mp.negativePrompt'), prompts.negativePrompt);
 
     if (prompts.replicationSettings) {
       const rs = prompts.replicationSettings;
       const grid = document.createElement('div');
-      grid.innerHTML = `<div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);margin:6px 0 4px">Camera settings to replicate</div>`;
+      grid.innerHTML = `<div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);margin:6px 0 4px">${i18n('mp.cameraSettingsReplicate')}</div>`;
       const cells = document.createElement('div');
       cells.className = 'mp-cam-grid';
       const addCell = (k, v) => {
@@ -1195,12 +1196,12 @@ export class MetadataPanel {
             <div class="mp-cam-cell-val">${_e(v)}</div>
           </div>`);
       };
-      addCell('Lens', rs.lensEquivalent);
-      addCell('Aperture', rs.aperture);
-      addCell('Shutter', rs.shutterSpeed);
+      addCell(i18n('mp.lens'), rs.lensEquivalent);
+      addCell(i18n('mp.aperture'), rs.aperture);
+      addCell(i18n('mp.shutter'), rs.shutterSpeed);
       addCell('ISO', rs.iso);
-      addCell('WB', rs.whiteBalance);
-      addCell('DoF', rs.depthOfField);
+      addCell(i18n('mp.wb'), rs.whiteBalance);
+      addCell(i18n('mp.dof'), rs.depthOfField);
       if (cells.children.length) { grid.appendChild(cells); body.appendChild(grid); }
       if (rs.technique) {
         body.insertAdjacentHTML('beforeend',
@@ -1208,27 +1209,27 @@ export class MetadataPanel {
       }
     }
 
-    return this._subsec('auto_awesome', 'Generative Prompts', '', body);
+    return this._subsec('auto_awesome', i18n('mp.generativePrompts'), '', body);
   }
 
   _buildDAM(dam) {
     if (!dam) return null;
     const body = document.createElement('div');
     body.insertAdjacentHTML('beforeend', [
-      this._kv('Sensitivity', dam.contentSensitivity),
-      this._kv('Identity', dam.identityNotes),
-      this._kv('Property', dam.propertyReleaseNotes),
-      this._kv('Branding', dam.brandingFlexibility),
-      this._kv('Geo verify', dam.geoVerification),
+      this._kv(i18n('mp.sensitivity'), dam.contentSensitivity),
+      this._kv(i18n('mp.identity'), dam.identityNotes),
+      this._kv(i18n('mp.property'), dam.propertyReleaseNotes),
+      this._kv(i18n('mp.branding'), dam.brandingFlexibility),
+      this._kv(i18n('mp.geoVerify'), dam.geoVerification),
     ].join(''));
     if (dam.limitations?.length) {
       const h = document.createElement('div');
       h.style.cssText = 'font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ps-text-faint);padding:5px 0 2px';
-      h.textContent = 'Limitations';
+      h.textContent = i18n('mp.limitations');
       body.appendChild(h);
       body.insertAdjacentHTML('beforeend', this._bulletList(dam.limitations));
     }
-    return this._subsec('shield', 'DAM Notes', '', body);
+    return this._subsec('shield', i18n('mp.damNotes'), '', body);
   }
 
   _buildComputed(computed) {
@@ -1237,7 +1238,7 @@ export class MetadataPanel {
     Object.entries(computed).forEach(([k, v]) => {
       body.insertAdjacentHTML('beforeend', this._kv(k, typeof v === 'object' ? JSON.stringify(v) : String(v)));
     });
-    return this._subsec('tune', 'Computed', '', body);
+    return this._subsec('tune', i18n('mp.computed'), '', body);
   }
 
   // ── AI Describe ────────────────────────────────────────────────────────────
@@ -1247,13 +1248,13 @@ export class MetadataPanel {
 
     const endpoint = getSettings().ai?.describerEndpoint?.trim();
     if (!endpoint) {
-      window.AuroraToast?.show({ variant: 'warning', title: 'No AI endpoint configured', description: 'Add an endpoint URL in Settings → AI Integration.' });
+      window.AuroraToast?.show({ variant: 'warning', title: i18n('mp.noEndpointConfigured'), description: i18n('mp.addEndpointInSettings') });
       return;
     }
 
     const originalHtml = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = `<span class="material-symbols-outlined" style="animation:spin 1s linear infinite">hourglass_top</span> Describing…`;
+    btn.innerHTML = `<span class="material-symbols-outlined" style="animation:spin 1s linear infinite">hourglass_top</span> ${i18n('mp.describing')}`;
 
     try {
       // Build multipart form — image + filename
@@ -1319,11 +1320,11 @@ export class MetadataPanel {
       const sec = this._panelEl?.querySelector('#mp-sec-analysis');
       sec?.classList.remove('mp-sec-collapsed');
 
-      window.AuroraToast?.show({ variant: 'success', title: 'AI analysis complete', description: `Sidecar updated for ${this._file.name}` });
+      window.AuroraToast?.show({ variant: 'success', title: i18n('mp.aiAnalysisComplete'), description: i18n('mp.sidecarUpdatedFor', { name: this._file.name }) });
 
     } catch (err) {
       console.error('[MetadataPanel] AI describe failed:', err);
-      window.AuroraToast?.show({ variant: 'danger', title: 'AI description failed', description: err.message });
+      window.AuroraToast?.show({ variant: 'danger', title: i18n('mp.aiDescriptionFailed'), description: err.message });
       btn.disabled = false;
       btn.innerHTML = originalHtml;
     }
@@ -1335,8 +1336,8 @@ export class MetadataPanel {
       <div class="mp-section mp-sec-collapsed" id="mp-sec-proc">
         <div class="mp-section-hdr" data-sec="mp-sec-proc">
           <span class="mp-section-toggle">expand_more</span>
-          <span class="mp-section-title">Processing Log</span>
-          <span class="mp-section-badge">${procs.length} run${procs.length !== 1 ? 's' : ''}</span>
+          <span class="mp-section-title">${i18n('mp.processingLog')}</span>
+          <span class="mp-section-badge">${i18n('mp.runsCount', { count: procs.length })}</span>
         </div>
         <div class="mp-section-body" style="padding:0 12px 10px">
           ${procs.slice().reverse().map(p => `
@@ -1369,8 +1370,8 @@ export class MetadataPanel {
       sec.innerHTML = `
         <div class="mp-section-hdr" id="mp-exif-hdr">
           <span class="mp-section-toggle">expand_more</span>
-          <span class="mp-section-title">File, Camera &amp; EXIF</span>
-          <span class="mp-section-badge">read-only</span>
+          <span class="mp-section-title">${i18n('mp.fileCameraExif')}</span>
+          <span class="mp-section-badge">${i18n('mp.readOnly')}</span>
         </div>`;
       const secBody = document.createElement('div');
       secBody.className = 'mp-section-body';
@@ -1386,7 +1387,7 @@ export class MetadataPanel {
       const extracted = await renderExtractedMetadataForSidebar(file);
       const legacyHost = body.querySelector('#mp-legacy-vision-host');
       if (extracted && legacyHost && this._file === file) {
-        const legacyNode = this._subsec('visibility', 'Vision (legacy)', 'read-only', extracted);
+        const legacyNode = this._subsec('visibility', i18n('mp.visionLegacy'), i18n('mp.readOnly'), extracted);
         legacyHost.replaceWith(legacyNode);
         // If there is any legacy data, make sure AI Analysis section is visible
         const analysisBody = body.querySelector('#mp-analysis-body');
@@ -1482,7 +1483,7 @@ export class MetadataPanel {
     body.querySelector('#mp-geocode')?.addEventListener('click', async e => {
       const btn = e.currentTarget;
       btn.disabled = true;
-      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:12px">hourglass_empty</span>Looking up…';
+      btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px">hourglass_empty</span>${i18n('mp.lookingUp')}`;
       try {
         const lat = this._sidecar?.exif?.gpsLat ?? this._file._exifLat;
         const lng = this._sidecar?.exif?.gpsLng ?? this._file._exifLng;
@@ -1493,12 +1494,12 @@ export class MetadataPanel {
         body.querySelector('#mp-country').value = r.country;
         body.querySelector('#mp-cc').value      = r.countryCode;
         this._dirty = true;
-        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:12px">check</span>Done';
-      } catch { btn.innerHTML = 'Geocode failed'; }
+        btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px">check</span>${i18n('mp.done')}`;
+      } catch { btn.innerHTML = i18n('mp.geocodeFailed'); }
       finally {
         setTimeout(() => {
           btn.disabled = false;
-          btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:12px">my_location</span>Fill from GPS';
+          btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px">my_location</span>${i18n('mp.fillFromGps')}`;
         }, 2000);
       }
     });
@@ -1577,7 +1578,7 @@ export class MetadataPanel {
       chip.remove();
     });
     wrap.insertBefore(chip, input);
-    window.AuroraToast?.show({ variant: 'success', title: `Tag added: ${tag}` });
+    window.AuroraToast?.show({ variant: 'success', title: i18n('mp.tagAdded', { tag }) });
   }
 
   _showTagSug(q, input, onSelect) {
@@ -1608,7 +1609,7 @@ export class MetadataPanel {
     const btn  = this._panelEl?.querySelector('#mp-save');
     if (!btn || !this._file || !this._dirHandle) return;
     btn.disabled = true;
-    btn.textContent = 'Saving…';
+    btn.textContent = i18n('mp.saving');
 
     const exifWriteback = this._panelEl?.querySelector('#mp-writeback')?.checked;
 
@@ -1672,12 +1673,12 @@ export class MetadataPanel {
       this._sidecar = merged;
       this._dirty   = false;
       this._onSaved?.(this._file, merged);
-      window.AuroraToast?.show({ variant: 'success', title: `Sidecar saved · ${this._file.name}.json` });
+      window.AuroraToast?.show({ variant: 'success', title: i18n('mp.sidecarSaved', { name: this._file.name }) });
     } catch (err) {
-      window.AuroraToast?.show({ variant: 'danger', title: 'Save failed', description: err.message });
+      window.AuroraToast?.show({ variant: 'danger', title: i18n('mp.saveFailed'), description: err.message });
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Save sidecar';
+      btn.textContent = i18n('mp.saveSidecar');
     }
   }
 

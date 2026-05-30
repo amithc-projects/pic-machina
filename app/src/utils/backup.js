@@ -1,6 +1,7 @@
 import { dbGetAll, getDB, dbGet } from '../data/db.js';
 import { showToast } from '../aurora/toast.js';
 import { showConfirm } from './dialogs.js';
+import { t as i18n } from '../i18n/index.js';
 
 /**
  * ImageChef — Database Backup & Restore Utility
@@ -30,6 +31,7 @@ async function getShadowDir({ create = true } = {}) {
         const hidden = await record.handle.getDirectoryHandle('.zumilabs-studio', { create: false });
         return await hidden.getDirectoryHandle('data', { create: false });
       } catch {
+        // Back-compat: legacy PicMachina marker dir. Do not remove — reads pre-rebrand workspaces.
         const hidden = await record.handle.getDirectoryHandle('.PicMachina', { create: false });
         return await hidden.getDirectoryHandle('data', { create: false });
       }
@@ -158,10 +160,10 @@ export async function exportAll() {
     a.click();
     URL.revokeObjectURL(url);
     
-    showToast({ variant: 'success', title: 'Backup Successful', description: 'Your configuration has been downloaded.' });
+    showToast({ variant: 'success', title: i18n('bk.backupSuccessful'), description: i18n('bk.backupSuccessfulDesc') });
   } catch (err) {
     console.error('Backup failed:', err);
-    showToast({ variant: 'error', title: 'Backup Failed', description: err.message });
+    showToast({ variant: 'error', title: i18n('bk.backupFailed'), description: err.message });
   }
 }
 
@@ -170,8 +172,9 @@ export async function importAll(file, { wipeFirst = true, silent = false } = {})
     const text = await file.text();
     const snapshot = JSON.parse(text);
 
+    // Back-compat: accept legacy 'PicMachinaExport' checksum from pre-rebrand backups. Do not remove.
     if ((snapshot.checksum !== 'ZumilabsStudioExport' && snapshot.checksum !== 'PicMachinaExport') || !snapshot.data) {
-      throw new Error('Invalid backup file format. Missing backup checksum.');
+      throw new Error(i18n('bk.invalidFormat'));
     }
 
     const db = getDB();
@@ -219,12 +222,12 @@ export async function importAll(file, { wipeFirst = true, silent = false } = {})
 
     if (silent) return; // caller handles feedback
 
-    showToast({ variant: 'success', title: 'Restore Complete', description: `Successfully restored ${count} configuration records. Reloading...` });
+    showToast({ variant: 'success', title: i18n('bk.restoreComplete'), description: i18n('bk.restoreCompleteDesc', { count }) });
     setTimeout(() => window.location.reload(), 1500);
   } catch (err) {
     console.error('Restore failed:', err);
     if (!silent) {
-      showToast({ variant: 'error', title: 'Restore Failed', description: err.message || 'The backup file is corrupt or unreadable.' });
+      showToast({ variant: 'error', title: i18n('bk.restoreFailed'), description: err.message || i18n('bk.restoreFailedDesc') });
     }
   }
 }

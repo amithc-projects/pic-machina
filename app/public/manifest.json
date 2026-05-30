@@ -1,6 +1,6 @@
 {
-  "name": "Zumilabs Studio",
-  "short_name": "Zumilabs Studio",
+  "name": "ZumiLabs Studio",
+  "short_name": "ZumiLabs Studio",
   "description": "Pro Studio Batch Media Processor — local-first, no uploads.",
   "start_url": "/",
   "scope": "/",
@@ -38,7 +38,7 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Zumilabs Studio"
+      "label": "ZumiLabs Studio"
     }
   ],
   "categories": ["photo", "productivity", "utilities"]

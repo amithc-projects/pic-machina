@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Thumbnail generation (baseline + subject-aware "smart")
+ * ZumiLabs Studio — Thumbnail generation (baseline + subject-aware "smart")
  *
  * Two exports:
  *   generateBaselineThumbnail(source, opts)  — fast, no inference. Cover-crop.

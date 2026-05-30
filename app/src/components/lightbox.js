@@ -4,6 +4,8 @@
  * Wraps ImageWorkspace for images, and standard HTML5 Video for video files.
  * Handles sidecar JSON metadata sidebar dynamically.
  */
+import { t as i18n } from '../i18n/index.js';
+
 export class GlobalLightbox {
   constructor() {
     this.container = document.createElement('div');
@@ -50,17 +52,17 @@ export class GlobalLightbox {
       <div class="ic-gl-content">
         <div class="ic-gl-main">
           <div class="ic-gl-header">
-            <div class="ic-gl-title">Lightbox</div>
+            <div class="ic-gl-title">${i18n('lb.lightbox')}</div>
             <div class="ic-gl-controls">
-              <button class="ic-gl-btn ic-gl-btn-info" title="Toggle Metadata"><span class="material-symbols-outlined text-[18px]">info</span></button>
-              <button class="ic-gl-btn ic-gl-btn-close" title="Close (Esc)"><span class="material-symbols-outlined text-[18px]">close</span></button>
+              <button class="ic-gl-btn ic-gl-btn-info" title="${i18n('lb.toggleMetadata')}"><span class="material-symbols-outlined text-[18px]">info</span></button>
+              <button class="ic-gl-btn ic-gl-btn-close" title="${i18n('lb.closeEsc')}"><span class="material-symbols-outlined text-[18px]">close</span></button>
             </div>
           </div>
           <div class="ic-gl-viewer"></div>
         </div>
         <div class="ic-gl-sidebar is-collapsed">
           <div class="ic-gl-sidebar-header">
-            <span>Metadata & Sidecar JSON</span>
+            <span>${i18n('lb.metadataSidecar')}</span>
             <button class="ic-gl-btn ic-gl-btn-close-side"><span class="material-symbols-outlined text-[16px]">close</span></button>
           </div>
           <div class="ic-gl-sidebar-content">
@@ -174,11 +176,11 @@ export class GlobalLightbox {
           <div style="padding:16px; border-bottom:1px solid var(--ps-border); display:flex; align-items:center; justify-content:space-between;">
              <div style="display:flex; align-items:center; gap:8px;">
                <span class="material-symbols-outlined text-[24px] text-[var(--ps-orange)]">data_object</span>
-               <h2 style="margin:0; font-size:16px; font-weight:600; color:var(--ps-text);">JSON Viewer</h2>
+               <h2 style="margin:0; font-size:16px; font-weight:600; color:var(--ps-text);">${i18n('lb.jsonViewer')}</h2>
              </div>
              <div style="display:flex; gap:8px;">
-                <button class="btn-secondary btn-sm" id="btn-json-expand-all">Expand All</button>
-                <button class="btn-secondary btn-sm" id="btn-json-collapse-all">Collapse All</button>
+                <button class="btn-secondary btn-sm" id="btn-json-expand-all">${i18n('lb.expandAll')}</button>
+                <button class="btn-secondary btn-sm" id="btn-json-collapse-all">${i18n('lb.collapseAll')}</button>
              </div>
           </div>
           <div style="flex:1; overflow:auto; padding:16px; font-family:monospace; font-size:13px; color:var(--ps-text);" id="json-tree-container">
@@ -255,7 +257,7 @@ export class GlobalLightbox {
         });
         
       } catch (e) {
-        this.viewer.querySelector('#json-tree-container').innerHTML = `<div style="color:var(--ps-red);">Failed to parse JSON: ${e.message}</div>`;
+        this.viewer.querySelector('#json-tree-container').innerHTML = `<div style="color:var(--ps-red);">${i18n('lb.failedParseJson', { error: e.message })}</div>`;
       }
     } else if (isAudio) {
       this.viewer.innerHTML = `
@@ -276,9 +278,9 @@ export class GlobalLightbox {
         await zip.loadAsync(ent.file);
         
         if (isPptx) {
-          let title = 'Unknown Title';
-          let slides = 'Unknown';
-          let creator = 'Unknown';
+          let title = i18n('lb.unknownTitle');
+          let slides = i18n('lb.unknown');
+          let creator = i18n('lb.unknown');
           
           if (zip.files['docProps/core.xml']) {
              const coreXml = await zip.files['docProps/core.xml'].async('string');
@@ -296,8 +298,8 @@ export class GlobalLightbox {
           this.viewer.innerHTML = `<div style="padding: 20px; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--ps-surface);">
             <span class="material-symbols-outlined text-[64px] text-[var(--ps-orange)] mb-4">presentation</span>
             <h2 style="margin-top:0; font-size:24px; font-weight:600; color:var(--ps-text); text-align:center;">${title}</h2>
-            <div style="color: var(--ps-text-muted); font-size: 14px; margin-bottom: 8px;">Author: ${creator}</div>
-            <div style="color: var(--ps-text-muted); font-size: 14px;">Slides: ${slides}</div>
+            <div style="color: var(--ps-text-muted); font-size: 14px; margin-bottom: 8px;">${i18n('lb.author', { author: creator })}</div>
+            <div style="color: var(--ps-text-muted); font-size: 14px;">${i18n('lb.slides', { slides })}</div>
           </div>`;
         } else {
           // ZIP file
@@ -307,25 +309,25 @@ export class GlobalLightbox {
             if (count > 100) return; // Limit to 100
             filesHtml += `<div style="padding: 8px 12px; border-bottom: 1px solid var(--ps-border); display: flex; justify-content: space-between; font-family:monospace; font-size:12px;">
                <span style="color:var(--ps-text);">${zipEntry.name}</span>
-               <span style="color: var(--ps-text-muted)">${zipEntry.dir ? 'Folder' : (zipEntry._data?.uncompressedSize || 0) + ' bytes'}</span>
+               <span style="color: var(--ps-text-muted)">${zipEntry.dir ? i18n('lb.folder') : i18n('lb.bytes', { count: (zipEntry._data?.uncompressedSize || 0) })}</span>
             </div>`;
             count++;
           });
           this.viewer.innerHTML = `<div style="width: 100%; height: 100%; display:flex; flex-direction:column; background:var(--ps-surface);">
             <div style="padding:16px; border-bottom:1px solid var(--ps-border); display:flex; align-items:center; gap:8px;">
                <span class="material-symbols-outlined text-[24px] text-[var(--ps-blue)]">folder_zip</span>
-               <h2 style="margin:0; font-size:16px; font-weight:600; color:var(--ps-text);">Archive Contents</h2>
+               <h2 style="margin:0; font-size:16px; font-weight:600; color:var(--ps-text);">${i18n('lb.archiveContents')}</h2>
             </div>
             <div style="flex:1; overflow-y:auto; padding:16px;">
                <div style="background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:8px; overflow:hidden;">
                   ${filesHtml}
-                  ${Object.keys(zip.files).length > 100 ? `<div style="padding: 12px; text-align:center; color: var(--ps-text-muted); font-size:12px;">...and ${Object.keys(zip.files).length - 100} more items</div>` : ''}
+                  ${Object.keys(zip.files).length > 100 ? `<div style="padding: 12px; text-align:center; color: var(--ps-text-muted); font-size:12px;">${i18n('lb.andMoreItems', { count: Object.keys(zip.files).length - 100 })}</div>` : ''}
                </div>
             </div>
           </div>`;
         }
       } catch (e) {
-        this.viewer.innerHTML = `<div style="padding:20px; color:var(--ps-red);">Failed to parse archive: ${e.message}</div>`;
+        this.viewer.innerHTML = `<div style="padding:20px; color:var(--ps-red);">${i18n('lb.failedParseArchive', { error: e.message })}</div>`;
       }
     } else {
       const zoomWrapper = document.createElement('div');
@@ -333,11 +335,11 @@ export class GlobalLightbox {
       zoomWrapper.innerHTML = `
          <img src="${this.currentBlobUrl}" class="ic-gl-zoom-img">
          <div class="ic-gl-zoom-ui">
-            <button class="ic-gl-btn ic-gl-btn-zoom-out" title="Zoom Out (-)"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+            <button class="ic-gl-btn ic-gl-btn-zoom-out" title="${i18n('lb.zoomOut')}"><span class="material-symbols-outlined text-[16px]">remove</span></button>
             <div class="ic-gl-zoom-dropdown-wrap">
-               <button class="ic-gl-zoom-label" title="Select Zoom">Fit <span class="material-symbols-outlined text-[14px] ml-1">arrow_drop_up</span></button>
+               <button class="ic-gl-zoom-label" title="${i18n('lb.selectZoom')}">${i18n('lb.fit')} <span class="material-symbols-outlined text-[14px] ml-1">arrow_drop_up</span></button>
                <div class="ic-gl-zoom-dropdown">
-                  <div class="ic-gl-zoom-item" data-zoom="fit">Fit</div>
+                  <div class="ic-gl-zoom-item" data-zoom="fit">${i18n('lb.fit')}</div>
                   <div class="ic-gl-zoom-item" data-zoom="0.5">50%</div>
                   <div class="ic-gl-zoom-item" data-zoom="1">100%</div>
                   <div class="ic-gl-zoom-item" data-zoom="1.5">150%</div>
@@ -345,7 +347,7 @@ export class GlobalLightbox {
                   <div class="ic-gl-zoom-item" data-zoom="4">400%</div>
                </div>
             </div>
-            <button class="ic-gl-btn ic-gl-btn-zoom-in" title="Zoom In (+)"><span class="material-symbols-outlined text-[16px]">add</span></button>
+            <button class="ic-gl-btn ic-gl-btn-zoom-in" title="${i18n('lb.zoomIn')}"><span class="material-symbols-outlined text-[16px]">add</span></button>
          </div>
       `;
       this.viewer.innerHTML = '';
@@ -359,7 +361,7 @@ export class GlobalLightbox {
       this.infoBtn.style.display = 'flex';
       this.sideContent.innerHTML = `<pre style="white-space:pre-wrap; word-wrap:break-word;">${JSON.stringify(ent.sidecar, null, 2)}</pre>`;
     } else {
-      this.sideContent.innerHTML = `<div class="text-center text-gray-500 mt-10">No sidecar metadata available.</div>`;
+      this.sideContent.innerHTML = `<div class="text-center text-gray-500 mt-10">${i18n('lb.noSidecarMetadata')}</div>`;
     }
   }
 
@@ -398,7 +400,7 @@ export class GlobalLightbox {
       img.style.transition = smooth ? 'transform 0.2s ease-out' : 'none';
       img.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
       if (uiLabel) {
-        const text = Math.abs(scale - fitScale) < 0.01 ? 'Fit' : `${Math.round(scale * 100)}%`;
+        const text = Math.abs(scale - fitScale) < 0.01 ? i18n('lb.fit') : `${Math.round(scale * 100)}%`;
         uiLabel.innerHTML = `${text} <span class="material-symbols-outlined text-[14px] ml-1">arrow_drop_up</span>`;
       }
     };

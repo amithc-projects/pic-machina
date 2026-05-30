@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Node Utilities
+ * ZumiLabs Studio — Node Utilities
  *
  * Shared logic for tree traversal, flattening, and counting of recipe nodes.
  */

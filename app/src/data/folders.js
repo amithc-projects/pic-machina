@@ -138,9 +138,9 @@ export async function loadVideoPreviews(dirHandle) {
 // same definitions without redeclaring them.
 export const IMAGE_EXTS   = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.tif', '.tiff', '.heic', '.heif', '.bmp']);
 export const VIDEO_EXTS   = new Set(['.mp4', '.mov', '.webm']);
-// Zumilabs Studio-produced archives (createPPTX / createZIP in compositor.js).
+// ZumiLabs Studio-produced archives (createPPTX / createZIP in compositor.js).
 // Listed separately so callers can opt in — most code paths still want
-// media only, archives only matter inside known Zumilabs Studio output folders.
+// media only, archives only matter inside known ZumiLabs Studio output folders.
 export const ARCHIVE_EXTS = new Set(['.zip', '.pptx']);
 
 export async function listImages(dirHandle, { includeVideo = false, onlyVideo = false, includeArchives = false } = {}) {

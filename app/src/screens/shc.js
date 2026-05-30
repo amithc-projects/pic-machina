@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — SHC: Showcase Screen
+ * ZumiLabs Studio — SHC: Showcase Screen
  *
  * List view: searchable, filterable grid of curated run outputs.
  * Detail view: before/after thumbnails, editable title/description, pipeline diagram.
@@ -18,6 +18,7 @@ import { registry }                      from '../engine/index.js';
 import { navigate }                      from '../main.js';
 import { formatDateTime }                from '../utils/misc.js';
 import { showConfirm }                   from '../utils/dialogs.js';
+import { t as i18n }                     from '../i18n/index.js';
 
 const VIDEO_EXTS = new Set(['.mp4', '.mov', '.webm']);
 
@@ -51,21 +52,21 @@ async function renderList(container) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">star</span>
-          Showcase
+          ${i18n('shc.showcase')}
         </div>
       </div>
       <div class="shc-list-toolbar">
         <div class="shc-search-wrap">
           <span class="material-symbols-outlined shc-search-icon">search</span>
-          <input id="shc-search" class="shc-search-input" placeholder="Search by title, recipe, description…" type="search">
+          <input id="shc-search" class="shc-search-input" placeholder="${i18n('shc.searchPlaceholder')}" type="search">
         </div>
         <div class="shc-filter-tabs" role="tablist">
-          <button class="shc-filter-tab is-active" data-filter="all" role="tab">All</button>
+          <button class="shc-filter-tab is-active" data-filter="all" role="tab">${i18n('shc.filterAll')}</button>
           <button class="shc-filter-tab" data-filter="image" role="tab">
-            <span class="material-symbols-outlined" style="font-size:14px">image</span> Images
+            <span class="material-symbols-outlined" style="font-size:14px">image</span> ${i18n('shc.filterImages')}
           </button>
           <button class="shc-filter-tab" data-filter="video" role="tab">
-            <span class="material-symbols-outlined" style="font-size:14px">movie</span> Videos
+            <span class="material-symbols-outlined" style="font-size:14px">movie</span> ${i18n('shc.filterVideos')}
           </button>
         </div>
       </div>
@@ -82,10 +83,10 @@ async function renderList(container) {
     body.innerHTML = `
       <div class="empty-state" style="padding-top:60px">
         <span class="material-symbols-outlined" style="font-size:48px">star_border</span>
-        <div class="empty-state-title">No showcase entries yet</div>
-        <div class="empty-state-desc">Go to Output History and click the star on a completed run to add it here.</div>
+        <div class="empty-state-title">${i18n('shc.emptyTitle')}</div>
+        <div class="empty-state-desc">${i18n('shc.emptyDesc')}</div>
         <button class="btn-primary" id="shc-go-out">
-          <span class="material-symbols-outlined">history</span> Output History
+          <span class="material-symbols-outlined">history</span> ${i18n('shc.outputHistory')}
         </button>
       </div>`;
     body.querySelector('#shc-go-out')?.addEventListener('click', () => navigate('#out'));
@@ -95,7 +96,7 @@ async function renderList(container) {
   body.innerHTML = `
     <div id="shc-empty-filtered" class="shc-empty-filtered" style="display:none">
       <span class="material-symbols-outlined" style="font-size:36px;opacity:.4">search_off</span>
-      <div class="text-muted" style="margin-top:8px">No entries match your search.</div>
+      <div class="text-muted" style="margin-top:8px">${i18n('shc.noMatch')}</div>
     </div>
     <div class="shc-grid" id="shc-grid"></div>`;
 
@@ -117,19 +118,19 @@ async function renderList(container) {
           : `<span class="material-symbols-outlined shc-card-hero-placeholder">image</span>`}
       </div>
       <div class="shc-card-body">
-        <div class="shc-card-title">${escHtml(entry.title || entry.recipeName || 'Untitled')}</div>
+        <div class="shc-card-title">${escHtml(entry.title || entry.recipeName || i18n('shc.untitled'))}</div>
         <div class="shc-card-meta">
-          <span class="shc-card-type-badge shc-card-type-badge--${type}">${type}</span>
+          <span class="shc-card-type-badge shc-card-type-badge--${type}">${type === 'video' ? i18n('shc.badgeVideo') : i18n('shc.badgeImage')}</span>
           <span class="text-sm text-muted">${escHtml(entry.recipeName || '')}</span>
           <span class="text-sm text-muted">${entry.createdAt ? formatDateTime(entry.createdAt) : ''}</span>
         </div>
         ${entry.description ? `<div class="shc-card-desc">${escHtml(entry.description)}</div>` : ''}
       </div>
       <div class="shc-card-hover-actions">
-        <button class="btn-icon shc-card-edit" data-id="${entry.id}" title="Open">
+        <button class="btn-icon shc-card-edit" data-id="${entry.id}" title="${i18n('shc.open')}">
           <span class="material-symbols-outlined">open_in_full</span>
         </button>
-        <button class="btn-icon shc-card-delete" data-id="${entry.id}" title="Delete">
+        <button class="btn-icon shc-card-delete" data-id="${entry.id}" title="${i18n('shc.delete')}">
           <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
         </button>
       </div>`;
@@ -152,9 +153,9 @@ async function renderList(container) {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
       const confirmed = await showConfirm({
-        title: 'Delete Showcase Entry?',
-        body: 'This will remove the showcase entry. The original run and its files are unaffected.',
-        confirmText: 'Delete', variant: 'danger', icon: 'delete_forever',
+        title: i18n('shc.deleteConfirmTitle'),
+        body: i18n('shc.deleteConfirmBody'),
+        confirmText: i18n('shc.delete'), variant: 'danger', icon: 'delete_forever',
       });
       if (!confirmed) return;
       await deleteShowcase(btn.dataset.id);
@@ -242,12 +243,12 @@ async function renderDetail(container, showcaseId) {
   container.innerHTML = `
     <div class="screen shc-screen">
       <div class="screen-header">
-        <button class="btn-icon" id="shc-back" title="Back to Showcase">
+        <button class="btn-icon" id="shc-back" title="${i18n('shc.backToShowcase')}">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
         <div class="screen-title">
           <span class="material-symbols-outlined">star</span>
-          Showcase
+          ${i18n('shc.showcase')}
         </div>
       </div>
       <div id="shc-detail-body" class="shc-detail-body">
@@ -262,8 +263,8 @@ async function renderDetail(container, showcaseId) {
     container.querySelector('#shc-detail-body').innerHTML = `
       <div class="empty-state" style="padding-top:60px">
         <span class="material-symbols-outlined" style="font-size:48px">error_outline</span>
-        <div class="empty-state-title">Showcase entry not found</div>
-        <button class="btn-secondary" id="shc-back2">Back to Showcase</button>
+        <div class="empty-state-title">${i18n('shc.notFound')}</div>
+        <button class="btn-secondary" id="shc-back2">${i18n('shc.backToShowcase')}</button>
       </div>`;
     container.querySelector('#shc-back2')?.addEventListener('click', () => navigate('#shc'));
     return;
@@ -283,14 +284,14 @@ async function renderDetail(container, showcaseId) {
         </div>
 
         <div class="shc-custom-thumb-section">
-          <label class="shc-field-label">Custom Cover Image</label>
+          <label class="shc-field-label">${i18n('shc.customCoverImage')}</label>
           <div class="shc-custom-thumb-preview ${entry.thumbnail ? '' : 'is-empty'}" id="shc-custom-thumb-preview">
             ${entry.thumbnail ? `<img src="${entry.thumbnail}" alt="">` : '<span class="material-symbols-outlined">image</span>'}
           </div>
           <div class="flex gap-2 mt-2">
             <button class="btn-secondary btn-sm" id="shc-custom-thumb-btn">
               <span class="material-symbols-outlined" style="font-size:14px">upload</span>
-              Upload Cover
+              ${i18n('shc.uploadCover')}
             </button>
             <button class="btn-ghost btn-sm" id="shc-custom-thumb-clear" style="${entry.thumbnail ? '' : 'display:none'}">
               <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-red)">delete</span>
@@ -298,37 +299,37 @@ async function renderDetail(container, showcaseId) {
           </div>
           <div class="text-xs text-muted" style="margin-top:4px">
             <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">content_paste</span>
-            Paste an image anywhere to set cover
+            ${i18n('shc.pasteHint')}
           </div>
         </div>
 
         <div class="shc-meta-edit">
-          <label class="shc-field-label">Title</label>
-          <input id="shc-title" class="ic-input shc-title-input" value="${escHtml(entry.title || entry.recipeName || '')}" placeholder="Add a title…">
+          <label class="shc-field-label">${i18n('shc.title')}</label>
+          <input id="shc-title" class="ic-input shc-title-input" value="${escHtml(entry.title || entry.recipeName || '')}" placeholder="${i18n('shc.addTitle')}">
 
-          <label class="shc-field-label" style="margin-top:12px">Description</label>
-          <textarea id="shc-desc" class="ic-input shc-desc-input" placeholder="Add a description…" rows="4">${escHtml(entry.description || '')}</textarea>
+          <label class="shc-field-label" style="margin-top:12px">${i18n('shc.description')}</label>
+          <textarea id="shc-desc" class="ic-input shc-desc-input" placeholder="${i18n('shc.addDescription')}" rows="4">${escHtml(entry.description || '')}</textarea>
         </div>
 
         <div class="shc-links-row">
           <button class="btn-secondary btn-sm" id="shc-recipe-link">
             <span class="material-symbols-outlined" style="font-size:15px">edit</span>
-            Edit Recipe
+            ${i18n('shc.editRecipe')}
           </button>
           <button class="btn-primary btn-sm" id="shc-run-again">
             <span class="material-symbols-outlined" style="font-size:15px">play_arrow</span>
-            Run Again
+            ${i18n('shc.runAgain')}
           </button>
         </div>
 
         <div class="shc-detail-meta text-sm text-muted" style="margin-top:8px">
-          <span>Recipe: <strong>${escHtml(entry.recipeName || '—')}</strong></span>
-          <span>Created: ${entry.createdAt ? formatDateTime(entry.createdAt) : '—'}</span>
+          <span>${i18n('shc.recipeLabel')} <strong>${escHtml(entry.recipeName || '—')}</strong></span>
+          <span>${i18n('shc.createdLabel')} ${entry.createdAt ? formatDateTime(entry.createdAt) : '—'}</span>
         </div>
       </div>
 
       <div class="shc-detail-right">
-        <div class="shc-pipeline-label text-sm text-muted">Pipeline</div>
+        <div class="shc-pipeline-label text-sm text-muted">${i18n('shc.pipeline')}</div>
         <div class="shc-pipeline" id="shc-pipeline">
           <div class="spinner" style="margin:20px auto"></div>
         </div>
@@ -338,7 +339,7 @@ async function renderDetail(container, showcaseId) {
     <div class="shc-detail-footer">
       <button class="btn-secondary btn-sm" id="shc-delete">
         <span class="material-symbols-outlined" style="font-size:15px;color:var(--ps-red)">delete</span>
-        Delete Showcase Entry
+        ${i18n('shc.deleteEntry')}
       </button>
     </div>`;
 
@@ -387,7 +388,7 @@ async function renderDetail(container, showcaseId) {
           const updated = await getShowcase(entry.id);
           entry.thumbnail = updated.thumbnail;
           refreshCustomThumbUI();
-          window.AuroraToast?.show({ variant: 'success', title: 'Cover image updated from clipboard' });
+          window.AuroraToast?.show({ variant: 'success', title: i18n('shc.coverUpdatedClipboard') });
         }
       }
     }
@@ -442,7 +443,7 @@ async function loadDetailThumbs(container, entry, run) {
   if (!section) return;
 
   if (!entry.sampleFileNames?.length || !run?.outputHandleObj) {
-    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">No sample images available.</div>`;
+    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">${i18n('shc.noSampleImages')}</div>`;
     return;
   }
 
@@ -451,7 +452,7 @@ async function loadDetailThumbs(container, entry, run) {
   try {
     subHandle = await getOrCreateOutputSubfolder(run.outputHandleObj, run.outputFolder || 'output');
   } catch {
-    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">Output folder not accessible.</div>`;
+    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">${i18n('shc.outputNotAccessible')}</div>`;
     return;
   }
 
@@ -463,7 +464,7 @@ async function loadDetailThumbs(container, entry, run) {
   const outputFiles = entry.sampleFileNames.map(n => outputFileMap.get(n)).filter(Boolean);
 
   if (!outputFiles.length) {
-    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">Output files not found.</div>`;
+    section.innerHTML = `<div class="text-sm text-muted" style="padding:4px">${i18n('shc.outputNotFound')}</div>`;
     return;
   }
 
@@ -537,7 +538,7 @@ async function loadDetailThumbs(container, entry, run) {
         <div class="shc-thumb-overlay">
           <div class="shc-thumb-name">${escHtml(f.name)}</div>
         </div>
-        ${!isVideo ? `<button class="shc-thumb-pin ${isCover ? 'shc-thumb-pin--active' : ''}" data-idx="${i}" title="${isCover ? 'Card cover image' : 'Set as card cover'}">
+        ${!isVideo ? `<button class="shc-thumb-pin ${isCover ? 'shc-thumb-pin--active' : ''}" data-idx="${i}" title="${isCover ? i18n('shc.cardCoverImage') : i18n('shc.setAsCardCover')}">
           <span class="material-symbols-outlined">${isCover ? 'push_pin' : 'push_pin'}</span>
         </button>` : ''}
       </div>`;
@@ -551,29 +552,29 @@ async function loadDetailThumbs(container, entry, run) {
     <div class="shc-strip-block">
       <div class="shc-strip-header">
         <span class="material-symbols-outlined shc-strip-icon shc-strip-icon--before">photo_camera</span>
-        <span class="shc-strip-label">Before</span>
-        <span class="text-sm text-muted">(${inputFiles.length} input${inputFiles.length !== 1 ? 's' : ''})</span>
+        <span class="shc-strip-label">${i18n('shc.before')}</span>
+        <span class="text-sm text-muted">${i18n('shc.inputCount', { count: inputFiles.length })}</span>
       </div>
       <div class="shc-thumb-strip" id="shc-strip-before">${beforeThumbHTML(inputFiles)}</div>
     </div>
     <div class="shc-strip-arrow">
       <span class="material-symbols-outlined">arrow_downward</span>
-      <span class="shc-strip-arrow-label">transformed by ${escHtml(entry.recipeName || 'recipe')}</span>
+      <span class="shc-strip-arrow-label">${i18n('shc.transformedBy', { recipe: entry.recipeName || i18n('shc.recipeFallback') })}</span>
       <span class="material-symbols-outlined">arrow_downward</span>
     </div>` : ''}
     <div class="shc-strip-block">
       <div class="shc-strip-header">
         <span class="material-symbols-outlined shc-strip-icon shc-strip-icon--after">auto_fix_high</span>
-        <span class="shc-strip-label">After</span>
-        <span class="text-sm text-muted">(${outputFiles.length} output${outputFiles.length !== 1 ? 's' : ''})</span>
+        <span class="shc-strip-label">${i18n('shc.after')}</span>
+        <span class="text-sm text-muted">${i18n('shc.outputCount', { count: outputFiles.length })}</span>
         ${showInputStrip ? `<button class="btn-secondary btn-sm shc-compare-all-btn" style="margin-left:auto;font-size:11px;padding:3px 10px">
-          <span class="material-symbols-outlined" style="font-size:13px">compare</span> Compare side by side
+          <span class="material-symbols-outlined" style="font-size:13px">compare</span> ${i18n('shc.compareSideBySide')}
         </button>` : ''}
       </div>
       <div class="shc-thumb-strip" id="shc-strip-after">${afterThumbHTML(outputFiles)}</div>
       <div class="shc-cover-hint text-sm text-muted" id="shc-cover-hint">
         <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">push_pin</span>
-        Pin an image to use it as the card thumbnail
+        ${i18n('shc.pinHint')}
       </div>
     </div>`;
 
@@ -617,7 +618,7 @@ async function loadDetailThumbs(container, entry, run) {
       // Hide the hint now that user has pinned
       section.querySelector('#shc-cover-hint')?.remove();
 
-      window.AuroraToast?.show({ variant: 'success', title: 'Card thumbnail updated' });
+      window.AuroraToast?.show({ variant: 'success', title: i18n('shc.cardThumbnailUpdated') });
     });
   });
 
@@ -693,9 +694,9 @@ async function openCompareLight(container, pairs, startIdx, blobUrls) {
       if (pair.inFile) {
         const beforeUrl = URL.createObjectURL(pair.inFile);
         blobUrls.push(beforeUrl);
-        return { beforeUrl, afterUrl, beforeLabel: 'Before', afterLabel: 'After', canCompare: true };
+        return { beforeUrl, afterUrl, beforeLabel: i18n('shc.before'), afterLabel: i18n('shc.after'), canCompare: true };
       }
-      return { beforeUrl: afterUrl, afterUrl, beforeLabel: 'Output', afterLabel: 'Output', canCompare: false };
+      return { beforeUrl: afterUrl, afterUrl, beforeLabel: i18n('shc.output'), afterLabel: i18n('shc.output'), canCompare: false };
     },
   });
 
@@ -743,7 +744,7 @@ function openSimpleLight(file) {
 
 function renderPipeline(el, recipe) {
   if (!recipe?.nodes?.length) {
-    el.innerHTML = `<div class="text-sm text-muted" style="padding:12px">Recipe not found or has no steps.</div>`;
+    el.innerHTML = `<div class="text-sm text-muted" style="padding:12px">${i18n('shc.recipeNoSteps')}</div>`;
     return;
   }
 
@@ -765,7 +766,7 @@ function renderPipeline(el, recipe) {
       const pop = document.createElement('div');
       pop.className = 'shc-pipe-popover';
       pop.innerHTML = `
-        <div class="shc-pop-title">${escHtml(card.querySelector('.shc-pipe-name')?.textContent || 'Step')}</div>
+        <div class="shc-pop-title">${escHtml(card.querySelector('.shc-pipe-name')?.textContent || i18n('shc.step'))}</div>
         ${Object.entries(node.params).map(([k, v]) =>
           `<div class="shc-pop-row"><span class="shc-pop-key">${escHtml(k)}</span><span class="shc-pop-val">${escHtml(String(v))}</span></div>`
         ).join('')}`;
@@ -785,23 +786,23 @@ function nodeCard(node, defMap, idx) {
 
   if (node.type === 'branch' || node.type === 'conditional') {
     return `<div class="shc-pipe-arrow" aria-hidden="true">▶</div>
-      <div class="shc-pipe-card shc-pipe-card--branch ${disabled}" data-idx="${idx}" title="Branch">
+      <div class="shc-pipe-card shc-pipe-card--branch ${disabled}" data-idx="${idx}" title="${i18n('shc.branch')}">
         <span class="material-symbols-outlined shc-pipe-icon">call_split</span>
-        <span class="shc-pipe-name">Branch</span>
+        <span class="shc-pipe-name">${i18n('shc.branch')}</span>
       </div>`;
   }
 
   if (node.type === 'block-ref') {
     return `<div class="shc-pipe-arrow" aria-hidden="true">▶</div>
-      <div class="shc-pipe-card ${disabled}" data-idx="${idx}" title="${escHtml(node.blockName || 'Block')}">
+      <div class="shc-pipe-card ${disabled}" data-idx="${idx}" title="${escHtml(node.blockName || i18n('shc.block'))}">
         <span class="material-symbols-outlined shc-pipe-icon">widgets</span>
-        <span class="shc-pipe-name">${escHtml(node.blockName || 'Block')} <span style="opacity:.6">⧉</span></span>
+        <span class="shc-pipe-name">${escHtml(node.blockName || i18n('shc.block'))} <span style="opacity:.6">⧉</span></span>
       </div>`;
   }
 
   const def    = defMap.get(node.transformId);
   const icon   = def?.icon || 'auto_fix_high';
-  const name   = def?.name || node.transformId || 'Step';
+  const name   = def?.name || node.transformId || i18n('shc.step');
   const params = node.params ? Object.entries(node.params).slice(0, 3) : [];
 
   return `${idx > 0 ? '<div class="shc-pipe-arrow" aria-hidden="true">▶</div>' : ''}

@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — LaMa Inpainting inference wrapper
+ * ZumiLabs Studio — LaMa Inpainting inference wrapper
  */
 
 import { getModelBytes, isModelDownloaded } from '../../data/models.js';

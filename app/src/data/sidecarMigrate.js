@@ -2,7 +2,7 @@
  * Sidecar format migration — one-time, idempotent.
  *
  * Renames legacy `filename.json` sidecar files to the dot-prefix format
- * `.filename` used by ux-file-manager (sidekick-manager). After this runs,
+ * `.filename` used by ux-file-manager (zumilabs-file-browser). After this runs,
  * both tools share the same on-disk sidecar files.
  *
  * Rules:

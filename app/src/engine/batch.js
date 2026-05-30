@@ -745,7 +745,7 @@ async function runMainThreadBatch({ recipe, files, inputHandle, outputHandle, su
   onComplete(run);
 
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    new Notification('Zumilabs Studio Batch Complete', {
+    new Notification('ZumiLabs Studio Batch Complete', {
       body: `Processed ${successCount} files successfully. ${failCount > 0 ? failCount + ' failed.' : ''}`.trim(),
     });
   }
@@ -838,6 +838,7 @@ export async function startBatch({ recipe, files, inputHandle, outputHandle, sub
     if (type === 'FILE_DONE') {
       try {
         let folder;
+        // Back-compat: '.PicMachina' is the legacy marker dir name; '.zumilabs-studio' is current. Keep both.
         if (payload.subfolder === '.PicMachina' || payload.subfolder === '.zumilabs-studio') {
           // Sidecar JSON lives inside the recipe output subfolder, not the root
           folder = await getOrCreateOutputSubfolder(subHandle, '.zumilabs-studio');

@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Model Blob Storage
+ * ZumiLabs Studio — Model Blob Storage
  *
  * Persists large ONNX model weights in IndexedDB so the user doesn't need to
  * re-download 100s of MB on every visit. Survives Cache-API eviction.

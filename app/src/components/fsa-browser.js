@@ -1,6 +1,7 @@
 import { MediaBrowser } from './media-browser.js';
 import { dbGet, dbPut } from '../data/db.js';
 import { verifyPermission } from '../utils/project-io.js';
+import { t as i18n } from '../i18n/index.js';
 
 export class FsaBrowser {
   constructor(container, options = {}) {
@@ -29,19 +30,19 @@ export class FsaBrowser {
          <div style="display:flex; align-items:center; justify-content:space-between; padding: 12px; border-bottom: 1px solid var(--ps-border); background: var(--ps-surface);">
             <div style="display:flex; align-items:center; gap: 8px;">
                <span class="material-symbols-outlined">folder_special</span>
-               <h3 style="margin:0; font-size:14px; font-weight:600;">Asset Browser</h3>
+               <h3 style="margin:0; font-size:14px; font-weight:600;">${i18n('fab.assetBrowser')}</h3>
             </div>
             <button class="btn-ghost text-muted hover:text-white" id="fsa-btn-close" style="padding:4px;"><span class="material-symbols-outlined text-[18px]">close</span></button>
          </div>
          <div style="display:flex; align-items:center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--ps-border); flex-wrap: wrap;">
             <select id="fsa-recent-select" class="input-field flex-1" style="font-size:12px; padding:4px 8px; min-width: 100px;">
-              <option value="">-- Recent Locations --</option>
+              <option value="">${i18n('fab.recentLocations')}</option>
             </select>
             <button id="fsa-btn-import-selected" class="btn-primary btn-sm" style="display:none; align-items:center; gap:4px; white-space: nowrap; flex-shrink: 0;">
                <span class="material-symbols-outlined text-[16px]">add_to_photos</span>
-               Import (<span id="fsa-selected-count">0</span>)
+               ${i18n('fab.import')} (<span id="fsa-selected-count">0</span>)
             </button>
-            <button id="fsa-btn-mount" class="btn-secondary btn-sm" title="Mount New Folder">
+            <button id="fsa-btn-mount" class="btn-secondary btn-sm" title="${i18n('fab.mountNewFolder')}">
                <span class="material-symbols-outlined text-[16px]">create_new_folder</span>
             </button>
          </div>
@@ -103,7 +104,7 @@ export class FsaBrowser {
        if (this.selectedFileHandles && this.selectedFileHandles.length > 0) {
           const btn = this.container.querySelector('#fsa-btn-import-selected');
           const originalHTML = btn.innerHTML;
-          btn.innerHTML = '<span class="material-symbols-outlined spin text-[16px]">autorenew</span> Importing...';
+          btn.innerHTML = `<span class="material-symbols-outlined spin text-[16px]">autorenew</span> ${i18n('fab.importing')}`;
           btn.disabled = true;
           
           await this.options.onImportMediaBatch(this.selectedFileHandles);
@@ -130,7 +131,7 @@ export class FsaBrowser {
   }
 
   updateSelectUI() {
-    this.selectEl.innerHTML = '<option value="">-- Recent Locations --</option>' + 
+    this.selectEl.innerHTML = `<option value="">${i18n('fab.recentLocations')}</option>` +
       this.recentLocations.map((loc, i) => `<option value="${i}">${loc.name}</option>`).join('');
     
     if (this.currentHandle && this.pathStack.length === 1) {
@@ -141,7 +142,7 @@ export class FsaBrowser {
 
   async openLocation(dirHandle, name) {
     if (!(await verifyPermission(dirHandle, false))) {
-       alert("Permission to read folder was denied.");
+       alert(i18n('fab.permissionDenied'));
        return;
     }
     this.currentHandle = dirHandle;

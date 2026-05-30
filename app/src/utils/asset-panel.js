@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Asset Metadata Panel
+ * ZumiLabs Studio — Asset Metadata Panel
  *
  * Renders a read/edit panel for an asset's stored metadata.
  * Call renderAssetPanel(file) → returns a DOM element.
@@ -15,6 +15,7 @@
 import { initDB }                              from '../data/db.js';
 import { ingestFile, patchAsset,
          setSidecarField }                     from '../data/assets.js';
+import { t as i18n }                            from '../i18n/index.js';
 
 // ── Style injection ─────────────────────────────────────────
 
@@ -193,7 +194,7 @@ function injectSidebarStyles() {
 function makeCopyBtn(token) {
   const btn = document.createElement('button');
   btn.className = 'ii-copy-btn';
-  btn.title = `Copy ${token}`;
+  btn.title = i18n('ap.copyToken', { token });
   btn.innerHTML = `<span class="material-symbols-outlined">content_copy</span>`;
   btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -281,7 +282,7 @@ export async function renderExtractedMetadataForSidebar(file) {
     // Heading
     const heading = document.createElement('div');
     heading.className = 'img-info-extracted-heading';
-    heading.textContent = 'Extracted Metadata';
+    heading.textContent = i18n('ap.extractedMetadata');
     frag.appendChild(heading);
 
     // ── Geocode ──────────────────────────────────────────────
@@ -289,13 +290,13 @@ export async function renderExtractedMetadataForSidebar(file) {
       const t = document.createElement('table');
       t.className = 'img-info-table';
       const g = asset.geo;
-      sidebarRow(t, 'Location',  g.location,  '{{sidecar.location}}');
-      sidebarRow(t, 'City',      g.city,       '{{sidecar.city}}');
-      sidebarRow(t, 'State',     g.state,      '{{sidecar.state}}');
-      sidebarRow(t, 'Country',   g.country,    '{{sidecar.country}}');
-      sidebarRow(t, 'Road',      g.road,       '{{sidecar.road}}');
-      sidebarRow(t, 'Postcode',  g.postcode,   '{{sidecar.postcode}}');
-      const sec = sidebarSection('Geocode', 'location_on', t);
+      sidebarRow(t, i18n('ap.location'),  g.location,  '{{sidecar.location}}');
+      sidebarRow(t, i18n('ap.city'),      g.city,       '{{sidecar.city}}');
+      sidebarRow(t, i18n('ap.state'),     g.state,      '{{sidecar.state}}');
+      sidebarRow(t, i18n('ap.country'),   g.country,    '{{sidecar.country}}');
+      sidebarRow(t, i18n('ap.road'),      g.road,       '{{sidecar.road}}');
+      sidebarRow(t, i18n('ap.postcode'),  g.postcode,   '{{sidecar.postcode}}');
+      const sec = sidebarSection(i18n('ap.geocode'), 'location_on', t);
       if (sec) frag.appendChild(sec);
     }
 
@@ -304,9 +305,9 @@ export async function renderExtractedMetadataForSidebar(file) {
       const t = document.createElement('table');
       t.className = 'img-info-table';
       const o = asset.ocr;
-      if (o.tags?.length) sidebarRow(t, 'Tags',  o.tags.join(', '), '{{sidecar.ocrTags}}');
-      if (o.text)         sidebarRow(t, 'Text',  o.text.slice(0, 120) + (o.text.length > 120 ? '…' : ''), '{{sidecar.ocrText}}');
-      const sec = sidebarSection('OCR Text', 'text_fields', t);
+      if (o.tags?.length) sidebarRow(t, i18n('ap.tags'),  o.tags.join(', '), '{{sidecar.ocrTags}}');
+      if (o.text)         sidebarRow(t, i18n('ap.text'),  o.text.slice(0, 120) + (o.text.length > 120 ? '…' : ''), '{{sidecar.ocrText}}');
+      const sec = sidebarSection(i18n('ap.ocrText'), 'text_fields', t);
       if (sec) frag.appendChild(sec);
     }
 
@@ -315,11 +316,11 @@ export async function renderExtractedMetadataForSidebar(file) {
       const t = document.createElement('table');
       t.className = 'img-info-table';
       const v = asset.vision;
-      if (v.peopleLabel)  sidebarRow(t, 'People',   v.peopleLabel,           '{{sidecar.peopleLabel}}');
-      if (v.personCount != null) sidebarRow(t, 'Persons', v.personCount,     '{{sidecar.personCount}}');
-      if (v.faceCount   != null) sidebarRow(t, 'Faces',   v.faceCount,       '{{sidecar.faceCount}}');
-      if (v.poseLabel)    sidebarRow(t, 'Pose',     v.poseLabel,             '{{sidecar.poseLabel}}');
-      const sec = sidebarSection('Vision / People', 'group', t);
+      if (v.peopleLabel)  sidebarRow(t, i18n('ap.people'),   v.peopleLabel,           '{{sidecar.peopleLabel}}');
+      if (v.personCount != null) sidebarRow(t, i18n('ap.persons'), v.personCount,     '{{sidecar.personCount}}');
+      if (v.faceCount   != null) sidebarRow(t, i18n('ap.faces'),   v.faceCount,       '{{sidecar.faceCount}}');
+      if (v.poseLabel)    sidebarRow(t, i18n('ap.pose'),     v.poseLabel,             '{{sidecar.poseLabel}}');
+      const sec = sidebarSection(i18n('ap.visionPeople'), 'group', t);
       if (sec) frag.appendChild(sec);
     }
 
@@ -331,7 +332,7 @@ export async function renderExtractedMetadataForSidebar(file) {
       for (const key of sidecarKeys) {
         sidebarRow(t, key, asset.sidecar[key], `{{sidecar.${key}}}`);
       }
-      const sec = sidebarSection('Custom Fields', 'edit_note', t);
+      const sec = sidebarSection(i18n('ap.customFields'), 'edit_note', t);
       if (sec) frag.appendChild(sec);
     }
 
@@ -355,7 +356,7 @@ export async function renderAssetPanel(file) {
 
   const wrapper = document.createElement('div');
   wrapper.className = 'ap-panel';
-  wrapper.innerHTML = `<div class="ap-loading"><div class="spinner"></div><span class="text-sm text-muted">Loading metadata…</span></div>`;
+  wrapper.innerHTML = `<div class="ap-loading"><div class="spinner"></div><span class="text-sm text-muted">${i18n('ap.loadingMetadata')}</span></div>`;
 
   // Async load — replace loading state when ready
   loadAndRender(file, wrapper);
@@ -392,7 +393,7 @@ async function loadAndRender(file, wrapper) {
     wrapper.innerHTML = '';
     wrapper.appendChild(buildPanel(asset, file));
   } catch (err) {
-    wrapper.innerHTML = `<div class="ap-empty">Failed to load metadata: ${escHtml(err.message)}</div>`;
+    wrapper.innerHTML = `<div class="ap-empty">${escHtml(i18n('ap.failedToLoad', { error: err.message }))}</div>`;
   }
 }
 
@@ -402,15 +403,15 @@ function buildPanel(asset, file) {
   // ── EXIF ───────────────────────────────────────────────────
   const exif = asset.exif ?? {};
   const exifRows = [
-    row('Date',         exif.date),
-    row('Camera',       [exif.cameraMake, exif.cameraModel].filter(Boolean).join(' ')),
-    row('Exposure',     exif.exposure),
-    row('Aperture',     exif.aperture ? `f/${exif.aperture}` : null),
+    row(i18n('ap.date'),         exif.date),
+    row(i18n('ap.camera'),       [exif.cameraMake, exif.cameraModel].filter(Boolean).join(' ')),
+    row(i18n('ap.exposure'),     exif.exposure),
+    row(i18n('ap.aperture'),     exif.aperture ? `f/${exif.aperture}` : null),
     row('ISO',          exif.iso),
-    row('Focal Length', exif.focalLength),
-    row('Author',       exif.author),
-    row('Copyright',    exif.copyright),
-    row('Description',  exif.description),
+    row(i18n('ap.focalLength'), exif.focalLength),
+    row(i18n('ap.author'),       exif.author),
+    row(i18n('ap.copyright'),    exif.copyright),
+    row(i18n('ap.description'),  exif.description),
     exif.gps ? row('GPS', `${exif.gps.lat.toFixed(5)}, ${exif.gps.lng.toFixed(5)}`) : '',
   ].join('');
 
@@ -422,43 +423,43 @@ function buildPanel(asset, file) {
   const geo = asset.geo;
   if (geo) {
     const geoRows = [
-      row('Location',  geo.location),
-      row('City',      geo.city),
-      row('County',    geo.county),
-      row('State',     geo.state),
-      row('Country',   geo.country),
-      row('Postcode',  geo.postcode),
-      row('Road',      geo.road),
-      row('Suburb',    geo.suburb),
-      row('Geocoded',  formatDate(geo.geocodedAt)),
+      row(i18n('ap.location'),  geo.location),
+      row(i18n('ap.city'),      geo.city),
+      row(i18n('ap.county'),    geo.county),
+      row(i18n('ap.state'),     geo.state),
+      row(i18n('ap.country'),   geo.country),
+      row(i18n('ap.postcode'),  geo.postcode),
+      row(i18n('ap.road'),      geo.road),
+      row(i18n('ap.suburb'),    geo.suburb),
+      row(i18n('ap.geocoded'),  formatDate(geo.geocodedAt)),
     ].join('');
-    frag.appendChild(section('location_on', 'Geocode', geoRows));
+    frag.appendChild(section('location_on', i18n('ap.geocode'), geoRows));
   }
 
   // ── OCR ────────────────────────────────────────────────────
   const ocr = asset.ocr;
   if (ocr) {
     let ocrBody = '';
-    if (ocr.tags?.length) ocrBody += row('Tags', ocr.tags.join(', '));
-    ocrBody += row('Words',    ocr.words?.length);
-    ocrBody += row('OCR date', formatDate(ocr.ocrAt));
+    if (ocr.tags?.length) ocrBody += row(i18n('ap.tags'), ocr.tags.join(', '));
+    ocrBody += row(i18n('ap.words'),    ocr.words?.length);
+    ocrBody += row(i18n('ap.ocrDate'), formatDate(ocr.ocrAt));
     if (ocr.text) {
       ocrBody += `<div class="ap-ocr-text">${escHtml(ocr.text.slice(0, 500))}${ocr.text.length > 500 ? '…' : ''}</div>`;
     }
-    frag.appendChild(section('text_fields', 'OCR Text', ocrBody));
+    frag.appendChild(section('text_fields', i18n('ap.ocrText'), ocrBody));
   }
 
   // ── Vision / People ────────────────────────────────────────
   const vision = asset.vision;
   if (vision) {
     const visionRows = [
-      row('People',      vision.peopleLabel),
-      row('Persons',     vision.personCount != null ? String(vision.personCount) : null),
-      row('Faces',       vision.faceCount   != null ? String(vision.faceCount)   : null),
-      row('Pose',        vision.poseLabel),
-      row('Analysed',    formatDate(vision.detectedAt)),
+      row(i18n('ap.people'),      vision.peopleLabel),
+      row(i18n('ap.persons'),     vision.personCount != null ? String(vision.personCount) : null),
+      row(i18n('ap.faces'),       vision.faceCount   != null ? String(vision.faceCount)   : null),
+      row(i18n('ap.pose'),        vision.poseLabel),
+      row(i18n('ap.analysed'),    formatDate(vision.detectedAt)),
     ].join('');
-    frag.appendChild(section('group', 'Vision / People', visionRows));
+    frag.appendChild(section('group', i18n('ap.visionPeople'), visionRows));
   }
 
   // ── Custom Metadata (sidecar — editable) ───────────────────
@@ -484,8 +485,8 @@ function buildSidecarSection(asset) {
   sidecarSec.innerHTML = `
     <div class="ap-section-head">
       <span class="material-symbols-outlined">edit_note</span>
-      Custom Metadata
-      <span class="ap-save-badge" id="ap-save-badge">Saved</span>
+      ${i18n('ap.customMetadata')}
+      <span class="ap-save-badge" id="ap-save-badge">${i18n('ap.saved')}</span>
       <span class="material-symbols-outlined ap-chevron">expand_more</span>
     </div>
     <div class="ap-section-body" id="ap-sidecar-body"></div>
@@ -535,7 +536,7 @@ function buildSidecarSection(asset) {
     if (keys.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'ap-empty';
-      empty.textContent = 'No custom fields yet. Add one below.';
+      empty.textContent = i18n('ap.noCustomFields');
       body.appendChild(empty);
     } else {
       for (const key of keys) {
@@ -544,7 +545,7 @@ function buildSidecarSection(asset) {
         rowEl.innerHTML = `
           <input class="ap-sidecar-key" value="${escHtml(key)}" readonly title="${escHtml(key)}">
           <input class="ap-sidecar-val" value="${escHtml(sidecar[key] ?? '')}">
-          <button class="ap-sidecar-del" title="Delete field">
+          <button class="ap-sidecar-del" title="${i18n('ap.deleteField')}">
             <span class="material-symbols-outlined">delete</span>
           </button>
         `;
@@ -560,9 +561,9 @@ function buildSidecarSection(asset) {
     const addRow = document.createElement('div');
     addRow.className = 'ap-add-row';
     addRow.innerHTML = `
-      <input class="ap-add-key" placeholder="field name" spellcheck="false">
-      <input class="ap-add-val" placeholder="value">
-      <button class="ap-add-btn">Add</button>
+      <input class="ap-add-key" placeholder="${i18n('ap.fieldName')}" spellcheck="false">
+      <input class="ap-add-val" placeholder="${i18n('ap.value')}">
+      <button class="ap-add-btn">${i18n('ap.add')}</button>
     `;
     const addKey = addRow.querySelector('.ap-add-key');
     const addVal = addRow.querySelector('.ap-add-val');

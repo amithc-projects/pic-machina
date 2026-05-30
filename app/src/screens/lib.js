@@ -12,6 +12,7 @@ import { formatDate, uuid, now } from '../utils/misc.js';
 import { initTabs } from '../aurora/tabs.js';
 import { countNodes } from '../utils/nodes.js';
 import { showConfirm } from '../utils/dialogs.js';
+import { t as i18n } from '../i18n/index.js';
 
 // Curated tag → category map. Tags not listed here fall into "Other".
 // Keys are normalised to lowercase; matching is case-insensitive.
@@ -81,27 +82,27 @@ function recipeCardHTML(recipe) {
         <div class="lib-card__cover-overlay">
           <div class="lib-card__badges">
             ${isSystem
-              ? '<span class="ic-badge ic-badge--blue"><span class="material-symbols-outlined" style="font-size:11px">lock</span> System</span>'
-              : '<span class="ic-badge ic-badge--green"><span class="material-symbols-outlined" style="font-size:11px">person</span> Yours</span>'}
+              ? `<span class="ic-badge ic-badge--blue"><span class="material-symbols-outlined" style="font-size:11px">lock</span> ${i18n('lib.badgeSystem')}</span>`
+              : `<span class="ic-badge ic-badge--green"><span class="material-symbols-outlined" style="font-size:11px">person</span> ${i18n('lib.badgeYours')}</span>`}
           </div>
           <div class="lib-card__quick-actions">
-            <button class="btn-icon lib-action-preview" data-id="${recipe.id}" title="Preview recipe">
+            <button class="btn-icon lib-action-preview" data-id="${recipe.id}" title="${i18n('lib.previewRecipe')}">
               <span class="material-symbols-outlined">preview</span>
             </button>
             ${isSystem
-              ? `<button class="btn-icon lib-action-clone" data-id="${recipe.id}" title="Clone recipe">
+              ? `<button class="btn-icon lib-action-clone" data-id="${recipe.id}" title="${i18n('lib.cloneRecipe')}">
                    <span class="material-symbols-outlined">content_copy</span>
                  </button>`
-              : `<button class="btn-icon lib-action-edit" data-id="${recipe.id}" title="Edit recipe">
+              : `<button class="btn-icon lib-action-edit" data-id="${recipe.id}" title="${i18n('lib.editRecipe')}">
                    <span class="material-symbols-outlined">edit</span>
                  </button>
-                 <button class="btn-icon lib-action-export" data-id="${recipe.id}" title="Export to JSON">
+                 <button class="btn-icon lib-action-export" data-id="${recipe.id}" title="${i18n('lib.exportToJson')}">
                    <span class="material-symbols-outlined">download</span>
                  </button>
-                 ${recipe.thumbnail ? `<button class="btn-icon lib-action-remove-thumb" data-id="${recipe.id}" title="Remove thumbnail">
+                 ${recipe.thumbnail ? `<button class="btn-icon lib-action-remove-thumb" data-id="${recipe.id}" title="${i18n('lib.removeThumbnail')}">
                    <span class="material-symbols-outlined" style="color:var(--ps-text-muted)">hide_image</span>
                  </button>` : ''}
-                 <button class="btn-icon lib-action-delete" data-id="${recipe.id}" title="Delete recipe">
+                 <button class="btn-icon lib-action-delete" data-id="${recipe.id}" title="${i18n('lib.deleteRecipe')}">
                    <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
                  </button>`
             }
@@ -109,12 +110,12 @@ function recipeCardHTML(recipe) {
         </div>
       </div>
       <div class="lib-card__body">
-        <h3 class="lib-card__name">${recipe.name || 'Unnamed Recipe'}</h3>
+        <h3 class="lib-card__name">${recipe.name || i18n('lib.unnamedRecipe')}</h3>
         <p class="lib-card__desc">${recipe.description || ''}</p>
         <div class="lib-card__meta">
           <span class="mono text-sm text-muted">
             <span class="material-symbols-outlined" style="font-size:13px;vertical-align:-2px">account_tree</span>
-            ${nodeCount} node${nodeCount !== 1 ? 's' : ''}
+            ${i18n('lib.nodeCount', { count: nodeCount })}
           </span>
           <span class="text-sm text-muted">${updated}</span>
         </div>
@@ -125,7 +126,7 @@ function recipeCardHTML(recipe) {
       <div class="lib-card__footer">
         <button class="btn-primary lib-action-use" data-id="${recipe.id}" style="width:100%;justify-content:center;">
           <span class="material-symbols-outlined">play_arrow</span>
-          Use Recipe
+          ${i18n('lib.useRecipe')}
         </button>
       </div>
     </article>`;
@@ -137,22 +138,22 @@ export async function render(container) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">library_books</span>
-          Recipe Library
+          ${i18n('lib.recipeLibrary')}
         </div>
         <div class="flex items-center gap-2">
           <div style="position:relative;">
             <span class="material-symbols-outlined" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--ps-text-faint);pointer-events:none">search</span>
-            <input id="lib-search" class="ic-input" placeholder="Search recipes…" style="padding-left:32px;width:220px;" autocomplete="off">
+            <input id="lib-search" class="ic-input" placeholder="${i18n('lib.searchRecipes')}" style="padding-left:32px;width:220px;" autocomplete="off">
           </div>
           <button class="btn-secondary" id="btn-import-recipe">
             <span class="material-symbols-outlined">upload</span>
-            Import JSON
+            ${i18n('lib.importJson')}
           </button>
           <button class="btn-primary" id="btn-new-recipe">
             <span class="material-symbols-outlined">add</span>
-            New Recipe
+            ${i18n('lib.newRecipe')}
           </button>
-          <button class="btn-icon" id="lib-btn-info" title="Image info for last test image">
+          <button class="btn-icon" id="lib-btn-info" title="${i18n('lib.imageInfoTitle')}">
             <span class="material-symbols-outlined">info</span>
           </button>
         </div>
@@ -161,17 +162,17 @@ export async function render(container) {
       <div class="lib-tabs-row">
         <div class="tabs" id="lib-tabs">
           <div role="tablist" aria-label="Recipe filter">
-            <button role="tab" aria-selected="true"  aria-controls="lib-panel-all"    id="lib-tab-all"    tabindex="0">All</button>
-            <button role="tab" aria-selected="false" aria-controls="lib-panel-system" id="lib-tab-system" tabindex="-1">System</button>
-            <button role="tab" aria-selected="false" aria-controls="lib-panel-user"   id="lib-tab-user"   tabindex="-1">My Recipes</button>
-            <button role="tab" aria-selected="false" aria-controls="lib-panel-recent" id="lib-tab-recent" tabindex="-1">Recent</button>
+            <button role="tab" aria-selected="true"  aria-controls="lib-panel-all"    id="lib-tab-all"    tabindex="0">${i18n('lib.tabAll')}</button>
+            <button role="tab" aria-selected="false" aria-controls="lib-panel-system" id="lib-tab-system" tabindex="-1">${i18n('lib.tabSystem')}</button>
+            <button role="tab" aria-selected="false" aria-controls="lib-panel-user"   id="lib-tab-user"   tabindex="-1">${i18n('lib.tabMyRecipes')}</button>
+            <button role="tab" aria-selected="false" aria-controls="lib-panel-recent" id="lib-tab-recent" tabindex="-1">${i18n('lib.tabRecent')}</button>
           </div>
         </div>
         <div class="flex items-center gap-2" style="margin-left:auto">
           <select id="lib-sort" class="ic-input" style="width:auto;min-width:160px;font-size:12px;padding:5px 8px">
-            <option value="updated">Recently Updated</option>
-            <option value="name-asc">Name A–Z</option>
-            <option value="name-desc">Name Z–A</option>
+            <option value="updated">${i18n('lib.sortRecentlyUpdated')}</option>
+            <option value="name-asc">${i18n('lib.sortNameAsc')}</option>
+            <option value="name-desc">${i18n('lib.sortNameDesc')}</option>
           </select>
           <span id="lib-count" class="text-sm text-muted" style="padding-right:4px;white-space:nowrap"></span>
         </div>
@@ -209,7 +210,7 @@ export async function render(container) {
   container.querySelector('#lib-btn-info')?.addEventListener('click', async () => {
     const testFile = window._icTestImage?.file;
     if (!testFile) {
-      window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet', description: 'Pick a test image from the recipe editor first.' });
+      window.AuroraToast?.show({ variant: 'info', title: i18n('lib.noTestImageTitle'), description: i18n('lib.noTestImageDesc') });
       return;
     }
     if (infoPanel.isVisible()) {
@@ -238,8 +239,8 @@ export async function render(container) {
     if (!items.length) {
       el.innerHTML = `<div class="empty-state">
         <span class="material-symbols-outlined">inbox</span>
-        <div class="empty-state-title">No recipes here yet</div>
-        <div class="empty-state-desc">Click "New Recipe" to create your first one.</div>
+        <div class="empty-state-title">${i18n('lib.emptyTitle')}</div>
+        <div class="empty-state-desc">${i18n('lib.emptyDesc')}</div>
       </div>`;
       return;
     }
@@ -261,17 +262,17 @@ export async function render(container) {
         
         if (isEnterprise) {
           badges.insertAdjacentHTML('beforeend',
-            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Zumilabs Studio Enterprise">` +
-            `<span class="material-symbols-outlined" style="font-size:11px">business_center</span> ENTERPRISE</span>`);
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="${i18n('lib.requiresEnterprise')}">` +
+            `<span class="material-symbols-outlined" style="font-size:11px">business_center</span> ${i18n('lib.badgeEnterprise')}</span>`);
         } else if (isPro) {
           badges.insertAdjacentHTML('beforeend',
-            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Requires Zumilabs Studio Pro">` +
-            `<span class="material-symbols-outlined" style="font-size:11px">workspace_premium</span> PRO</span>`);
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="${i18n('lib.requiresPro')}">` +
+            `<span class="material-symbols-outlined" style="font-size:11px">workspace_premium</span> ${i18n('lib.badgePro')}</span>`);
         } else {
           const tip = unmet.map(r => r.label).join(', ');
           badges.insertAdjacentHTML('beforeend',
-            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="Needs setup: ${tip}">` +
-            `<span class="material-symbols-outlined" style="font-size:11px">warning</span> Needs setup</span>`);
+            `<span class="ic-badge ic-badge--amber lib-needs-setup-badge" title="${i18n('lib.needsSetupTip', { tip })}">` +
+            `<span class="material-symbols-outlined" style="font-size:11px">warning</span> ${i18n('lib.needsSetup')}</span>`);
         }
       }
     })();
@@ -305,9 +306,9 @@ export async function render(container) {
       row.classList.add('lib-tag-filter-row--simple');
       row.classList.remove('is-open');
       row.innerHTML = `
-        <span class="text-xs text-muted" style="flex-shrink:0">Filter by tag:</span>
+        <span class="text-xs text-muted" style="flex-shrink:0">${i18n('lib.filterByTag')}</span>
         <div class="lib-tag-chips">${allTags.map(tagPillHTML).join('')}</div>
-        ${activeTags.size ? '<button class="btn-ghost lib-tag-clear" style="font-size:11px;padding:2px 8px">Clear</button>' : ''}
+        ${activeTags.size ? `<button class="btn-ghost lib-tag-clear" style="font-size:11px;padding:2px 8px">${i18n('lib.clear')}</button>` : ''}
       `;
       bindTagInteractions(row);
       return;
@@ -339,10 +340,10 @@ export async function render(container) {
       `<button class="lib-tag-chip is-active" data-tag="${t}" data-source="summary">${t}<span class="material-symbols-outlined" style="font-size:14px;margin-left:2px">close</span></button>`
     ).join('');
     const overflowPill = overflow > 0
-      ? `<span class="lib-tag-summary__more">+${overflow} more</span>`
+      ? `<span class="lib-tag-summary__more">${i18n('lib.moreCount', { count: overflow })}</span>`
       : '';
     const summaryLabel = selected.length === 0
-      ? '<span class="lib-tag-summary__all">All</span>'
+      ? `<span class="lib-tag-summary__all">${i18n('lib.allLabel')}</span>`
       : '';
 
     // Search-filtered render of category groups
@@ -357,10 +358,10 @@ export async function render(container) {
             return ap - bp || a.localeCompare(b);
           });
           if (!hits.length) {
-            return '<div class="lib-tag-empty">No tags match "' + q + '"</div>';
+            return `<div class="lib-tag-empty">${i18n('lib.noTagsMatch', { query: q })}</div>`;
           }
           return `<div class="lib-tag-group">
-            <div class="lib-tag-group__head">Matches</div>
+            <div class="lib-tag-group__head">${i18n('lib.matches')}</div>
             <div class="lib-tag-chips">${hits.map(tagPillHTML).join('')}</div>
           </div>`;
         })()
@@ -374,13 +375,13 @@ export async function render(container) {
 
     const popularHTML = popular.length && !q ? `
       <div class="lib-tag-group lib-tag-group--popular">
-        <div class="lib-tag-group__head">Popular</div>
+        <div class="lib-tag-group__head">${i18n('lib.popular')}</div>
         <div class="lib-tag-chips">${popular.map(tagPillHTML).join('')}</div>
       </div>` : '';
 
     const selectedStripHTML = selected.length ? `
       <div class="lib-tag-group lib-tag-group--selected">
-        <div class="lib-tag-group__head">Selected</div>
+        <div class="lib-tag-group__head">${i18n('lib.selected')}</div>
         <div class="lib-tag-chips">${selected.map(tagPillHTML).join('')}</div>
       </div>` : '';
 
@@ -388,15 +389,15 @@ export async function render(container) {
       <div class="lib-tag-summary" role="button" tabindex="0" aria-expanded="${open}">
         <span class="material-symbols-outlined lib-tag-summary__caret">chevron_right</span>
         <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-muted)">sell</span>
-        <span class="lib-tag-summary__label">Tags</span>
+        <span class="lib-tag-summary__label">${i18n('lib.tags')}</span>
         <span class="lib-tag-summary__chips">${summaryLabel}${summaryChips}${overflowPill}</span>
-        ${activeTags.size ? '<button class="btn-ghost lib-tag-clear" style="font-size:11px;padding:2px 8px;margin-left:auto">Clear</button>' : ''}
+        ${activeTags.size ? `<button class="btn-ghost lib-tag-clear" style="font-size:11px;padding:2px 8px;margin-left:auto">${i18n('lib.clear')}</button>` : ''}
       </div>
       <div class="lib-tag-body">
         <div class="lib-tag-body__inner">
           <div class="lib-tag-search-wrap">
             <span class="material-symbols-outlined">search</span>
-            <input type="text" class="lib-tag-search" placeholder="Search tags…" value="${q}" autocomplete="off">
+            <input type="text" class="lib-tag-search" placeholder="${i18n('lib.searchTags')}" value="${q}" autocomplete="off">
           </div>
           ${selectedStripHTML}
           ${popularHTML}
@@ -483,7 +484,7 @@ export async function render(container) {
     renderGrid('lib-grid-recent', recent);
 
     const count = container.querySelector('#lib-count');
-    if (count) count.textContent = `${filtered.length} recipe${filtered.length !== 1 ? 's' : ''}`;
+    if (count) count.textContent = i18n('lib.recipeCount', { count: filtered.length });
     bindCardActions();
   }
 
@@ -530,9 +531,9 @@ export async function render(container) {
         const text = await file.text();
         const data = JSON.parse(text);
         
-        // Validation check
+        // Validation check (back-compat: accept legacy 'PicMachinaRecipeBundle' — do not remove)
         if (data.type !== 'ZumilabsStudioRecipeBundle' && data.type !== 'PicMachinaRecipeBundle') {
-          throw new Error('This file does not appear to be a Zumilabs Studio recipe bundle.');
+          throw new Error(i18n('lib.invalidBundle'));
         }
 
         // Before saving, see if recipe ID already exists
@@ -540,10 +541,10 @@ export async function render(container) {
         const exists   = existing.find(r => r.id === data.recipe.id);
         if (exists) {
           const overwrite = await showConfirm({
-            title: 'Recipe Already Exists',
-            body: `A recipe named "${exists.name}" already exists. Do you want to overwrite it?`,
-            confirmText: 'Overwrite',
-            cancelText: 'Keep Both',
+            title: i18n('lib.recipeExistsTitle'),
+            body: i18n('lib.recipeExistsBody', { name: exists.name }),
+            confirmText: i18n('lib.overwrite'),
+            cancelText: i18n('lib.keepBoth'),
             variant: 'warning',
             icon: 'warning'
           });
@@ -551,7 +552,7 @@ export async function render(container) {
           if (!overwrite) {
             // Rename to avoid collision
             data.recipe.id = uuid();
-            data.recipe.name = `${data.recipe.name} (Imported)`;
+            data.recipe.name = i18n('lib.importedSuffix', { name: data.recipe.name });
           }
         }
 
@@ -562,16 +563,16 @@ export async function render(container) {
         applyFilter(container.querySelector('#lib-search')?.value || '');
         renderTagChips();
         
-        window.AuroraToast?.show({ 
-          variant: 'success', 
-          title: 'Recipe imported', 
-          description: `Successfully loaded "${data.recipe.name}".` 
+        window.AuroraToast?.show({
+          variant: 'success',
+          title: i18n('lib.recipeImported'),
+          description: i18n('lib.recipeImportedDesc', { name: data.recipe.name })
         });
       } catch (err) {
-        window.AuroraToast?.show({ 
-          variant: 'danger', 
-          title: 'Import failed', 
-          description: err.message 
+        window.AuroraToast?.show({
+          variant: 'danger',
+          title: i18n('lib.importFailed'),
+          description: err.message
         });
       }
     };
@@ -610,7 +611,7 @@ export async function render(container) {
         recipes = await getAllRecipes();
         applyFilter(container.querySelector('#lib-search')?.value || '');
         renderTagChips();
-        window.AuroraToast?.show({ variant: 'success', title: `"${cloned.name}" cloned`, description: 'You can now edit it.' });
+        window.AuroraToast?.show({ variant: 'success', title: i18n('lib.recipeCloned', { name: cloned.name }), description: i18n('lib.recipeClonedDesc') });
         navigate(`#bld?id=${cloned.id}`);
       });
     });
@@ -627,9 +628,9 @@ export async function render(container) {
         e.stopPropagation();
         
         const confirmed = await showConfirm({
-          title: 'Delete Recipe?',
-          body: 'This will permanently delete this recipe from your library. This action cannot be undone.',
-          confirmText: 'Delete',
+          title: i18n('lib.deleteConfirmTitle'),
+          body: i18n('lib.deleteConfirmBody'),
+          confirmText: i18n('lib.delete'),
           variant: 'danger',
           icon: 'delete_forever'
         });
@@ -640,7 +641,7 @@ export async function render(container) {
         recipes = recipes.filter(r => r.id !== btn.dataset.id);
         applyFilter(container.querySelector('#lib-search')?.value || '');
         renderTagChips();
-        window.AuroraToast?.show({ variant: 'success', title: 'Recipe deleted' });
+        window.AuroraToast?.show({ variant: 'success', title: i18n('lib.recipeDeleted') });
       });
     });
 
@@ -650,7 +651,7 @@ export async function render(container) {
         await clearRecipeThumbnail(btn.dataset.id);
         recipes = await getAllRecipes();
         applyFilter(container.querySelector('#lib-search')?.value || '');
-        window.AuroraToast?.show({ variant: 'success', title: 'Thumbnail removed' });
+        window.AuroraToast?.show({ variant: 'success', title: i18n('lib.thumbnailRemoved') });
       });
     });
 
@@ -666,10 +667,10 @@ export async function render(container) {
           a.download = `${bundle.recipe.name.replace(/[^a-z0-9]/gi, '_')}.json`;
           a.click();
           URL.revokeObjectURL(url);
-          window.AuroraToast?.show({ variant: 'success', title: 'Recipe exported', description: 'JSON file downloaded.' });
+          window.AuroraToast?.show({ variant: 'success', title: i18n('lib.recipeExported'), description: i18n('lib.recipeExportedDesc') });
         } catch (err) {
           console.error(err);
-          window.AuroraToast?.show({ variant: 'danger', title: 'Export failed' });
+          window.AuroraToast?.show({ variant: 'danger', title: i18n('lib.exportFailed') });
         }
       });
     });

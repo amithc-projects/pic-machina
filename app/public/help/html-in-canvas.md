@@ -17,7 +17,7 @@ You need to turn on **two flags** in `chrome://flags`:
 
 3. Click **Relaunch** to restart Chrome with both flags active.
 
-### Tell Zumilabs Studio you've done it
+### Tell ZumiLabs Studio you've done it
 
 After relaunching, open **Settings → Browser Capabilities** and check  
 **"HTML-in-Canvas enabled"**, then save. This removes the setup warning from Hyperframe recipes.

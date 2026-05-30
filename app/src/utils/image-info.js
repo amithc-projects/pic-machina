@@ -5,6 +5,8 @@
  * Provides a renderer that returns a styled info panel HTML element.
  */
 
+import { t as i18n } from '../i18n/index.js';
+
 // Well-known EXIF tag groups for organised display
 const CAMERA_TAGS = new Set([
   'Make','Model','LensModel','LensMake','LensSpecification',
@@ -139,35 +141,35 @@ export function renderImageInfoPanel(info) {
 
   // File section (always shown)
   const basicRows = [
-    ['Filename',   info.filename || '—'],
-    ['Format',     fmt],
-    ['File Size',  formatBytes(info.fileSize)],
-    ['Dimensions', info.width && info.height ? `${info.width} × ${info.height} px` : '—'],
+    [i18n('ii.filename'),   info.filename || '—'],
+    [i18n('ii.format'),     fmt],
+    [i18n('ii.fileSize'),  formatBytes(info.fileSize)],
+    [i18n('ii.dimensions'), info.width && info.height ? `${info.width} × ${info.height} px` : '—'],
   ];
-  el.appendChild(buildSection('File', basicRows));
+  el.appendChild(buildSection(i18n('ii.file'), basicRows));
 
   // Camera
   if (Object.keys(info.camera).length) {
-    el.appendChild(buildSection('Camera', Object.entries(info.camera)));
+    el.appendChild(buildSection(i18n('ii.camera'), Object.entries(info.camera)));
   }
 
   // Capture settings
   if (Object.keys(info.capture).length) {
-    el.appendChild(buildSection('Capture Settings', Object.entries(info.capture)));
+    el.appendChild(buildSection(i18n('ii.captureSettings'), Object.entries(info.capture)));
   }
 
   // Author / rights
   if (Object.keys(info.meta).length) {
-    el.appendChild(buildSection('Author / Rights', Object.entries(info.meta)));
+    el.appendChild(buildSection(i18n('ii.authorRights'), Object.entries(info.meta)));
   }
 
   // GPS
   if (info.gps) {
     const gpsRows = [
-      ['Latitude',  info.gps.lat.toFixed(6) + '°'],
-      ['Longitude', info.gps.lng.toFixed(6) + '°'],
+      [i18n('ii.latitude'),  info.gps.lat.toFixed(6) + '°'],
+      [i18n('ii.longitude'), info.gps.lng.toFixed(6) + '°'],
     ];
-    if (info.gps.altitude != null) gpsRows.push(['Altitude', info.gps.altitude.toFixed(1) + ' m']);
+    if (info.gps.altitude != null) gpsRows.push([i18n('ii.altitude'), info.gps.altitude.toFixed(1) + ' m']);
     Object.entries(info.gpsRaw).forEach(([k, v]) => {
       if (!['Latitude','Longitude','Altitude'].includes(k)) gpsRows.push([k, v]);
     });
@@ -176,7 +178,7 @@ export function renderImageInfoPanel(info) {
 
   // Other EXIF
   if (Object.keys(info.exifOther).length) {
-    el.appendChild(buildSection('EXIF (Other)', Object.entries(info.exifOther), true));
+    el.appendChild(buildSection(i18n('ii.exifOther'), Object.entries(info.exifOther), true));
   }
 
   // XMP
@@ -196,7 +198,7 @@ export function renderImageInfoPanel(info) {
   if (!hasMeta) {
     const note = document.createElement('div');
     note.className = 'img-info-empty';
-    note.textContent = 'No embedded metadata found in this file.';
+    note.textContent = i18n('ii.noEmbeddedMetadata');
     el.appendChild(note);
   }
 

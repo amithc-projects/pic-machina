@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Unsplash API Client
+ * ZumiLabs Studio — Unsplash API Client
  *
  * Wraps the Unsplash public API (photos only — Unsplash has no video
  * endpoint) and normalises results into the provider-agnostic asset
@@ -78,7 +78,7 @@ function photoToAsset(p) {
 }
 
 /**
- * Map an Unsplash asset onto a partial Zumilabs Studio sidecar (schema v2).
+ * Map an Unsplash asset onto a partial ZumiLabs Studio sidecar (schema v2).
  * Unsplash exposes richer metadata than Pexels — tags, EXIF, location —
  * so we populate more sections.
  */

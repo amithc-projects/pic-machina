@@ -15,6 +15,7 @@ import { showConfirm }                            from '../utils/dialogs.js';
 import { getSettings }                            from '../utils/settings.js';
 import { backfillRunThumbnails, THUMBNAIL_VERSION, getRunOutputFiles } from '../utils/run-thumbnail.js';
 import { isVideoFile }                              from '../utils/video-frame.js';
+import { t }                                        from '../i18n/index.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -22,10 +23,10 @@ function escHtml(s) {
 
 function statusBadge(status) {
   const cfg = {
-    completed: ['check_circle', 'ic-badge--green', 'Completed'],
-    failed:    ['error',        'ic-badge--red',   'Failed'],
-    cancelled: ['cancel',       '',                'Cancelled'],
-    running:   ['sync',         'ic-badge--blue',  'Running'],
+    completed: ['check_circle', 'ic-badge--green', t('out.statusCompleted')],
+    failed:    ['error',        'ic-badge--red',   t('out.statusFailed')],
+    cancelled: ['cancel',       '',                t('out.statusCancelled')],
+    running:   ['sync',         'ic-badge--blue',  t('out.statusRunning')],
   }[status] || ['help', '', status];
   return `<span class="ic-badge ${cfg[1]}"><span class="material-symbols-outlined" style="font-size:11px">${cfg[0]}</span> ${cfg[2]}</span>`;
 }
@@ -86,24 +87,24 @@ export async function render(container, hash) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">history</span>
-          Output History
+          ${t('out.outputHistory')}
         </div>
         <button class="btn-secondary" id="out-btn-clear-all">
           <span class="material-symbols-outlined">delete_sweep</span>
-          Clear All
+          ${t('out.clearAll')}
         </button>
       </div>
       <div class="out-filter-bar" id="out-filter-bar">
         <span class="material-symbols-outlined" style="font-size:18px;color:var(--ps-text-faint);flex-shrink:0">filter_list</span>
         <select id="out-filter-recipe" class="out-filter-select">
-          <option value="">All recipes</option>
+          <option value="">${t('out.allRecipes')}</option>
         </select>
-        <span class="text-sm text-muted" style="flex-shrink:0">From</span>
-        <input type="date" id="out-filter-from" class="out-filter-date" title="From date">
-        <span class="text-sm text-muted" style="flex-shrink:0">to</span>
-        <input type="date" id="out-filter-to" class="out-filter-date" title="To date">
+        <span class="text-sm text-muted" style="flex-shrink:0">${t('out.from')}</span>
+        <input type="date" id="out-filter-from" class="out-filter-date" title="${t('out.fromDate')}">
+        <span class="text-sm text-muted" style="flex-shrink:0">${t('out.to')}</span>
+        <input type="date" id="out-filter-to" class="out-filter-date" title="${t('out.toDate')}">
         <button class="btn-secondary btn-sm" id="out-filter-clear" style="display:none">
-          <span class="material-symbols-outlined" style="font-size:14px">close</span> Clear
+          <span class="material-symbols-outlined" style="font-size:14px">close</span> ${t('out.clear')}
         </button>
       </div>
       <div id="out-body" class="out-body">
@@ -167,8 +168,8 @@ export async function render(container, hash) {
         return {
           beforeUrl,
           afterUrl,
-          beforeLabel: pair.inputFile ? 'Input' : 'Output',
-          afterLabel: pair.inputFile ? 'Output' : 'Output',
+          beforeLabel: pair.inputFile ? t('out.input') : t('out.output'),
+          afterLabel: t('out.output'),
           context: { filename: file.name },
           canCompare: !!pair.inputFile
         };
@@ -296,10 +297,10 @@ export async function render(container, hash) {
     if (!runs.length) {
       body.innerHTML = `<div class="empty-state" style="padding-top:60px">
         <span class="material-symbols-outlined" style="font-size:48px">history</span>
-        <div class="empty-state-title">No runs yet</div>
-        <div class="empty-state-desc">Process a batch to see output history here.</div>
+        <div class="empty-state-title">${t('out.noRuns')}</div>
+        <div class="empty-state-desc">${t('out.noRunsDesc')}</div>
         <button class="btn-primary" id="out-go-lib">
-          <span class="material-symbols-outlined">library_books</span> Browse Recipes
+          <span class="material-symbols-outlined">library_books</span> ${t('out.browseRecipes')}
         </button>
       </div>`;
       body.querySelector('#out-go-lib')?.addEventListener('click', () => navigate('#lib'));
@@ -313,15 +314,15 @@ export async function render(container, hash) {
       <div class="out-stats-bar">
         <div class="out-stat-card">
           <span class="out-stat-val">${runs.length}</span>
-          <span class="out-stat-label">Total Runs</span>
+          <span class="out-stat-label">${t('out.totalRuns')}</span>
         </div>
         <div class="out-stat-card">
           <span class="out-stat-val" style="color:var(--ps-green,#22c55e)">${completed}</span>
-          <span class="out-stat-label">Completed</span>
+          <span class="out-stat-label">${t('out.statusCompleted')}</span>
         </div>
         <div class="out-stat-card">
           <span class="out-stat-val" style="color:var(--ps-blue)">${totalImgs}</span>
-          <span class="out-stat-label">Images Processed</span>
+          <span class="out-stat-label">${t('out.imagesProcessed')}</span>
         </div>
       </div>
       <div class="out-run-list">
@@ -373,7 +374,7 @@ export async function render(container, hash) {
           <span class="material-symbols-outlined out-run-chevron" style="font-size:16px;color:var(--ps-text-faint);transition:transform 200ms">chevron_right</span>
           ${thumbHTML}
           <div class="out-run-info">
-            <div class="out-run-name">${escHtml(run.recipeName || 'Unknown Recipe')}</div>
+            <div class="out-run-name">${escHtml(run.recipeName || t('out.unknownRecipe'))}</div>
             <div class="out-run-meta">
               <span class="mono text-sm text-muted">${run.outputFolder || '—'}</span>
               <span class="text-sm text-muted">${run.startedAt ? formatDateTime(run.startedAt) : '—'}</span>
@@ -382,24 +383,24 @@ export async function render(container, hash) {
           <div class="out-run-stats">
             ${statusBadge(run.status)}
             <span class="out-stat-inline"><span class="material-symbols-outlined" style="font-size:13px">image</span>${run.successCount ?? 0}/${run.imageCount ?? 0}</span>
-            ${run.failCount ? `<span class="out-stat-inline" style="color:var(--ps-red)"><span class="material-symbols-outlined" style="font-size:13px">error</span>${run.failCount} failed</span>` : ''}
+            ${run.failCount ? `<span class="out-stat-inline" style="color:var(--ps-red)"><span class="material-symbols-outlined" style="font-size:13px">error</span>${t('out.failedCount', { count: run.failCount })}</span>` : ''}
             <span class="out-stat-inline"><span class="material-symbols-outlined" style="font-size:13px">schedule</span>${durationStr(run)}</span>
           </div>
           <div class="out-run-actions">
-            ${run.status === 'completed' ? `<button class="btn-secondary out-btn-browse" data-run-id="${run.id}" title="Browse in Folder Viewer" style="font-size:12px;padding:5px 10px">
+            ${run.status === 'completed' ? `<button class="btn-secondary out-btn-browse" data-run-id="${run.id}" title="${t('out.browseInFolderViewer')}" style="font-size:12px;padding:5px 10px">
               <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
-              Browse
+              ${t('out.browse')}
             </button>
-            <button class="btn-icon out-btn-showcase" data-run-id="${run.id}" title="Add to ShowCase">
+            <button class="btn-icon out-btn-showcase" data-run-id="${run.id}" title="${t('out.addToShowcase')}">
               <span class="material-symbols-outlined">star</span>
             </button>` : ''}
-            <button class="btn-icon out-btn-edit" data-recipe-id="${run.recipeId}" title="Edit recipe">
+            <button class="btn-icon out-btn-edit" data-recipe-id="${run.recipeId}" title="${t('out.editRecipe')}">
               <span class="material-symbols-outlined">edit</span>
             </button>
-            <button class="btn-icon out-btn-use" data-recipe-id="${run.recipeId}" title="Run batch again">
+            <button class="btn-icon out-btn-use" data-recipe-id="${run.recipeId}" title="${t('out.runBatchAgain')}">
               <span class="material-symbols-outlined">play_arrow</span>
             </button>
-            <button class="btn-icon out-btn-delete" data-id="${run.id}" title="Delete record">
+            <button class="btn-icon out-btn-delete" data-id="${run.id}" title="${t('out.deleteRecord')}">
               <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
             </button>
           </div>
@@ -410,12 +411,12 @@ export async function render(container, hash) {
           <div id="out-gallery-${run.id}" class="out-gallery-section" style="display:none"></div>
           <!-- Log section -->
           <div class="out-log-header">
-            <span class="text-sm text-muted">Run log</span>
+            <span class="text-sm text-muted">${t('out.runLog')}</span>
             <span class="mono text-sm text-muted">${run.id.slice(0,8)}</span>
           </div>
           <div class="terminal out-log-body">
             ${(run.log||[]).length === 0
-              ? '<span style="color:var(--ps-text-faint)">No log entries.</span>'
+              ? `<span style="color:var(--ps-text-faint)">${t('out.noLogEntries')}</span>`
               : (run.log||[]).map(e => {
                   const c = e.level === 'error' ? 'var(--ps-red)' : e.level === 'warn' ? '#f59e0b' : e.level === 'ok' ? '#22c55e' : e.level === 'info' ? 'var(--ps-text-muted)' : 'var(--ps-text-faint)';
                   return `<div><span style="color:var(--ps-text-faint)">[${new Date(e.ts).toLocaleTimeString()}]</span> <span style="color:${c}">[${e.level}]</span> <span style="color:${c === 'var(--ps-text-muted)' ? 'var(--ps-text)' : c}">${escHtml(e.msg)}</span></div>`;
@@ -474,14 +475,14 @@ export async function render(container, hash) {
     }
 
     galleryEl.style.display = 'block';
-    galleryEl.innerHTML = `<div style="padding:12px;display:flex;align-items:center;gap:8px"><div class="spinner"></div><span class="text-sm text-muted">Loading output files…</span></div>`;
+    galleryEl.innerHTML = `<div style="padding:12px;display:flex;align-items:center;gap:8px"><div class="spinner"></div><span class="text-sm text-muted">${t('out.loadingOutputFiles')}</span></div>`;
 
     try {
       const run = await getRun(runId);
       let outputHandle = run?.outputHandleObj || await getFolder('output');
 
       if (!outputHandle) {
-        galleryEl.innerHTML = `<div class="out-gallery-empty">Output folder not accessible. <button class="btn-secondary out-btn-repick">Pick Folder</button></div>`;
+        galleryEl.innerHTML = `<div class="out-gallery-empty">${t('out.outputNotAccessible')} <button class="btn-secondary out-btn-repick">${t('out.pickFolder')}</button></div>`;
         return;
       }
 
@@ -489,7 +490,7 @@ export async function render(container, hash) {
       try {
         subHandle = await getOrCreateOutputSubfolder(outputHandle, subfolder);
       } catch {
-        galleryEl.innerHTML = `<div class="out-gallery-empty">Subfolder "${subfolder}" not found.</div>`;
+        galleryEl.innerHTML = `<div class="out-gallery-empty">${t('out.subfolderNotFound', { subfolder })}</div>`;
         return;
       }
 
@@ -498,7 +499,7 @@ export async function render(container, hash) {
       // video-producing recipes show their results too.
       const outputFiles = await getRunOutputFiles(run);
       if (!outputFiles.length) {
-        galleryEl.innerHTML = `<div class="out-gallery-empty">No output files found for this run.</div>`;
+        galleryEl.innerHTML = `<div class="out-gallery-empty">${t('out.noOutputFiles')}</div>`;
         return;
       }
 
@@ -572,20 +573,20 @@ export async function render(container, hash) {
           const matchCount = pairs.filter(p => p.inputFile).length;
           galleryEl.innerHTML = `
             <div class="out-gallery-header">
-              <span class="text-sm text-muted">${outputFiles.length} file${outputFiles.length !== 1 ? 's' : ''} in <code>${subfolder}/</code></span>
+              <span class="text-sm text-muted">${t('out.filesIn', { count: outputFiles.length })} <code>${subfolder}/</code></span>
               <button class="btn-secondary out-btn-browse-gallery" data-run-id="${runId}" style="font-size:11px;padding:4px 8px;margin-left:8px">
-                <span class="material-symbols-outlined" style="font-size:13px">folder_open</span> Browse Folder
+                <span class="material-symbols-outlined" style="font-size:13px">folder_open</span> ${t('out.browseFolder')}
               </button>
               <button class="btn-secondary out-btn-showcase-gallery" data-run-id="${runId}" style="font-size:11px;padding:4px 8px;margin-left:4px">
-                <span class="material-symbols-outlined" style="font-size:13px">star</span> Add to ShowCase
+                <span class="material-symbols-outlined" style="font-size:13px">star</span> ${t('out.addToShowcase')}
               </button>
               ${matchCount
-                ? `<span class="text-sm text-muted" style="margin-left:6px">&nbsp;·&nbsp; ${matchCount} originals matched for comparison</span>`
+                ? `<span class="text-sm text-muted" style="margin-left:6px">&nbsp;·&nbsp; ${t('out.originalsMatched', { count: matchCount })}</span>`
                 : `<span style="margin-left:8px;display:flex;align-items:center;gap:6px">
-                     <span class="ic-badge">No originals matched</span>
+                     <span class="ic-badge">${t('out.noOriginalsMatched')}</span>
                      <button class="btn-secondary out-btn-reload-gallery" data-run-id="${runId}" style="font-size:11px;padding:4px 8px">
                        <span class="material-symbols-outlined" style="font-size:13px">folder_open</span>
-                       Re-authorize input folder
+                       ${t('out.reauthorizeInput')}
                      </button>
                    </span>`}
             </div>
@@ -669,7 +670,7 @@ export async function render(container, hash) {
           });
 
     } catch (err) {
-      galleryEl.innerHTML = `<div class="out-gallery-empty">Error: ${escHtml(err.message)}</div>`;
+      galleryEl.innerHTML = `<div class="out-gallery-empty">${t('out.errorPrefix', { message: err.message })}</div>`;
     }
   }
 
@@ -712,9 +713,9 @@ export async function render(container, hash) {
       btn.addEventListener('click', async e => {
         e.stopPropagation();
         const confirmed = await showConfirm({
-          title: 'Delete Run Record?',
-          body: 'This will remove the execution record and its history. This action cannot be undone.',
-          confirmText: 'Delete',
+          title: t('out.deleteRunTitle'),
+          body: t('out.deleteRunBody'),
+          confirmText: t('out.delete'),
           variant: 'danger',
           icon: 'delete_forever'
         });
@@ -730,15 +731,15 @@ export async function render(container, hash) {
     const runs = await getAllRuns();
     if (!runs.length) return;
     const confirmed = await showConfirm({
-      title: 'Clear All History?',
-      body: `Are you sure you want to delete all ${runs.length} execution records? This cannot be undone.`,
-      confirmText: 'Clear All',
+      title: t('out.clearAllTitle'),
+      body: t('out.clearAllBody', { count: runs.length }),
+      confirmText: t('out.clearAll'),
       variant: 'danger',
       icon: 'delete_sweep'
     });
     if (!confirmed) return;
     await Promise.all(runs.map(r => deleteRun(r.id)));
-    window.AuroraToast?.show({ variant: 'success', title: 'All run records cleared' });
+    window.AuroraToast?.show({ variant: 'success', title: t('out.allRecordsCleared') });
     await loadRuns();
   });
 
@@ -759,7 +760,7 @@ function initFilters(runs, container, { initialRecipeId } = {}) {
   const seen = new Map(); // recipeId → recipeName
   for (const r of runs) {
     if (!r.recipeId) continue;
-    if (!seen.has(r.recipeId)) seen.set(r.recipeId, r.recipeName || '(unnamed recipe)');
+    if (!seen.has(r.recipeId)) seen.set(r.recipeId, r.recipeName || t('out.unnamedRecipe'));
   }
   [...seen.entries()]
     .sort((a, b) => a[1].localeCompare(b[1]))
@@ -817,7 +818,7 @@ async function addRunToShowcase(run, preloadedFiles) {
     if (!files) {
       let outputHandle = run.outputHandleObj || await getFolder('output');
       if (!outputHandle) {
-        window.AuroraToast?.show({ variant: 'warning', title: 'Output folder not accessible' });
+        window.AuroraToast?.show({ variant: 'warning', title: t('out.outputFolderNotAccessible') });
         return;
       }
       const subHandle = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
@@ -867,12 +868,12 @@ async function addRunToShowcase(run, preloadedFiles) {
 
     window.AuroraToast?.show({
       variant: 'success',
-      title: 'Added to ShowCase',
-      description: `<a href="#shc?id=${entry.id}" style="color:var(--ps-blue)">View entry →</a>`,
+      title: t('out.addedToShowcase'),
+      description: `<a href="#shc?id=${entry.id}" style="color:var(--ps-blue)">${t('out.viewEntry')}</a>`,
     });
   } catch (err) {
     console.error('[addRunToShowcase]', err);
-    window.AuroraToast?.show({ variant: 'danger', title: 'Failed to add to ShowCase', description: err.message });
+    window.AuroraToast?.show({ variant: 'danger', title: t('out.failedToAddShowcase'), description: err.message });
   }
 }
 

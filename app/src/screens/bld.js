@@ -20,6 +20,7 @@ import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
 import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../utils/video-scrubber.js';
 import { fileFilterForRecipe, getFolder } from '../data/folders.js';
 import { wireFolderState, allowedTypesAttrForRecipe } from '../data/folder-state.js';
+import { t as i18n } from '../i18n/index.js';
 
 // Category accent colours (match theme vars)
 const CAT_COLORS = {
@@ -33,14 +34,14 @@ const CAT_COLORS = {
 
 
 const COVER_COLORS = [
-  { label: 'Blue',   value: '#0077ff' },
-  { label: 'Purple', value: '#8b5cf6' },
-  { label: 'Green',  value: '#22c55e' },
-  { label: 'Amber',  value: '#f59e0b' },
-  { label: 'Pink',   value: '#f472b6' },
-  { label: 'Slate',  value: '#374151' },
-  { label: 'Brown',  value: '#92400e' },
-  { label: 'Sky',    value: '#0ea5e9' },
+  { labelKey: 'bld.colorBlue',   value: '#0077ff' },
+  { labelKey: 'bld.colorPurple', value: '#8b5cf6' },
+  { labelKey: 'bld.colorGreen',  value: '#22c55e' },
+  { labelKey: 'bld.colorAmber',  value: '#f59e0b' },
+  { labelKey: 'bld.colorPink',   value: '#f472b6' },
+  { labelKey: 'bld.colorSlate',  value: '#374151' },
+  { labelKey: 'bld.colorBrown',  value: '#92400e' },
+  { labelKey: 'bld.colorSky',    value: '#0ea5e9' },
 ];
 
 const COVER_GRADIENTS = {
@@ -97,30 +98,30 @@ function buildNodeRow(item, isSelected) {
   return `
     <div class="bld-node-row ${isSelected ? 'is-selected' : ''} ${node.disabled ? 'is-disabled' : ''}"
          data-id="${node.id}" draggable="true" style="padding-left:${8 + depth * 16}px">
-      <button class="btn-icon bld-drag-handle" title="Drag to reorder" tabindex="-1">
+      <button class="btn-icon bld-drag-handle" title="${i18n('bld.dragToReorder')}" tabindex="-1">
         <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-faint)">drag_indicator</span>
       </button>
       <span class="bld-node-dot" style="background:${color}"></span>
       <span class="material-symbols-outlined" style="font-size:14px;color:${color};flex-shrink:0">${icon}</span>
       <span class="bld-node-label" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(label)}">${label}</span>
-      ${node.disabled ? '<span class="ic-badge" style="font-size:10px">off</span>' : ''}
-      <button class="btn-icon bld-btn-menu" style="margin-right:8px; display:inline-flex;" title="Options">
+      ${node.disabled ? `<span class="ic-badge" style="font-size:10px">${i18n('bld.off')}</span>` : ''}
+      <button class="btn-icon bld-btn-menu" style="margin-right:8px; display:inline-flex;" title="${i18n('bld.options')}">
         <span class="material-symbols-outlined dropdown-toggle" style="font-size:16px;color:var(--ps-text-muted)">more_vert</span>
       </button>
     </div>`;
 }
 
 function buildParamRow(p, i) {
-  const typeLabel = { text:'Text', number:'Number', range:'Range', select:'Select', boolean:'Toggle', color:'Color' }[p.type] || p.type;
+  const typeLabel = { text:i18n('bld.typeText'), number:i18n('bld.typeNumber'), range:i18n('bld.typeRange'), select:i18n('bld.typeSelect'), boolean:i18n('bld.typeToggle'), color:i18n('bld.typeColor') }[p.type] || p.type;
   return `
     <div class="bld-param-row" data-idx="${i}">
       <span class="ic-badge" style="font-size:10px;font-family:var(--font-mono)" title="${escHtml(p.name)}">${escHtml(p.name)}</span>
       <span class="text-sm" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(p.label)}">${escHtml(p.label)}</span>
       <span class="text-sm text-muted">${typeLabel}</span>
-      <button class="btn-icon bld-param-edit" data-idx="${i}" title="Edit">
+      <button class="btn-icon bld-param-edit" data-idx="${i}" title="${i18n('bld.edit')}">
         <span class="material-symbols-outlined" style="font-size:14px">edit</span>
       </button>
-      <button class="btn-icon bld-param-delete" data-idx="${i}" title="Delete" style="color:var(--ps-red)">
+      <button class="btn-icon bld-param-delete" data-idx="${i}" title="${i18n('bld.delete')}" style="color:var(--ps-red)">
         <span class="material-symbols-outlined" style="font-size:14px">delete</span>
       </button>
     </div>`;
@@ -146,7 +147,7 @@ function buildAddNodeModal(grouped, blocks = []) {
   }).join('');
 
   const blockItems = blocks.length === 0
-    ? `<div style="padding:6px 2px;color:var(--ps-text-muted);font-size:12px">No blocks yet. <a href="#bkb" style="color:var(--ps-blue)">Create a block →</a></div>`
+    ? `<div style="padding:6px 2px;color:var(--ps-text-muted);font-size:12px">${i18n('bld.noBlocksYet')}</div>`
     : `<div class="bld-add-grid">
         ${blocks.map(b => `
           <button class="bld-add-item bld-add-block-item" data-block-id="${escHtml(b.id)}" data-block-name="${escHtml(b.name)}">
@@ -161,13 +162,13 @@ function buildAddNodeModal(grouped, blocks = []) {
     <div id="bld-add-modal" class="bld-modal-overlay" style="display:none">
       <div class="bld-modal" style="width:1200px; max-width:95vw;">
         <div class="bld-modal-header">
-          <span class="bld-modal-title">Add Step</span>
+          <span class="bld-modal-title">${i18n('bld.addStep')}</span>
           <div class="flex items-center gap-2">
             <button class="btn-secondary is-active" id="bld-toggle-help-btn" style="margin-right:12px;font-size:12px;padding:4px 8px;gap:6px;transition:background 0.2s;background:var(--ps-blue);color:#fff;border-color:var(--ps-blue);">
                <span class="material-symbols-outlined" style="font-size:14px;">menu_book</span>
-               Hide Help
+               ${i18n('bld.hideHelp')}
             </button>
-            <input type="text" id="bld-add-search" class="ic-input" placeholder="Search transforms & blocks…" style="width:220px" autocomplete="off">
+            <input type="text" id="bld-add-search" class="ic-input" placeholder="${i18n('bld.searchTransforms')}" style="width:220px" autocomplete="off">
             <button class="btn-icon" id="bld-add-close">
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -178,23 +179,23 @@ function buildAddNodeModal(grouped, blocks = []) {
             <div class="bld-add-body" id="bld-add-sections">
               ${sections}
               <div class="bld-add-section bld-add-section--blocks">
-                <div class="bld-add-cat" style="color:#a855f7">Blocks</div>
+                <div class="bld-add-cat" style="color:#a855f7">${i18n('bld.blocks')}</div>
                 ${blockItems}
               </div>
             </div>
             <div class="bld-modal-footer">
               <button class="btn-secondary bld-add-branch-btn" data-type="branch">
                 <span class="material-symbols-outlined" style="font-size:14px">device_hub</span>
-                Add Branch
+                ${i18n('bld.addBranch')}
               </button>
               <button class="btn-secondary bld-add-branch-btn" data-type="conditional">
                 <span class="material-symbols-outlined" style="font-size:14px">alt_route</span>
-                Add Conditional
+                ${i18n('bld.addConditional')}
               </button>
             </div>
           </div>
           <div id="bld-add-help-pane" style="display:flex; flex-direction:column; flex:1; border-left:1px solid var(--ps-border); background:var(--ps-bg-app); min-width:0; overflow:hidden; position:relative;">
-            <div class="empty-state">Hover over a transformation to view its detailed documentation.</div>
+            <div class="empty-state">${i18n('bld.hoverForDocs')}</div>
           </div>
         </div>
       </div>
@@ -210,8 +211,8 @@ export async function render(container, hash) {
     container.innerHTML = `<div class="screen"><div class="screen-body" style="align-items:center;justify-content:center">
       <div class="empty-state">
         <span class="material-symbols-outlined">error_outline</span>
-        <div class="empty-state-title">Recipe not found</div>
-        <button class="btn-primary" onclick="navigate('#lib')">Back to Library</button>
+        <div class="empty-state-title">${i18n('bld.recipeNotFound')}</div>
+        <button class="btn-primary" onclick="navigate('#lib')">${i18n('bld.backToLibrary')}</button>
       </div></div></div>`;
     return;
   }
@@ -277,7 +278,7 @@ export async function render(container, hash) {
           </button>
           <div class="screen-title">
             <span class="material-symbols-outlined">${isTransient ? 'photo_filter' : 'format_list_numbered'}</span>
-            ${isTransient ? 'Image Editor' : 'Recipe Builder'}
+            ${isTransient ? i18n('bld.imageEditor') : i18n('bld.recipeBuilder')}
           </div>
           ${isTransient ? '' : '<span id="bld-save-status" class="text-sm text-muted" style="margin-left:4px"></span>'}
         </div>
@@ -285,7 +286,7 @@ export async function render(container, hash) {
           ${isTransient
             ? ''
             : `<span id="bld-header-name" class="bld-header-name">${escHtml(draft.name)}</span>
-               <button class="btn-icon bld-config-toggle" id="bld-config-toggle" title="Edit recipe details" style="margin-left:4px">
+               <button class="btn-icon bld-config-toggle" id="bld-config-toggle" title="${i18n('bld.editRecipeDetails')}" style="margin-left:4px">
                  <span class="material-symbols-outlined" style="font-size:15px">edit</span>
                </button>`}
         </div>
@@ -293,19 +294,19 @@ export async function render(container, hash) {
           ${isTransient
             ? `<button class="btn-secondary" id="bld-btn-save-recipe">
                  <span class="material-symbols-outlined">bookmark_add</span>
-                 Save as Recipe
+                 ${i18n('bld.saveAsRecipe')}
                </button>
                <button class="btn-primary" id="bld-btn-download">
                  <span class="material-symbols-outlined">save</span>
-                 Save Image
+                 ${i18n('bld.saveImage')}
                </button>`
             : `<button class="btn-secondary" id="bld-btn-preview">
                  <span class="material-symbols-outlined">preview</span>
-                 Preview
+                 ${i18n('bld.preview')}
                </button>
                <button class="btn-primary" id="bld-btn-use">
                  <span class="material-symbols-outlined">play_arrow</span>
-                 Use
+                 ${i18n('bld.use')}
                </button>`}
         </div>
       </div>
@@ -318,92 +319,92 @@ export async function render(container, hash) {
           </div>
 
           <div class="bld-config-form">
-            <label class="ic-label">Name <span style="color:var(--ps-red)">*</span></label>
-            <input type="text" id="bld-name" class="ic-input" value="${escHtml(draft.name)}" placeholder="Recipe name…">
+            <label class="ic-label">${i18n('bld.name')} <span style="color:var(--ps-red)">*</span></label>
+            <input type="text" id="bld-name" class="ic-input" value="${escHtml(draft.name)}" placeholder="${i18n('bld.recipeNamePlaceholder')}">
 
-            <label class="ic-label" style="margin-top:12px">Description</label>
-            <textarea id="bld-desc" class="ic-input" rows="3" placeholder="What does this recipe do?">${escHtml(draft.description || '')}</textarea>
+            <label class="ic-label" style="margin-top:12px">${i18n('bld.description')}</label>
+            <textarea id="bld-desc" class="ic-input" rows="3" placeholder="${i18n('bld.descriptionPlaceholder')}">${escHtml(draft.description || '')}</textarea>
 
             <div id="bld-name-hint" class="ic-badge ic-badge--amber" style="margin-top:12px; display:none; flex-wrap:wrap; white-space:normal; line-height:1.3">
               <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; flex-shrink:0">info</span>
-              Please provide a Name to start building your recipe.
+              ${i18n('bld.provideNameHint')}
             </div>
             <div id="bld-name-warn" class="ic-badge ic-badge--amber" style="margin-top:12px; display:none; flex-wrap:wrap; white-space:normal; line-height:1.3; color:var(--ps-warning)">
               <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; flex-shrink:0">warning</span>
-              A recipe with this name already exists.
+              ${i18n('bld.nameExists')}
             </div>
 
             <div id="bld-config-advanced" style="transition: opacity 0.2s">
-              <label class="ic-label" style="margin-top:12px">Thumbnail</label>
+              <label class="ic-label" style="margin-top:12px">${i18n('bld.thumbnail')}</label>
             <div id="bld-thumb-preview" style="width:100%;height:80px;border-radius:6px;border:1px solid var(--ps-border);background:var(--ps-bg-overlay);margin-bottom:6px;overflow:hidden;position:relative;">
               ${draft.thumbnail ? `<img src="${draft.thumbnail}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;" alt="">` : ''}
             </div>
             <div style="display:flex;gap:6px">
               <label class="btn-secondary" style="flex:1;justify-content:center;cursor:pointer;font-size:12px;">
-                <span class="material-symbols-outlined" style="font-size:14px;margin-right:4px">upload</span>Browse
+                <span class="material-symbols-outlined" style="font-size:14px;margin-right:4px">upload</span>${i18n('bld.browse')}
                 <input type="file" id="bld-thumb-input" accept="image/*" style="display:none">
               </label>
               <button class="btn-ghost" id="bld-thumb-clear" style="font-size:12px;color:var(--ps-red);${draft.thumbnail ? '' : 'display:none'}">
                 <span class="material-symbols-outlined" style="font-size:14px">delete</span>
               </button>
-              <button class="btn-ghost" id="bld-thumb-prompt" style="font-size:12px;color:var(--ps-blue);" title="Copy AI Prompt to Clipboard">
+              <button class="btn-ghost" id="bld-thumb-prompt" style="font-size:12px;color:var(--ps-blue);" title="${i18n('bld.copyAiPrompt')}">
                 <span class="material-symbols-outlined" style="font-size:14px">smart_toy</span>
               </button>
             </div>
             <div class="text-xs text-muted" style="margin-top:4px">
               <span class="material-symbols-outlined" style="font-size:11px;vertical-align:middle">content_paste</span>
-              Paste image anywhere to set
+              ${i18n('bld.pasteImageHint')}
             </div>
 
             <label class="ic-label" style="margin-top:12px; display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--ps-text); font-weight:normal; text-transform:none; letter-spacing:0;">
               <input type="checkbox" id="bld-is-ordered" ${draft.isOrdered ? 'checked' : ''}>
-              Enforce Sequence Ordering
+              ${i18n('bld.enforceSequenceOrdering')}
             </label>
 
-            <label class="ic-label" style="margin-top:12px">Cover Colour</label>
+            <label class="ic-label" style="margin-top:12px">${i18n('bld.coverColour')}</label>
             <div class="bld-color-grid">
               ${COVER_COLORS.map(c => `
                 <button class="bld-color-swatch ${draft.coverColor === c.value ? 'is-active' : ''}"
-                  data-color="${c.value}" style="background:${c.value}" title="${c.label}">
+                  data-color="${c.value}" style="background:${c.value}" title="${i18n(c.labelKey)}">
                   ${draft.coverColor === c.value ? '<span class="material-symbols-outlined" style="font-size:14px">check</span>' : ''}
                 </button>`).join('')}
             </div>
 
-            <label class="ic-label" style="margin-top:12px">Tags</label>
-            <input type="text" id="bld-tags" class="ic-input" value="${(draft.tags || []).join(', ')}" placeholder="web, social, print …">
-            <div class="text-sm text-muted" style="margin-top:4px">Comma-separated</div>
+            <label class="ic-label" style="margin-top:12px">${i18n('bld.tags')}</label>
+            <input type="text" id="bld-tags" class="ic-input" value="${(draft.tags || []).join(', ')}" placeholder="${i18n('bld.tagsPlaceholder')}">
+            <div class="text-sm text-muted" style="margin-top:4px">${i18n('bld.commaSeparated')}</div>
 
             <div style="display:flex;gap:12px;margin-top:16px">
               <div style="flex:1">
-                <label class="ic-label">Min Items</label>
-                <input type="number" id="bld-min-items" class="ic-input" value="${draft.minItems ?? ''}" placeholder="Any" min="1">
+                <label class="ic-label">${i18n('bld.minItems')}</label>
+                <input type="number" id="bld-min-items" class="ic-input" value="${draft.minItems ?? ''}" placeholder="${i18n('bld.any')}" min="1">
               </div>
               <div style="flex:1">
-                <label class="ic-label">Max Items</label>
-                <input type="number" id="bld-max-items" class="ic-input" value="${draft.maxItems ?? ''}" placeholder="Any" min="1">
+                <label class="ic-label">${i18n('bld.maxItems')}</label>
+                <input type="number" id="bld-max-items" class="ic-input" value="${draft.maxItems ?? ''}" placeholder="${i18n('bld.any')}" min="1">
               </div>
             </div>
 
             <div style="margin-top:12px">
-              <label class="ic-label">Media Type</label>
+              <label class="ic-label">${i18n('bld.mediaType')}</label>
               <select id="bld-input-type" class="ic-input">
-                <option value="image" ${draft.inputType === 'image' ? 'selected' : ''}>Images Only</option>
-                <option value="video" ${draft.inputType === 'video' ? 'selected' : ''}>Videos Only</option>
-                <option value="any" ${draft.inputType === 'any' || !draft.inputType ? 'selected' : ''}>Images & Videos</option>
+                <option value="image" ${draft.inputType === 'image' ? 'selected' : ''}>${i18n('bld.imagesOnly')}</option>
+                <option value="video" ${draft.inputType === 'video' ? 'selected' : ''}>${i18n('bld.videosOnly')}</option>
+                <option value="any" ${draft.inputType === 'any' || !draft.inputType ? 'selected' : ''}>${i18n('bld.imagesAndVideos')}</option>
               </select>
             </div>
 
             <div style="margin-top:16px;border-top:1px solid var(--ps-border);padding-top:12px">
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
                 <span class="material-symbols-outlined" style="font-size:15px;color:var(--ps-blue)">tune</span>
-                <span class="ic-label" style="margin-bottom:0">Run Parameters</span>
+                <span class="ic-label" style="margin-bottom:0">${i18n('bld.runParameters')}</span>
                 <button class="btn-ghost" id="bld-add-param" style="margin-left:auto;font-size:11px;padding:2px 8px">
-                  <span class="material-symbols-outlined" style="font-size:13px">add</span> Add
+                  <span class="material-symbols-outlined" style="font-size:13px">add</span> ${i18n('bld.add')}
                 </button>
               </div>
               <div id="bld-params-list" class="bld-params-list">
                 ${(draft.params || []).length === 0
-                  ? `<div class="text-sm text-muted" id="bld-params-empty">No parameters defined.</div>`
+                  ? `<div class="text-sm text-muted" id="bld-params-empty">${i18n('bld.noParamsDefined')}</div>`
                   : (draft.params || []).map((p, i) => buildParamRow(p, i)).join('')}
               </div>
             </div>
@@ -414,11 +415,11 @@ export async function render(container, hash) {
         <!-- Middle: node list -->
         <div class="bld-nodes-panel">
           <div class="bld-nodes-header">
-            <span class="text-sm font-medium">Steps</span>
-            <span id="bld-node-count" class="text-sm text-muted">${draft.nodes.length} step${draft.nodes.length !== 1 ? 's' : ''}</span>
+            <span class="text-sm font-medium">${i18n('bld.steps')}</span>
+            <span id="bld-node-count" class="text-sm text-muted">${i18n('bld.stepCount', { count: draft.nodes.length })}</span>
             <button class="btn-primary bld-btn-add" id="bld-btn-add-node" style="margin-left:auto">
               <span class="material-symbols-outlined">add</span>
-              Add Step
+              ${i18n('bld.addStep')}
             </button>
           </div>
 
@@ -427,8 +428,8 @@ export async function render(container, hash) {
               ? getFlatItems().map(item => buildNodeRow(item, selectedId === item.node.id)).join('')
               : `<div class="empty-state" style="padding:32px">
                    <span class="material-symbols-outlined">account_tree</span>
-                   <div class="empty-state-title">No steps yet</div>
-                   <div class="empty-state-desc">Click "Add Step" to build your recipe.</div>
+                   <div class="empty-state-title">${i18n('bld.noStepsYet')}</div>
+                   <div class="empty-state-desc">${i18n('bld.noStepsDesc')}</div>
                  </div>`}
           </div>
         </div>
@@ -488,7 +489,7 @@ export async function render(container, hash) {
   container.querySelector('#bld-info-btn')?.addEventListener('click', async () => {
     const testFile = window._icTestImage?.file;
     if (!testFile) {
-      window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
+      window.AuroraToast?.show({ variant: 'info', title: i18n('bld.noTestImage') });
       return;
     }
     const panel = await getBldInfoPanel();
@@ -515,9 +516,9 @@ export async function render(container, hash) {
   const wsContainer = container.querySelector('#bld-workspace-container');
   wsContainer.style.position = 'relative';
 
-  // Create sidekick-manager element
+  // Create zumilabs-file-browser element
   let bldSk = null;
-  const skEl = document.createElement('sidekick-manager');
+  const skEl = document.createElement('zumilabs-file-browser');
   skEl.setAttribute('compare-mode', 'transform');
   skEl.setAttribute('no-hash-routing', '');
   const bldAllowedTypes = allowedTypesAttrForRecipe(recipe);
@@ -533,9 +534,9 @@ export async function render(container, hash) {
   wsContainer.appendChild(bldScrubberMount);
 
   // ── Track active file → scrubber + info panel; restore folder state ──
-  // Attach BEFORE compareInfo/compareRender so the sidekick:ready listener
+  // Attach BEFORE compareInfo/compareRender so the filebrowser:ready listener
   // is registered before the element fires it.
-  bldSk.addEventListener('sidekick:workspace', (e) => {
+  bldSk.addEventListener('filebrowser:workspace', (e) => {
     if (e.detail?.currentHandle) _bldCurrentDirHandle = e.detail.currentHandle;
   });
 
@@ -591,16 +592,16 @@ export async function render(container, hash) {
   function buildCompareControls() {
     return `
       <div style="display:flex;align-items:center;justify-content:center;width:100%;gap:12px">
-        <span style="${_lbl}">Before</span>
+        <span style="${_lbl}">${i18n('bld.before')}</span>
         <div style="${_row}">
-          ${_cmpBtn('bld-cmp-ref-btn', 'ref', 'original', bldCompareRef === 'original', 'Compare against the original unedited image', 'Original')}
-          ${_cmpBtn('bld-cmp-ref-btn', 'ref', 'prev', bldCompareRef === 'prev', 'Compare against the output of the previous step', 'Prev Step')}
+          ${_cmpBtn('bld-cmp-ref-btn', 'ref', 'original', bldCompareRef === 'original', i18n('bld.compareOriginalTitle'), i18n('bld.original'))}
+          ${_cmpBtn('bld-cmp-ref-btn', 'ref', 'prev', bldCompareRef === 'prev', i18n('bld.comparePrevTitle'), i18n('bld.prevStep'))}
         </div>
         <div style="width:1px;height:22px;background:#374151;flex-shrink:0"></div>
-        <span style="${_lbl}">After</span>
+        <span style="${_lbl}">${i18n('bld.after')}</span>
         <div style="${_row}">
-          ${_cmpBtn('bld-cmp-result-btn', 'result', 'step', bldResultRef === 'step', 'Show the result of this step only', 'This Step')}
-          ${_cmpBtn('bld-cmp-result-btn', 'result', 'final', bldResultRef === 'final', 'Show the final result after all steps are applied', 'Final Result')}
+          ${_cmpBtn('bld-cmp-result-btn', 'result', 'step', bldResultRef === 'step', i18n('bld.showStepTitle'), i18n('bld.thisStep'))}
+          ${_cmpBtn('bld-cmp-result-btn', 'result', 'final', bldResultRef === 'final', i18n('bld.showFinalTitle'), i18n('bld.finalResult'))}
         </div>
       </div>`;
   }
@@ -683,13 +684,13 @@ export async function render(container, hash) {
     const flat = flattenNodes(draft.nodes);
     const nodeEnt = flat.find(f => f.node.id === bldPreviewNodeId);
     const afterTitle = bldResultRef === 'final'
-      ? 'Final Result'
-      : nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
+      ? i18n('bld.finalResult')
+      : nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : i18n('bld.allSteps');
 
     let overlayWarning = null;
     if (nodeEnt) {
       if (nodeEnt.node.type !== 'transform') {
-        overlayWarning = '(Not all steps are previewable)';
+        overlayWarning = i18n('bld.notAllPreviewable');
       } else {
         const NO_PREVIEW_IDS = new Set([
           'flow-create-gif', 'flow-create-video', 'flow-create-pdf', 'flow-create-pptx',
@@ -707,7 +708,7 @@ export async function render(container, hash) {
         const isVideoStep = def?.sourceTransformId || def?.categoryKey === 'video-effect';
 
         if (NO_PREVIEW_IDS.has(tid) || (!isVideo && isVideoStep)) {
-          overlayWarning = '(Not all steps are previewable)';
+          overlayWarning = i18n('bld.notAllPreviewable');
         }
       }
     }
@@ -716,7 +717,7 @@ export async function render(container, hash) {
       ? (() => { const c = imageSource; const b = document.createElement('canvas'); b.width = c.width; b.height = c.height; b.getContext('2d').drawImage(c, 0, 0); return new Promise(r => b.toBlob(bl => r(URL.createObjectURL(bl)), 'image/jpeg', 0.9)); })()
       : Promise.resolve(URL.createObjectURL(file));
     beforeUrl = await beforeUrl;
-    let beforeTitle = 'Original';
+    let beforeTitle = i18n('bld.original');
 
     if (bldCompareRef === 'prev') {
       const prevId = getPrevNodeId();
@@ -728,7 +729,7 @@ export async function render(container, hash) {
         };
         beforeUrl = await proc2.previewDataUrl(imageSource, draft.nodes, ctx2, prevId);
         const prevEnt = flat.find(f => f.node.id === prevId);
-        beforeTitle = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : 'Prev Step';
+        beforeTitle = prevEnt ? (prevEnt.node.label || prevEnt.node.transformId || prevEnt.node.type) : i18n('bld.prevStep');
       }
     }
 
@@ -762,8 +763,8 @@ export async function render(container, hash) {
       scheduleBldPreview();
       return;
     }
-    if (saveStatus) saveStatus.textContent = 'Unsaved…';
-    scheduleAutosave(draft, () => { if (saveStatus) saveStatus.textContent = 'Saved'; });
+    if (saveStatus) saveStatus.textContent = i18n('bld.unsaved');
+    scheduleAutosave(draft, () => { if (saveStatus) saveStatus.textContent = i18n('bld.saved'); });
     scheduleBldPreview();
   }
 
@@ -776,8 +777,8 @@ export async function render(container, hash) {
         ? items.map(item => buildNodeRow(item, selectedId === item.node.id)).join('')
         : `<div class="empty-state" style="padding:32px">
              <span class="material-symbols-outlined">account_tree</span>
-             <div class="empty-state-title">No steps yet</div>
-             <div class="empty-state-desc">Click "Add Step" to build your recipe.</div>
+             <div class="empty-state-title">${i18n('bld.noStepsYet')}</div>
+             <div class="empty-state-desc">${i18n('bld.noStepsDesc')}</div>
            </div>`;
       bindNodeActions();
 
@@ -794,22 +795,22 @@ export async function render(container, hash) {
           const tip = unmet.map(r => r.label).join(', ');
           if (isEnterprise) {
             row.insertAdjacentHTML('beforeend',
-              `<span class="material-symbols-outlined bld-req-warn" title="Requires Zumilabs Studio Enterprise"` +
+              `<span class="material-symbols-outlined bld-req-warn" title="${i18n('bld.requiresEnterprise')}"` +
               ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">business_center</span>`);
           } else if (isPro) {
             row.insertAdjacentHTML('beforeend',
-              `<span class="material-symbols-outlined bld-req-warn" title="Requires Zumilabs Studio Pro"` +
+              `<span class="material-symbols-outlined bld-req-warn" title="${i18n('bld.requiresPro')}"` +
               ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">workspace_premium</span>`);
           } else {
             row.insertAdjacentHTML('beforeend',
-              `<span class="material-symbols-outlined bld-req-warn" title="Needs setup: ${tip}"` +
+              `<span class="material-symbols-outlined bld-req-warn" title="${i18n('bld.needsSetup', { tip })}"` +
               ` style="font-size:14px;color:var(--ps-amber,#f59e0b);flex-shrink:0;margin-left:2px;cursor:default">build</span>`);
           }
         }
       })();
     }
     const realCount = countNodes(draft.nodes);
-    if (countEl) countEl.textContent = `${realCount} step${realCount !== 1 ? 's' : ''}`;
+    if (countEl) countEl.textContent = i18n('bld.stepCount', { count: realCount });
   }
 
   // ── Back ──────────────────────────────────────────────────
@@ -857,11 +858,11 @@ export async function render(container, hash) {
   // ── Transient: Download & Save as Recipe ──────────────────
   container.querySelector('#bld-btn-download')?.addEventListener('click', async () => {
     const file = window._icTestImage?.file;
-    if (!file) { window.AuroraToast?.show({ variant: 'warning', title: 'Select an image first' }); return; }
+    if (!file) { window.AuroraToast?.show({ variant: 'warning', title: i18n('bld.selectImageFirst') }); return; }
     const btn = container.querySelector('#bld-btn-download');
     const orig = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="material-symbols-outlined" style="animation:spin 1s linear infinite">progress_activity</span> Saving…';
+    btn.innerHTML = `<span class="material-symbols-outlined" style="animation:spin 1s linear infinite">progress_activity</span> ${i18n('bld.saving')}`;
     try {
       const { ImageProcessor } = await import('../engine/index.js');
       const { extractExif }    = await import('../engine/exif-reader.js');
@@ -892,10 +893,10 @@ export async function render(container, hash) {
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
       }
-      window.AuroraToast?.show({ variant: 'success', title: 'Image saved' });
+      window.AuroraToast?.show({ variant: 'success', title: i18n('bld.imageSaved') });
     } catch (err) {
       console.error('[ime] download failed', err);
-      window.AuroraToast?.show({ variant: 'error', title: 'Download failed', body: err.message });
+      window.AuroraToast?.show({ variant: 'error', title: i18n('bld.downloadFailed'), body: err.message });
     } finally {
       btn.disabled = false;
       btn.innerHTML = orig;
@@ -903,12 +904,12 @@ export async function render(container, hash) {
   });
 
   container.querySelector('#bld-btn-save-recipe')?.addEventListener('click', async () => {
-    const name = prompt('Recipe name:', 'My Recipe');
+    const name = prompt(i18n('bld.recipeNamePrompt'), i18n('bld.myRecipe'));
     if (!name) return;
     draft.name = name;
     draft._transient = false;
     await saveRecipe(draft);
-    window.AuroraToast?.show({ variant: 'success', title: 'Recipe saved', body: name });
+    window.AuroraToast?.show({ variant: 'success', title: i18n('bld.recipeSaved'), body: name });
     navigate(`#bld?id=${draft.id}`);
   });
 
@@ -1014,7 +1015,7 @@ export async function render(container, hash) {
   });
 
   container.querySelector('#bld-thumb-prompt')?.addEventListener('click', async () => {
-    const promptText = `I need you generate an ICON for a recipe within Zumilabs Studio.
+    const promptText = `I need you generate an ICON for a recipe within ZumiLabs Studio.
 
 
 # README: Studio Recipe Icon Style Definition
@@ -1057,10 +1058,10 @@ ${draft.description || ''}`;
 
     try {
       await navigator.clipboard.writeText(promptText);
-      window.AuroraToast?.show({ variant: 'success', title: 'AI Prompt copied to clipboard!' });
+      window.AuroraToast?.show({ variant: 'success', title: i18n('bld.aiPromptCopied') });
     } catch (err) {
       console.error('Failed to copy text: ', err);
-      window.AuroraToast?.show({ variant: 'danger', title: 'Failed to copy prompt to clipboard.' });
+      window.AuroraToast?.show({ variant: 'danger', title: i18n('bld.aiPromptCopyFailed') });
     }
   });
 
@@ -1085,21 +1086,21 @@ ${draft.description || ''}`;
           tile.disabled = true;
           tile.style.opacity = '0.5';
           tile.style.cursor = 'not-allowed';
-          tile.title = `Unavailable: ${tip}`;
+          tile.title = i18n('bld.unavailable', { tip });
           const isEnterprise = unmet.some(r => r.type === 'premium' && r.id === 'enterprise');
           const isPro = unmet.some(r => r.type === 'premium' && r.id === 'pro');
           if (isEnterprise) {
             tile.insertAdjacentHTML('beforeend',
-              `<span class="ic-badge ic-badge--amber" title="Requires Zumilabs Studio Enterprise"` +
-              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">business_center</span>ENTERPRISE</span>`);
+              `<span class="ic-badge ic-badge--amber" title="${i18n('bld.requiresEnterprise')}"` +
+              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">business_center</span>${i18n('bld.badgeEnterprise')}</span>`);
           } else if (isPro) {
             tile.insertAdjacentHTML('beforeend',
-              `<span class="ic-badge ic-badge--amber" title="Requires Zumilabs Studio Pro"` +
-              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">workspace_premium</span>PRO</span>`);
+              `<span class="ic-badge ic-badge--amber" title="${i18n('bld.requiresPro')}"` +
+              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;gap:2px"><span class="material-symbols-outlined" style="font-size:10px;">workspace_premium</span>${i18n('bld.badgePro')}</span>`);
           } else {
             tile.insertAdjacentHTML('beforeend',
-              `<span class="ic-badge ic-badge--amber" title="Unavailable: ${tip}"` +
-              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3)">SETUP</span>`);
+              `<span class="ic-badge ic-badge--amber" title="${i18n('bld.unavailable', { tip })}"` +
+              ` style="position:absolute;top:4px;right:4px;font-size:9px;line-height:1;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,0.3)">${i18n('bld.badgeSetup')}</span>`);
           }
         }
       })();
@@ -1161,8 +1162,8 @@ ${draft.description || ''}`;
   bldToggleHelpBtn?.addEventListener('click', () => {
     isHelpPaneOpen = !isHelpPaneOpen;
     bldToggleHelpBtn.innerHTML = isHelpPaneOpen 
-      ? `<span class="material-symbols-outlined" style="font-size:14px;">menu_book</span> Hide Help`
-      : `<span class="material-symbols-outlined" style="font-size:14px;">menu_book</span> Show Help`;
+      ? `<span class="material-symbols-outlined" style="font-size:14px;">menu_book</span> ${i18n('bld.hideHelp')}`
+      : `<span class="material-symbols-outlined" style="font-size:14px;">menu_book</span> ${i18n('bld.showHelp')}`;
 
     if (isHelpPaneOpen) {
       bldToggleHelpBtn.classList.add('is-active');
@@ -1177,7 +1178,7 @@ ${draft.description || ''}`;
       
       // Default placeholder if nothing hovered yet
       if (!currentHelpRenderId) {
-         helpPane.innerHTML = `<div class="empty-state">Hover over a transformation to view its detailed documentation.</div>`;
+         helpPane.innerHTML = `<div class="empty-state">${i18n('bld.hoverForDocs')}</div>`;
       }
     } else {
       bldToggleHelpBtn.classList.remove('is-active');
@@ -1208,7 +1209,7 @@ ${draft.description || ''}`;
            if (backBtn) backBtn.style.display = 'none';
         } catch(err) {
            console.error('Help Error:', err);
-           helpPane.innerHTML = `<div class="empty-state">Failed to load Help module:<br/>${err.message}</div>`;
+           helpPane.innerHTML = `<div class="empty-state">${i18n('bld.helpLoadFailed')}<br/>${err.message}</div>`;
         }
       }, 100); // 100ms debounce to ignore fast sweeps
     });
@@ -1269,15 +1270,15 @@ ${draft.description || ''}`;
       let newNode;
       if (type === 'branch') {
         newNode = {
-          id: uuid(), type: 'branch', label: 'Branch',
+          id: uuid(), type: 'branch', label: i18n('bld.branch'),
           branches: [
-            { id: uuid(), label: 'Variant A', nodes: [] },
-            { id: uuid(), label: 'Variant B', nodes: [] },
+            { id: uuid(), label: i18n('bld.variantName', { letter: 'A' }), nodes: [] },
+            { id: uuid(), label: i18n('bld.variantName', { letter: 'B' }), nodes: [] },
           ]
         };
       } else {
         newNode = {
-          id: uuid(), type: 'conditional', label: 'Conditional',
+          id: uuid(), type: 'conditional', label: i18n('bld.conditional'),
           condition: { field: 'width', operator: 'gt', value: 1000 },
           thenNodes: [], elseNodes: []
         };
@@ -1321,12 +1322,12 @@ ${draft.description || ''}`;
         return btn;
       };
 
-      menu.appendChild(createItem('Copy', 'content_copy', () => {
+      menu.appendChild(createItem(i18n('bld.copy'), 'content_copy', () => {
         _bldCopiedNodeData = deepClone(info.node);
-        if (window.AuroraToast) window.AuroraToast.show({ variant: 'success', title: 'Step copied' });
+        if (window.AuroraToast) window.AuroraToast.show({ variant: 'success', title: i18n('bld.stepCopied') });
       }));
 
-      menu.appendChild(createItem('Paste (After)', 'content_paste', () => {
+      menu.appendChild(createItem(i18n('bld.pasteAfter'), 'content_paste', () => {
         const newNode = deepClone(_bldCopiedNodeData);
         newNode.id = uuid();
         info.parent.splice(info.index + 1, 0, newNode);
@@ -1338,12 +1339,12 @@ ${draft.description || ''}`;
       div.style.cssText = 'height:1px; background:var(--ps-border); margin:4px 0;';
       menu.appendChild(div);
 
-      menu.appendChild(createItem('Edit', 'edit', () => {
+      menu.appendChild(createItem(i18n('bld.edit'), 'edit', () => {
         if (info.node.type === 'block-ref') navigate(`#bkb?id=${info.node.blockId}`);
         else navigate(`#ned?recipe=${draft.id}&node=${id}${isTransient ? '&transient=1' : ''}`);
       }));
 
-      menu.appendChild(createItem(info.node.disabled ? 'Enable' : 'Disable', info.node.disabled ? 'visibility' : 'visibility_off', () => {
+      menu.appendChild(createItem(info.node.disabled ? i18n('bld.enable') : i18n('bld.disable'), info.node.disabled ? 'visibility' : 'visibility_off', () => {
         info.node.disabled = !info.node.disabled;
         refreshNodeList();
         markDirty();
@@ -1353,11 +1354,11 @@ ${draft.description || ''}`;
       div2.style.cssText = 'height:1px; background:var(--ps-border); margin:4px 0;';
       menu.appendChild(div2);
 
-      menu.appendChild(createItem('Delete', 'delete', async () => {
+      menu.appendChild(createItem(i18n('bld.delete'), 'delete', async () => {
         const confirmed = await showConfirm({
-          title: 'Remove Step?',
-          body: 'This will remove the selected transformation or block from the recipe.',
-          confirmText: 'Remove',
+          title: i18n('bld.removeStepTitle'),
+          body: i18n('bld.removeStepBody'),
+          confirmText: i18n('bld.remove'),
           variant: 'danger',
           icon: 'delete_sweep'
         });
@@ -1374,7 +1375,7 @@ ${draft.description || ''}`;
         div3.style.cssText = 'height:1px; background:var(--ps-border); margin:4px 0;';
         menu.appendChild(div3);
 
-        menu.appendChild(createItem('Help', 'school', async () => {
+        menu.appendChild(createItem(i18n('bld.help'), 'school', async () => {
           const modal = document.createElement('div');
           modal.style.cssText = 'position:absolute; inset:0; z-index:9000; display:flex; flex-direction:column; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); padding:24px; overflow-y:auto;';
           
@@ -1390,7 +1391,7 @@ ${draft.description || ''}`;
               <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--ps-border); background:var(--ps-surface);">
                 <h3 style="margin:0; font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px;">
                   <span class="material-symbols-outlined" style="color:var(--ps-blue);">school</span>
-                  Node Documentation
+                  ${i18n('bld.nodeDocumentation')}
                 </h3>
                 <button class="btn-icon" id="bld-node-help-close">
                   <span class="material-symbols-outlined" style="font-size:18px;">close</span>
@@ -1414,12 +1415,12 @@ ${draft.description || ''}`;
             try { markedLib = await import('marked'); } catch(err) {}
             
             const record = getHelpRecord(transformId);
-            const body = record ? record.body : 'No documentation found for this node.';
+            const body = record ? record.body : i18n('bld.noDocsFound');
             const htmlBody = markedLib ? markedLib.parse(body) : `<pre style="white-space:pre-wrap;font-family:inherit;">${body}</pre>`;
             
             modal.querySelector('#bld-node-help-content').innerHTML = htmlBody;
           } catch (err) {
-            modal.querySelector('#bld-node-help-content').innerHTML = '<div class="empty-state">Error loading documentation.</div>';
+            modal.querySelector('#bld-node-help-content').innerHTML = `<div class="empty-state">${i18n('bld.docsLoadError')}</div>`;
           }
         }));
       }
@@ -1539,7 +1540,7 @@ ${draft.description || ''}`;
     const list = container.querySelector('#bld-params-list');
     if (!list) return;
     if (!(draft.params || []).length) {
-      list.innerHTML = `<div class="text-sm text-muted" id="bld-params-empty">No parameters defined.</div>`;
+      list.innerHTML = `<div class="text-sm text-muted" id="bld-params-empty">${i18n('bld.noParamsDefined')}</div>`;
     } else {
       list.innerHTML = (draft.params || []).map((p, i) => buildParamRow(p, i)).join('');
     }
@@ -1571,19 +1572,19 @@ ${draft.description || ''}`;
     dlg.className = 'modal';
     dlg.innerHTML = `
       <div class="modal__header">
-        <h2 class="modal__title">${isNew ? 'Add' : 'Edit'} Parameter</h2>
+        <h2 class="modal__title">${isNew ? i18n('bld.peAddParameter') : i18n('bld.peEditParameter')}</h2>
       </div>
       <div class="modal__body" style="padding:16px;min-width:320px;display:flex;flex-direction:column;gap:12px">
         <div>
-          <label class="ic-label">Machine Name <span class="text-muted">(used in {{recipe.xxx}})</span></label>
-          <input type="text" id="pe-name" class="ic-input" value="${escHtml(p.name)}" placeholder="e.g. overlap">
+          <label class="ic-label">${i18n('bld.peMachineName')} <span class="text-muted">(used in {{recipe.xxx}})</span></label>
+          <input type="text" id="pe-name" class="ic-input" value="${escHtml(p.name)}" placeholder="${i18n('bld.peNamePlaceholder')}">
         </div>
         <div>
-          <label class="ic-label">Label</label>
-          <input type="text" id="pe-label" class="ic-input" value="${escHtml(p.label)}" placeholder="e.g. Overlap %">
+          <label class="ic-label">${i18n('bld.peLabel')}</label>
+          <input type="text" id="pe-label" class="ic-input" value="${escHtml(p.label)}" placeholder="${i18n('bld.peLabelPlaceholder')}">
         </div>
         <div>
-          <label class="ic-label">Type</label>
+          <label class="ic-label">${i18n('bld.peType')}</label>
           <select id="pe-type" class="ic-input">
             ${['text','number','range','select','boolean','color'].map(t =>
               `<option value="${t}" ${p.type===t?'selected':''}>${t}</option>`).join('')}
@@ -1591,13 +1592,13 @@ ${draft.description || ''}`;
         </div>
         <div id="pe-extra"></div>
         <div>
-          <label class="ic-label">Default Value</label>
+          <label class="ic-label">${i18n('bld.peDefaultValue')}</label>
           <input type="text" id="pe-default" class="ic-input" value="${escHtml(String(p.defaultValue ?? ''))}">
         </div>
       </div>
       <div class="modal__footer" style="display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--ps-border)">
-        <button class="btn-secondary" id="pe-cancel">Cancel</button>
-        <button class="btn-primary" id="pe-save">Save</button>
+        <button class="btn-secondary" id="pe-cancel">${i18n('bld.cancel')}</button>
+        <button class="btn-primary" id="pe-save">${i18n('bld.save')}</button>
       </div>`;
 
     function updateExtra() {
@@ -1606,13 +1607,13 @@ ${draft.description || ''}`;
       if (type === 'range' || type === 'number') {
         extra.innerHTML = `
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div><label class="ic-label">Min</label><input type="number" id="pe-min" class="ic-input" value="${escHtml(String(p.min??''))}"></div>
-            <div><label class="ic-label">Max</label><input type="number" id="pe-max" class="ic-input" value="${escHtml(String(p.max??''))}"></div>
+            <div><label class="ic-label">${i18n('bld.peMin')}</label><input type="number" id="pe-min" class="ic-input" value="${escHtml(String(p.min??''))}"></div>
+            <div><label class="ic-label">${i18n('bld.peMax')}</label><input type="number" id="pe-max" class="ic-input" value="${escHtml(String(p.max??''))}"></div>
           </div>`;
       } else if (type === 'select') {
         const opts = (p.options||[]).map(o=>`${o.label}:${o.value}`).join(', ');
         extra.innerHTML = `
-          <div><label class="ic-label">Options <span class="text-muted">(Label:value, comma-separated)</span></label>
+          <div><label class="ic-label">${i18n('bld.peOptions')} <span class="text-muted">${i18n('bld.peOptionsHint')}</span></label>
           <input type="text" id="pe-options" class="ic-input" value="${escHtml(opts)}" placeholder="GIF:gif, MP4:mp4"></div>`;
       } else {
         extra.innerHTML = '';
@@ -1680,7 +1681,7 @@ ${draft.description || ''}`;
             }
             const clearBtn = container.querySelector('#bld-thumb-clear');
             if (clearBtn) clearBtn.style.display = '';
-            window.AuroraToast?.show({ variant: 'success', title: 'Recipe thumbnail updated from clipboard' });
+            window.AuroraToast?.show({ variant: 'success', title: i18n('bld.thumbnailUpdated') });
           } catch (err) {
             console.error('Failed to set thumbnail via paste:', err);
           }

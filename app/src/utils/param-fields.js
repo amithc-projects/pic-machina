@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Shared param field renderer
+ * ZumiLabs Studio — Shared param field renderer
  *
  * Provides renderParamField() and collectParams() for rendering
  * typed form fields from a param definition array.
@@ -7,6 +7,7 @@
  */
 
 import { getSettings } from './settings.js';
+import { t as i18n } from '../i18n/index.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -23,11 +24,11 @@ function renderLabelHtml(label, id, param = null) {
   const safe = escHtml(label || '');
   let html = safe.replace(/\{\{(vars?|variables)\}\}/gi, (match) => {
     return `<button type="button" class="ned-vars-link" data-vars-link="${id}"
-      title="Click to browse and insert variables"
+      title="${i18n('pf.clickToBrowseVariables')}"
       style="background:none;border:none;padding:0 2px;margin:0;font:inherit;font-family:var(--font-mono,monospace);color:var(--ps-blue,#3b82f6);cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px">${match}</button>`;
   });
   if (param && param.textStyleOverride) {
-    html = `<input type="checkbox" class="ic-text-override-toggle" data-target="${param.name}" title="Override Style Property" style="margin-right:4px;" /> ` + html;
+    html = `<input type="checkbox" class="ic-text-override-toggle" data-target="${param.name}" title="${i18n('pf.overrideStyleProperty')}" style="margin-right:4px;" /> ` + html;
   }
   return html;
 }
@@ -44,7 +45,7 @@ function isVarRef(val) {
  */
 function varBindBtn(id, active) {
   return `<button type="button" class="ned-var-bind-btn${active ? ' ned-var-bind-btn--active' : ''}"
-    data-var-bind="${id}" title="Bind to recipe variable"
+    data-var-bind="${id}" title="${i18n('pf.bindToRecipeVariable')}"
     style="margin-left:auto;padding:0 2px;min-height:0;height:16px;display:flex;align-items:center;background:none;border:none;cursor:pointer;color:${active ? 'var(--ps-blue)' : 'var(--ps-text-muted)'}">
     <span class="material-symbols-outlined" style="font-size:14px;line-height:1">data_object</span>
   </button>`;
@@ -97,7 +98,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           </div>
           <canvas class="ned-curves-canvas" data-for="${id}" width="200" height="200"
             style="width:100%;aspect-ratio:1;border:1px solid var(--ps-border);border-radius:4px;cursor:crosshair;display:block;touch-action:none"></canvas>
-          <div style="font-size:10px;color:var(--ps-text-muted);margin-top:3px">Click to add • Drag to adjust • Dbl-click to remove</div>
+          <div style="font-size:10px;color:var(--ps-text-muted);margin-top:3px">${i18n('pf.curvesHint')}</div>
         </div>`;
     }
 
@@ -112,29 +113,29 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           <input type="hidden" id="${id}" name="${param.name}" value="${levJson}">
           <canvas class="ned-levels-histogram" data-for="${id}" width="200" height="52"
             style="width:100%;height:52px;border:1px solid var(--ps-border);border-radius:4px 4px 0 0;display:block;background:#111"></canvas>
-          <div style="padding:8px 0 2px;font-size:10px;color:var(--ps-text-muted);text-transform:uppercase;letter-spacing:.05em">Input</div>
+          <div style="padding:8px 0 2px;font-size:10px;color:var(--ps-text-muted);text-transform:uppercase;letter-spacing:.05em">${i18n('pf.input')}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">
             <div>
-              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Black <span class="ned-levels-in-black-val">${levelsData.inBlack}</span></div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">${i18n('pf.black')} <span class="ned-levels-in-black-val">${levelsData.inBlack}</span></div>
               <input type="range" class="ic-range ned-levels-in-black" data-for="${id}" min="0" max="253" step="1" value="${levelsData.inBlack}">
             </div>
             <div>
-              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Gamma <span class="ned-levels-gamma-val">${levelsData.gamma}</span></div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">${i18n('pf.gamma')} <span class="ned-levels-gamma-val">${levelsData.gamma}</span></div>
               <input type="range" class="ic-range ned-levels-gamma" data-for="${id}" min="0.1" max="9.99" step="0.01" value="${levelsData.gamma}">
             </div>
             <div>
-              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">White <span class="ned-levels-in-white-val">${levelsData.inWhite}</span></div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">${i18n('pf.white')} <span class="ned-levels-in-white-val">${levelsData.inWhite}</span></div>
               <input type="range" class="ic-range ned-levels-in-white" data-for="${id}" min="2" max="255" step="1" value="${levelsData.inWhite}">
             </div>
           </div>
-          <div style="padding:2px 0;font-size:10px;color:var(--ps-text-muted);text-transform:uppercase;letter-spacing:.05em">Output</div>
+          <div style="padding:2px 0;font-size:10px;color:var(--ps-text-muted);text-transform:uppercase;letter-spacing:.05em">${i18n('pf.output')}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
             <div>
-              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Shadow <span class="ned-levels-out-black-val">${levelsData.outBlack}</span></div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">${i18n('pf.shadow')} <span class="ned-levels-out-black-val">${levelsData.outBlack}</span></div>
               <input type="range" class="ic-range ned-levels-out-black" data-for="${id}" min="0" max="254" step="1" value="${levelsData.outBlack}">
             </div>
             <div>
-              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">Highlight <span class="ned-levels-out-white-val">${levelsData.outWhite}</span></div>
+              <div style="font-size:10px;color:var(--ps-text-muted);margin-bottom:2px">${i18n('pf.highlight')} <span class="ned-levels-out-white-val">${levelsData.outWhite}</span></div>
               <input type="range" class="ic-range ned-levels-out-white" data-for="${id}" min="1" max="255" step="1" value="${levelsData.outWhite}">
             </div>
           </div>
@@ -159,15 +160,15 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           </div>
           <div class="ned-hsl-sliders" data-for="${id}" data-active-range="${hslRanges[0]}">
             <div style="margin-bottom:6px">
-              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Hue</span><span class="ned-hsl-h-val">${d0.h||0}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>${i18n('pf.hue')}</span><span class="ned-hsl-h-val">${d0.h||0}</span></div>
               <input type="range" class="ic-range ned-hsl-h" data-for="${id}" min="-180" max="180" step="1" value="${d0.h||0}">
             </div>
             <div style="margin-bottom:6px">
-              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Saturation</span><span class="ned-hsl-s-val">${d0.s||0}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>${i18n('pf.saturation')}</span><span class="ned-hsl-s-val">${d0.s||0}</span></div>
               <input type="range" class="ic-range ned-hsl-s" data-for="${id}" min="-100" max="100" step="1" value="${d0.s||0}">
             </div>
             <div>
-              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>Luminance</span><span class="ned-hsl-l-val">${d0.l||0}</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>${i18n('pf.luminance')}</span><span class="ned-hsl-l-val">${d0.l||0}</span></div>
               <input type="range" class="ic-range ned-hsl-l" data-for="${id}" min="-100" max="100" step="1" value="${d0.l||0}">
             </div>
           </div>
@@ -182,9 +183,9 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           <div style="display:flex;align-items:center;gap:8px">
             <button class="btn-secondary ned-mask-edit-btn" style="flex:1" data-param-id="${id}">
               <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">brush</span>
-              ${val ? 'Edit Mask' : 'Draw Mask'}
+              ${val ? i18n('pf.editMask') : i18n('pf.drawMask')}
             </button>
-            ${val ? `<span style="color:#4ade80;font-size:11px;white-space:nowrap">&#10003; Painted</span>` : ''}
+            ${val ? `<span style="color:#4ade80;font-size:11px;white-space:nowrap">&#10003; ${i18n('pf.painted')}</span>` : ''}
           </div>
         </div>`;
 
@@ -198,9 +199,9 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           <div style="display:flex;align-items:center;gap:8px">
             <button class="btn-secondary ned-path-edit-btn" style="flex:1" data-param-id="${id}">
               <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">gesture</span>
-              Edit Path Points
+              ${i18n('pf.editPathPoints')}
             </button>
-            <span class="ned-path-points-count" id="${id}-count" style="font-size:11px;color:var(--ps-text-muted);white-space:nowrap">${ptsCount} points</span>
+            <span class="ned-path-points-count" id="${id}-count" style="font-size:11px;color:var(--ps-text-muted);white-space:nowrap">${i18n('pf.pointsCount', { count: ptsCount })}</span>
           </div>
         </div>`;
     }
@@ -213,9 +214,9 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
           <div style="display:flex;align-items:center;gap:8px">
             <button class="btn-secondary ned-paint-edit-btn" style="flex:1" data-param-id="${id}">
               <span class="material-symbols-outlined" style="font-size:14px;vertical-align:-3px">brush</span>
-              ${val ? 'Edit Paint' : 'Start Painting'}
+              ${val ? i18n('pf.editPaint') : i18n('pf.startPainting')}
             </button>
-            ${val ? `<span style="color:#4ade80;font-size:11px;white-space:nowrap">&#10003; Painted</span>` : ''}
+            ${val ? `<span style="color:#4ade80;font-size:11px;white-space:nowrap">&#10003; ${i18n('pf.painted')}</span>` : ''}
           </div>
         </div>`;
 
@@ -233,7 +234,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
         </div>`;
 
     case 'text-style-select': {
-      let savedStylesHtml = '<option value="">None (Custom Settings)</option>';
+      let savedStylesHtml = `<option value="">${i18n('pf.noneCustomSettings')}</option>`;
       try {
         const saved = getSettings().textStyles || [];
         savedStylesHtml += saved.map(s => `<option value="${escHtml(s.id)}" ${s.id === val ? 'selected' : ''}>${escHtml(s.name)}</option>`).join('');
@@ -341,7 +342,7 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
               </div>
               <div class="ned-saved-colors-wrap" id="${id}-saved-wrap" style="display:flex; gap:4px; flex-wrap:wrap;">
                 ${savedColorsHtml}
-                <button class="btn-ghost" title="Manage Swatches..." onclick="document.querySelector('#nav-settings')?.click()" style="padding:0; min-height:20px; width:20px; height:20px; margin-left:2px; border-radius:4px; background:var(--ps-bg-overlay);">
+                <button class="btn-ghost" title="${i18n('pf.manageSwatches')}" onclick="document.querySelector('#nav-settings')?.click()" style="padding:0; min-height:20px; width:20px; height:20px; margin-left:2px; border-radius:4px; background:var(--ps-bg-overlay);">
                    <span class="material-symbols-outlined" style="font-size:14px; color:var(--ps-text-muted);">settings</span>
                 </button>
               </div>`
@@ -390,26 +391,26 @@ export function renderParamField(param, value, prefix = 'rp', { showVarBind = tr
         else previewHtml = `<img class="ned-file-thumb" id="${id}-thumb" src="${escHtml(String(val))}" alt="Preview">`;
       } else {
         const icon = isAudio ? 'audio_file' : 'image';
-        const text = isAudio ? 'No file selected' : 'No image selected';
+        const text = isAudio ? i18n('pf.noFileSelected') : i18n('pf.noImageSelected');
         previewHtml = `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">${icon}</span><span>${text}</span></div>`;
       }
       
       return `
         <div class="ned-field${overrideClass}">
-          <label class="ned-field-label">${escHtml(param.label || 'File')}</label>
+          <label class="ned-field-label">${escHtml(param.label || i18n('pf.file'))}</label>
           <input type="hidden" id="${id}" name="${param.name}" value="${escHtml(String(val))}">
           <div class="ned-file-wrap" id="${id}-wrap">
             <div class="ned-file-preview-area" id="${id}-preview-area">
               ${previewHtml}
             </div>
             <div class="ned-file-actions">
-              <label class="btn-secondary btn-sm ned-file-browse-label" title="Browse for file">
+              <label class="btn-secondary btn-sm ned-file-browse-label" title="${i18n('pf.browseForFile')}">
                 <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
-                Browse…
+                ${i18n('pf.browse')}
                 <input type="file" id="${id}-file" accept="${param.accept || 'image/*'}" style="display:none">
               </label>
               <button class="btn-secondary btn-sm ned-file-clear-btn" id="${id}-clear"
-                      title="Clear file" style="display:${hasVal ? 'flex' : 'none'}">
+                      title="${i18n('pf.clearFile')}" style="display:${hasVal ? 'flex' : 'none'}">
                 <span class="material-symbols-outlined" style="font-size:14px">close</span>
               </button>
             </div>
@@ -716,7 +717,7 @@ function _bindLevelsField(container, id) {
     const ctx = histCanvas.getContext('2d');
     ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#555'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText('Histogram updates on preview', W/2, H/2 + 3);
+    ctx.fillText(i18n('pf.histogramUpdatesOnPreview'), W/2, H/2 + 3);
   }
 
   const save = () => {
@@ -916,7 +917,7 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
           if (clearBtn) clearBtn.style.display = 'flex';
         } else {
           const icon = isAudio ? 'audio_file' : 'image';
-          const text = isAudio ? 'No file selected' : 'No image selected';
+          const text = isAudio ? i18n('pf.noFileSelected') : i18n('pf.noImageSelected');
           previewArea.innerHTML = `<div class="ned-file-empty" id="${id}-thumb"><span class="material-symbols-outlined">${icon}</span><span>${text}</span></div>`;
           if (clearBtn) clearBtn.style.display = 'none';
         }
@@ -1003,7 +1004,7 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
         // Exclusive template selectors
         templateSelects.forEach(select => {
           const currentVal = select.dataset.value || select.value;
-          let html = '<option value="">-- Select Template --</option>';
+          let html = `<option value="">${i18n('pf.selectTemplate')}</option>`;
           templates.forEach(t => {
             html += `<option value="${t.id}" ${t.id === currentVal ? 'selected' : ''}>${escHtml(t.name)}</option>`;
           });
@@ -1015,7 +1016,7 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
           const currentVal = select.dataset.value || select.value;
           let html = select.innerHTML;
           if (templates.length > 0) {
-              html += '<optgroup label="Templates">';
+              html += `<optgroup label="${i18n('pf.templates')}">`;
               templates.forEach(t => {
                 html += `<option value="${t.id}" ${t.id === currentVal ? 'selected' : ''}>${escHtml(t.name)}</option>`;
               });
@@ -1042,7 +1043,7 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
         const vSel = variantSelects[idx];
         if (!mSel || !vSel) return;
 
-        let fHTML = '<option value="">-- Family --</option>';
+        let fHTML = `<option value="">${i18n('pf.family')}</option>`;
         Object.keys(data).forEach(fKey => {
            fHTML += `<option value="${fKey}">${escHtml(fKey)}</option>`;
         });
@@ -1050,20 +1051,20 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
 
         const updateModels = () => {
            const fVal = fSel.value;
-           let mHTML = '<option value="">-- Model --</option>';
+           let mHTML = `<option value="">${i18n('pf.model')}</option>`;
            if (fVal && data[fVal]) {
              Object.keys(data[fVal]).forEach(mKey => {
                 mHTML += `<option value="${mKey}">${escHtml(mKey)}</option>`;
              });
            }
            mSel.innerHTML = mHTML;
-           vSel.innerHTML = '<option value="">-- Color --</option>';
+           vSel.innerHTML = `<option value="">${i18n('pf.color')}</option>`;
         };
 
         const updateVariants = () => {
            const fVal = fSel.value;
            const mVal = mSel.value;
-           let vHTML = '<option value="">-- Color --</option>';
+           let vHTML = `<option value="">${i18n('pf.color')}</option>`;
            if (fVal && mVal && data[fVal] && data[fVal][mVal]) {
               Object.keys(data[fVal][mVal]).forEach(vKey => {
                  vHTML += `<option value="${vKey}">${escHtml(vKey)}</option>`;
@@ -1105,7 +1106,7 @@ export function bindParamFieldEvents(container, paramDefs, prefix = 'rp', { getR
       wrapper.style.cssText = 'background:var(--ps-bg-overlay); border:1px solid var(--ps-border); border-radius:8px; margin-top:8px; margin-bottom:8px;';
       wrapper.innerHTML = `
         <summary style="cursor:pointer; padding:8px 12px; font-size:12px; font-weight:600; color:var(--ps-text); display:flex; align-items:center; gap:6px;">
-           <span class="material-symbols-outlined" style="font-size:16px;">tune</span> Style Overrides
+           <span class="material-symbols-outlined" style="font-size:16px;">tune</span> ${i18n('pf.styleOverrides')}
         </summary>
         <div class="details-content" style="padding:12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--ps-border);"></div>
       `;
