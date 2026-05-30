@@ -489,11 +489,18 @@ let masterVolumeNode = null;
 let playLoopId = null;
 let currentProjectDirHandle = null;
 let timelineView = null;
+let sndKeydownHandler = null;
 
 // -------------- MAIN RENDER --------------
 
 export async function render(container) {
   timelineView = null;
+  // Drop any keydown handler left over from a prior render (e.g. recursive
+  // re-render when switching projects) so listeners don't accumulate.
+  if (sndKeydownHandler) {
+    document.removeEventListener('keydown', sndKeydownHandler);
+    sndKeydownHandler = null;
+  }
   if (!currentProjectDirHandle) {
     container.innerHTML = `
       <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%; background:var(--ps-bg-surface);">
@@ -761,10 +768,10 @@ export async function render(container) {
           <span contenteditable="true" id="snd-project-name" style="font-weight: 400; color: #94a3b8; margin-left: 4px; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,255,255,0.1)'" onblur="this.style.borderColor='transparent'">${project.name || 'Untitled'}</span>
         </div>
         <div style="display: flex; gap: 16px;">
-          <button id="btn-new-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">add</span> ${i18n('snd.new')}</button>
+          <button id="btn-new-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">add_box</span> ${i18n('snd.new')}</button>
+          <button id="btn-open-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">folder_open</span> ${i18n('snd.open')}</button>
           <button id="btn-save-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">save</span> ${i18n('snd.save')}</button>
-          <button id="btn-export" class="snd-btn snd-btn-primary"><span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> ${i18n('snd.export')}</button>
-          <button id="btn-close" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">eject</span> ${i18n('snd.closeAudio')}</button>
+          <button id="btn-export" class="snd-btn snd-btn-primary"><span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> ${i18n('snd.exportAudio')}</button>
         </div>
       </div>
       
@@ -785,7 +792,7 @@ export async function render(container) {
         <!-- Left Sidebar -->
         <div class="snd-sidebar" style="width: 320px; background: #151521; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; z-index: 10;">
             
-            <div id="snd-fsa-browser-panel" style="flex: 3.5; min-height: 480px; display: none; flex-direction: column; border-bottom: 1px solid rgba(255,255,255,0.05);"></div>
+            <div id="snd-fsa-browser-panel" style="flex: 3.5; min-height: 480px; display: none; flex-direction: column; border-top: 2px solid rgba(6,182,212,0.5); border-bottom: 4px solid rgba(0,0,0,0.4); box-shadow: inset 0 0 0 1px rgba(6,182,212,0.12);"></div>
 
             <div id="snd-sfx-generator-panel" style="display: none; flex-direction: column; padding: 16px; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);">
               <div class="fx-title" style="margin: 0; border: none; padding: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; margin-bottom: 4px;">
@@ -806,8 +813,8 @@ export async function render(container) {
               <div id="snd-sfx-status" style="display: none; font-size: 11px; margin-top: 4px;"></div>
             </div>
 
-            <div style="padding: 20px 20px 0 20px; display:flex; justify-content:space-between; align-items:center;">
-               <div class="fx-title" style="margin:0; border:none; padding:0;">${i18n('snd.audioPool')}</div>
+            <div style="padding: 14px 20px; display:flex; justify-content:space-between; align-items:center; background: rgba(168,85,247,0.08); border-top: 1px solid rgba(168,85,247,0.25); border-bottom: 1px solid rgba(168,85,247,0.18);">
+               <div class="fx-title" style="margin:0; border:none; padding:0; display:flex; align-items:center; gap:8px; color:#c084fc;"><span class="material-symbols-outlined" style="font-size:18px;">library_music</span>${i18n('snd.audioPool')}</div>
                <div style="display: flex; gap: 8px; align-items: center;">
                  <button class="btn-ghost" id="snd-btn-toggle-sfx" title="${i18n('snd.aiSoundFxMicRecorder')}" style="padding: 4px; color: #a855f7; cursor:pointer; background: transparent; border: none; display: flex; align-items: center;">
                     <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
@@ -817,7 +824,7 @@ export async function render(container) {
                  </button>
                </div>
             </div>
-            <div class="snd-scroll" id="snd-audio-pool" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px;">
+            <div class="snd-scroll" id="snd-audio-pool" style="flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; background: rgba(168,85,247,0.03);">
                <!-- Audio Pool Items Dynamically Rendered Here -->
             </div>
         </div>
@@ -937,8 +944,13 @@ export async function render(container) {
   };
 
   const recomputeClipBuffer = (clip) => {
-      const actions = clip.appliedActions || new Set();
-      
+      // appliedActions is a Set in memory but serializes to a plain array when a
+      // project is saved/loaded — coerce it back so .has()/.size are available.
+      if (!(clip.appliedActions instanceof Set)) {
+          clip.appliedActions = new Set(Array.isArray(clip.appliedActions) ? clip.appliedActions : []);
+      }
+      const actions = clip.appliedActions;
+
       if (actions.size === 0) {
           clip.buffer = null;
           return;
@@ -1265,6 +1277,7 @@ export async function render(container) {
       if (!timelineView) {
           timelineView = new TimelineView(container.querySelector('#snd-timeline-wrapper'), {
               pixelsPerSecond: pixelsPerSecond,
+              onTogglePlay: () => togglePlay(),
               onPlayheadMove: (time) => {
                   if (!isPlaying) Tone.Transport.seconds = time;
                   updatePlayheadDOM();
@@ -1285,13 +1298,77 @@ export async function render(container) {
                   });
               },
               onAddTrack: () => {
-                  project.tracks.push({
-                      id: 'trk_' + Date.now(),
-                      name: `Track ${project.tracks.length + 1}`,
-                      color: '#10b981',
-                      clips: [],
-                      muted: false
+                  const dialog = document.createElement('div');
+                  dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:#fff;';
+                  dialog.innerHTML = `
+                    <div style="background:var(--ps-bg-surface,#1e1e1e);border:1px solid var(--ps-border,#333);border-radius:8px;padding:20px;width:340px;">
+                      <h3 style="margin:0 0 12px 0;font-size:16px;">${i18n('snd.addTrack')}</h3>
+                      <p style="margin:0 0 16px 0;font-size:12px;color:#94a3b8;">${i18n('snd.chooseTrackType')}</p>
+                      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
+                        <button class="snd-add-track-choice" data-kind="audio"
+                          style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
+                          <span class="material-symbols-outlined" style="color:#f472b6;">graphic_eq</span>
+                          <div>
+                            <div style="font-weight:500;">${i18n('snd.audioTrack')}</div>
+                            <div style="font-size:11px;color:#94a3b8;">${i18n('snd.audioTrackDesc')}</div>
+                          </div>
+                        </button>
+                        <button class="snd-add-track-choice" data-kind="fx"
+                          style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
+                          <span class="material-symbols-outlined" style="color:#10b981;">auto_awesome</span>
+                          <div>
+                            <div style="font-weight:500;">${i18n('snd.fxTrack')}</div>
+                            <div style="font-size:11px;color:#94a3b8;">${i18n('snd.fxTrackDesc')}</div>
+                          </div>
+                        </button>
+                      </div>
+                      <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button id="snd-btn-cancel-add-track" class="snd-btn">${i18n('snd.cancel')}</button>
+                      </div>
+                    </div>`;
+                  document.body.appendChild(dialog);
+                  const close = () => { if (document.body.contains(dialog)) document.body.removeChild(dialog); };
+                  dialog.querySelector('#snd-btn-cancel-add-track').onclick = close;
+                  dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
+                  dialog.querySelectorAll('.snd-add-track-choice').forEach(btn => {
+                      btn.onclick = () => {
+                          const kind = btn.dataset.kind;
+                          if (kind === 'fx') {
+                              const idx = project.tracks.filter(t => t.kind === 'fx').length + 1;
+                              project.tracks.push({
+                                  id: 'trk_' + Date.now(), kind: 'fx',
+                                  name: `FX ${idx}`, color: '#10b981', clips: [], muted: false
+                              });
+                          } else {
+                              project.tracks.push({
+                                  id: 'trk_' + Date.now(), kind: 'audio',
+                                  name: `Track ${project.tracks.length + 1}`, color: '#06b6d4', clips: [], muted: false
+                              });
+                          }
+                          close();
+                          renderTimeline();
+                      };
                   });
+              },
+              onTrackDoubleClick: (track, offsetX) => {
+                  // Double-click an FX lane to drop a time-positioned effect block.
+                  const t = project.tracks.find(x => x.id === track.id);
+                  if (!t || t.kind !== 'fx') return;
+                  const startTime = Math.max(0, offsetX / pixelsPerSecond);
+                  const block = {
+                      id: 'fxb_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                      name: i18n('snd.effectBlock'),
+                      isFxBlock: true,
+                      buffer: null, poolId: null, sourceStart: 0,
+                      timelineStart: startTime, duration: 4, rate: 1,
+                      fx: [], keyframes: []
+                  };
+                  t.clips.push(block);
+                  selectedItems.tracks.clear();
+                  selectedItems.clips.clear();
+                  selectedItems.clips.add(block.id);
+                  rebuildPlayback();
+                  renderInspector();
                   renderTimeline();
               },
               onZoom: (val) => {
@@ -1300,6 +1377,8 @@ export async function render(container) {
                   renderTimeline();
               },
               onTrackDrop: (track, offsetX, event) => {
+                  const dropTrack = project.tracks.find(x => x.id === track.id);
+                  if (dropTrack && dropTrack.kind === 'fx') return; // FX lanes hold effect blocks, not audio
                   const jsonStr = event.dataTransfer.getData('application/json');
                   if (jsonStr) {
                       const payload = JSON.parse(jsonStr);
@@ -1473,6 +1552,18 @@ export async function render(container) {
               },
               onRenderTrackHeader: (track, hdr) => {
                   hdr.style.cursor = 'pointer';
+                  if (track.kind === 'fx') {
+                      hdr.style.background = 'rgba(16,185,129,0.08)';
+                      hdr.style.borderLeft = '3px solid #10b981';
+                      const nameEl = hdr.querySelector('div');
+                      if (nameEl && !nameEl.querySelector('.snd-fx-track-icon')) {
+                          const icon = document.createElement('span');
+                          icon.className = 'material-symbols-outlined snd-fx-track-icon';
+                          icon.textContent = 'auto_awesome';
+                          icon.style.cssText = 'font-size:14px;color:#10b981;margin-right:4px;vertical-align:middle;';
+                          nameEl.prepend(icon);
+                      }
+                  }
                   hdr.onclick = (e) => {
                       if (e.target.closest('button')) return;
                       if (e.shiftKey || e.metaKey) {
@@ -1531,12 +1622,24 @@ export async function render(container) {
               onRenderClip: (clip, el) => {
                   const track = project.tracks.find(t => t.clips.includes(clip));
                   const isSelected = selectedItems.clips.has(clip.id) || (track && selectedItems.tracks.has(track.id));
-                  
+
                   if (isSelected) {
                       el.style.borderColor = '#f472b6';
                       el.style.boxShadow = '0 0 0 2px #f472b6';
                   }
-                  
+
+                  // FX blocks render as labeled effect regions (no waveform).
+                  if (clip.isFxBlock || (track && track.kind === 'fx')) {
+                      el.style.background = 'repeating-linear-gradient(45deg, rgba(16,185,129,0.18), rgba(16,185,129,0.18) 8px, rgba(16,185,129,0.30) 8px, rgba(16,185,129,0.30) 16px)';
+                      if (!isSelected) el.style.borderColor = '#10b981';
+                      const icon = document.createElement('span');
+                      icon.className = 'material-symbols-outlined';
+                      icon.textContent = 'auto_awesome';
+                      icon.style.cssText = 'position:absolute;top:4px;left:4px;font-size:14px;color:#d1fae5;z-index:3;pointer-events:none;';
+                      el.appendChild(icon);
+                      return;
+                  }
+
                   const w = Math.max(1, (clip.duration / (clip.rate||1)) * pixelsPerSecond);
                   const cvs = document.createElement('canvas');
                   cvs.style.width = '100%';
@@ -1629,12 +1732,36 @@ export async function render(container) {
           node.connect(masterIn);
           masterIn = node;
           activeToneNodes.push(node);
-          fxDef._node = node; 
+          fxDef._node = node;
       });
-      
+
+      // FX tracks: each effect block inserts its chain on the master signal,
+      // gated to the block's time window via wet automation (dry = transparent
+      // outside the window). Inserted upstream of masterFx so the full mix flows
+      // through it. Effects without a wet param can't be time-gated and are skipped.
       project.tracks.forEach(track => {
-          if (track.muted) return; // Skip muted tracks
-          
+          if (track.kind !== 'fx' || track.muted) return;
+          track.clips.forEach(block => {
+              const start = block.timelineStart;
+              const end = block.timelineStart + block.duration;
+              (block.fx || []).forEach(fxDef => {
+                  const node = createFxNode(fxDef);
+                  if (!node.wet) { node.dispose && node.dispose(); return; }
+                  node.connect(masterIn);
+                  masterIn = node;
+                  activeToneNodes.push(node);
+                  fxDef._node = node;
+                  const target = (fxDef.params && fxDef.params.wet !== undefined) ? fxDef.params.wet : 1;
+                  node.wet.value = 0;
+                  Tone.Transport.schedule((time) => { node.wet.cancelScheduledValues(time); node.wet.rampTo(target, 0.03, time); }, start);
+                  Tone.Transport.schedule((time) => { node.wet.cancelScheduledValues(time); node.wet.rampTo(0, 0.03, time); }, end);
+              });
+          });
+      });
+
+      project.tracks.forEach(track => {
+          if (track.kind === 'fx' || track.muted) return; // FX tracks aren't played as audio; skip muted
+
           track.clips.forEach(clip => {
               const buf = clip.buffer || (clip.poolId ? project.mediaPool[clip.poolId] : null);
               if (!buf) return;
@@ -2018,16 +2145,18 @@ export async function render(container) {
       });
   }
 
-  container.querySelector('#btn-close').addEventListener('click', () => {
-      showDialog(i18n('snd.closeSession'), i18n('snd.closeSessionBody'), true, () => {
-          if (isPlaying) container.querySelector('#btn-stop').click();
-          project = { originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
-          activeToneNodes.forEach(n => n.dispose && n.dispose());
-          activeToneNodes = [];
-          
-          currentProjectDirHandle = null;
-          render(container);
-      });
+  // Tear down the current session and return to the workspace project list.
+  const returnToWorkspace = () => {
+      if (isPlaying) container.querySelector('#btn-stop').click();
+      project = { originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
+      activeToneNodes.forEach(n => n.dispose && n.dispose());
+      activeToneNodes = [];
+      currentProjectDirHandle = null;
+      render(container);
+  };
+
+  container.querySelector('#btn-open-proj').addEventListener('click', () => {
+      showDialog(i18n('snd.openProjectTitle'), i18n('snd.openProjectBody'), true, returnToWorkspace);
   });
 
   // Transport
@@ -2172,27 +2301,55 @@ export async function render(container) {
   });
   
   container.querySelector('#btn-new-proj').addEventListener('click', () => {
-      container.querySelector('#btn-close').click(); // Re-use close logic to go back to workspace
+      showDialog(i18n('snd.newProjectTitle'), i18n('snd.newProjectBody'), true, async () => {
+          const workspaceHandle = await getWorkspaceRoot();
+          if (!workspaceHandle) { returnToWorkspace(); return; }
+          const name = await showPrompt(i18n('snd.projectNamePrompt'));
+          if (!name) { returnToWorkspace(); return; }
+          try {
+              if (isPlaying) container.querySelector('#btn-stop').click();
+              activeToneNodes.forEach(n => n.dispose && n.dispose());
+              activeToneNodes = [];
+              const initialData = { name, mediaPoolMeta: {}, tracks: [], masterFx: [] };
+              const dirHandle = await createProjectInWorkspace(workspaceHandle, name, initialData);
+              project = { name, originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
+              currentProjectDirHandle = dirHandle;
+              render(container);
+          } catch(e) {
+              window.AuroraToast?.show({ variant: 'error', title: i18n('snd.error'), description: e.message });
+          }
+      });
   });
 
-  container.querySelector('#btn-play').addEventListener('click', async () => {
+  // Reflect playback state on the timeline-toolbar play button (if mounted).
+  const setTimelinePlayIcon = (icon) => {
+      const tlIcon = container.querySelector('#tme-btn-play-timeline .material-symbols-outlined');
+      if (tlIcon) tlIcon.textContent = icon;
+  };
+
+  // Shared play/pause toggle — used by the transport button, the timeline
+  // toolbar play button, and the Ctrl/Cmd+F shortcut.
+  async function togglePlay() {
       await Tone.start();
-      window._debugAudio = true; // enable logging
+      const playBtn = container.querySelector('#btn-play');
       if (isPlaying) {
           isPlaying = false;
           Tone.Transport.pause();
-          container.querySelector('#btn-play').innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
-          container.querySelector('#btn-play').className = 'snd-btn snd-btn-primary';
+          playBtn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
+          playBtn.className = 'snd-btn snd-btn-primary';
+          setTimelinePlayIcon('play_arrow');
       } else {
           isPlaying = true;
           Tone.Transport.start();
           playLoopId = requestAnimationFrame(loop);
-          console.log("[PLAY CLICKED] Starting 60fps interpolation loop...");
-          container.querySelector('#btn-play').innerHTML = '<span class="material-symbols-outlined">pause</span>';
-          container.querySelector('#btn-play').className = 'snd-btn snd-btn-pink';
+          playBtn.innerHTML = '<span class="material-symbols-outlined">pause</span>';
+          playBtn.className = 'snd-btn snd-btn-pink';
+          setTimelinePlayIcon('pause');
       }
-  });
-  
+  }
+
+  container.querySelector('#btn-play').addEventListener('click', () => togglePlay());
+
   container.querySelector('#btn-stop').addEventListener('click', () => {
       isPlaying = false;
       Tone.Transport.stop();
@@ -2200,7 +2357,38 @@ export async function render(container) {
       updatePlayheadDOM();
       container.querySelector('#btn-play').innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
       container.querySelector('#btn-play').className = 'snd-btn snd-btn-primary';
+      setTimelinePlayIcon('play_arrow');
   });
+
+  // ─── Keyboard shortcuts (mirrors the Video Timeline editor) ───
+  //   Ctrl/Cmd+F  Play / Pause
+  //   Ctrl/Cmd+B  Move playhead to the beginning
+  //   Ctrl/Cmd+E  Move playhead to the end (end of the longest track)
+  const getProjectEnd = () => {
+      let maxEnd = 0;
+      project.tracks.forEach(t => (t.clips || []).forEach(c => {
+          const end = c.timelineStart + c.duration;
+          if (end > maxEnd) maxEnd = end;
+      }));
+      return maxEnd;
+  };
+  const seekTo = (sec) => {
+      Tone.Transport.seconds = Math.max(0, sec);
+      updatePlayheadDOM();
+  };
+  const handleSndKeyDown = (e) => {
+      // Only act when the Sound Studio is the active screen — guards against a
+      // stale listener firing while another editor (e.g. Video Timeline) is up.
+      if (location.hash.replace('#', '').split('/')[0].split('?')[0] !== 'snd') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'f') { e.preventDefault(); togglePlay(); }
+      else if (k === 'b') { e.preventDefault(); seekTo(0); }
+      else if (k === 'e') { e.preventDefault(); seekTo(getProjectEnd()); }
+  };
+  document.addEventListener('keydown', handleSndKeyDown);
+  sndKeydownHandler = handleSndKeyDown;
 
 
   container.querySelector('#btn-kf-prev')?.addEventListener('click', () => {
@@ -2674,7 +2862,7 @@ export async function render(container) {
       } catch (err) {
           window.AuroraToast?.show({ variant: 'error', title: i18n('snd.exportFailed'), description: err.message });
       } finally {
-          btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> ${i18n('snd.exportFinal')}`;
+          btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> ${i18n('snd.exportAudio')}`;
           btn.disabled = false;
       }
   });
@@ -2691,4 +2879,13 @@ export async function render(container) {
       rebuildPlayback();
   }
 
+  // Cleanup when navigating away from the screen.
+  return () => {
+      if (sndKeydownHandler) {
+          document.removeEventListener('keydown', sndKeydownHandler);
+          sndKeydownHandler = null;
+      }
+      isPlaying = false;
+      if (playLoopId) cancelAnimationFrame(playLoopId);
+  };
 }

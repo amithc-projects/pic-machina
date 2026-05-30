@@ -19,7 +19,8 @@ export class TimelineView {
             onClipDrag: (clipId, newTimeSec) => {},
             onClipDrop: (clipId) => {},
             onRenderTrackHeader: (track, element) => {},
-            onTrackDrop: (track, offsetX, event) => {}
+            onTrackDrop: (track, offsetX, event) => {},
+            onTrackDoubleClick: (track, offsetX, event) => {}
         }, options);
 
         this.pixelsPerSecond = this.options.pixelsPerSecond;
@@ -244,8 +245,17 @@ export class TimelineView {
                 this.options.onTrackDrop(track, offsetX, e);
             });
 
+            body.addEventListener('dblclick', e => {
+                if (e.target.closest('[data-clip-el]')) return; // ignore dbl-clicks on clips
+                const rect = body.getBoundingClientRect();
+                const scrollLeft = this.dom.tracksBody.parentElement.scrollLeft;
+                const offsetX = e.clientX - rect.left + scrollLeft;
+                this.options.onTrackDoubleClick(track, offsetX, e);
+            });
+
             (track.clips || []).forEach(clip => {
                 const el = document.createElement('div');
+                el.dataset.clipEl = '1';
                 el.style.position = 'absolute';
                 el.style.left = `${clip.timelineStart * this.pixelsPerSecond}px`;
                 el.style.width = `${clip.duration * this.pixelsPerSecond}px`;

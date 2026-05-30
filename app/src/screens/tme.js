@@ -13,6 +13,7 @@ import { t as i18n } from '../i18n/index.js';
 let currentTimeline = null;
 let currentProjectDirHandle = null;
 let timelineView = null;
+let tmeKeydownHandler = null;
 let mediaPoolSelection = new Set();
 let lastSelectedPoolIndex = -1;
 let selectedItemId = null;
@@ -419,12 +420,45 @@ export async function render(container) {
   const btnImportFolder = container.querySelector('#tme-btn-import-folder');
 
   const handleGlobalKeyDown = async (e) => {
+    // Only act when the Video Timeline is the active screen — guards against a
+    // stale listener firing while another editor (e.g. Sound Studio) is up.
+    if (location.hash.replace('#', '').split('/')[0].split('?')[0] !== 'tme') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-    
+
     // Command+F or Ctrl+F toggles playback
     if (e.key.toLowerCase() === 'f' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         btnPlay.click();
+        return;
+    }
+
+    // Ctrl/Cmd+B — jump to the beginning of the timeline
+    if (e.key.toLowerCase() === 'b' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        seekTimeline(0);
+        return;
+    }
+
+    // Ctrl/Cmd+E — jump to the end (end of the longest track)
+    if (e.key.toLowerCase() === 'e' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        seekTimeline(getTimelineEnd());
+        return;
+    }
+
+    // Ctrl/Cmd+Right — step forward one frame
+    if (e.key === 'ArrowRight' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const fps = currentTimeline.fps || 30;
+        seekTimeline(Math.min(getTimelineEnd(), playheadTime + 1 / fps));
+        return;
+    }
+
+    // Ctrl/Cmd+Left — step back one frame
+    if (e.key === 'ArrowLeft' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const fps = currentTimeline.fps || 30;
+        seekTimeline(playheadTime - 1 / fps);
         return;
     }
 
@@ -451,7 +485,9 @@ export async function render(container) {
         renderPropertiesPanel();
     }
   };
+  if (tmeKeydownHandler) { document.removeEventListener('keydown', tmeKeydownHandler); tmeKeydownHandler = null; }
   document.addEventListener('keydown', handleGlobalKeyDown);
+  tmeKeydownHandler = handleGlobalKeyDown;
 
   // ─── Render Media Pool ──────────────────────────────────
   function renderMediaPool() {
@@ -2547,6 +2583,30 @@ export async function render(container) {
       activeAudioPlayers.set(clip.id, audio);
   }
 
+  function getTimelineEnd() {
+    let maxTime = 0;
+    currentTimeline.videoTracks.forEach(t => {
+      maxTime = t.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), maxTime);
+    });
+    if (currentTimeline.effectTracks) {
+      currentTimeline.effectTracks.forEach(t => {
+        maxTime = t.blocks.reduce((max, fx) => Math.max(max, fx.timelineStart + fx.duration), maxTime);
+      });
+    }
+    if (currentTimeline.audioTracks) {
+      currentTimeline.audioTracks.forEach(t => {
+        maxTime = t.blocks.reduce((max, au) => Math.max(max, au.timelineStart + au.duration), maxTime);
+      });
+    }
+    return maxTime;
+  }
+
+  function seekTimeline(sec) {
+    playheadTime = Math.max(0, sec);
+    updatePlayheadUI();
+    renderFrame();
+  }
+
   function updatePlayheadUI() {
     if (timelineView) timelineView.setPlayhead(playheadTime, false);
     timecodeEl.textContent = formatTimecode(playheadTime);
@@ -2936,20 +2996,7 @@ export async function render(container) {
     playheadTime += dt;
     
     // Auto stop if we pass the end of the last clip or effect
-    let maxTime = 0;
-    currentTimeline.videoTracks.forEach(t => {
-      maxTime = t.blocks.reduce((max, c) => Math.max(max, c.timelineStart + c.duration), maxTime);
-    });
-    if (currentTimeline.effectTracks) {
-      currentTimeline.effectTracks.forEach(t => {
-        maxTime = t.blocks.reduce((max, fx) => Math.max(max, fx.timelineStart + fx.duration), maxTime);
-      });
-    }
-    if (currentTimeline.audioTracks) {
-      currentTimeline.audioTracks.forEach(t => {
-        maxTime = t.blocks.reduce((max, au) => Math.max(max, au.timelineStart + au.duration), maxTime);
-      });
-    }
+    const maxTime = getTimelineEnd();
 
     if (playheadTime > maxTime && maxTime > 0) {
       playheadTime = 0; // loop back to start
@@ -3070,6 +3117,7 @@ export async function render(container) {
 
   return () => {
     document.removeEventListener('keydown', handleGlobalKeyDown);
+    tmeKeydownHandler = null;
     isPlaying = false;
     if (animFrameId) cancelAnimationFrame(animFrameId);
   };

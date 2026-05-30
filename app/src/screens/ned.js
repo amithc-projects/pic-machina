@@ -574,7 +574,14 @@ export async function render(container, hash) {
     await saveRecipe(recipe);
   };
 
-  const _doneFn = async () => { await saveNode(); navigate(`#bld?id=${recipeId}${nedTransient ? '&transient=1' : ''}`); };
+  // Commit any open freehand paint / mask overlay so unconfirmed edits aren't
+  // lost when the user clicks Done while still painting.
+  const commitOpenDrawEditors = () => {
+    wsContainer.querySelector('#ned-paint-confirm-btn')?.click();
+    wsContainer.querySelector('#ned-mask-confirm-btn')?.click();
+  };
+
+  const _doneFn = async () => { commitOpenDrawEditors(); await saveNode(); navigate(`#bld?id=${recipeId}${nedTransient ? '&transient=1' : ''}`); };
   container.querySelector('#ned-done-btn')?.addEventListener('click', _doneFn);
   container.querySelector('#ned-done-btn-bottom')?.addEventListener('click', _doneFn);
 
