@@ -23,6 +23,7 @@ import { showThreeWayConfirm }                      from '../utils/dialogs.js';
 import { registry }                                 from '../engine/index.js';
 import { computeStrength }                          from '../engine/video-convert.js';
 import { checkRecipeAvailability }                  from '../engine/capabilities.js';
+import { t as i18n }                                from '../i18n/index.js';
 
 export async function render(container, hash) {
   injectStyles();
@@ -42,7 +43,7 @@ export async function render(container, hash) {
   let batchControl   = null;     // { cancel, runId }
 
   let outputHistory  = [];
-  let sk             = null;  // sidekick-manager element
+  let sk             = null;  // zumilabs-file-browser element
 
   // ── State declared early to avoid temporal dead zone (TDZ) ──
   const BUILTIN_SLOT_COUNTS = {
@@ -59,18 +60,18 @@ export async function render(container, hash) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">folder_open</span>
-          Batch Setup
+          ${i18n('set.batchSetup')}
         </div>
         <div class="flex items-center gap-2">
-          <span id="set-order-hint" style="display:none; font-size:12px; margin-right:4px; font-style:italic;" class="text-muted">Select photos in sequence</span>
+          <span id="set-order-hint" style="display:none; font-size:12px; margin-right:4px; font-style:italic;" class="text-muted">${i18n('set.selectInSequence')}</span>
           <span id="set-run-warning" style="color:var(--ps-danger);display:none;font-size:12px;font-weight:500;padding-right:8px;"></span>
-          <button class="btn-secondary" id="btn-edit-recipe" style="display:none" title="Edit selected recipe">
+          <button class="btn-secondary" id="btn-edit-recipe" style="display:none" title="${i18n('set.editSelectedRecipe')}">
             <span class="material-symbols-outlined">edit</span>
-            Edit Recipe
+            ${i18n('set.editRecipe')}
           </button>
           <button class="btn-primary" id="btn-run" disabled>
             <span class="material-symbols-outlined">play_arrow</span>
-            Run Batch
+            ${i18n('set.runBatch')}
           </button>
         </div>
       </div>
@@ -80,12 +81,12 @@ export async function render(container, hash) {
         <div class="set-config">
           <!-- Recipe selector -->
           <section class="set-section">
-            <div class="set-section-title">Recipe</div>
+            <div class="set-section-title">${i18n('set.recipe')}</div>
             <div id="set-recipe-display" class="set-recipe-pill">
               <span class="material-symbols-outlined">format_list_numbered</span>
-              <span id="set-recipe-name">No recipe selected</span>
+              <span id="set-recipe-name">${i18n('set.noRecipeSelected')}</span>
               <button class="btn-ghost" id="btn-pick-recipe" style="margin-left:auto">
-                <span class="material-symbols-outlined">swap_horiz</span>Change
+                <span class="material-symbols-outlined">swap_horiz</span>${i18n('set.change')}
               </button>
             </div>
             <div id="set-recipe-desc" class="text-muted" style="font-size: 12px; margin-top: 8px; line-height: 1.4; display: none;"></div>
@@ -94,59 +95,59 @@ export async function render(container, hash) {
 
           <!-- Output folder -->
           <section class="set-section" id="set-output-section">
-            <div class="set-section-title" id="set-output-title">Output Folder</div>
+            <div class="set-section-title" id="set-output-title">${i18n('set.outputFolder')}</div>
             <div class="set-folder-row" id="set-output-row" style="flex-wrap:wrap">
               <span class="material-symbols-outlined" style="color:var(--ps-text-faint)">drive_folder_upload</span>
-              <span id="set-output-path" class="set-folder-path text-muted">Not selected</span>
+              <span id="set-output-path" class="set-folder-path text-muted">${i18n('set.notSelected')}</span>
               <select id="set-output-mru" class="ic-input" style="width: auto; height: 33px; padding: 4px 8px; display: none; max-width:140px; font-size: 11px;">
-                <option value="">Recent...</option>
+                <option value="">${i18n('set.recent')}</option>
               </select>
               <button class="btn-secondary" id="btn-pick-output">
-                <span class="material-symbols-outlined">folder_open</span>Browse
+                <span class="material-symbols-outlined">folder_open</span>${i18n('set.browse')}
               </button>
             </div>
             <div class="set-subfolder-row">
-              <label class="ic-label">Output subfolder</label>
+              <label class="ic-label">${i18n('set.outputSubfolder')}</label>
               <input id="set-subfolder" class="ic-input" value="output" style="max-width:160px">
             </div>
           </section>
 
           <!-- Options -->
           <section class="set-section">
-            <div class="set-section-title">Options</div>
+            <div class="set-section-title">${i18n('set.options')}</div>
             <label class="set-checkbox-row">
               <input type="checkbox" id="opt-skip-existing" checked>
-              <span>Skip already-processed files</span>
+              <span>${i18n('set.skipExisting')}</span>
             </label>
           </section>
 
           <!-- Recent runs link — populated by updateRecipeDisplay() -->
           <section class="set-section" id="set-history-section" style="display:none">
-            <div class="set-section-title">History</div>
+            <div class="set-section-title">${i18n('set.history')}</div>
             <a href="#" id="set-history-link" class="set-history-link" role="button">
               <span class="material-symbols-outlined">history</span>
-              <span class="set-history-link__label">View recent runs</span>
+              <span class="set-history-link__label">${i18n('set.viewRecentRuns')}</span>
               <span class="material-symbols-outlined set-history-link__arrow">arrow_forward</span>
             </a>
           </section>
 
           <!-- Slot assignment (shown when recipe uses a named template) -->
           <section class="set-section" id="set-slots-section" style="display:none">
-            <div class="set-section-title">Slot Assignment</div>
+            <div class="set-section-title">${i18n('set.slotAssignment')}</div>
             <div id="set-slots-list" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;"></div>
           </section>
 
           <!-- Recipe run parameters (shown when recipe has params) -->
           <section class="set-section" id="set-params-section" style="display:none">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
-              <div class="set-section-title" style="margin-bottom:0">Parameters</div>
-              <button class="btn-ghost" id="set-params-reset" style="margin-left:auto;font-size:11px;padding:2px 8px;color:var(--ps-text-muted)">Reset</button>
+              <div class="set-section-title" style="margin-bottom:0">${i18n('set.parameters')}</div>
+              <button class="btn-ghost" id="set-params-reset" style="margin-left:auto;font-size:11px;padding:2px 8px;color:var(--ps-text-muted)">${i18n('set.reset')}</button>
             </div>
             <div id="set-params-fields" style="display:flex;flex-direction:column;gap:10px"></div>
           </section>
         </div>
 
-        <!-- Right: image grid (sidekick-manager) -->
+        <!-- Right: image grid (zumilabs-file-browser) -->
         <div class="set-grid-area" style="display:flex; flex-direction:column; background:var(--ps-surface);">
           <div id="set-mb-host" style="flex: 1; display:flex; flex-direction:column; min-height: 0;"></div>
         </div>
@@ -156,7 +157,7 @@ export async function render(container, hash) {
       <div class="set-timeline" id="set-timeline" style="display:none">
         <div class="set-timeline-header">
           <span class="material-symbols-outlined" style="font-size:14px">timeline</span>
-          Effect Timeline
+          ${i18n('set.effectTimeline')}
         </div>
         <div class="set-timeline-tracks" id="set-timeline-tracks"></div>
       </div>
@@ -179,7 +180,7 @@ export async function render(container, hash) {
   // ── Apply Settings ──────────────────────────────────────
   const settings = getSettings();
   if (settings.batch?.useInputForOutput) {
-     container.querySelector('#set-output-title').textContent = 'Output Destination';
+     container.querySelector('#set-output-title').textContent = i18n('set.outputDestination');
      container.querySelector('#set-output-row').style.display = 'none';
   }
 
@@ -193,7 +194,7 @@ export async function render(container, hash) {
         if (dp) dp.style.display = 'none';
         return;
       }
-      let html = `<option value="">History...</option>`;
+      let html = `<option value="">${i18n('set.historyDots')}</option>`;
       hist.forEach((h, i) => html += `<option value="${i}">${h.name}</option>`);
       dp.innerHTML = html;
       dp.style.display = 'block';
@@ -266,7 +267,7 @@ export async function render(container, hash) {
       // Ensure we have read/write access to the target folder
       if ((await effOutputHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
           if ((await effOutputHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
-              window.AuroraToast?.show({ variant: 'danger', title: 'Permission Denied', description: 'Cannot write output to the input directory without your permission.' });
+              window.AuroraToast?.show({ variant: 'danger', title: i18n('set.permissionDenied'), description: i18n('set.permissionDeniedDesc') });
               return;
           }
       }
@@ -334,10 +335,10 @@ export async function render(container, hash) {
       } catch (err) {
         console.error('[SET] startBatch failed:', err);
         const msg = err.name === 'NotFoundError'
-          ? 'Output folder not found — please re-select it on the Batch Setup screen.'
+          ? i18n('set.outputFolderNotFound')
           : err.message;
         window._queError?.(msg);
-        window.AuroraToast?.show({ variant: 'danger', title: 'Batch failed to start', description: msg });
+        window.AuroraToast?.show({ variant: 'danger', title: i18n('set.batchFailedToStart'), description: msg });
       }
     };
 
@@ -382,10 +383,10 @@ export async function render(container, hash) {
             const meta = setFileMetadata.get(file.name);
             const dateStr = new Date(file.lastModified).toLocaleString();
             const sizeStr = formatBytes(file.size);
-            const typeStr = isVideoFile(file) 
-              ? `Video: ${meta.width}x${meta.height} • ${meta.duration ? meta.duration.toFixed(1) + 's' : '?s'}` 
-              : `Image: ${meta.width}x${meta.height}`;
-            cell.title = `${file.name}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
+            const typeStr = isVideoFile(file)
+              ? i18n('set.tooltipVideo', { w: meta.width, h: meta.height, dur: meta.duration ? meta.duration.toFixed(1) + 's' : '?s' })
+              : i18n('set.tooltipImage', { w: meta.width, h: meta.height });
+            cell.title = `${file.name}\n${typeStr}\n${i18n('set.tooltipModified', { date: dateStr })}\n${i18n('set.tooltipSize', { size: sizeStr })}`;
           }
         }
       } catch(e) {
@@ -420,10 +421,10 @@ export async function render(container, hash) {
     host.innerHTML = `
       <div class="empty-state" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;">
         <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-text-faint);">folder_open</span>
-        <div class="empty-state-title" style="margin-top:16px;">No Input Folder Selected</div>
-        <div class="empty-state-desc">Select an input folder to view and pick media for processing.</div>
+        <div class="empty-state-title" style="margin-top:16px;">${i18n('set.noInputFolder')}</div>
+        <div class="empty-state-desc">${i18n('set.noInputFolderDesc')}</div>
         <button class="btn-primary" id="set-btn-empty-browse" style="margin-top:16px;">
-          <span class="material-symbols-outlined">folder_open</span> Browse
+          <span class="material-symbols-outlined">folder_open</span> ${i18n('set.browse')}
         </button>
       </div>`;
     host.querySelector('#set-btn-empty-browse')?.addEventListener('click', async () => {
@@ -482,23 +483,23 @@ export async function render(container, hash) {
         });
       }
       
-      // ── Mount or update sidekick-manager ──────────────────
-      const typeStr = onlyVideo ? 'Videos' : (includeVideo ? 'Images and Videos' : 'Images');
+      // ── Mount or update zumilabs-file-browser ──────────────────
+      const typeStr = onlyVideo ? i18n('set.typeVideos') : (includeVideo ? i18n('set.typeImagesAndVideos') : i18n('set.typeImages'));
       const hiddenMsg = skippedMediaCount > 0
-        ? `${skippedMediaCount} file${skippedMediaCount !== 1 ? 's' : ''} hidden — this recipe only accepts ${typeStr}.`
+        ? i18n('set.filesHidden', { count: skippedMediaCount, type: typeStr })
         : (selectedFiles.length === 0
-          ? `No ${typeStr} found in this folder.`
+          ? i18n('set.noTypeFound', { type: typeStr })
           : '');
 
       if (!sk) {
         const host = container.querySelector('#set-mb-host');
         const allowedTypes = allowedTypesAttrForRecipe(currentRecipe);
         const allowedAttr = allowedTypes ? ` allowed-types="${allowedTypes}"` : '';
-        host.innerHTML = `<sidekick-manager id="set-sk-manager" no-hash-routing${allowedAttr} style="display:block;width:100%;height:100%"></sidekick-manager>`;
+        host.innerHTML = `<zumilabs-file-browser id="set-sk-manager" no-hash-routing${allowedAttr} style="display:block;width:100%;height:100%"></zumilabs-file-browser>`;
         sk = host.querySelector('#set-sk-manager');
 
         // Wire selection changes from sidekick back to set.js state
-        sk.addEventListener('sidekick:selection', (e) => {
+        sk.addEventListener('filebrowser:selection', (e) => {
           const items = e.detail?.items || [];
           selectedIds.clear();
           items.forEach((name, i) => selectedIds.set(name, i + 1));
@@ -508,7 +509,7 @@ export async function render(container, hash) {
         });
 
         // When sidekick navigates to a new folder, track path + re-enumerate
-        sk.addEventListener('sidekick:workspace', async (e) => {
+        sk.addEventListener('filebrowser:workspace', async (e) => {
           // Guard: ignore events fired during sidekick unmount (React resets path to [] on teardown)
           if (!sk.isConnected) return;
           trackWorkspaceChange(e.detail.folderName, e.detail.pathLength, e.detail.pathNames, 'set', e.detail.rootHandle);
@@ -524,7 +525,7 @@ export async function render(container, hash) {
         });
 
         // Track single-file focus for cross-screen selection restoration
-        sk.addEventListener('sidekick:file-focus', (e) => {
+        sk.addEventListener('filebrowser:file-focus', (e) => {
           setSelectedFile(e.detail?.filename || null);
         });
 
@@ -534,7 +535,7 @@ export async function render(container, hash) {
         // React state update and the stack isn't populated until React commits
         // (signalled by the workspace event). So we wait for pathLength===1
         // before calling navigate.
-        sk.addEventListener('sidekick:ready', async () => {
+        sk.addEventListener('filebrowser:ready', async () => {
           sk._setReady = true;
           console.log('[folder-state] READY [set]');
           if (!currentHandle) { console.log('[folder-state] READY [set] — no handle, skipping restore'); return; }
@@ -549,13 +550,13 @@ export async function render(container, hash) {
             }
             const onRoot = (e) => {
               if (e.detail?.pathLength !== 1) return;
-              sk.removeEventListener('sidekick:workspace', onRoot);
+              sk.removeEventListener('filebrowser:workspace', onRoot);
               console.log(`[folder-state] RESTORE [set] root confirmed, navigating to "${targetPath}"`);
               sk.navigate(targetPath, selectedFilename ? { filename: selectedFilename } : undefined)
                 .catch(err => console.warn('[folder-state] RESTORE [set] navigate failed', err))
                 .finally(resolve);
             };
-            sk.addEventListener('sidekick:workspace', onRoot);
+            sk.addEventListener('filebrowser:workspace', onRoot);
             sk.setRoot(currentHandle);
           });
           console.log('[folder-state] RESTORE [set] done');
@@ -575,7 +576,7 @@ export async function render(container, hash) {
       sk.setAttribute('hidden-files-count', String(warningCount));
       sk.setAttribute('hidden-files-message', hiddenMsg);
 
-      // Push the ROOT folder into sidekick (skip when triggered by sidekick:workspace).
+      // Push the ROOT folder into sidekick (skip when triggered by filebrowser:workspace).
       // Always use inputHandle (the root), not currentHandle (which may be a subfolder).
       if (!skipSetRoot && sk._setReady) {
         sk._pushRoot(inputHandle);
@@ -611,9 +612,9 @@ export async function render(container, hash) {
       const max = currentRecipe.maxItems;
       
       if (typeof min === 'number' && count < min) {
-        warning = min === max ? `Requires exactly ${min} items` : `Requires at least ${min} items`;
+        warning = min === max ? i18n('set.requiresExactly', { count: min }) : i18n('set.requiresAtLeast', { count: min });
       } else if (typeof max === 'number' && count > max) {
-        warning = min === max ? `Requires exactly ${max} items` : `Requires at most ${max} items`;
+        warning = min === max ? i18n('set.requiresExactly', { count: max }) : i18n('set.requiresAtMost', { count: max });
       }
     }
 
@@ -641,8 +642,8 @@ export async function render(container, hash) {
           if (hasPremiumLock) {
             btn.disabled = true;
             if (warningText) {
-              const lockType = unmet.find(r => r.type === 'premium')?.id === 'enterprise' ? 'Enterprise' : 'Pro';
-              warningText.textContent = `Requires Zumilabs Studio ${lockType}`;
+              const lockType = unmet.find(r => r.type === 'premium')?.id === 'enterprise' ? i18n('set.tierEnterprise') : i18n('set.tierPro');
+              warningText.textContent = i18n('set.requiresTier', { tier: lockType });
               warningText.style.display = '';
             }
           }
@@ -657,7 +658,7 @@ export async function render(container, hash) {
 
   function updateRecipeDisplay() {
     const name = container.querySelector('#set-recipe-name');
-    if (name) name.textContent = currentRecipe?.name || 'No recipe selected';
+    if (name) name.textContent = currentRecipe?.name || i18n('set.noRecipeSelected');
     const editBtn = container.querySelector('#btn-edit-recipe');
     if (editBtn) editBtn.style.display = currentRecipe ? '' : 'none';
 
@@ -665,8 +666,8 @@ export async function render(container, hash) {
     if (descEl) {
       if (currentRecipe) {
         const stepCount = currentRecipe.nodes ? currentRecipe.nodes.length : 0;
-        const stepText = stepCount === 1 ? '1 step' : `${stepCount} steps`;
-        descEl.innerHTML = `<strong>${stepText}</strong> &nbsp;·&nbsp; ${currentRecipe.description || 'No description provided.'}`;
+        const stepText = i18n('set.stepCount', { count: stepCount });
+        descEl.innerHTML = `<strong>${stepText}</strong> &nbsp;·&nbsp; ${currentRecipe.description || i18n('set.noDescription')}`;
         descEl.style.display = 'block';
       } else {
         descEl.style.display = 'none';
@@ -706,9 +707,7 @@ export async function render(container, hash) {
     if (!runs.length) { section.style.display = 'none'; return; }
 
     section.style.display = '';
-    label.textContent = runs.length === 1
-      ? 'View 1 recent run'
-      : `View ${runs.length} recent runs`;
+    label.textContent = i18n('set.viewRecentRunsCount', { count: runs.length });
 
     // Re-bind every refresh — the link's recipe id changes when the user
     // swaps recipes via "Change". Prefer onclick (idempotent) over
@@ -916,9 +915,9 @@ export async function render(container, hash) {
             </span>
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;font-weight:600;">Slot ${slotNum}${label}</div>
+            <div style="font-size:12px;font-weight:600;">${i18n('set.slot', { num: slotNum })}${label}</div>
             <div style="font-size:11px;color:var(--ps-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-              ${assigned ? assigned.name : '<span style="color:var(--ps-text-faint);font-style:italic">Not assigned</span>'}
+              ${assigned ? assigned.name : `<span style="color:var(--ps-text-faint);font-style:italic">${i18n('set.notAssigned')}</span>`}
             </div>
           </div>
         </div>`;
@@ -975,12 +974,12 @@ export async function render(container, hash) {
     modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal__header">
-        <h2 class="modal__title">Choose a Recipe</h2>
-        <button class="modal__close" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+        <h2 class="modal__title">${i18n('set.chooseRecipe')}</h2>
+        <button class="modal__close" aria-label="${i18n('set.close')}"><span class="material-symbols-outlined">close</span></button>
       </div>
       <div class="modal__body" style="padding:0">
         <div style="padding:12px 16px;border-bottom:1px solid var(--ps-border)">
-          <input class="ic-input" id="recipe-picker-search" placeholder="Search…" autocomplete="off">
+          <input class="ic-input" id="recipe-picker-search" placeholder="${i18n('set.searchDots')}" autocomplete="off">
         </div>
         <ul id="recipe-picker-list" style="list-style:none;padding:8px;margin:0;max-height:400px;overflow-y:auto;">
           ${allRecipes.map(r => `
@@ -988,7 +987,7 @@ export async function render(container, hash) {
               <div class="recipe-picker-swatch" style="width:24px;height:24px;border-radius:6px;background:${r.coverColor || '#374151'};flex-shrink:0"></div>
               <div>
                 <div style="font-size:13px;font-weight:500;color:var(--ps-text)">${r.name}</div>
-                <div style="font-size:11px;color:var(--ps-text-muted)">${r.isSystem ? 'System' : 'Yours'}</div>
+                <div style="font-size:11px;color:var(--ps-text-muted)">${r.isSystem ? i18n('set.system') : i18n('set.yours')}</div>
               </div>
             </li>`).join('')}
         </ul>
@@ -1052,17 +1051,17 @@ function showCapabilityDialog(unmet) {
         dialog.ic-modal::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
       </style>
       <div style="padding:20px 20px 8px;border-bottom:1px solid var(--ps-border)">
-        <div style="font-size:15px;font-weight:600;color:var(--ps-text);margin-bottom:4px">${hasPremiumLock ? 'License Required' : 'Setup required'}</div>
-        <div style="font-size:12px;color:var(--ps-text-muted)">This recipe uses steps that need additional setup:</div>
+        <div style="font-size:15px;font-weight:600;color:var(--ps-text);margin-bottom:4px">${hasPremiumLock ? i18n('set.licenseRequired') : i18n('set.setupRequired')}</div>
+        <div style="font-size:12px;color:var(--ps-text-muted)">${i18n('set.capabilityIntro')}</div>
       </div>
       <ul style="list-style:none;padding:12px 20px;margin:0">
         ${items}
       </ul>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--ps-border)">
         <button class="btn-secondary" id="cap-dlg-fix">
-          <span class="material-symbols-outlined">open_in_new</span>${hasPremiumLock ? 'Upgrade' : 'Fix now'}
+          <span class="material-symbols-outlined">open_in_new</span>${hasPremiumLock ? i18n('set.upgrade') : i18n('set.fixNow')}
         </button>
-        ${hasPremiumLock ? '' : '<button class="btn-primary" id="cap-dlg-run">Run anyway</button>'}
+        ${hasPremiumLock ? '' : `<button class="btn-primary" id="cap-dlg-run">${i18n('set.runAnyway')}</button>`}
       </div>`;
 
     document.body.appendChild(dlg);

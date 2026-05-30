@@ -13,6 +13,7 @@ import { showConfirm } from '../utils/dialogs.js';
 import { registry } from '../engine/index.js';
 import { flattenNodes, countNodes, findNodeAndParent } from '../utils/nodes.js';
 import { injectBldStyles } from './bld.js';
+import { t } from '../i18n/index.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -25,11 +26,11 @@ async function renderList(container) {
   const userBlocks   = blocks.filter(b => !b.isSystem).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
   const systemSection = systemBlocks.length > 0 ? `
-    <div class="bkb-section-header">System Blocks</div>
+    <div class="bkb-section-header">${t('bkb.systemBlocks')}</div>
     <div class="bkb-grid">${systemBlocks.map(b => blockCardHTML(b)).join('')}</div>` : '';
 
   const userSection = userBlocks.length > 0 ? `
-    <div class="bkb-section-header" style="margin-top:${systemBlocks.length ? '24px' : '0'}">My Blocks</div>
+    <div class="bkb-section-header" style="margin-top:${systemBlocks.length ? '24px' : '0'}">${t('bkb.myBlocks')}</div>
     <div class="bkb-grid">${userBlocks.map(b => blockCardHTML(b)).join('')}</div>` : '';
 
   // Empty state for the user-blocks section. The "+ New Block" button in
@@ -38,8 +39,8 @@ async function renderList(container) {
   const emptyUser = userBlocks.length === 0 ? `
     <div class="empty-state" style="padding-top:${systemBlocks.length ? '32px' : '60px'}">
       <span class="material-symbols-outlined" style="font-size:${systemBlocks.length ? '32px' : '48px'}">add_box</span>
-      <div class="empty-state-title">No custom blocks yet</div>
-      <div class="empty-state-desc">Use <strong>+ New Block</strong> above to build a reusable step sequence, or clone a system block to customise it.</div>
+      <div class="empty-state-title">${t('bkb.noCustomBlocks')}</div>
+      <div class="empty-state-desc">${t('bkb.noCustomBlocksDesc')}</div>
     </div>` : '';
 
   container.innerHTML = `
@@ -47,11 +48,11 @@ async function renderList(container) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">widgets</span>
-          Block Builder
+          ${t('bkb.title')}
         </div>
         <button class="btn-primary" id="bkb-btn-new">
           <span class="material-symbols-outlined">add</span>
-          New Block
+          ${t('bkb.newBlock')}
         </button>
       </div>
 
@@ -73,7 +74,7 @@ async function renderList(container) {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
       const c = await cloneBlock(btn.dataset.id);
-      window.AuroraToast?.show({ variant: 'success', title: `"${c.name}" cloned` });
+      window.AuroraToast?.show({ variant: 'success', title: t('bkb.cloned', { name: c.name }) });
       navigate(`#bkb?id=${c.id}`);
     });
   });
@@ -81,15 +82,15 @@ async function renderList(container) {
     btn.addEventListener('click', async e => {
       e.stopPropagation();
       const confirmed = await showConfirm({
-        title: 'Delete Block?',
-        body: 'This will permanently remove this reusable block. It will be removed from any recipes that currently reference it.',
-        confirmText: 'Delete',
+        title: t('bkb.deleteConfirmTitle'),
+        body: t('bkb.deleteConfirmBody'),
+        confirmText: t('bkb.delete'),
         variant: 'danger',
         icon: 'delete_forever'
       });
       if (!confirmed) return;
       await deleteBlock(btn.dataset.id);
-      window.AuroraToast?.show({ variant: 'success', title: 'Block deleted' });
+      window.AuroraToast?.show({ variant: 'success', title: t('bkb.blockDeleted') });
       renderList(container); // re-render
     });
   });
@@ -101,7 +102,7 @@ async function renderList(container) {
   });
 
   async function createNew() {
-    const block = { id: uuid(), name: 'Untitled Block', description: '', category: 'General', nodes: [], createdAt: now(), updatedAt: now() };
+    const block = { id: uuid(), name: t('bkb.untitledBlock'), description: '', category: 'General', nodes: [], createdAt: now(), updatedAt: now() };
     await saveBlock(block);
     navigate(`#bkb?id=${block.id}`);
   }
@@ -118,23 +119,23 @@ function blockCardHTML(block) {
       <div class="bkb-card-body">
         <div class="bkb-card-name">
           ${escHtml(block.name)}
-          ${block.isSystem ? `<span class="ic-badge ic-badge--blue" style="font-size:10px;margin-left:6px;vertical-align:middle">System</span>` : ''}
+          ${block.isSystem ? `<span class="ic-badge ic-badge--blue" style="font-size:10px;margin-left:6px;vertical-align:middle">${t('bkb.system')}</span>` : ''}
         </div>
         <div class="bkb-card-desc">${escHtml(block.description || '')}</div>
         <div class="bkb-card-meta">
-          <span class="ic-badge">${escHtml(block.category || 'General')}</span>
-          <span class="text-sm text-muted">${countNodes(block.nodes)} step${countNodes(block.nodes) !== 1 ? 's' : ''}</span>
+          <span class="ic-badge">${escHtml(block.category || t('bkb.generalCategory'))}</span>
+          <span class="text-sm text-muted">${t('bkb.stepCount', { count: countNodes(block.nodes) })}</span>
           <span class="text-sm text-muted" style="margin-left:auto">${updated}</span>
         </div>
       </div>
       <div class="bkb-card-actions">
-        <button class="btn-icon bkb-card-edit" data-id="${block.id}" title="${block.isSystem ? 'View' : 'Edit'}">
+        <button class="btn-icon bkb-card-edit" data-id="${block.id}" title="${block.isSystem ? t('bkb.view') : t('bkb.edit')}">
           <span class="material-symbols-outlined">${block.isSystem ? 'visibility' : 'edit'}</span>
         </button>
-        <button class="btn-icon bkb-card-clone" data-id="${block.id}" title="Clone">
+        <button class="btn-icon bkb-card-clone" data-id="${block.id}" title="${t('bkb.clone')}">
           <span class="material-symbols-outlined">content_copy</span>
         </button>
-        ${!block.isSystem ? `<button class="btn-icon bkb-card-delete" data-id="${block.id}" title="Delete">
+        ${!block.isSystem ? `<button class="btn-icon bkb-card-delete" data-id="${block.id}" title="${t('bkb.delete')}">
           <span class="material-symbols-outlined" style="color:var(--ps-red)">delete</span>
         </button>` : ''}
       </div>
@@ -159,23 +160,23 @@ async function renderEditor(container, blockId) {
               <span class="material-symbols-outlined">widgets</span>
               ${escHtml(block.name)}
             </div>
-            <span class="ic-badge ic-badge--blue" style="font-size:11px">System</span>
+            <span class="ic-badge ic-badge--blue" style="font-size:11px">${t('bkb.system')}</span>
           </div>
           <button class="btn-primary" id="bkb-clone-system">
             <span class="material-symbols-outlined">content_copy</span>
-            Clone to Edit
+            ${t('bkb.cloneToEdit')}
           </button>
         </div>
         <div class="bkb-readonly-body">
           <div class="bkb-readonly-info">
             <div class="text-sm text-muted" style="margin-bottom:8px">${escHtml(block.description || '')}</div>
             <div class="flex items-center gap-2" style="margin-bottom:16px">
-              <span class="ic-badge">${escHtml(block.category || 'General')}</span>
-              <span class="text-sm text-muted">${countNodes(block.nodes)} step${countNodes(block.nodes) !== 1 ? 's' : ''}</span>
+              <span class="ic-badge">${escHtml(block.category || t('bkb.generalCategory'))}</span>
+              <span class="text-sm text-muted">${t('bkb.stepCount', { count: countNodes(block.nodes) })}</span>
             </div>
             <div class="bkb-readonly-notice">
               <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-blue)">lock</span>
-              System blocks are read-only. Clone this block to create your own editable copy.
+              ${t('bkb.readonlyNotice')}
             </div>
           </div>
           <div class="bld-node-list bkb-readonly-nodes">
@@ -188,7 +189,7 @@ async function renderEditor(container, blockId) {
     container.querySelector('#bkb-back')?.addEventListener('click', () => navigate('#bkb'));
     container.querySelector('#bkb-clone-system')?.addEventListener('click', async () => {
       const clone = await cloneBlock(block.id);
-      window.AuroraToast?.show({ variant: 'success', title: `"${clone.name}" created`, description: 'You can now edit this block.' });
+      window.AuroraToast?.show({ variant: 'success', title: t('bkb.created', { name: clone.name }), description: t('bkb.createdDesc') });
       navigate(`#bkb?id=${clone.id}`);
     });
     return;
@@ -207,13 +208,13 @@ async function renderEditor(container, blockId) {
           </button>
           <div class="screen-title">
             <span class="material-symbols-outlined">widgets</span>
-            <span id="bkb-header-name">${escHtml(draft.name) || 'Untitled Block'}</span>
+            <span id="bkb-header-name">${escHtml(draft.name) || t('bkb.untitledBlock')}</span>
           </div>
           <span id="bkb-save-status" class="text-sm text-muted" style="margin-left:4px"></span>
         </div>
         <button class="btn-primary" id="bkb-save-btn">
           <span class="material-symbols-outlined">save</span>
-          Save Block
+          ${t('bkb.saveBlock')}
         </button>
       </div>
 
@@ -221,25 +222,25 @@ async function renderEditor(container, blockId) {
         <!-- Left: meta -->
         <div class="bld-config">
           <div class="bld-config-form">
-            <label class="ic-label">Name</label>
+            <label class="ic-label">${t('bkb.name')}</label>
             <input type="text" id="bkb-name" class="ic-input" value="${escHtml(draft.name)}">
 
-            <label class="ic-label" style="margin-top:12px">Description</label>
+            <label class="ic-label" style="margin-top:12px">${t('bkb.description')}</label>
             <textarea id="bkb-desc" class="ic-input" rows="3">${escHtml(draft.description || '')}</textarea>
 
-            <label class="ic-label" style="margin-top:12px">Category</label>
-            <input type="text" id="bkb-cat" class="ic-input" value="${escHtml(draft.category || 'General')}" placeholder="e.g. Color, Privacy…">
+            <label class="ic-label" style="margin-top:12px">${t('bkb.category')}</label>
+            <input type="text" id="bkb-cat" class="ic-input" value="${escHtml(draft.category || 'General')}" placeholder="${t('bkb.categoryPlaceholder')}">
           </div>
         </div>
 
         <!-- Right: nodes -->
         <div class="bld-nodes-panel">
           <div class="bld-nodes-header">
-            <span class="text-sm font-medium">Steps</span>
-            <span id="bkb-count" class="text-sm text-muted">${draft.nodes.length} step${draft.nodes.length !== 1 ? 's' : ''}</span>
+            <span class="text-sm font-medium">${t('bkb.steps')}</span>
+            <span id="bkb-count" class="text-sm text-muted">${t('bkb.stepCount', { count: draft.nodes.length })}</span>
             <button class="btn-primary" id="bkb-add-node" style="margin-left:auto">
               <span class="material-symbols-outlined">add</span>
-              Add Step
+              ${t('bkb.addStep')}
             </button>
           </div>
           <div id="bkb-node-list" class="bld-node-list">
@@ -253,7 +254,7 @@ async function renderEditor(container, blockId) {
     <div id="bkb-add-modal" class="bld-modal-overlay" style="display:none">
       <div class="bld-modal">
         <div class="bld-modal-header">
-          <span class="bld-modal-title">Add Step</span>
+          <span class="bld-modal-title">${t('bkb.addStep')}</span>
           <button class="btn-icon" id="bkb-modal-close"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="bld-add-body">
@@ -261,10 +262,10 @@ async function renderEditor(container, blockId) {
             <div class="bld-add-section">
               <div class="bld-add-cat">${cat}</div>
               <div class="bld-add-grid">
-                ${transforms.map(t => `
-                  <button class="bld-add-item" data-tid="${t.id}">
-                    <span class="material-symbols-outlined" style="font-size:18px">${t.icon || 'tune'}</span>
-                    <span class="bld-add-item-name">${t.name}</span>
+                ${transforms.map(tr => `
+                  <button class="bld-add-item" data-tid="${tr.id}">
+                    <span class="material-symbols-outlined" style="font-size:18px">${tr.icon || 'tune'}</span>
+                    <span class="bld-add-item-name">${tr.name}</span>
                   </button>`).join('')}
               </div>
             </div>`).join('')}
@@ -276,15 +277,15 @@ async function renderEditor(container, blockId) {
 
   const status = container.querySelector('#bkb-save-status');
 
-  function markDirty() { if (status) status.textContent = 'Unsaved…'; }
+  function markDirty() { if (status) status.textContent = t('bkb.unsaved'); }
 
   async function doSave() {
     draft.name        = container.querySelector('#bkb-name')?.value || draft.name;
     draft.description = container.querySelector('#bkb-desc')?.value || '';
     draft.category    = container.querySelector('#bkb-cat')?.value  || 'General';
     await saveBlock(draft);
-    if (status) status.textContent = 'Saved';
-    window.AuroraToast?.show({ variant: 'success', title: 'Block saved' });
+    if (status) status.textContent = t('bkb.saved');
+    window.AuroraToast?.show({ variant: 'success', title: t('bkb.blockSaved') });
   }
 
   container.querySelector('#bkb-back')?.addEventListener('click', async () => { await doSave(); navigate('#bkb'); });
@@ -296,7 +297,7 @@ async function renderEditor(container, blockId) {
   const headerName = container.querySelector('#bkb-header-name');
   nameInput?.addEventListener('input', () => {
     markDirty();
-    if (headerName) headerName.textContent = nameInput.value || 'Untitled Block';
+    if (headerName) headerName.textContent = nameInput.value || t('bkb.untitledBlock');
   });
   container.querySelector('#bkb-desc')?.addEventListener('input', markDirty);
   container.querySelector('#bkb-cat')?.addEventListener('input', markDirty);
@@ -324,7 +325,7 @@ async function renderEditor(container, blockId) {
     const countEl = container.querySelector('#bkb-count');
     if (listEl) { listEl.innerHTML = renderNodeList(draft.nodes); bindNodeActions(); }
     const realCount = countNodes(draft.nodes);
-    if (countEl) countEl.textContent = `${realCount} step${realCount !== 1 ? 's' : ''}`;
+    if (countEl) countEl.textContent = t('bkb.stepCount', { count: realCount });
   }
 
   function bindNodeActions() {
@@ -333,9 +334,9 @@ async function renderEditor(container, blockId) {
         e.stopPropagation();
         const id = btn.dataset.id;
         const confirmed = await showConfirm({
-          title: 'Remove Step?',
-          body: 'This will remove the selected transformation from the block.',
-          confirmText: 'Remove',
+          title: t('bkb.removeStepTitle'),
+          body: t('bkb.removeStepBody'),
+          confirmText: t('bkb.remove'),
           variant: 'danger',
           icon: 'delete_sweep'
         });
@@ -357,7 +358,7 @@ function renderNodeList(nodes) {
   const items = flattenNodes(nodes);
   if (!items.length) return `<div class="empty-state" style="padding:32px">
     <span class="material-symbols-outlined">account_tree</span>
-    <div class="empty-state-title">No steps yet</div></div>`;
+    <div class="empty-state-title">${t('bkb.noStepsYet')}</div></div>`;
 
   return items.map(item => {
     const { node, depth, isBranchHeader } = item;
@@ -375,7 +376,7 @@ function renderNodeList(nodes) {
       <div class="bld-node-row" style="padding-left:${8 + depth * 16}px">
         <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-blue)">${def?.icon || 'tune'}</span>
         <span style="flex:1;font-size:13px">${label}</span>
-        <button class="btn-icon bkb-del-node" data-id="${node.id}" title="Remove">
+        <button class="btn-icon bkb-del-node" data-id="${node.id}" title="${t('bkb.remove')}">
           <span class="material-symbols-outlined" style="font-size:14px;color:var(--ps-red)">delete</span>
         </button>
       </div>`;

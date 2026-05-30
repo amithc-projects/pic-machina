@@ -11,17 +11,17 @@
  * Usage pattern in each screen:
  *
  *   // 1. Track navigations
- *   sk.addEventListener('sidekick:workspace', (e) => {
+ *   sk.addEventListener('filebrowser:workspace', (e) => {
  *     trackWorkspaceChange(e.detail.folderName, e.detail.pathLength);
  *   });
  *
  *   // 2. Track selected file
- *   sk.addEventListener('sidekick:file-focus', (e) => {
+ *   sk.addEventListener('filebrowser:file-focus', (e) => {
  *     setSelectedFile(e.detail?.filename || null);
  *   });
  *
  *   // 3. On ready, restore state
- *   sk.addEventListener('sidekick:ready', async () => {
+ *   sk.addEventListener('filebrowser:ready', async () => {
  *     const initHandle = await getFolder('input').catch(() => null);
  *     if (!initHandle) return;
  *     const { subPath, selectedFilename } = getFolderState();
@@ -31,19 +31,19 @@
  *       setFolderPath(subPath);
  *       const onRoot = (e) => {
  *         if (e.detail?.pathLength !== 1) return;
- *         sk.removeEventListener('sidekick:workspace', onRoot);
+ *         sk.removeEventListener('filebrowser:workspace', onRoot);
  *         const pathStr = subPath.join('/');
  *         sk.navigate(pathStr, selectedFilename ? { filename: selectedFilename } : undefined)
  *           .catch(() => {});
  *       };
- *       sk.addEventListener('sidekick:workspace', onRoot);
+ *       sk.addEventListener('filebrowser:workspace', onRoot);
  *     }
  *   }, { once: true });
  */
 
 /**
  * Map a zumilabs-studio recipe's `inputType` field to the comma-separated
- * `allowed-types` attribute string consumed by <sidekick-manager>.
+ * `allowed-types` attribute string consumed by <zumilabs-file-browser>.
  *
  *   recipe.inputType  | allowed-types
  *   ──────────────────┼─────────────────────
@@ -87,7 +87,7 @@ try {
 } catch (e) {}
 
 /**
- * Call from a sidekick:workspace listener to keep the path in sync.
+ * Call from a filebrowser:workspace listener to keep the path in sync.
  *   folderName = e.detail.folderName
  *   pathLength = e.detail.pathLength
  *   pathNames  = e.detail.pathNames  (optional — full names array from sidekick,
@@ -132,7 +132,7 @@ export function setFolderPath(pathArray) {
 }
 
 /**
- * Call from a sidekick:file-focus listener.
+ * Call from a filebrowser:file-focus listener.
  */
 export function setSelectedFile(filename) {
   _selectedFilename = filename || null;
@@ -179,9 +179,9 @@ export function getFolderState(label = '?') {
 }
 
 /**
- * Wire folder-state tracking + restoration onto a sidekick-manager element.
+ * Wire folder-state tracking + restoration onto a zumilabs-file-browser element.
  *
- * @param {HTMLElement} sk        The <sidekick-manager> element.
+ * @param {HTMLElement} sk        The <zumilabs-file-browser> element.
  * @param {Function}    getHandle Async fn that returns the root FileSystemDirectoryHandle.
  * @param {Object}      [opts]
  * @param {Function}    [opts.onWorkspace]    Extra callback after trackWorkspaceChange.
@@ -209,7 +209,7 @@ export function wireFolderState(sk, getHandle, {
   label = '?',
 } = {}) {
   // ── Ongoing navigation tracking ──────────────────────────
-  sk.addEventListener('sidekick:workspace', (e) => {
+  sk.addEventListener('filebrowser:workspace', (e) => {
     // Ignore workspace events from a sidekick that is being torn down — the
     // React app inside resets its path stack to [] on unmount, which would
     // corrupt the shared state right before the next screen reads it.
@@ -219,13 +219,13 @@ export function wireFolderState(sk, getHandle, {
     onWorkspace?.(e);
   });
 
-  sk.addEventListener('sidekick:file-focus', (e) => {
+  sk.addEventListener('filebrowser:file-focus', (e) => {
     if (!skipTracking) setSelectedFile(e.detail?.filename || null);
     onFileFocus?.(e);
   });
 
   // ── Restore on ready ─────────────────────────────────────
-  sk.addEventListener('sidekick:ready', async () => {
+  sk.addEventListener('filebrowser:ready', async () => {
     console.log(`[folder-state] READY [${label}]`);
     const handle = await getHandle().catch(() => null);
     if (!handle) { console.log(`[folder-state] READY [${label}] — no handle, skipping restore`); return; }
@@ -246,13 +246,13 @@ export function wireFolderState(sk, getHandle, {
       }
       const onRoot = (e) => {
         if (e.detail?.pathLength !== 1) return;
-        sk.removeEventListener('sidekick:workspace', onRoot);
+        sk.removeEventListener('filebrowser:workspace', onRoot);
         console.log(`[folder-state] RESTORE [${label}] root confirmed, navigating to "${targetPath}"`);
         sk.navigate(targetPath, targetFile ? { filename: targetFile } : undefined)
           .catch(err => console.warn(`[folder-state] RESTORE [${label}] navigate failed`, err))
           .finally(resolve);
       };
-      sk.addEventListener('sidekick:workspace', onRoot);
+      sk.addEventListener('filebrowser:workspace', onRoot);
       sk.setRoot(handle);
     });
 

@@ -8,6 +8,7 @@ import { WebGLCompositor, TRANSITIONS } from '../engine/stitcher.js';
 import { formatBytes } from '../utils/misc.js';
 import { TimelineView } from '../components/timeline-view.js';
 import JSZip from 'jszip';
+import { t as i18n } from '../i18n/index.js';
 
 let currentTimeline = null;
 let currentProjectDirHandle = null;
@@ -98,8 +99,8 @@ function injectTmeStyles() {
           <p style="margin-bottom:16px;color:var(--ps-text-muted);font-size:13px;line-height:1.4;">${message}</p>
           ${inputHtml}
           <div style="display:flex;justify-content:flex-end;gap:8px;">
-            <button id="tme-btn-dialog-cancel" class="btn-ghost">Cancel</button>
-            <button id="tme-btn-dialog-confirm" class="${type === 'confirm' ? 'btn-danger' : 'btn-primary'}">OK</button>
+            <button id="tme-btn-dialog-cancel" class="btn-ghost">${i18n('tme.cancel')}</button>
+            <button id="tme-btn-dialog-confirm" class="${type === 'confirm' ? 'btn-danger' : 'btn-primary'}">${i18n('tme.ok')}</button>
           </div>
         </div>
       `;
@@ -134,8 +135,8 @@ export async function render(container) {
     container.innerHTML = `
       <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%;">
         <div style="text-align:center;">
-           <h2 style="font-size:24px; margin-bottom:8px;">Timeline Editor</h2>
-           <p class="text-muted" style="font-size:14px;">Select or create a project to get started.</p>
+           <h2 style="font-size:24px; margin-bottom:8px;">${i18n('tme.timelineEditor')}</h2>
+           <p class="text-muted" style="font-size:14px;">${i18n('tme.selectOrCreate')}</p>
         </div>
         <div id="tme-workspace-root" style="width:100%; max-width:800px; display:flex; flex-direction:column; gap:16px;"></div>
       </div>
@@ -149,9 +150,9 @@ export async function render(container) {
           rootEl.innerHTML = `
             <div style="display:flex; flex-direction:column; align-items:center; padding:48px; border:2px dashed var(--ps-border); border-radius:12px; background:var(--ps-surface);">
                <span class="material-symbols-outlined text-muted" style="font-size:48px; margin-bottom:16px;">folder_open</span>
-               <h3 style="margin-bottom:8px;">No Workspace Selected</h3>
-               <p class="text-muted" style="margin-bottom:24px; text-align:center;">A workspace is a local folder on your computer where all your video projects will be stored.</p>
-               <button class="btn-primary" id="tme-btn-set-workspace">Select Workspace Folder</button>
+               <h3 style="margin-bottom:8px;">${i18n('tme.noWorkspaceSelected')}</h3>
+               <p class="text-muted" style="margin-bottom:24px; text-align:center;">${i18n('tme.workspaceDesc')}</p>
+               <button class="btn-primary" id="tme-btn-set-workspace">${i18n('tme.selectWorkspaceFolder')}</button>
             </div>
           `;
           rootEl.querySelector('#tme-btn-set-workspace').onclick = async () => {
@@ -159,28 +160,28 @@ export async function render(container) {
                 workspaceHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                 await setWorkspaceRoot(workspaceHandle);
                 renderWorkspace();
-             } catch(e) { if(e.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+             } catch(e) { if(e.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: i18n('tme.error'), description: e.message }); }
           };
           return;
        }
        
        if (!(await verifyPermission(workspaceHandle, true))) {
-          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">Permission required to access Workspace.</p><button class="btn-primary" id="tme-btn-grant">Grant Permission</button></div>`;
+          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">${i18n('tme.permissionRequired')}</p><button class="btn-primary" id="tme-btn-grant">${i18n('tme.grantPermission')}</button></div>`;
           rootEl.querySelector('#tme-btn-grant').onclick = async () => {
              if (await verifyPermission(workspaceHandle, true)) renderWorkspace();
           };
           return;
        }
        
-       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> Scanning workspace...</div>`;
+       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> ${i18n('tme.scanningWorkspace')}</div>`;
        const projects = await scanWorkspaceProjects(workspaceHandle);
        
        // Sort by recent? They don't have lastOpened natively unless we read it from db, but let's just sort by title
        projects.sort((a,b) => (b.projectData.title || b.projectData.name || '').localeCompare(a.projectData.title || a.projectData.name || ''));
        
        let gridHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> Workspace: <b>${workspaceHandle.name}</b></div>
-         <button class="btn-ghost btn-sm" id="tme-btn-change-workspace" title="Change Workspace"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> ${i18n('tme.workspaceLabel')} <b>${workspaceHandle.name}</b></div>
+         <button class="btn-ghost btn-sm" id="tme-btn-change-workspace" title="${i18n('tme.changeWorkspace')}"><span class="material-symbols-outlined text-[16px]">edit</span></button>
        </div>`;
        
        gridHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">`;
@@ -189,7 +190,7 @@ export async function render(container) {
        gridHtml += `
          <button id="tme-btn-new-project" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:rgba(255,255,255,0.02); border:2px dashed var(--ps-border); border-radius:12px; cursor:pointer; color:var(--ps-text-muted); transition:0.2s;" onmouseover="this.style.color='var(--ps-blue)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.color='var(--ps-text-muted)'; this.style.borderColor='var(--ps-border)';">
            <span class="material-symbols-outlined" style="font-size:32px; margin-bottom:8px;">add_circle</span>
-           <span style="font-size:14px; font-weight:600;">New Project</span>
+           <span style="font-size:14px; font-weight:600;">${i18n('tme.newProject')}</span>
          </button>
        `;
        
@@ -202,7 +203,7 @@ export async function render(container) {
            <div class="tme-project-card" data-index="${i}" style="display:flex; flex-direction:column; padding:12px; background:var(--ps-surface); border:1px solid var(--ps-border); border-radius:12px; cursor:pointer; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.background='var(--ps-surface)'; this.style.borderColor='var(--ps-border)';">
               ${thumb}
               <span style="font-size:14px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${title}</span>
-              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${p.projectData.mediaPool?.length || 0} assets</span>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${i18n('tme.assetsCount', { count: p.projectData.mediaPool?.length || 0 })}</span>
            </div>
          `;
        });
@@ -219,7 +220,7 @@ export async function render(container) {
        };
        
        rootEl.querySelector('#tme-btn-new-project').onclick = async () => {
-          const name = await showDialog({ type: 'prompt', title: 'New Project', message: 'Project Name:' });
+          const name = await showDialog({ type: 'prompt', title: i18n('tme.newProject'), message: i18n('tme.projectNameLabel') });
           if (!name) return;
           try {
              const dirHandle = await createProjectInWorkspace(workspaceHandle, name, createEmptyTimeline());
@@ -228,7 +229,7 @@ export async function render(container) {
              currentTimeline = JSON.parse(await file.text());
              currentProjectDirHandle = dirHandle;
              render(container);
-          } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+          } catch(e) { window.AuroraToast?.show({ variant: 'error', title: i18n('tme.error'), description: e.message }); }
        };
        
        rootEl.querySelectorAll('.tme-project-card').forEach(card => {
@@ -258,7 +259,7 @@ export async function render(container) {
                   }
                }
                render(container);
-             } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: 'Could not open project. Error: ' + e.message }); }
+             } catch(e) { window.AuroraToast?.show({ variant: 'error', title: i18n('tme.error'), description: i18n('tme.couldNotOpenProject', { error: e.message }) }); }
           };
        });
     };
@@ -323,21 +324,21 @@ export async function render(container) {
       <div class="screen-header">
         <div class="screen-title">
           <span class="material-symbols-outlined">view_timeline</span>
-          Timeline Editor — 
+          ${i18n('tme.timelineEditor')} —
           <span contenteditable="true" id="tme-project-name" style="font-weight: 400; color: var(--ps-text-muted); margin-left: 4px; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--ps-border)'" onblur="this.style.borderColor='transparent'">${currentTimeline.name}</span>
         </div>
         <div class="flex gap-2">
           <button class="btn-secondary" id="tme-btn-new">
-            <span class="material-symbols-outlined">add_box</span> New
+            <span class="material-symbols-outlined">add_box</span> ${i18n('tme.new')}
           </button>
           <button class="btn-secondary" id="tme-btn-open">
-            <span class="material-symbols-outlined">folder_open</span> Open
+            <span class="material-symbols-outlined">folder_open</span> ${i18n('tme.open')}
           </button>
           <button class="btn-secondary" id="tme-btn-save">
-            <span class="material-symbols-outlined">save</span> Save Project
+            <span class="material-symbols-outlined">save</span> ${i18n('tme.saveProject')}
           </button>
           <button class="btn-secondary" id="tme-btn-export">
-            <span class="material-symbols-outlined">ios_share</span> Export
+            <span class="material-symbols-outlined">ios_share</span> ${i18n('tme.export')}
           </button>
         </div>
       </div>
@@ -352,14 +353,14 @@ export async function render(container) {
             <div id="tme-fsa-browser-panel" style="flex: 3.5; min-height: 480px; display: none; flex-direction: column; border-bottom: 1px solid var(--ps-border);"></div>
 
             <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <span class="panel-header-title">Media Pool</span>
+              <span class="panel-header-title">${i18n('tme.mediaPool')}</span>
               <div style="display: flex; gap: 4px;">
-                <button class="btn-ghost" id="tme-btn-remove-media" title="Remove Selected Media" style="color: var(--ps-danger); padding: 4px; opacity: 0.3; cursor: not-allowed;" disabled>
+                <button class="btn-ghost" id="tme-btn-remove-media" title="${i18n('tme.removeSelectedMedia')}" style="color: var(--ps-danger); padding: 4px; opacity: 0.3; cursor: not-allowed;" disabled>
                   <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
                 </button>
 
-                <button class="btn-ghost" id="tme-btn-import-folder" title="Import Folder" style="padding: 4px;"><span class="material-symbols-outlined" style="font-size: 20px;">snippet_folder</span></button>
-                <button class="btn-ghost" id="tme-btn-add-media" title="Import Media Files" style="padding: 4px;">
+                <button class="btn-ghost" id="tme-btn-import-folder" title="${i18n('tme.importFolder')}" style="padding: 4px;"><span class="material-symbols-outlined" style="font-size: 20px;">snippet_folder</span></button>
+                <button class="btn-ghost" id="tme-btn-add-media" title="${i18n('tme.importMediaFiles')}" style="padding: 4px;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
                 </button>
               </div>
@@ -384,10 +385,10 @@ export async function render(container) {
           <div class="panel-right" style="width: 260px; border-left: 1px solid var(--ps-border); display: flex; flex-direction: column;">
             <div class="panel-header" id="tme-effects-header" style="flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; cursor: pointer;">
               <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <span class="panel-header-title">Effects</span>
+                <span class="panel-header-title">${i18n('tme.effects')}</span>
                 <span class="material-symbols-outlined" id="tme-effects-chevron" style="font-size: 16px;">expand_more</span>
               </div>
-              <input type="text" id="tme-effects-search" placeholder="Search effects..." class="ic-input" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.2);">
+              <input type="text" id="tme-effects-search" placeholder="${i18n('tme.searchEffects')}" class="ic-input" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.2);">
             </div>
             <div class="panel-body" id="tme-effects-pool" style="flex: 1; overflow-y: auto; padding-bottom: 8px; padding-top: 8px;">
               <!-- Render list of available effects here -->
@@ -395,10 +396,10 @@ export async function render(container) {
 
             <!-- Properties Panel -->
             <div class="panel-header" style="flex-shrink: 0; border-top: 1px solid var(--ps-border);">
-              <span class="panel-header-title">Properties</span>
+              <span class="panel-header-title">${i18n('tme.properties')}</span>
             </div>
             <div class="panel-body" id="tme-properties-panel" style="height: 45%; overflow-y: auto; background: var(--ps-bg-surface);">
-              <div class="text-sm text-muted" style="padding: 12px;">Select an effect block to view properties.</div>
+              <div class="text-sm text-muted" style="padding: 12px;">${i18n('tme.selectEffectBlock')}</div>
             </div>
           </div>
 
@@ -428,7 +429,7 @@ export async function render(container) {
     }
 
     if ((e.key === 'Backspace' || e.key === 'Delete') && timelineView && timelineView.selectedClips.size > 0) {
-        if (!(await showDialog({ title: 'Delete Items', message: 'Are you sure you want to delete the selected items?' }))) return;
+        if (!(await showDialog({ title: i18n('tme.deleteItems'), message: i18n('tme.deleteItemsBody') }))) return;
         
         currentTimeline.videoTracks.forEach(t => {
             t.blocks = t.blocks.filter(b => !timelineView.selectedClips.has(b.id));
@@ -460,8 +461,8 @@ export async function render(container) {
       poolContainer.innerHTML = `
         <div class="empty-state" style="width: 100%;">
           <span class="material-symbols-outlined">perm_media</span>
-          <div class="empty-state-title">No Media</div>
-          <div class="empty-state-desc">Click '+' or drag files here to add media.</div>
+          <div class="empty-state-title">${i18n('tme.noMedia')}</div>
+          <div class="empty-state-desc">${i18n('tme.noMediaDesc')}</div>
         </div>
       `;
       return;
@@ -502,13 +503,13 @@ export async function render(container) {
          const sizeStr = item.meta.size ? formatBytes(item.meta.size) : '';
          let typeStr = '';
          if (item.type === 'video') {
-           typeStr = `Video: ${item.meta.width || '?'}x${item.meta.height || '?'} • ${item.meta.duration ? item.meta.duration.toFixed(1) + 's' : '?s'}`;
+           typeStr = i18n('tme.tooltipVideo', { w: item.meta.width || '?', h: item.meta.height || '?', dur: item.meta.duration ? item.meta.duration.toFixed(1) + 's' : '?s' });
          } else if (item.type === 'image') {
-           typeStr = `Image: ${item.meta.width || '?'}x${item.meta.height || '?'}`;
+           typeStr = i18n('tme.tooltipImage', { w: item.meta.width || '?', h: item.meta.height || '?' });
          } else if (item.type === 'audio') {
-           typeStr = `Audio: ${item.meta.duration ? item.meta.duration.toFixed(1) + 's' : '?s'}`;
+           typeStr = i18n('tme.tooltipAudio', { dur: item.meta.duration ? item.meta.duration.toFixed(1) + 's' : '?s' });
          }
-         tooltip = `${tooltip}\n${typeStr}\nModified: ${dateStr}\nSize: ${sizeStr}`;
+         tooltip = `${tooltip}\n${typeStr}\n${i18n('tme.tooltipModified', { date: dateStr })}\n${i18n('tme.tooltipSize', { size: sizeStr })}`;
       }
       el.title = tooltip;
       
@@ -605,15 +606,15 @@ export async function render(container) {
         btnRemoveMedia.disabled = false;
         btnRemoveMedia.style.opacity = '1';
         btnRemoveMedia.style.cursor = 'pointer';
-        btnRemoveMedia.title = "Remove Selected Media";
+        btnRemoveMedia.title = i18n('tme.removeSelectedMedia');
       } else {
         btnRemoveMedia.disabled = true;
         btnRemoveMedia.style.opacity = '0.3';
         btnRemoveMedia.style.cursor = 'not-allowed';
         if (anySelectedIsUsed) {
-           btnRemoveMedia.title = "Cannot delete media currently used in timeline";
+           btnRemoveMedia.title = i18n('tme.cannotDeleteUsedMedia');
         } else {
-           btnRemoveMedia.title = "Remove Selected Media";
+           btnRemoveMedia.title = i18n('tme.removeSelectedMedia');
         }
       }
     }
@@ -729,7 +730,7 @@ export async function render(container) {
     propsContainer.innerHTML = '';
     
     if (!selectedItemId || (selectedItemType !== 'fx' && selectedItemType !== 'video')) {
-      propsContainer.innerHTML = '<div class="text-sm text-muted" style="padding: 12px;">Select an effect or video block to view properties.</div>';
+      propsContainer.innerHTML = `<div class="text-sm text-muted" style="padding: 12px;">${i18n('tme.selectEffectOrVideo')}</div>`;
       if (isEffectsCollapsed) {
         isEffectsCollapsed = false;
         updateEffectsCollapseState();
@@ -749,11 +750,11 @@ export async function render(container) {
       
       return `
         <div class="panel-header" style="flex-shrink: 0; border-top: 1px solid var(--ps-border); border-bottom: 1px solid var(--ps-border); background: var(--ps-bg-surface);">
-          <span class="panel-header-title text-xs">Transitions</span>
+          <span class="panel-header-title text-xs">${i18n('tme.transitions')}</span>
         </div>
         <div class="ned-fields" style="padding: 12px; background: rgba(0,0,0,0.1);">
           <div class="ned-field">
-            <span class="ned-field-label">Transition In</span>
+            <span class="ned-field-label">${i18n('tme.transitionIn')}</span>
             <div style="display:flex; gap: 8px;">
               <select id="tme-t-in-style" class="ic-input" style="flex: 1; font-size: 11px;">
                 ${styles.map(s => `<option value="${s}" ${tIn.style === s ? 'selected' : ''}>${s}</option>`).join('')}
@@ -763,7 +764,7 @@ export async function render(container) {
             </div>
           </div>
           <div class="ned-field">
-            <span class="ned-field-label">Transition Out</span>
+            <span class="ned-field-label">${i18n('tme.transitionOut')}</span>
             <div style="display:flex; gap: 8px;">
               <select id="tme-t-out-style" class="ic-input" style="flex: 1; font-size: 11px;">
                 ${styles.map(s => `<option value="${s}" ${tOut.style === s ? 'selected' : ''}>${s}</option>`).join('')}
@@ -822,7 +823,7 @@ export async function render(container) {
 
       propsContainer.innerHTML = `
         <div style="padding: 12px; font-size: 12px; color: var(--ps-text-muted);">
-          <strong>Video Clip:</strong> ${name}
+          <strong>${i18n('tme.videoClipLabel')}</strong> ${name}
         </div>
         ${getTransitionHtml(vBlock)}
       `;
@@ -844,11 +845,11 @@ export async function render(container) {
 
       propsContainer.innerHTML = `
         <div style="padding: 12px; font-size: 12px; color: var(--ps-text-muted); border-bottom: 1px solid var(--ps-border);">
-          <strong>Audio Clip:</strong> ${name}
+          <strong>${i18n('tme.audioClipLabel')}</strong> ${name}
         </div>
         <div style="padding: 16px;">
           <div class="ned-field">
-            <div class="ned-field-label">Volume</div>
+            <div class="ned-field-label">${i18n('tme.volume')}</div>
             <div style="display:flex; align-items:center; gap:8px;">
               <input type="range" id="tme-audio-volume" min="0" max="1" step="0.05" value="${aBlock.volume !== undefined ? aBlock.volume : 1}" style="flex:1;">
               <span id="tme-audio-volume-val" style="font-size:11px; width:30px;">${Math.round((aBlock.volume !== undefined ? aBlock.volume : 1) * 100)}%</span>
@@ -885,7 +886,7 @@ export async function render(container) {
     let activeKeyframeIdx = -1;
 
     if (!def || !def.params || def.params.length === 0) {
-      paramsHtml = '<div class="text-sm text-muted" style="padding: 12px;">No configurable properties for this effect.</div>';
+      paramsHtml = `<div class="text-sm text-muted" style="padding: 12px;">${i18n('tme.noConfigurableProps')}</div>`;
     } else {
       if (Array.isArray(fxBlock.keyframes) && fxBlock.keyframes.length > 0) {
         const offset = playheadTime - fxBlock.timelineStart;
@@ -910,10 +911,10 @@ export async function render(container) {
         <div style="display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--ps-border); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);">
           <div style="display:flex; align-items:center; gap: 4px;">
             <button class="btn-icon" id="tme-kf-prev" style="width:20px;height:20px;padding:0;" ${disablePrev ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span></button>
-            <span class="text-xs" style="color:#22d3ee;">${activeKeyframeIdx === -1 ? 'Base Settings' : `Keyframe ${activeKeyframeIdx + 1}`}</span>
+            <span class="text-xs" style="color:#22d3ee;">${activeKeyframeIdx === -1 ? i18n('tme.baseSettings') : i18n('tme.keyframeNum', { num: activeKeyframeIdx + 1 })}</span>
             <button class="btn-icon" id="tme-kf-next" style="width:20px;height:20px;padding:0;" ${disableNext ? 'disabled' : ''}><span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
           </div>
-          <button class="btn-icon" id="tme-kf-delete" style="width:20px;height:20px;padding:0; color:var(--ps-danger); ${activeKeyframeIdx === -1 ? 'display:none;' : ''}" title="Delete Keyframe"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>
+          <button class="btn-icon" id="tme-kf-delete" style="width:20px;height:20px;padding:0; color:var(--ps-danger); ${activeKeyframeIdx === -1 ? 'display:none;' : ''}" title="${i18n('tme.deleteKeyframe')}"><span class="material-symbols-outlined" style="font-size:14px;">delete</span></button>
         </div>
       `;
 
@@ -950,9 +951,9 @@ export async function render(container) {
                 html += `
                   <div style="margin-top: 4px; margin-bottom: 12px; display:flex; flex-direction:column; gap:4px; padding-left: 8px; border-left: 2px solid rgba(167, 139, 250, 0.3);">
                     <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--ps-blue);">
-                      <span><span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle; margin-right:2px;">animation</span> Behavior</span>
+                      <span><span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle; margin-right:2px;">animation</span> ${i18n('tme.behavior')}</span>
                       <select class="tme-behavior-select ic-input" data-param="${p.name}" style="font-size:10px; padding:2px; height:auto; width: 100px;">
-                        <option value="">None</option>
+                        <option value="">${i18n('tme.none')}</option>
                         ${behavOptions}
                       </select>
                     </div>
@@ -1114,7 +1115,7 @@ export async function render(container) {
       const clickX = e.clientX - rect.left + scrollContainer.scrollLeft;
       const clickTime = Math.max(0, clickX / PIXELS_PER_SECOND);
       
-      const gapStr = await showDialog({ type: 'prompt', title: 'Insert Gap', message: `Insert gap at ${clickTime.toFixed(2)}s.\nEnter number of seconds to shift everything forward:`, defaultValue: '1.0' });
+      const gapStr = await showDialog({ type: 'prompt', title: i18n('tme.insertGap'), message: i18n('tme.insertGapBody', { time: clickTime.toFixed(2) }), defaultValue: '1.0' });
       if (!gapStr) return;
       const gap = parseFloat(gapStr);
       if (isNaN(gap) || gap <= 0) return;
@@ -1286,36 +1287,36 @@ export async function render(container) {
           dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:#fff;';
           dialog.innerHTML = `
             <div style="background:var(--ps-bg-surface);border:1px solid var(--ps-border);border-radius:8px;padding:20px;width:340px;">
-              <h3 style="margin:0 0 12px 0;font-size:16px;">Add Track</h3>
-              <p style="margin:0 0 16px 0;font-size:12px;color:var(--ps-text-muted);">Choose the type of track to add:</p>
+              <h3 style="margin:0 0 12px 0;font-size:16px;">${i18n('tme.addTrack')}</h3>
+              <p style="margin:0 0 16px 0;font-size:12px;color:var(--ps-text-muted);">${i18n('tme.chooseTrackType')}</p>
               <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
                 <button class="tme-add-track-choice" data-type="video"
                   style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
                   <span class="material-symbols-outlined" style="color:#3b82f6;">videocam</span>
                   <div>
-                    <div style="font-weight:500;">Video Track</div>
-                    <div style="font-size:11px;color:var(--ps-text-muted);">Layer videos on top of the base track (e.g. transparent overlays)</div>
+                    <div style="font-weight:500;">${i18n('tme.videoTrack')}</div>
+                    <div style="font-size:11px;color:var(--ps-text-muted);">${i18n('tme.videoTrackDesc')}</div>
                   </div>
                 </button>
                 <button class="tme-add-track-choice" data-type="fx"
                   style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
                   <span class="material-symbols-outlined" style="color:#10b981;">auto_awesome</span>
                   <div>
-                    <div style="font-weight:500;">Effect (FX) Track</div>
-                    <div style="font-size:11px;color:var(--ps-text-muted);">Apply timed effects, transforms, and animations</div>
+                    <div style="font-weight:500;">${i18n('tme.fxTrack')}</div>
+                    <div style="font-size:11px;color:var(--ps-text-muted);">${i18n('tme.fxTrackDesc')}</div>
                   </div>
                 </button>
                 <button class="tme-add-track-choice" data-type="audio"
                   style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.3);border-radius:6px;cursor:pointer;color:#fff;text-align:left;">
                   <span class="material-symbols-outlined" style="color:#f472b6;">graphic_eq</span>
                   <div>
-                    <div style="font-weight:500;">Audio Track</div>
-                    <div style="font-size:11px;color:var(--ps-text-muted);">Add music, narration, or sound effects</div>
+                    <div style="font-weight:500;">${i18n('tme.audioTrack')}</div>
+                    <div style="font-size:11px;color:var(--ps-text-muted);">${i18n('tme.audioTrackDesc')}</div>
                   </div>
                 </button>
               </div>
               <div style="display:flex;justify-content:flex-end;gap:8px;">
-                <button id="tme-btn-cancel-add-track" class="btn-ghost">Cancel</button>
+                <button id="tme-btn-cancel-add-track" class="btn-ghost">${i18n('tme.cancel')}</button>
               </div>
             </div>
           `;
@@ -1401,7 +1402,7 @@ export async function render(container) {
             };
 
             if (trackType === 'fx') {
-                addMenuItem('Add Keyframe Here', 'add_location_alt', async () => {
+                addMenuItem(i18n('tme.addKeyframeHere'), 'add_location_alt', async () => {
                    let fxBlock = null;
                    currentTimeline.effectTracks.forEach(t => {
                      const b = t.blocks.find(blk => blk.id === selectedItemId);
@@ -1428,7 +1429,7 @@ export async function render(container) {
                 });
             }
             
-            addMenuItem('Split Clip Here', 'content_cut', async () => {
+            addMenuItem(i18n('tme.splitClipHere'), 'content_cut', async () => {
                 let splitHappened = false;
                 const splitTime = clip.timelineStart + splitOffsetSec;
 
@@ -1485,7 +1486,7 @@ export async function render(container) {
                 }
             });
             
-            addMenuItem('Delete Clip', 'delete', () => timelineView.options.onDeleteSelected());
+            addMenuItem(i18n('tme.deleteClip'), 'delete', () => timelineView.options.onDeleteSelected());
 
             document.body.appendChild(menu);
             const closeMenu = (evt) => {
@@ -1698,8 +1699,8 @@ export async function render(container) {
                         <span class="text-xs font-mono text-muted">${track.name}</span>
                     </div>
                     <div class="actions flex gap-1 items-center">
-                        <span class="material-symbols-outlined text-muted tl-btn-toggle-track" style="font-size:14px; cursor:pointer;" title="Disable Track">visibility</span>
-                        ${track.type !== 'video' ? `<span class="material-symbols-outlined text-muted tl-btn-delete-track" style="font-size:14px; cursor:pointer;" title="Delete Track">delete</span>` : ''}
+                        <span class="material-symbols-outlined text-muted tl-btn-toggle-track" style="font-size:14px; cursor:pointer;" title="${i18n('tme.disableTrack')}">visibility</span>
+                        ${track.type !== 'video' ? `<span class="material-symbols-outlined text-muted tl-btn-delete-track" style="font-size:14px; cursor:pointer;" title="${i18n('tme.deleteTrack')}">delete</span>` : ''}
                     </div>
                 </div>
             `;
@@ -1708,7 +1709,7 @@ export async function render(container) {
             if (btnDel) {
                 btnDel.onclick = async (e) => {
                     e.stopPropagation();
-                    if (!(await showDialog({ title: 'Delete Track', message: `Delete track ${track.name}?` }))) return;
+                    if (!(await showDialog({ title: i18n('tme.deleteTrack'), message: i18n('tme.deleteTrackBody', { name: track.name }) }))) return;
                     currentTimeline.audioTracks = currentTimeline.audioTracks.filter(t => t.id !== track.id);
                     currentTimeline.effectTracks = currentTimeline.effectTracks.filter(t => t.id !== track.id);
                     await saveTimeline(currentTimeline, currentProjectDirHandle);
@@ -1990,7 +1991,7 @@ export async function render(container) {
          ...currentTimeline.effectTracks.flatMap(t => t.blocks.map(b => b.timelineStart + b.duration)),
          0
       );
-      if (maxTime === 0) { window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: "Timeline is empty!" }); return; }
+      if (maxTime === 0) { window.AuroraToast?.show({ variant: 'warning', title: i18n('tme.notice'), description: i18n('tme.timelineEmpty') }); return; }
 
       // Find the first video clip's resolution (across all video tracks, V1 first)
       let defaultW = currentTimeline.width || 1920;
@@ -2009,24 +2010,24 @@ export async function render(container) {
       dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:#fff;font-family:Inter,sans-serif;';
       dialog.innerHTML = `
         <div style="background:var(--ps-bg-surface);border:1px solid var(--ps-border);border-radius:8px;padding:24px;width:320px;">
-          <h3 style="margin-bottom:16px;">Export Settings</h3>
+          <h3 style="margin-bottom:16px;">${i18n('tme.exportSettings')}</h3>
           <div style="margin-bottom:12px;">
-            <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">Resolution (WxH)</label>
+            <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">${i18n('tme.resolution')}</label>
             <input type="text" id="tme-export-res" class="ic-input" value="${defaultW}x${defaultH}" style="width:100%; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--ps-border); border-radius:4px; color:#fff;">
           </div>
           <div style="display:flex;gap:12px;margin-bottom:20px;">
             <div style="flex:1;">
-              <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">Start Time (s)</label>
+              <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">${i18n('tme.startTime')}</label>
               <input type="number" id="tme-export-start" class="ic-input" value="0" min="0" step="0.1" style="width:100%; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--ps-border); border-radius:4px; color:#fff;">
             </div>
             <div style="flex:1;">
-              <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">End Time (s)</label>
+              <label style="display:block;font-size:11px;color:#a1a1aa;margin-bottom:4px;">${i18n('tme.endTime')}</label>
               <input type="number" id="tme-export-end" class="ic-input" value="${maxTime.toFixed(1)}" min="0" step="0.1" style="width:100%; padding:8px; background:rgba(0,0,0,0.2); border:1px solid var(--ps-border); border-radius:4px; color:#fff;">
             </div>
           </div>
           <div style="display:flex;justify-content:flex-end;gap:8px;">
-            <button id="tme-export-cancel" class="btn-ghost" style="padding:8px 16px;">Cancel</button>
-            <button id="tme-export-confirm" class="btn-primary" style="padding:8px 16px;">Export</button>
+            <button id="tme-export-cancel" class="btn-ghost" style="padding:8px 16px;">${i18n('tme.cancel')}</button>
+            <button id="tme-export-confirm" class="btn-primary" style="padding:8px 16px;">${i18n('tme.export')}</button>
           </div>
         </div>
       `;
@@ -2040,8 +2041,8 @@ export async function render(container) {
         document.body.removeChild(dialog);
 
         const [parsedW, parsedH] = resStr.toLowerCase().split('x').map(s => parseInt(s.trim(), 10));
-        if (!parsedW || !parsedH) { window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: "Invalid resolution format. Please use WxH (e.g. 1920x1080)." }); return; }
-        if (exportStart >= exportEnd) { window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: "Start time must be before end time." }); return; }
+        if (!parsedW || !parsedH) { window.AuroraToast?.show({ variant: 'warning', title: i18n('tme.notice'), description: i18n('tme.invalidResolution') }); return; }
+        if (exportStart >= exportEnd) { window.AuroraToast?.show({ variant: 'warning', title: i18n('tme.notice'), description: i18n('tme.startBeforeEnd') }); return; }
         
         // Update canvas and timeline with new dimensions
         canvas.width = parsedW;
@@ -2063,7 +2064,7 @@ export async function render(container) {
            const projectNameSafe = (currentTimeline.name || 'export').replace(/[^a-z0-9_\- ]/gi, '').trim().replace(/ +/g, '_').toLowerCase();
            const handle = await window.showSaveFilePicker({
               suggestedName: `${projectNameSafe}.mp4`,
-              types: [{ description: 'MP4 Video', accept: {'video/mp4': ['.mp4']} }],
+              types: [{ description: i18n('tme.mp4Video'), accept: {'video/mp4': ['.mp4']} }],
            });
            fileStream = await handle.createWritable();
         } catch(e) {
@@ -2075,15 +2076,15 @@ export async function render(container) {
         const modal = document.createElement('div');
         modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:Inter, sans-serif;';
         modal.innerHTML = `
-          <h2 style="margin-bottom:10px;">Exporting Video...</h2>
-          <div id="tme-export-progress" style="color:#a1a1aa; margin-bottom:20px;">Preparing Audio Mix...</div>
-          <button id="tme-btn-cancel-export" class="btn-secondary" style="border: 1px solid var(--ps-border); padding:8px 16px; border-radius:4px; background:rgba(0,0,0,0.3); color:#fff;">Cancel Export</button>
+          <h2 style="margin-bottom:10px;">${i18n('tme.exportingVideo')}</h2>
+          <div id="tme-export-progress" style="color:#a1a1aa; margin-bottom:20px;">${i18n('tme.preparingAudioMix')}</div>
+          <button id="tme-btn-cancel-export" class="btn-secondary" style="border: 1px solid var(--ps-border); padding:8px 16px; border-radius:4px; background:rgba(0,0,0,0.3); color:#fff;">${i18n('tme.cancelExport')}</button>
         `;
         document.body.appendChild(modal);
 
         modal.querySelector('#tme-btn-cancel-export').addEventListener('click', () => {
           cancelExport = true;
-          modal.innerHTML = `<h2>Cancelling...</h2>`;
+          modal.innerHTML = `<h2>${i18n('tme.cancelling')}</h2>`;
         });
 
         try {
@@ -2197,7 +2198,7 @@ export async function render(container) {
                      audioData.close();
                      currentSample += size;
                      
-                     modal.querySelector('#tme-export-progress').innerText = `Encoding Audio ${Math.round((currentSample/totalSamples)*100)}%`;
+                     modal.querySelector('#tme-export-progress').innerText = i18n('tme.encodingAudio', { pct: Math.round((currentSample/totalSamples)*100) });
                      await new Promise(r => setTimeout(r, 0));
                   }
                   await audioEncoder.flush();
@@ -2222,7 +2223,7 @@ export async function render(container) {
 
                   // Yield to UI to show progress
                   if (fi % 5 === 0) {
-                    modal.querySelector('#tme-export-progress').innerText = `Rendering Frame ${fi} / ${totalFrames} (${Math.round((fi/totalFrames)*100)}%)`;
+                    modal.querySelector('#tme-export-progress').innerText = i18n('tme.renderingFrame', { fi, total: totalFrames, pct: Math.round((fi/totalFrames)*100) });
                     await new Promise(r => setTimeout(r, 0));
                   }
                 }
@@ -2243,8 +2244,8 @@ export async function render(container) {
           modal.innerHTML = `
             <div style="text-align:center;">
               <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-green); margin-bottom:10px;">check_circle</span>
-              <h2>Export Complete</h2>
-              <button onclick="this.parentElement.parentElement.remove()" class="btn-secondary" style="margin-top:20px; padding:8px 16px; border-radius:4px; background:rgba(255,255,255,0.1); color:#fff; border:none; cursor:pointer;">Close</button>
+              <h2>${i18n('tme.exportComplete')}</h2>
+              <button onclick="this.parentElement.parentElement.remove()" class="btn-secondary" style="margin-top:20px; padding:8px 16px; border-radius:4px; background:rgba(255,255,255,0.1); color:#fff; border:none; cursor:pointer;">${i18n('tme.close')}</button>
             </div>
           `;
         } catch (err) {
@@ -2255,9 +2256,9 @@ export async function render(container) {
             modal.innerHTML = `
               <div style="text-align:center; padding: 20px;">
                 <span class="material-symbols-outlined" style="font-size:48px; color:var(--ps-danger); margin-bottom:10px;">error</span>
-                <h2 style="color:var(--ps-danger); margin-bottom: 10px;">Export Failed</h2>
+                <h2 style="color:var(--ps-danger); margin-bottom: 10px;">${i18n('tme.exportFailed')}</h2>
                 <p style="color:#a1a1aa; max-width:400px; text-align:center; margin-bottom:20px;">${err.message}</p>
-                <button onclick="this.parentElement.parentElement.remove()" style="padding:10px 24px; background:var(--ps-surface); border:1px solid #444; border-radius:6px; color:white; cursor:pointer;">Close</button>
+                <button onclick="this.parentElement.parentElement.remove()" style="padding:10px 24px; background:var(--ps-surface); border:1px solid #444; border-radius:6px; color:white; cursor:pointer;">${i18n('tme.close')}</button>
               </div>
             `;
             console.error(err);
@@ -2274,7 +2275,7 @@ export async function render(container) {
   
   if (btnImportFolder) {
     btnImportFolder.innerHTML = '<span class="material-symbols-outlined" style="font-size: 20px;">folder_special</span>';
-    btnImportFolder.title = 'Asset Browser';
+    btnImportFolder.title = i18n('tme.assetBrowser');
     
     btnImportFolder.addEventListener('click', () => {
       fsaPanelEl.style.display = fsaPanelEl.style.display === 'none' ? 'flex' : 'none';
@@ -2366,7 +2367,7 @@ export async function render(container) {
       const handles = await window.showOpenFilePicker({
         multiple: true,
         types: [{
-          description: 'Images, Video, and Audio',
+          description: i18n('tme.imagesVideoAudio'),
           accept: {
             'image/*': ['.png', '.jpg', '.jpeg', '.webp'],
             'video/*': ['.mp4', '.webm'],
@@ -3012,7 +3013,7 @@ export async function render(container) {
 
   if (btnNew) {
     btnNew.addEventListener('click', async () => {
-      if (await showDialog({ title: 'New Project', message: 'Create a new project? Any unsaved changes will be lost.' })) {
+      if (await showDialog({ title: i18n('tme.newProjectTitle'), message: i18n('tme.newProjectBody') })) {
         if (isPlaying) {
           isPlaying = false;
           btnPlay.innerHTML = '<span class="material-symbols-outlined">play_arrow</span>';
@@ -3035,7 +3036,7 @@ export async function render(container) {
   
   if (btnOpen) {
     btnOpen.addEventListener('click', async () => {
-       if (!(await showDialog({ title: 'Open Project', message: 'Close current project to open another? Unsaved changes will be lost.' }))) return;
+       if (!(await showDialog({ title: i18n('tme.openProjectTitle'), message: i18n('tme.openProjectBody') }))) return;
        
        if (isPlaying) {
          isPlaying = false;
@@ -3063,7 +3064,7 @@ export async function render(container) {
   if (btnSave) {
     btnSave.addEventListener('click', async () => {
       await saveTimeline(currentTimeline, currentProjectDirHandle);
-      window.AuroraToast?.show({ variant: 'success', title: 'Project Saved' });
+      window.AuroraToast?.show({ variant: 'success', title: i18n('tme.projectSaved') });
     });
   }
 

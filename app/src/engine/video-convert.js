@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Video Conversion Utilities
+ * ZumiLabs Studio — Video Conversion Utilities
  *
  * Powered by Mediabunny (https://mediabunny.dev) for the format/codec
  * operations (convert, trim, compress, change-fps).

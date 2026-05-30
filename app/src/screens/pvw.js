@@ -13,6 +13,7 @@ import { getImageInfo, renderImageInfoPanel,
          injectImageInfoStyles }                   from '../utils/image-info.js';
 import { flattenNodes, countNodes }               from '../utils/nodes.js';
 import { getRunsForRecipe }                       from '../data/runs.js';
+import { t }                                      from '../i18n/index.js';
 
 // Node category accent colours (match app.css node-category-tag vars)
 const CAT_COLORS = {
@@ -25,9 +26,9 @@ const CAT_COLORS = {
 };
 
 function nodeTypeLabel(node) {
-  if (node.type === 'branch')      return { icon: 'device_hub',       label: node.label || 'Branch',       cat: 'flow' };
-  if (node.type === 'conditional') return { icon: 'alt_route',        label: node.label || 'Conditional',  cat: 'flow' };
-  if (node.type === 'block-ref')   return { icon: 'widgets',          label: node.label || 'Block Ref',    cat: 'flow' };
+  if (node.type === 'branch')      return { icon: 'device_hub',       label: node.label || t('pvw.nodeBranch'),       cat: 'flow' };
+  if (node.type === 'conditional') return { icon: 'alt_route',        label: node.label || t('pvw.nodeConditional'),  cat: 'flow' };
+  if (node.type === 'block-ref')   return { icon: 'widgets',          label: node.label || t('pvw.nodeBlockRef'),    cat: 'flow' };
   if (node.type === 'transform')   return { icon: 'tune',             label: node.label || node.transformId, cat: node.categoryKey || node.transformId?.split('-')[0] };
   return { icon: 'help_outline', label: node.label || node.type, cat: 'other' };
 }
@@ -35,7 +36,7 @@ function nodeTypeLabel(node) {
 
 function renderNodeList(nodes, previewNodeId) {
   const items = flattenNodes(nodes);
-  if (!items.length) return '<div class="empty-state" style="padding:24px"><div class="empty-state-title">No nodes</div></div>';
+  if (!items.length) return `<div class="empty-state" style="padding:24px"><div class="empty-state-title">${t('pvw.noNodes')}</div></div>`;
   return items.map(({ node, depth, isBranchHeader }) => {
     if (isBranchHeader) {
       return `<div class="pvw-node-row pvw-node-row--header" style="padding-left:${16 + depth * 16}px">
@@ -46,14 +47,14 @@ function renderNodeList(nodes, previewNodeId) {
     const { icon, label, cat } = nodeTypeLabel(node);
     const accent = CAT_COLORS[cat] || '#6b7280';
     const isCurrent = node.id === previewNodeId;
-    return `<div class="pvw-node-row${isCurrent ? ' is-active' : ''}" style="padding-left:${16 + depth * 16}px" data-node-id="${node.id}" title="Click eye to preview up to this step">
+    return `<div class="pvw-node-row${isCurrent ? ' is-active' : ''}" style="padding-left:${16 + depth * 16}px" data-node-id="${node.id}" title="${t('pvw.eyeHint')}">
       <span class="pvw-node-dot" style="background:${isCurrent ? 'var(--ps-blue)' : accent}"></span>
       <span class="material-symbols-outlined" style="font-size:14px;color:${isCurrent ? 'var(--ps-blue)' : accent};flex-shrink:0">${icon}</span>
       <span class="pvw-node-label">${label}</span>
       <button class="pvw-node-eye btn-icon" data-eye-id="${node.id}">
         <span class="material-symbols-outlined">${isCurrent ? 'visibility' : 'visibility_off'}</span>
       </button>
-      ${node.disabled ? '<span class="ic-badge" style="margin-left:auto;font-size:10px">off</span>' : ''}
+      ${node.disabled ? `<span class="ic-badge" style="margin-left:auto;font-size:10px">${t('pvw.off')}</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -73,9 +74,9 @@ export async function render(container, hash) {
       <div class="screen-body" style="align-items:center;justify-content:center">
         <div class="empty-state">
           <span class="material-symbols-outlined">error_outline</span>
-          <div class="empty-state-title">Recipe not found</div>
-          <div class="empty-state-desc">The requested recipe does not exist.</div>
-          <button class="btn-primary" onclick="navigate('#lib')">Back to Library</button>
+          <div class="empty-state-title">${t('pvw.notFound')}</div>
+          <div class="empty-state-desc">${t('pvw.notFoundDesc')}</div>
+          <button class="btn-primary" onclick="navigate('#lib')">${t('pvw.backToLibrary')}</button>
         </div>
       </div>
     </div>`;
@@ -88,7 +89,7 @@ export async function render(container, hash) {
     <div class="screen pvw-screen">
       <div class="screen-header">
         <div class="flex items-center gap-2">
-          <button class="btn-icon" id="pvw-back" title="Back to Library">
+          <button class="btn-icon" id="pvw-back" title="${t('pvw.backToLibrary')}">
             <span class="material-symbols-outlined">arrow_back</span>
           </button>
           <div class="screen-title">
@@ -96,27 +97,27 @@ export async function render(container, hash) {
             ${recipe.name}
           </div>
           ${recipe.isSystem
-            ? '<span class="ic-badge ic-badge--blue"><span class="material-symbols-outlined" style="font-size:11px">lock</span> System</span>'
-            : '<span class="ic-badge ic-badge--green"><span class="material-symbols-outlined" style="font-size:11px">person</span> Yours</span>'}
+            ? `<span class="ic-badge ic-badge--blue"><span class="material-symbols-outlined" style="font-size:11px">lock</span> ${t('pvw.system')}</span>`
+            : `<span class="ic-badge ic-badge--green"><span class="material-symbols-outlined" style="font-size:11px">person</span> ${t('pvw.yours')}</span>`}
         </div>
         <div class="flex items-center gap-2">
-          <button class="btn-secondary" id="pvw-btn-compare" disabled title="Compare requires a test image">
+          <button class="btn-secondary" id="pvw-btn-compare" disabled title="${t('pvw.compareHint')}">
             <span class="material-symbols-outlined">compare</span>
-            Compare
+            ${t('pvw.compare')}
           </button>
           ${recipe.isSystem
             ? `<button class="btn-secondary" id="pvw-btn-clone">
                  <span class="material-symbols-outlined">content_copy</span>
-                 Clone
+                 ${t('pvw.clone')}
                </button>`
             : `<button class="btn-secondary" id="pvw-btn-edit">
                  <span class="material-symbols-outlined">edit</span>
-                 Edit
+                 ${t('pvw.edit')}
                </button>`
           }
           <button class="btn-primary" id="pvw-btn-use">
             <span class="material-symbols-outlined">play_arrow</span>
-            Use Recipe
+            ${t('pvw.useRecipe')}
           </button>
         </div>
       </div>
@@ -127,24 +128,24 @@ export async function render(container, hash) {
           <div class="pvw-meta-card">
             <div class="pvw-cover" style="${getCoverStyle(recipe)}">
               <div class="pvw-cover-overlay">
-                <span class="text-sm text-muted mono">${nodeCount} step${nodeCount !== 1 ? 's' : ''}</span>
+                <span class="text-sm text-muted mono">${t('pvw.stepCount', { count: nodeCount })}</span>
               </div>
             </div>
             <div class="pvw-meta-body">
               ${recipe.description ? `<p class="pvw-desc">${recipe.description}</p>` : ''}
               <div class="pvw-tags" style="margin-bottom:12px">
-                ${(recipe.tags || []).map(t => `<span class="ic-badge">${t}</span>`).join('')}
+                ${(recipe.tags || []).map(tag => `<span class="ic-badge">${tag}</span>`).join('')}
               </div>
               <div id="pvw-history" style="display:none;border-top:1px solid var(--ps-border);padding-top:10px;">
                 <a href="#out?recipe=${recipe.id}" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ps-blue);text-decoration:none;font-weight:500;">
                   <span class="material-symbols-outlined" style="font-size:16px">history</span>
-                  <span id="pvw-history-label">View recent runs</span>
+                  <span id="pvw-history-label">${t('pvw.viewRuns')}</span>
                 </a>
               </div>
             </div>
           </div>
 
-          <div class="pvw-section-title">Steps</div>
+          <div class="pvw-section-title">${t('pvw.steps')}</div>
           <div class="pvw-node-list" id="pvw-node-list">
             ${renderNodeList(recipe.nodes, null)}
           </div>
@@ -185,13 +186,13 @@ export async function render(container, hash) {
 
       const flat = flattenNodes(recipe.nodes);
       const nodeEnt = flat.find(f => f.node.id === previewNodeId);
-      const label = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : 'All Steps';
+      const label = nodeEnt ? (nodeEnt.node.label || nodeEnt.node.transformId || nodeEnt.node.type) : t('pvw.allSteps');
 
       return {
         beforeUrl,
         afterUrl,
-        beforeLabel: 'Original',
-        afterLabel: previewNodeId ? `Up to: ${label}` : 'Result',
+        beforeLabel: t('pvw.original'),
+        afterLabel: previewNodeId ? t('pvw.upTo', { label }) : t('pvw.result'),
         context
       };
     }
@@ -213,7 +214,7 @@ export async function render(container, hash) {
   container.querySelector('#pvw-btn-edit')?.addEventListener('click', () => navigate(`#bld?id=${recipe.id}`));
   container.querySelector('#pvw-btn-clone')?.addEventListener('click', async () => {
     const cloned = await cloneRecipe(recipe.id);
-    window.AuroraToast?.show({ variant: 'success', title: `"${cloned.name}" cloned` });
+    window.AuroraToast?.show({ variant: 'success', title: t('pvw.cloned', { name: cloned.name }) });
     navigate(`#bld?id=${cloned.id}`);
   });
 
@@ -251,7 +252,7 @@ export async function render(container, hash) {
       const histLabel   = container.querySelector('#pvw-history-label');
       if (histSection && histLabel) {
         histSection.style.display = 'block';
-        histLabel.textContent = runs.length === 1 ? 'View 1 recent run' : `View ${runs.length} recent runs`;
+        histLabel.textContent = t('pvw.viewRunsCount', { count: runs.length });
       }
     }
   } catch (err) {

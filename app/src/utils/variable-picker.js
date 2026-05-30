@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Variable Picker Modal
+ * ZumiLabs Studio — Variable Picker Modal
  *
  * Opens a modal listing every {{variable}} token the user could insert into
  * the current input, grouped by source (Built-in, Recipe Vars, File EXIF,
@@ -16,12 +16,13 @@
 
 import { interpolate } from './variables.js';
 import { SIDECAR_SCHEMA_GROUPS } from '../data/sidecar.js';
+import { t as i18n } from '../i18n/index.js';
 
 // ── Built-in tokens that aren't derived from a data source ───
 const BUILTIN_TOKENS = [
-  { token: 'filename', desc: 'Base filename (no extension)' },
-  { token: 'ext',      desc: 'File extension (no dot)' },
-  { token: 'br',       desc: 'Newline (line break)' },
+  { token: 'filename', descKey: 'vp.descFilename' },
+  { token: 'ext',      descKey: 'vp.descExt' },
+  { token: 'br',       descKey: 'vp.descBr' },
 ];
 
 function esc(s) {
@@ -166,25 +167,25 @@ function buildVariableGroups(ctx = {}) {
   const groups = [];
 
   // ── Built-ins ──
-  const builtins = BUILTIN_TOKENS.map(({ token, desc }) => {
+  const builtins = BUILTIN_TOKENS.map(({ token, descKey }) => {
     const resolved = ctx.filename != null ? interpolate(`{{${token}}}`, ctx) : null;
-    return { token, desc, value: resolved };
+    return { token, desc: i18n(descKey), value: resolved };
   });
-  groups.push({ title: 'Built-in', items: builtins, defaultOpen: true });
+  groups.push({ title: i18n('vp.groupBuiltin'), items: builtins, defaultOpen: true });
 
   // ── Recipe Vars ──
   const recipeVars = (ctx.recipeVars || []).map(name => ({
     token: `recipe.${name}`,
     value: ctx.recipe?.[name] != null ? String(ctx.recipe[name]) : null,
   }));
-  if (recipeVars.length) groups.push({ title: 'Recipe Variables', items: recipeVars, defaultOpen: true });
+  if (recipeVars.length) groups.push({ title: i18n('vp.groupRecipeVars'), items: recipeVars, defaultOpen: true });
 
   // ── EXIF (walked recursively so nested like gps.lat show up) ──
   if (ctx.exif && typeof ctx.exif === 'object') {
     const leaves = walkLeaves(ctx.exif).sort((a, b) => a.path.localeCompare(b.path));
     const items = leaves.map(({ path, value }) => ({ token: `exif.${path}`, value }));
     if (items.length) {
-      groups.push({ title: `EXIF (${items.length})`, items, defaultOpen: items.length <= 12 });
+      groups.push({ title: i18n('vp.groupExif', { count: items.length }), items, defaultOpen: items.length <= 12 });
     }
   }
 
@@ -192,23 +193,23 @@ function buildVariableGroups(ctx = {}) {
   if (ctx.xmp && typeof ctx.xmp === 'object') {
     const leaves = walkLeaves(ctx.xmp).sort((a, b) => a.path.localeCompare(b.path));
     const items = leaves.map(({ path, value }) => ({ token: `exif.${path}`, value,
-      desc: 'XMP tag (resolves via exif namespace)' }));
-    if (items.length) groups.push({ title: `XMP (${items.length})`, items, defaultOpen: false });
+      desc: i18n('vp.descXmp') }));
+    if (items.length) groups.push({ title: i18n('vp.groupXmp', { count: items.length }), items, defaultOpen: false });
   }
 
   // ── IPTC ──
   if (ctx.iptc && typeof ctx.iptc === 'object') {
     const leaves = walkLeaves(ctx.iptc).sort((a, b) => a.path.localeCompare(b.path));
     const items = leaves.map(({ path, value }) => ({ token: `meta.${path}`, value,
-      desc: 'IPTC tag (resolves via meta namespace)' }));
-    if (items.length) groups.push({ title: `IPTC (${items.length})`, items, defaultOpen: false });
+      desc: i18n('vp.descIptc') }));
+    if (items.length) groups.push({ title: i18n('vp.groupIptc', { count: items.length }), items, defaultOpen: false });
   }
 
   // ── Meta (arbitrary structured metadata) ──
   if (ctx.meta && typeof ctx.meta === 'object') {
     const leaves = walkLeaves(ctx.meta).sort((a, b) => a.path.localeCompare(b.path));
     const items = leaves.map(({ path, value }) => ({ token: `meta.${path}`, value }));
-    if (items.length) groups.push({ title: `Metadata (${items.length})`, items, defaultOpen: false });
+    if (items.length) groups.push({ title: i18n('vp.groupMetadata', { count: items.length }), items, defaultOpen: false });
   }
 
   // ── Sidecar (mirrors the sidecar-drawer sections so users see the same
@@ -233,7 +234,7 @@ function buildVariableGroups(ctx = {}) {
     });
     const hasValues = items.some(i => i.value != null);
     groups.push({
-      title: `Sidecar — ${grp.title}`,
+      title: i18n('vp.groupSidecar', { title: grp.title }),
       items,
       // Auto-expand when we can show values, otherwise honour the drawer's
       // default-open flag so the overall hierarchy matches.
@@ -251,7 +252,7 @@ function buildVariableGroups(ctx = {}) {
     const filtered = leaves.filter(it => it.token !== 'sidecar.$version');
     if (filtered.length) {
       groups.push({
-        title: `Sidecar — Other (${filtered.length})`,
+        title: i18n('vp.groupSidecarOther', { count: filtered.length }),
         items: filtered.sort((a, b) => a.token.localeCompare(b.token)),
         defaultOpen: false,
       });
@@ -301,30 +302,30 @@ export function openVariablePicker(input, { getVarContext } = {}) {
 
   const contextNoteHtml = (ctx) => {
     const fname = ctx.sourceFilename || (ctx.filename ? `${ctx.filename}${ctx.ext ? '.' + ctx.ext : ''}` : null);
-    if (!fname) return '<div class="vp-context-note">No file context — values will appear when a file is selected.</div>';
-    return `<div class="vp-context-note">Values shown for: <b>${esc(fname)}</b></div>`;
+    if (!fname) return `<div class="vp-context-note">${i18n('vp.noFileContext')}</div>`;
+    return `<div class="vp-context-note">${i18n('vp.valuesShownFor')} <b>${esc(fname)}</b></div>`;
   };
 
   const backdrop = document.createElement('div');
   backdrop.className = 'vp-backdrop';
   backdrop.innerHTML = `
-    <div class="vp-modal" role="dialog" aria-label="Insert variables">
+    <div class="vp-modal" role="dialog" aria-label="${i18n('vp.insertVariables')}">
       <div class="vp-header">
         <span class="material-symbols-outlined" style="color:var(--ps-blue)">data_object</span>
-        <div class="vp-title">Insert Variables</div>
-        <button type="button" class="vp-close" aria-label="Close">
+        <div class="vp-title">${i18n('vp.insertVariables')}</div>
+        <button type="button" class="vp-close" aria-label="${i18n('vp.close')}">
           <span class="material-symbols-outlined" style="font-size:20px">close</span>
         </button>
       </div>
       <div class="vp-ctx-slot"></div>
       <div class="vp-search">
-        <input type="text" placeholder="Search variables..." autocomplete="off">
+        <input type="text" placeholder="${i18n('vp.searchVariables')}" autocomplete="off">
       </div>
       <div class="vp-body"></div>
       <div class="vp-footer">
-        <div class="vp-count">0 selected</div>
-        <button type="button" class="vp-btn vp-btn-cancel">Cancel</button>
-        <button type="button" class="vp-btn vp-btn--primary vp-btn-insert" disabled>Insert</button>
+        <div class="vp-count">${i18n('vp.selectedCount', { count: 0 })}</div>
+        <button type="button" class="vp-btn vp-btn-cancel">${i18n('vp.cancel')}</button>
+        <button type="button" class="vp-btn vp-btn--primary vp-btn-insert" disabled>${i18n('vp.insert')}</button>
       </div>
     </div>`;
 
@@ -378,14 +379,14 @@ export function openVariablePicker(input, { getVarContext } = {}) {
       }
     }
     if (!body.children.length) {
-      body.innerHTML = '<div class="vp-empty-state">No variables available in this context.</div>';
+      body.innerHTML = `<div class="vp-empty-state">${i18n('vp.noVariablesAvailable')}</div>`;
     }
     updateCount();
   }
 
   function updateCount() {
     const selected = body.querySelectorAll('.vp-row input[type=checkbox]:checked');
-    countEl.textContent = `${selected.length} selected`;
+    countEl.textContent = i18n('vp.selectedCount', { count: selected.length });
     btnIns.disabled = selected.length === 0;
     // Update row highlight
     body.querySelectorAll('.vp-row').forEach(r => {
@@ -480,7 +481,7 @@ export function openVariablePicker(input, { getVarContext } = {}) {
   // or after the promise resolves if the caller returned one (e.g. ned.js
   // needs to call getImageInfo() on the current file).
   if (ctxIsPromise) {
-    body.innerHTML = '<div class="vp-empty-state">Loading…</div>';
+    body.innerHTML = `<div class="vp-empty-state">${i18n('vp.loading')}</div>`;
     Promise.resolve(ctxRaw).then(ctx => renderGroups(ctx || {}))
       .catch(() => renderGroups({}));
   } else {

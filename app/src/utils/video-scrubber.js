@@ -14,6 +14,7 @@
  */
 
 import { extractVideoFilmstrip, getVideoDuration } from './video-frame.js';
+import { t as i18n } from '../i18n/index.js';
 
 const STRIP_FRAME_COUNT = 16;
 const STORAGE_KEY = (filename) => `ic-seek:${filename}`;
@@ -45,7 +46,7 @@ export async function mountVideoScrubber(hostEl, file, { initialTime = null, onS
     <div class="vs-root">
       <div class="vs-bar">
         <span class="material-symbols-outlined vs-icon">movie</span>
-        <span class="vs-label">Preview frame: ${file.name}</span>
+        <span class="vs-label">${i18n('vs.previewFrame', { name: file.name })}</span>
         <span class="vs-time" id="vs-time">—</span>
         <span class="vs-dur" id="vs-dur"></span>
       </div>
@@ -155,7 +156,7 @@ export async function mountVideoScrubber(hostEl, file, { initialTime = null, onS
   } catch (err) {
     console.warn('[VideoScrubber] Failed to load filmstrip:', err.message);
     const loadingEl = hostEl.querySelector('.vs-strip-loading');
-    if (loadingEl) loadingEl.innerHTML = '<span style="font-size:11px;color:var(--ps-text-muted);padding:4px">Preview unavailable</span>';
+    if (loadingEl) loadingEl.innerHTML = `<span style="font-size:11px;color:var(--ps-text-muted);padding:4px">${i18n('vs.previewUnavailable')}</span>`;
   }
 
   return {

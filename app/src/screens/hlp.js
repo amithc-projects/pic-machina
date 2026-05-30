@@ -8,6 +8,7 @@
 import { navigate } from '../main.js';
 import { helpCatalog, getHelpRecord } from '../data/help.js';
 import { registry } from '../engine/registry.js';
+import { t } from '../i18n/index.js';
 
 export async function render(container, hash) {
   const params = new URLSearchParams((hash.split('?')[1] || ''));
@@ -24,36 +25,36 @@ export async function render(container, hash) {
 function renderIndex(container) {
   // Extract unique tags globally
   const allTags = new Set(['general']);
-  helpCatalog.forEach(c => c.tags.forEach(t => allTags.add(t)));
+  helpCatalog.forEach(c => c.tags.forEach(tag => allTags.add(tag)));
 
   container.innerHTML = `
     <div class="screen hlp-screen" style="display:flex;flex-direction:column;height:100%;background:var(--ps-surface)">
       <div class="screen-header" style="flex-shrink:0;">
         <div class="flex items-center gap-2">
            <span class="material-symbols-outlined" style="color:var(--ps-blue)">school</span>
-           <div class="screen-title">Documentation</div>
+           <div class="screen-title">${t('hlp.title')}</div>
         </div>
       </div>
-      
+
       <div style="padding:24px;max-width:900px;margin:0 auto;width:100%;">
-        
+
         <div style="margin-bottom: 32px;">
-          <p class="text-sm text-muted" style="margin:0 0 16px 0; line-height:1.5;">Watch this quick breakdown to master the interface, build powerful chained macro recipes, and unleash localized AI across hundreds of your images in seconds.</p>
+          <p class="text-sm text-muted" style="margin:0 0 16px 0; line-height:1.5;">${t('hlp.intro')}</p>
           <div style="background:#000; border-radius:8px; overflow:hidden; border:1px solid var(--ps-border); aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; position:relative;">
             <video src="/assets/tutorial.mp4" controls preload="none" style="width:100%; height:100%; outline:none;" poster="/assets/tutorial-poster.jpg"></video>
             <!-- Absolute centered placeholder fallback in case video fails to load or isn't built yet -->
             <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; color:rgba(255,255,255,0.4);" class="video-placeholder">
               <span class="material-symbols-outlined" style="font-size:48px; margin-bottom:12px;">movie</span>
-              <span style="font-size:14px; font-weight:500;">Tutorial Video Pending...</span>
+              <span style="font-size:14px; font-weight:500;">${t('hlp.videoPending')}</span>
             </div>
           </div>
         </div>
 
         <div style="display:flex;gap:12px;margin-bottom:24px;">
-           <input type="text" id="hlp-search" class="ic-input" placeholder="Search documentation..." style="flex:1;padding:12px 16px;font-size:15px">
+           <input type="text" id="hlp-search" class="ic-input" placeholder="${t('hlp.searchPlaceholder')}" style="flex:1;padding:12px 16px;font-size:15px">
            <select id="hlp-tag-filter" class="ic-input" style="width:160px;cursor:pointer">
-             <option value="">All Tags</option>
-             ${Array.from(allTags).map(t => `<option value="${t}">${t}</option>`).join('')}
+             <option value="">${t('hlp.allTags')}</option>
+             ${Array.from(allTags).map(tag => `<option value="${tag}">${tag}</option>`).join('')}
            </select>
         </div>
 
@@ -86,7 +87,7 @@ function renderIndex(container) {
     });
 
     resultsDiv.innerHTML = filtered.length === 0 
-      ? `<div class="empty-state" style="grid-column:1/-1;padding:48px 0;">No articles match your search.</div>`
+      ? `<div class="empty-state" style="grid-column:1/-1;padding:48px 0;">${t('hlp.noResults')}</div>`
       : filtered.map(c => `
         <div class="hlp-card" data-id="${c.id}" style="background:var(--ps-bg-app);border:1px solid var(--ps-border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color 0.15s, transform 0.15s;">
            <div style="font-weight:600;margin-bottom:8px;font-size:15px;display:flex;align-items:center;gap:6px;">
@@ -94,7 +95,7 @@ function renderIndex(container) {
              ${c.title}
            </div>
            <div style="display:flex;gap:4px;flex-wrap:wrap">
-             ${c.tags.map(t => `<span style="font-size:10px;background:var(--ps-surface);padding:2px 6px;border-radius:4px;color:var(--ps-text-muted);border:1px solid var(--ps-border)">${t}</span>`).join('')}
+             ${c.tags.map(tag => `<span style="font-size:10px;background:var(--ps-surface);padding:2px 6px;border-radius:4px;color:var(--ps-text-muted);border:1px solid var(--ps-border)">${tag}</span>`).join('')}
            </div>
         </div>
       `).join('');
@@ -114,7 +115,7 @@ function renderIndex(container) {
 let markedLib = null;
 
 export async function renderDetail(container, id) {
-  const record = getHelpRecord(id) || { title: `Documentation not found (${id})`, body: 'This node does not have a connected markdown page yet.', tags: [] };
+  const record = getHelpRecord(id) || { title: t('hlp.notFound', { id }), body: t('hlp.notFoundBody'), tags: [] };
   const def = registry.get(id);
 
   // Lazy-load marked parser
@@ -132,14 +133,14 @@ export async function renderDetail(container, id) {
   let paramsHtml = '';
   if (def && def.params && def.params.length > 0) {
     paramsHtml = `
-      <h3 style="margin-top:32px;border-bottom:1px solid var(--ps-border);padding-bottom:8px;">Parameters</h3>
+      <h3 style="margin-top:32px;border-bottom:1px solid var(--ps-border);padding-bottom:8px;">${t('hlp.parameters')}</h3>
       <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px">
         <thead>
           <tr style="text-align:left;border-bottom:2px solid var(--ps-border)">
-            <th style="padding:8px 12px;font-weight:600">Name</th>
-            <th style="padding:8px 12px;font-weight:600">Type</th>
-            <th style="padding:8px 12px;font-weight:600">Description</th>
-            <th style="padding:8px 12px;font-weight:600">Default</th>
+            <th style="padding:8px 12px;font-weight:600">${t('hlp.colName')}</th>
+            <th style="padding:8px 12px;font-weight:600">${t('hlp.colType')}</th>
+            <th style="padding:8px 12px;font-weight:600">${t('hlp.colDescription')}</th>
+            <th style="padding:8px 12px;font-weight:600">${t('hlp.colDefault')}</th>
           </tr>
         </thead>
         <tbody>
@@ -195,7 +196,7 @@ export async function renderDetail(container, id) {
            </button>
            <span class="material-symbols-outlined" style="color:var(--ps-text-muted)">${def?.icon || 'help'}</span>
            <div class="screen-title">${record.title}</div>
-           ${record.tags.map(t => `<span style="margin-left:8px;font-size:11px;background:var(--ps-surface);padding:2px 8px;border-radius:12px;color:var(--ps-text-muted);border:1px solid var(--ps-border)">${t}</span>`).join('')}
+           ${record.tags.map(tag => `<span style="margin-left:8px;font-size:11px;background:var(--ps-surface);padding:2px 8px;border-radius:12px;color:var(--ps-text-muted);border:1px solid var(--ps-border)">${tag}</span>`).join('')}
         </div>
       </div>
       
@@ -204,8 +205,8 @@ export async function renderDetail(container, id) {
         <!-- Viewer Section -->
         <div class="hlp-viewer" id="hlp-viewer-mount" style="display:none;">
            <div class="hlp-layout-toggles">
-             <button class="hlp-layout-btn is-active" data-layout="slider" title="Slider Mode"><span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span></button>
-             <button class="hlp-layout-btn" data-layout="side" title="Side-by-side Mode"><span class="material-symbols-outlined" style="font-size:16px">vertical_split</span></button>
+             <button class="hlp-layout-btn is-active" data-layout="slider" title="${t('hlp.sliderMode')}"><span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span></button>
+             <button class="hlp-layout-btn" data-layout="side" title="${t('hlp.sideMode')}"><span class="material-symbols-outlined" style="font-size:16px">vertical_split</span></button>
            </div>
            <div id="hlp-layout-canvas" style="position:absolute;inset:0;"></div>
         </div>
@@ -244,8 +245,8 @@ export async function renderDetail(container, id) {
              <div style="position:absolute;top:0;bottom:0;left:9px;width:2px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,0.5)"></div>
              <div style="position:relative;width:28px;height:28px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.3);color:#333;z-index:2"><span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span></div>
           </div>
-          <span class="hlp-cmp-label" style="left:10px;">Before</span>
-          <span class="hlp-cmp-label" style="right:10px;background:var(--ps-blue)">After</span>
+          <span class="hlp-cmp-label" style="left:10px;">${t('hlp.before')}</span>
+          <span class="hlp-cmp-label" style="right:10px;background:var(--ps-blue)">${t('hlp.after')}</span>
         </div>
       `;
 
@@ -272,12 +273,12 @@ export async function renderDetail(container, id) {
       canvasContainer.innerHTML = `
         <div class="hlp-side-view">
           <div class="hlp-side">
-            <span class="hlp-cmp-label" style="left:10px;">Before</span>
+            <span class="hlp-cmp-label" style="left:10px;">${t('hlp.before')}</span>
             ${hasBefore ? `<img src="/help/${id}.before.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;">` : ''}
           </div>
           <div style="width:2px;background:var(--ps-border);z-index:2;"></div>
           <div class="hlp-side">
-            <span class="hlp-cmp-label" style="left:10px;background:var(--ps-blue)">After</span>
+            <span class="hlp-cmp-label" style="left:10px;background:var(--ps-blue)">${t('hlp.after')}</span>
             ${hasAfter ? `<img src="/help/${id}.after.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;">` : ''}
           </div>
         </div>

@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Perspective Rendering Utilities
+ * ZumiLabs Studio — Perspective Rendering Utilities
  */
 
 /**

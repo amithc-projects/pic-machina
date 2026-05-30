@@ -5,6 +5,7 @@
  * using the File System Access API.
  */
 import { dbGet, dbPut } from '../data/db.js';
+import { t as i18n } from '../i18n/index.js';
 
 
 export async function getWorkspaceRoot() {
@@ -80,7 +81,7 @@ export async function addRecentProject(type, dirHandle, projectData) {
   record.projects = record.projects.filter(p => p.name !== dirHandle.name);
   record.projects.unshift({
     name: dirHandle.name,
-    title: projectData.title || projectData.name || 'Untitled',
+    title: projectData.title || projectData.name || i18n('pio.untitled'),
     handle: dirHandle,
     lastOpened: Date.now()
   });
@@ -97,7 +98,7 @@ export async function getRecentProjects(type) {
 
 export async function openProjectFromHandle(dirHandle) {
   if (!(await verifyPermission(dirHandle))) {
-    throw new Error('Permission to access folder was denied.');
+    throw new Error(i18n('pio.permissionDenied'));
   }
   const fileHandle = await dirHandle.getFileHandle('project.json');
   const file = await fileHandle.getFile();
@@ -151,7 +152,7 @@ export async function openProject() {
       
       return { dirHandle, projectData };
     } catch (e) {
-      throw new Error('Selected folder is not a valid project (missing or unreadable project.json).');
+      throw new Error(i18n('pio.invalidProject'));
     }
   } catch (err) {
     if (err.name !== 'AbortError') {

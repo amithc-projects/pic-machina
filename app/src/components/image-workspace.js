@@ -1,5 +1,6 @@
 import { extractExif } from '../engine/exif-reader.js';
 import { isVideoFile, extractVideoFrame } from '../utils/video-frame.js';
+import { t as i18n } from '../i18n/index.js';
 
 /**
  * ImageWorkspace Unified Component
@@ -18,8 +19,8 @@ export class ImageWorkspace {
       onRender: async (file) => ({
         beforeUrl: URL.createObjectURL(file),
         afterUrl: URL.createObjectURL(file),
-        beforeLabel: 'Original',
-        afterLabel: 'Result',
+        beforeLabel: i18n('iw.original'),
+        afterLabel: i18n('iw.result'),
         context: null,
       }),
       onInfo: async (file, afterUrl, context) => {
@@ -51,28 +52,28 @@ export class ImageWorkspace {
     this.container.innerHTML = `
       <div class="ic-image-workspace" style="display:flex;flex-direction:column;height:100%;background:var(--ps-surface)">
         <div class="iw-header" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--ps-border)">
-          <div class="iw-title" style="font-size:13px;font-weight:500;color:var(--ps-text)">Preview</div>
+          <div class="iw-title" style="font-size:13px;font-weight:500;color:var(--ps-text)">${i18n('iw.preview')}</div>
           <style>
              .ic-image-workspace.is-single-mode .iw-custom-controls { opacity: 0.5; pointer-events: none; }
           </style>
           <div class="iw-controls" style="display:flex;align-items:center;gap:8px">
             <div class="iw-cmp-controls" style="display:none;align-items:center;gap:8px">
               <div class="iw-zoom-controls" style="display:flex;align-items:center;background:var(--ps-bg);border-radius:4px;padding:2px">
-                <button class="btn-icon iw-zoom-out-btn" title="Zoom Out" style="width:24px;height:24px"><span class="material-symbols-outlined text-[16px]">remove</span></button>
-                <button class="btn-icon iw-zoom-fit-btn" title="Fit to Screen" style="padding:0 8px;font-size:12px;height:24px;min-width:40px;width:auto;border-radius:3px">Fit</button>
-                <button class="btn-icon iw-zoom-in-btn" title="Zoom In" style="width:24px;height:24px"><span class="material-symbols-outlined text-[16px]">add</span></button>
+                <button class="btn-icon iw-zoom-out-btn" title="${i18n('iw.zoomOut')}" style="width:24px;height:24px"><span class="material-symbols-outlined text-[16px]">remove</span></button>
+                <button class="btn-icon iw-zoom-fit-btn" title="${i18n('iw.fitToScreen')}" style="padding:0 8px;font-size:12px;height:24px;min-width:40px;width:auto;border-radius:3px">${i18n('iw.fit')}</button>
+                <button class="btn-icon iw-zoom-in-btn" title="${i18n('iw.zoomIn')}" style="width:24px;height:24px"><span class="material-symbols-outlined text-[16px]">add</span></button>
               </div>
-              <button class="btn-icon iw-info-btn" title="Toggle Info metadata modal" style="color:var(--ps-text-muted)">
+              <button class="btn-icon iw-info-btn" title="${i18n('iw.toggleInfoModal')}" style="color:var(--ps-text-muted)">
                 <span class="material-symbols-outlined">info</span>
               </button>
               <div class="iw-mode-toggle" style="display:flex;background:var(--ps-bg);border-radius:4px;padding:2px">
-                <button class="btn-icon iw-layout-single ${!this.compareMode ? 'is-active' : ''}" title="Single Preview" style="border-radius:3px;width:28px;height:28px">
+                <button class="btn-icon iw-layout-single ${!this.compareMode ? 'is-active' : ''}" title="${i18n('iw.singlePreview')}" style="border-radius:3px;width:28px;height:28px">
                   <span class="material-symbols-outlined" style="font-size:16px">crop_square</span>
                 </button>
-                <button class="btn-icon iw-layout-slider ${this.compareMode && this.compareLayout === 'slider' ? 'is-active' : ''}" title="Slider" style="border-radius:3px;width:28px;height:28px">
+                <button class="btn-icon iw-layout-slider ${this.compareMode && this.compareLayout === 'slider' ? 'is-active' : ''}" title="${i18n('iw.slider')}" style="border-radius:3px;width:28px;height:28px">
                   <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
                 </button>
-                <button class="btn-icon iw-layout-side ${this.compareMode && this.compareLayout === 'side' ? 'is-active' : ''}" title="Side by side" style="border-radius:3px;width:28px;height:28px">
+                <button class="btn-icon iw-layout-side ${this.compareMode && this.compareLayout === 'side' ? 'is-active' : ''}" title="${i18n('iw.sideBySide')}" style="border-radius:3px;width:28px;height:28px">
                   <span class="material-symbols-outlined" style="font-size:16px">vertical_split</span>
                 </button>
               </div>
@@ -81,19 +82,19 @@ export class ImageWorkspace {
 
             <div style="display:flex;gap:8px">
               ${this.options.allowUpload ? `
-                <label class="btn-secondary iw-upload-label" style="cursor:pointer" title="Upload a test image">
+                <label class="btn-secondary iw-upload-label" style="cursor:pointer" title="${i18n('iw.uploadTestImage')}">
                   <span class="material-symbols-outlined" style="font-size:14px">image</span>
-                  Image
+                  ${i18n('iw.image')}
                   <input type="file" class="iw-file-input" accept="image/*" style="display:none">
                 </label>
               ` : ''}
               ${this.options.allowFolder ? `
                 <div style="display:flex;gap:0">
-                  <button class="btn-secondary iw-folder-btn" title="Select a test folder" style="border-radius:6px 0 0 6px;border-right:none">
+                  <button class="btn-secondary iw-folder-btn" title="${i18n('iw.selectTestFolder')}" style="border-radius:6px 0 0 6px;border-right:none">
                     <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
-                    Folder
+                    ${i18n('iw.folder')}
                   </button>
-                  <select class="btn-secondary iw-folder-mru" title="Recent folders" style="border-radius:0 6px 6px 0;padding:0 6px;min-width:28px;cursor:pointer">
+                  <select class="btn-secondary iw-folder-mru" title="${i18n('iw.recentFolders')}" style="border-radius:0 6px 6px 0;padding:0 6px;min-width:28px;cursor:pointer">
                     <option value="">▾</option>
                   </select>
                 </div>
@@ -105,7 +106,7 @@ export class ImageWorkspace {
         <div class="iw-stage" style="flex:1;position:relative;overflow:hidden;min-height:200px">
           <div class="empty-state" style="padding:24px;text-align:center;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
              <span class="material-symbols-outlined" style="font-size:36px;color:var(--ps-text-muted)">image</span>
-             <div style="font-size:12px;margin-top:8px">Drop an image here</div>
+             <div style="font-size:12px;margin-top:8px">${i18n('iw.dropImageHere')}</div>
           </div>
         </div>
 
@@ -399,7 +400,7 @@ export class ImageWorkspace {
       this.stage.innerHTML = `
         <div class="empty-state" style="padding:24px;text-align:center;position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
            <span class="material-symbols-outlined" style="font-size:36px;color:var(--ps-text-muted)">image</span>
-           <div style="font-size:12px;margin-top:8px">No matching files in folder</div>
+           <div style="font-size:12px;margin-top:8px">${i18n('iw.noMatchingFiles')}</div>
         </div>`;
       this.carousel.style.display = 'none';
       if (this.modeToggleGroup) this.modeToggleGroup.style.display = 'none';
@@ -447,7 +448,7 @@ export class ImageWorkspace {
 
       // Step does not support preview — show overlay instead of image
       if (this.lastRenderResult?.noPreview) {
-        const reason = this.lastRenderResult.noPreviewReason || 'Preview is not available for this step.';
+        const reason = this.lastRenderResult.noPreviewReason || i18n('iw.previewNotAvailable');
         this.stage.innerHTML = `
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
             background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);gap:10px;z-index:10;pointer-events:none;">
@@ -477,7 +478,7 @@ export class ImageWorkspace {
       this.renderCurrentState();
     } catch (err) {
       console.error(err);
-      this.stage.innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
+      this.stage.innerHTML = `<div class="empty-state">${i18n('iw.error', { message: err.message })}</div>`;
     }
   }
 
@@ -499,8 +500,8 @@ export class ImageWorkspace {
           <img src="${afterUrl}" class="iw-cmp-img" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;" draggable="false">
           ${overlayHtml}
           <span class="iw-cmp-label iw-cmp-label--r" style="display:flex;align-items:center;">
-             ${afterLabel || 'Result'}
-             <a href="${afterUrl}" target="_blank" title="Open in new tab" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
+             ${afterLabel || i18n('iw.result')}
+             <a href="${afterUrl}" target="_blank" title="${i18n('iw.openInNewTab')}" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
           </span>
         </div>`;
       return;
@@ -511,16 +512,16 @@ export class ImageWorkspace {
         <div class="iw-side-view">
           <div class="iw-side">
             <div class="iw-side-label" style="display:flex;align-items:center;pointer-events:auto;">
-               ${beforeLabel || 'Original'}
-               <a href="${beforeUrl}" target="_blank" title="Open in new tab" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
+               ${beforeLabel || i18n('iw.original')}
+               <a href="${beforeUrl}" target="_blank" title="${i18n('iw.openInNewTab')}" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
             </div>
             <img src="${beforeUrl}" class="iw-side-img" draggable="false">
           </div>
           <div class="iw-divider"></div>
           <div class="iw-side">
             <div class="iw-side-label iw-side-label--blue" style="display:flex;align-items:center;pointer-events:auto;">
-               ${afterLabel || 'Result'}
-               <a href="${afterUrl}" target="_blank" title="Open in new tab" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
+               ${afterLabel || i18n('iw.result')}
+               <a href="${afterUrl}" target="_blank" title="${i18n('iw.openInNewTab')}" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
             </div>
             <img src="${afterUrl}" class="iw-side-img" draggable="false">
             ${overlayHtml}
@@ -541,12 +542,12 @@ export class ImageWorkspace {
             <div class="iw-cmp-handle-knob"><span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span></div>
           </div>
           <span class="iw-cmp-label iw-cmp-label--l" style="display:flex;align-items:center;pointer-events:auto;">
-             ${beforeLabel || 'Original'}
-             <a href="${beforeUrl}" target="_blank" title="Open in new tab" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
+             ${beforeLabel || i18n('iw.original')}
+             <a href="${beforeUrl}" target="_blank" title="${i18n('iw.openInNewTab')}" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
           </span>
           <span class="iw-cmp-label iw-cmp-label--r" style="display:flex;align-items:center;pointer-events:auto;">
-             ${afterLabel || 'Result'}
-             <a href="${afterUrl}" target="_blank" title="Open in new tab" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
+             ${afterLabel || i18n('iw.result')}
+             <a href="${afterUrl}" target="_blank" title="${i18n('iw.openInNewTab')}" style="color:inherit;text-decoration:none;display:flex;margin-left:6px;"><span class="material-symbols-outlined" style="font-size:14px;">open_in_new</span></a>
           </span>
         </div>`;
         
@@ -624,9 +625,9 @@ export class ImageWorkspace {
       
       const modDate = file.lastModified ? new Date(file.lastModified).toLocaleString() : '';
       let tooltip = file.name;
-      if (isVideoFile(file)) tooltip += '\nVideo';
-      else tooltip += '\nImage';
-      tooltip += `\nModified: ${modDate}\nSize: ${formatBytes(file.size)}`;
+      if (isVideoFile(file)) tooltip += '\n' + i18n('iw.video');
+      else tooltip += '\n' + i18n('iw.image');
+      tooltip += '\n' + i18n('iw.modified', { date: modDate }) + '\n' + i18n('iw.size', { size: formatBytes(file.size) });
       thumb.title = tooltip;
       
       thumb.addEventListener('click', () => {

@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — MDL: Model Manager
+ * ZumiLabs Studio — MDL: Model Manager
  *
  * Lists downloadable AI models (e.g. InSPyReNet) and lets the user manage
  * local copies stored in IndexedDB.
@@ -12,6 +12,7 @@ import {
   deleteModel,
 } from '../data/models.js';
 import { invalidate } from '../engine/capabilities.js';
+import { t } from '../i18n/index.js';
 
 function escHtml(s) {
   return String(s)
@@ -42,7 +43,7 @@ export async function render(container) {
         <div class="flex items-center gap-2">
           <div class="screen-title">
             <span class="material-symbols-outlined">neurology</span>
-            Models
+            ${t('mdl.title')}
           </div>
         </div>
       </div>
@@ -61,11 +62,11 @@ export async function render(container) {
   envEl.innerHTML = `
     <span class="mdl-badge ${hasWebGPU ? 'ok' : 'warn'}">
       <span class="material-symbols-outlined">${hasWebGPU ? 'bolt' : 'memory'}</span>
-      ${hasWebGPU ? 'WebGPU available' : 'CPU / WASM fallback'}
+      ${hasWebGPU ? t('mdl.env.webgpu') : t('mdl.env.cpuFallback')}
     </span>
     <span class="mdl-badge ${self.crossOriginIsolated ? 'ok' : 'warn'}">
       <span class="material-symbols-outlined">${self.crossOriginIsolated ? 'lock' : 'lock_open'}</span>
-      ${self.crossOriginIsolated ? 'cross-origin isolated' : 'not cross-origin isolated'}
+      ${self.crossOriginIsolated ? t('mdl.env.isolated') : t('mdl.env.notIsolated')}
     </span>`;
 
   const storageEl = container.querySelector('#mdl-storage');
@@ -74,7 +75,7 @@ export async function render(container) {
       const est = await navigator.storage.estimate();
       const pct = est.quota ? Math.round((est.usage / est.quota) * 100) : null;
       storageEl.textContent =
-        `Storage: ${formatBytes(est.usage)} used of ${formatBytes(est.quota)}` +
+        t('mdl.storage', { used: formatBytes(est.usage), quota: formatBytes(est.quota) }) +
         (pct !== null ? ` (${pct}%)` : '');
     } catch { /* ignore */ }
   }
@@ -128,15 +129,15 @@ export async function render(container) {
         </div>
         <div class="mdl-card__status">
           ${hasBytes
-            ? `<span class="mdl-pill ok"><span class="material-symbols-outlined">check_circle</span> Downloaded</span>`
-            : `<span class="mdl-pill muted"><span class="material-symbols-outlined">download</span> Not downloaded</span>`}
+            ? `<span class="mdl-pill ok"><span class="material-symbols-outlined">check_circle</span> ${t('mdl.downloaded')}</span>`
+            : `<span class="mdl-pill muted"><span class="material-symbols-outlined">download</span> ${t('mdl.notDownloaded')}</span>`}
         </div>
       </div>
 
       <p class="mdl-card__desc">${escHtml(meta.description)}</p>
 
       ${hasBytes
-        ? `<div class="mdl-card__meta mono text-muted">Downloaded ${escHtml(formatTimestamp(rec.downloadedAt))}</div>`
+        ? `<div class="mdl-card__meta mono text-muted">${t('mdl.downloadedAt', { date: escHtml(formatTimestamp(rec.downloadedAt)) })}</div>`
         : ''}
 
       <div class="mdl-card__progress" hidden>
@@ -147,13 +148,13 @@ export async function render(container) {
       <div class="mdl-card__actions">
         ${hasBytes
           ? `<button class="btn-secondary" data-action="redownload">
-               <span class="material-symbols-outlined">refresh</span> Re-download
+               <span class="material-symbols-outlined">refresh</span> ${t('mdl.reDownload')}
              </button>
              <button class="btn-secondary" data-action="delete">
-               <span class="material-symbols-outlined">delete</span> Delete
+               <span class="material-symbols-outlined">delete</span> ${t('mdl.delete')}
              </button>`
           : `<button class="btn-primary" data-action="download">
-               <span class="material-symbols-outlined">download</span> Download
+               <span class="material-symbols-outlined">download</span> ${t('mdl.download')}
              </button>`}
       </div>
       <div class="mdl-card__error" hidden></div>
@@ -171,7 +172,7 @@ export async function render(container) {
     if (action === 'download' || action === 'redownload') {
       await startDownload(meta);
     } else if (action === 'delete') {
-      const confirmMsg = `Delete "${meta.name}" from local storage?`;
+      const confirmMsg = t('mdl.deleteConfirm', { name: meta.name });
       if (!window.confirm(confirmMsg)) return;
       try {
         const { disposeSession } = await import('../engine/ai/inspyrenet.js');
@@ -221,10 +222,10 @@ export async function render(container) {
     } catch (err) {
       entry.abort = null;
       if (err.name === 'AbortError') {
-        lblEl.textContent = 'Cancelled';
+        lblEl.textContent = t('mdl.cancelled');
       } else {
         errEl.hidden = false;
-        errEl.textContent = `Download failed: ${err.message || err}`;
+        errEl.textContent = t('mdl.downloadFailed', { error: err.message || err });
       }
       actions.forEach(b => b.disabled = false);
     }

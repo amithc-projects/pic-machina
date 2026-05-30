@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — GSD: Get Started (benefits-focused, scroll-snap landing)
+ * ZumiLabs Studio — GSD: Get Started (benefits-focused, scroll-snap landing)
  *
  * Vertical stack of full-viewport slides with CSS scroll-snap (Apple-style).
  * Three interactive slides — Why-switch, Outcomes, Personas — let the user
@@ -15,6 +15,7 @@
  */
 
 import { getAllRecipes } from '../data/recipes.js';
+import { t } from '../i18n/index.js';
 
 // ─── Utils ────────────────────────────────────────────────────
 function go(hash) {
@@ -27,65 +28,44 @@ async function getStats() {
   return { recipeCount: recipes.length };
 }
 
-const SLIDES = [
-  { id: 'hero',     label: 'Welcome' },
-  { id: 'why',      label: 'Why' },
-  { id: 'outcomes', label: 'Outcomes' },
-  { id: 'personas', label: 'Who it\'s for' },
-  { id: 'how',      label: 'How' },
-  { id: 'features', label: 'Features' },
-  { id: 'stats',    label: 'At a glance' },
-  { id: 'cta',      label: 'Get started' },
+// Built at render time so language switches re-render correctly.
+const SLIDES = () => [
+  { id: 'hero',     label: t('gsd.slides.welcome') },
+  { id: 'why',      label: t('gsd.slides.why') },
+  { id: 'outcomes', label: t('gsd.slides.outcomes') },
+  { id: 'personas', label: t('gsd.slides.whoFor') },
+  { id: 'how',      label: t('gsd.slides.how') },
+  { id: 'features', label: t('gsd.slides.features') },
+  { id: 'stats',    label: t('gsd.slides.atGlance') },
+  { id: 'cta',      label: t('gsd.slides.getStarted') },
 ];
 
-// 50 feature labels for the floating cloud
-const FEATURES = [
-  'Background Removal', 'Watermarking', 'Smart Crop', 'Face Swap', 'Colour Match',
-  'Auto-Levels', 'Slideshow Builder', 'Video Trim', 'Frame Extraction', 'GIF Export',
-  'Batch Resize', 'Format Convert', 'Multi-Size Export', 'EXIF Strip', 'Geotag Edit',
-  'AI Upscaling', 'Style Transfer', 'Mask Generation', 'Object Removal', 'Sky Replace',
-  'Tone Mapping', 'HDR Merge', 'Panorama Stitch', 'Border & Frame', 'Caption Overlay',
-  'Logo Stamp', 'Sequence Numbering', 'Filename Templates', 'Folder Routing', 'CSV Import',
-  'Drag & Drop Recipes', 'Block Builder', 'Live Preview', 'Undo History', 'Run Queue',
-  'Output Browser', 'Template Library', 'AI Recipe Author', 'Conditional Steps', 'Loop Steps',
-  'Webhooks', 'Local-First', 'GPU Acceleration', 'Privacy by Default', 'Cross-Platform',
-  'Keyboard Shortcuts', 'Dark & Light', 'Plugin API', 'Smart Naming', 'Audio Tracks',
-];
+// 50 feature labels for the floating cloud.
+const FEATURES = () => t('gsd.featureLabels', { returnObjects: true });
 
 // ─── Detail panel content ─────────────────────────────────────
-const WHY_DETAILS = {
-  hours: {
-    title: 'Save hours every week',
-    blurb: 'Watch a real run finish in the time it takes to make coffee.',
-    video: 'why-hours.mp4',
-  },
-  same: {
-    title: 'The same result, every time',
-    blurb: '500 product shots, identical crop, watermark and colour profile.',
-    video: 'why-same.mp4',
-  },
-  channel: {
-    title: 'One workflow, every channel',
-    blurb: 'A single source image fanned out to web, social and print.',
-    video: 'why-channel.mp4',
-  },
-};
+// Video filenames stay in code (not translated); titles/blurbs come from i18n.
+const WHY_DETAILS = () => ({
+  hours:   { title: t('gsd.why.details.hours.title'),   blurb: t('gsd.why.details.hours.blurb'),   video: 'why-hours.mp4' },
+  same:    { title: t('gsd.why.details.same.title'),    blurb: t('gsd.why.details.same.blurb'),    video: 'why-same.mp4' },
+  channel: { title: t('gsd.why.details.channel.title'), blurb: t('gsd.why.details.channel.blurb'), video: 'why-channel.mp4' },
+});
 
-const OUTCOME_DETAILS = {
-  bg:        { title: 'Strip backgrounds from 200 product photos',     blurb: 'Drag the folder, hit Run.' },
-  slide:     { title: 'Make a slideshow video from a holiday folder',  blurb: 'Pick the music, you\'re done.' },
-  watermark: { title: 'Watermark and resize a year of blog images',    blurb: 'One recipe, applied to the lot.' },
-  swap:      { title: 'Swap faces or colours across a batch',          blurb: 'Consistent edits, zero manual tweaking.' },
-  social:    { title: 'Build a social pack — square, portrait, story', blurb: 'Every aspect ratio in one go.' },
-  vid:       { title: 'Turn a video into stills, or stills into a video', blurb: 'Both directions, no extra tools.' },
-};
+const OUTCOME_DETAILS = () => ({
+  bg:        { title: t('gsd.outcomes.cards.bg.title'),        blurb: t('gsd.outcomes.cards.bg.sub') },
+  slide:     { title: t('gsd.outcomes.cards.slide.title'),     blurb: t('gsd.outcomes.cards.slide.sub') },
+  watermark: { title: t('gsd.outcomes.cards.watermark.title'), blurb: t('gsd.outcomes.cards.watermark.sub') },
+  swap:      { title: t('gsd.outcomes.cards.swap.title'),      blurb: t('gsd.outcomes.cards.swap.sub') },
+  social:    { title: t('gsd.outcomes.cards.social.title'),    blurb: t('gsd.outcomes.cards.social.sub') },
+  vid:       { title: t('gsd.outcomes.cards.vid.title'),       blurb: t('gsd.outcomes.cards.vid.sub') },
+});
 
-const PERSONA_DETAILS = {
-  creator:      { title: 'Content creators',           blurb: '"I publish 5 videos a week — Zumilabs Studio makes the thumbnails."', video: 'persona-creator.mp4' },
-  shop:         { title: 'Small shops & marketplaces', blurb: '"Every listing photo perfectly on-brand, in minutes."',          video: 'persona-shop.mp4' },
-  photographer: { title: 'Photographers',              blurb: '"Client galleries delivered in every format the brief asks for."', video: 'persona-photographer.mp4' },
-  library:      { title: 'Anyone with a messy library',blurb: '"My 30,000-photo backlog, finally organised."',                  video: 'persona-library.mp4' },
-};
+const PERSONA_DETAILS = () => ({
+  creator:      { title: t('gsd.personas.details.creator.title'),      blurb: t('gsd.personas.details.creator.blurb'),      video: 'persona-creator.mp4' },
+  shop:         { title: t('gsd.personas.details.shop.title'),         blurb: t('gsd.personas.details.shop.blurb'),         video: 'persona-shop.mp4' },
+  photographer: { title: t('gsd.personas.details.photographer.title'), blurb: t('gsd.personas.details.photographer.blurb'), video: 'persona-photographer.mp4' },
+  library:      { title: t('gsd.personas.details.library.title'),      blurb: t('gsd.personas.details.library.blurb'),      video: 'persona-library.mp4' },
+});
 
 // ─── Main render ──────────────────────────────────────────────
 export async function render(container) {
@@ -99,27 +79,25 @@ export async function render(container) {
       <section class="wel-slide wel-slide--hero" id="slide-hero">
         <div class="wel-slide__inner wel-hero">
           <h1 class="wel-hero__title">
-            Edit one photo.<br/>
-            <span class="wel-accent">Apply it to a thousand.</span>
+            ${t('gsd.hero.titleLine1')}<br/>
+            <span class="wel-accent">${t('gsd.hero.titleLine2')}</span>
           </h1>
           <p class="wel-hero__sub">
-            Zumilabs Studio turns the fiddly bits of image and video work — resizing,
-            watermarking, swapping backgrounds, exporting for every platform —
-            into one-click recipes you can reuse forever.
+            ${t('gsd.hero.subtitle')}
           </p>
           <div class="wel-hero__cta">
             <button class="wel-btn wel-btn--primary" data-go="#lib">
               <span class="material-symbols-outlined">play_arrow</span>
-              Process my first batch
+              ${t('gsd.hero.ctaPrimary')}
             </button>
             <button class="wel-btn wel-btn--ghost" data-go="#shc">
               <span class="material-symbols-outlined">auto_awesome</span>
-              See what's possible
+              ${t('gsd.hero.ctaSecondary')}
             </button>
           </div>
           <div class="wel-scroll-hint">
             <span class="material-symbols-outlined">keyboard_arrow_down</span>
-            <span>Scroll to explore</span>
+            <span>${t('gsd.hero.scrollHint')}</span>
           </div>
         </div>
       </section>
@@ -128,14 +106,14 @@ export async function render(container) {
       <section class="wel-slide" id="slide-why">
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
-            <p class="wel-eyebrow">The benefits</p>
-            <h2 class="wel-h2">Why people switch to Zumilabs Studio</h2>
+            <p class="wel-eyebrow">${t('gsd.why.eyebrow')}</p>
+            <h2 class="wel-h2">${t('gsd.why.title')}</h2>
           </header>
           <div class="wel-detail-wrap" data-kind="why">
             <div class="wel-tiles">
-              ${tile('hours',   'schedule', 'Save hours every week',         'Drop in a folder, pick a recipe, walk away. What used to take an afternoon in Photoshop runs in minutes — untouched.')}
-              ${tile('same',    'repeat',   'The same result, every time',   'Recipes are repeatable. Your thumbnails, product shots and social posts come out identical whether it\'s 5 images or 5,000.')}
-              ${tile('channel', 'share',    'One workflow, every channel',   'Web-ready, Instagram, YouTube thumbnails, print — every size and format from a single source image.')}
+              ${tile('hours',   'schedule', t('gsd.why.tiles.hours.title'),   t('gsd.why.tiles.hours.body'))}
+              ${tile('same',    'repeat',   t('gsd.why.tiles.same.title'),    t('gsd.why.tiles.same.body'))}
+              ${tile('channel', 'share',    t('gsd.why.tiles.channel.title'), t('gsd.why.tiles.channel.body'))}
               ${backBtn()}
             </div>
             <aside class="wel-detail" aria-live="polite"></aside>
@@ -147,17 +125,17 @@ export async function render(container) {
       <section class="wel-slide" id="slide-outcomes">
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
-            <p class="wel-eyebrow">Time saving</p>
-            <h2 class="wel-h2">What you can do in minutes</h2>
+            <p class="wel-eyebrow">${t('gsd.outcomes.eyebrow')}</p>
+            <h2 class="wel-h2">${t('gsd.outcomes.title')}</h2>
           </header>
           <div class="wel-detail-wrap wel-detail-wrap--outcomes" data-kind="outcomes">
             <div class="wel-outcomes">
-              ${outcomeCard('bg',        'content_cut',              'Strip backgrounds from 200 product photos',          'Drag the folder, hit Run.')}
-              ${outcomeCard('slide',     'movie',                    'Make a slideshow video from a holiday folder',       'Pick the music, you\'re done.')}
-              ${outcomeCard('watermark', 'branding_watermark',       'Watermark and resize a year of blog images',         'One recipe, applied to the lot.')}
-              ${outcomeCard('swap',      'face_retouching_natural',  'Swap faces or colours across a batch',               'Consistent edits, zero manual tweaking.')}
-              ${outcomeCard('social',    'aspect_ratio',             'Build a social pack — square, portrait, story',      'Every aspect ratio in one go.')}
-              ${outcomeCard('vid',       'movie_filter',             'Turn a video into stills, or stills into a video',   'Both directions, no extra tools.')}
+              ${outcomeCard('bg',        'content_cut',              t('gsd.outcomes.cards.bg.title'),        t('gsd.outcomes.cards.bg.sub'))}
+              ${outcomeCard('slide',     'movie',                    t('gsd.outcomes.cards.slide.title'),     t('gsd.outcomes.cards.slide.sub'))}
+              ${outcomeCard('watermark', 'branding_watermark',       t('gsd.outcomes.cards.watermark.title'), t('gsd.outcomes.cards.watermark.sub'))}
+              ${outcomeCard('swap',      'face_retouching_natural',  t('gsd.outcomes.cards.swap.title'),      t('gsd.outcomes.cards.swap.sub'))}
+              ${outcomeCard('social',    'aspect_ratio',             t('gsd.outcomes.cards.social.title'),    t('gsd.outcomes.cards.social.sub'))}
+              ${outcomeCard('vid',       'movie_filter',             t('gsd.outcomes.cards.vid.title'),       t('gsd.outcomes.cards.vid.sub'))}
               ${backBtn()}
             </div>
             <aside class="wel-detail" aria-live="polite"></aside>
@@ -169,15 +147,15 @@ export async function render(container) {
       <section class="wel-slide" id="slide-personas">
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
-            <p class="wel-eyebrow">Who it's for ?</p>
-            <h2 class="wel-h2">Built for anyone with a folder full of media</h2>
+            <p class="wel-eyebrow">${t('gsd.personas.eyebrow')}</p>
+            <h2 class="wel-h2">${t('gsd.personas.title')}</h2>
           </header>
           <div class="wel-detail-wrap wel-detail-wrap--personas" data-kind="personas">
             <div class="wel-personas">
-              ${persona('creator',      'podcasts',     'Content creators',           'Keeping a publishing schedule alive without burning out on edits.')}
-              ${persona('shop',         'storefront',   'Small shops & marketplaces', 'Every product photo on-brand and on-spec, automatically.')}
-              ${persona('photographer', 'photo_camera', 'Photographers',              'Client galleries delivered in every required size and format.')}
-              ${persona('library',      'photo_library','Anyone with a messy library','Order without hours of clicking.')}
+              ${persona('creator',      'podcasts',     t('gsd.personas.cards.creator.title'),      t('gsd.personas.cards.creator.body'))}
+              ${persona('shop',         'storefront',   t('gsd.personas.cards.shop.title'),         t('gsd.personas.cards.shop.body'))}
+              ${persona('photographer', 'photo_camera', t('gsd.personas.cards.photographer.title'), t('gsd.personas.cards.photographer.body'))}
+              ${persona('library',      'photo_library',t('gsd.personas.cards.library.title'),      t('gsd.personas.cards.library.body'))}
               ${backBtn()}
             </div>
             <aside class="wel-detail" aria-live="polite"></aside>
@@ -189,8 +167,8 @@ export async function render(container) {
       <section class="wel-slide" id="slide-how">
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
-            <p class="wel-eyebrow">How it works</p>
-            <h2 class="wel-h2">Three steps. That's the whole product.</h2>
+            <p class="wel-eyebrow">${t('gsd.how.eyebrow')}</p>
+            <h2 class="wel-h2">${t('gsd.how.title')}</h2>
           </header>
           <div class="wel-timeline">
             <div class="wel-tl-track" aria-hidden="true">
@@ -202,17 +180,16 @@ export async function render(container) {
             </div>
             <div class="wel-tl-labels">
               <div class="wel-tl-label">
-                <h3>Pick a recipe</h3>
-                <p>Start from a ready-made one, or describe what you want and let
-                AI build it for you.</p>
+                <h3>${t('gsd.how.step1.title')}</h3>
+                <p>${t('gsd.how.step1.body')}</p>
               </div>
               <div class="wel-tl-label">
-                <h3>Point it at your images</h3>
-                <p>A folder, a selection, or a single file — whatever you have.</p>
+                <h3>${t('gsd.how.step2.title')}</h3>
+                <p>${t('gsd.how.step2.body')}</p>
               </div>
               <div class="wel-tl-label">
-                <h3>Press Run</h3>
-                <p>Get a tidy export folder, every time.</p>
+                <h3>${t('gsd.how.step3.title')}</h3>
+                <p>${t('gsd.how.step3.body')}</p>
               </div>
             </div>
           </div>
@@ -222,13 +199,12 @@ export async function render(container) {
       <!-- Slide 6: Floating features -->
       <section class="wel-slide wel-slide--features" id="slide-features">
         <div class="wel-features-bg" aria-hidden="true">
-          ${FEATURES.map((f, i) => `<span class="wel-fly" style="${flyStyle(i, FEATURES.length)}">${f}</span>`).join('')}
+          ${(() => { const f = FEATURES(); return f.map((label, i) => `<span class="wel-fly" style="${flyStyle(i, f.length)}">${label}</span>`).join(''); })()}
         </div>
         <div class="wel-slide__inner wel-features-inner">
-          <p class="wel-eyebrow">Powerful in dozens of ways</p>
-          <h2 class="wel-h2">${FEATURES.length}+ features.<br/>One simple workflow.</h2>
-          <p class="wel-features-sub">From background removal to AI upscaling — every tool you need to
-          take one image (or a folder of them) all the way to publish-ready.</p>
+          <p class="wel-eyebrow">${t('gsd.features.eyebrow')}</p>
+          <h2 class="wel-h2">${t('gsd.features.title', { count: FEATURES().length })}<br/>${t('gsd.features.titleLine2')}</h2>
+          <p class="wel-features-sub">${t('gsd.features.sub')}</p>
         </div>
       </section>
 
@@ -236,21 +212,21 @@ export async function render(container) {
       <section class="wel-slide" id="slide-stats">
         <div class="wel-slide__inner">
           <header class="wel-slide__head">
-            <p class="wel-eyebrow">At a glance</p>
-            <h2 class="wel-h2">Powerful, private, and ready right now</h2>
+            <p class="wel-eyebrow">${t('gsd.stats.eyebrow')}</p>
+            <h2 class="wel-h2">${t('gsd.stats.title')}</h2>
           </header>
           <div class="wel-stats">
             <div class="wel-stats__item">
               <div class="wel-stats__num">${stats.recipeCount}</div>
-              <div class="wel-stats__label">ready-made recipes — no setup needed</div>
+              <div class="wel-stats__label">${t('gsd.stats.recipesLabel')}</div>
             </div>
             <div class="wel-stats__item">
               <div class="wel-stats__num">∞</div>
-              <div class="wel-stats__label">images per run — your hardware is the limit</div>
+              <div class="wel-stats__label">${t('gsd.stats.perRunLabel')}</div>
             </div>
             <div class="wel-stats__item">
               <div class="wel-stats__num">100%</div>
-              <div class="wel-stats__label">local — your photos and videos never leave your machine</div>
+              <div class="wel-stats__label">${t('gsd.stats.localLabel')}</div>
             </div>
           </div>
         </div>
@@ -273,25 +249,25 @@ export async function render(container) {
                 stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </svg>
         <div class="wel-slide__inner wel-closing">
-          <h2 class="wel-closing__title">Ready to make<br/>something amazing?</h2>
-          <p class="wel-closing__sub">Zumilabs Studio is free to try. No credit card required.</p>
+          <h2 class="wel-closing__title">${t('gsd.cta.title1')}<br/>${t('gsd.cta.title2')}</h2>
+          <p class="wel-closing__sub">${t('gsd.cta.sub')}</p>
           <div class="wel-closing__cta">
             <button class="wel-btn wel-btn--primary wel-btn--lg" data-go="#lib">
               <span class="material-symbols-outlined">upload</span>
-              Open your first photo
+              ${t('gsd.cta.button')}
             </button>
-            <a href="#shc" class="wel-closing__link">Explore on your own</a>
+            <a href="#shc" class="wel-closing__link">${t('gsd.cta.link')}</a>
           </div>
           <p class="wel-closing__hint">
-            Looking for engine internals, the node catalogue, or AI integrations?
-            <a href="#pow" class="wel-link">Visit the Power Users page →</a>
+            ${t('gsd.cta.hintText')}
+            <a href="#pow" class="wel-link">${t('gsd.cta.hintLink')}</a>
           </p>
         </div>
       </section>
 
       <!-- Side dot-nav -->
-      <nav class="wel-dots" aria-label="Page sections">
-        ${SLIDES.map(s => `
+      <nav class="wel-dots" aria-label="${t('gsd.pageSections')}">
+        ${SLIDES().map(s => `
           <button class="wel-dot" data-target="slide-${s.id}" aria-label="${s.label}">
             <span class="wel-dot__pip"></span>
             <span class="wel-dot__label">${s.label}</span>
@@ -317,7 +293,7 @@ function tile(id, icon, title, body) {
       <p>${body}</p>
       <span class="wel-tile__cta">
         <span class="material-symbols-outlined">play_circle</span>
-        Watch
+        ${t('gsd.tile.watch')}
       </span>
     </button>
   `;
@@ -333,7 +309,7 @@ function outcomeCard(id, icon, title, sub) {
       </div>
       <span class="wel-outcome__cta">
         <span class="material-symbols-outlined">compare</span>
-        Before / after
+        ${t('gsd.outcome.beforeAfter')}
       </span>
     </button>
   `;
@@ -341,9 +317,9 @@ function outcomeCard(id, icon, title, sub) {
 
 function backBtn() {
   return `
-    <button class="wel-back" type="button" aria-label="Back to all">
+    <button class="wel-back" type="button" aria-label="${t('gsd.backToAll')}">
       <span class="material-symbols-outlined">arrow_back</span>
-      Back to all
+      ${t('gsd.backToAll')}
     </button>
   `;
 }
@@ -360,7 +336,7 @@ function persona(id, _icon, title, body) {
       <p>${body}</p>
       <span class="wel-persona__cta">
         <span class="material-symbols-outlined">play_circle</span>
-        Hear their story
+        ${t('gsd.persona.hearStory')}
       </span>
     </button>
   `;
@@ -492,12 +468,12 @@ function runWithTransition(wrap, tileEl, detail, apply, done) {
 
 function renderDetail(kind, id) {
   if (kind === 'why') {
-    const d = WHY_DETAILS[id] || {};
+    const d = WHY_DETAILS()[id] || {};
     return `
       <div class="wel-detail__pane wel-detail__pane--video">
         <div class="wel-video-ph">
           <span class="material-symbols-outlined">play_circle</span>
-          <p>Video coming soon</p>
+          <p>${t('gsd.detail.videoSoon')}</p>
           <small>${d.video || ''}</small>
         </div>
         <div class="wel-detail__caption">
@@ -508,19 +484,19 @@ function renderDetail(kind, id) {
     `;
   }
   if (kind === 'outcomes') {
-    const d = OUTCOME_DETAILS[id] || {};
+    const d = OUTCOME_DETAILS()[id] || {};
     return `
       <div class="wel-detail__pane wel-detail__pane--ba">
         <div class="wel-ba">
           <div class="wel-ba__slot">
-            <span class="wel-ba__label">Before</span>
+            <span class="wel-ba__label">${t('gsd.detail.before')}</span>
             <div class="wel-ba__placeholder">
               <span class="material-symbols-outlined">image</span>
               <small>before-${id}</small>
             </div>
           </div>
           <div class="wel-ba__slot">
-            <span class="wel-ba__label">After</span>
+            <span class="wel-ba__label">${t('gsd.detail.after')}</span>
             <div class="wel-ba__placeholder wel-ba__placeholder--after">
               <span class="material-symbols-outlined">auto_awesome</span>
               <small>after-${id}</small>
@@ -535,12 +511,12 @@ function renderDetail(kind, id) {
     `;
   }
   if (kind === 'personas') {
-    const d = PERSONA_DETAILS[id] || {};
+    const d = PERSONA_DETAILS()[id] || {};
     return `
       <div class="wel-detail__pane wel-detail__pane--video">
         <div class="wel-video-ph wel-video-ph--testimonial">
           <span class="material-symbols-outlined">record_voice_over</span>
-          <p>Video testimonial coming soon</p>
+          <p>${t('gsd.detail.testimonialSoon')}</p>
           <small>${d.video || ''}</small>
         </div>
         <div class="wel-detail__caption">

@@ -15,6 +15,7 @@ import {
   reverseGeocode, buildSidecarPatch,
 } from '../data/sidecar.js';
 import { extractExif } from '../engine/exif-reader.js';
+import { t as i18n } from '../i18n/index.js';
 
 let _stylesInjected = false;
 
@@ -272,12 +273,12 @@ export class SidecarDrawer {
 
     panel.innerHTML = `
       <div class="sdc-header">
-        <button class="sdc-nav-btn" id="sdc-prev" title="Previous" ${idx <= 0 ? 'disabled' : ''}>
+        <button class="sdc-nav-btn" id="sdc-prev" title="${escH(i18n('sd.previous'))}" ${idx <= 0 ? 'disabled' : ''}>
           <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
         </button>
         <div class="sdc-header-title" title="${escH(this._file?.name || '')}">${escH(this._file?.name || '')}</div>
         ${total > 0 ? `<span style="font-size:11px;color:var(--ps-text-faint)">${idx + 1}/${total}</span>` : ''}
-        <button class="sdc-nav-btn" id="sdc-next" title="Next" ${idx >= total - 1 ? 'disabled' : ''}>
+        <button class="sdc-nav-btn" id="sdc-next" title="${escH(i18n('sd.next'))}" ${idx >= total - 1 ? 'disabled' : ''}>
           <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
         </button>
         <button class="sdc-close-btn" id="sdc-close">
@@ -289,69 +290,69 @@ export class SidecarDrawer {
 
         <!-- Rating + Flag -->
         <div>
-          <div class="sdc-label">Rating &amp; Flag</div>
+          <div class="sdc-label">${i18n('sd.ratingFlag')}</div>
           <div class="sdc-rating-row">
             <div class="sdc-stars" id="sdc-stars">
               ${[1,2,3,4,5].map(n => `
                 <span class="sdc-star ${(this._rating || 0) >= n ? 'filled' : ''}"
-                      data-star="${n}" title="${n} star${n>1?'s':''}">${(this._rating||0)>=n?'star':'star'}</span>
+                      data-star="${n}" title="${escH(i18n('sd.starCount', { count: n }))}">${(this._rating||0)>=n?'star':'star'}</span>
               `).join('')}
             </div>
             <div class="sdc-flag-btns">
-              <button class="sdc-flag-btn ${this._flag==='pick'?'active-pick':''}" data-flag="pick">Pick</button>
-              <button class="sdc-flag-btn ${this._flag==='reject'?'active-reject':''}" data-flag="reject">Reject</button>
-              <button class="sdc-flag-btn ${!this._flag?'active':''}" data-flag="">Unflag</button>
+              <button class="sdc-flag-btn ${this._flag==='pick'?'active-pick':''}" data-flag="pick">${i18n('sd.pick')}</button>
+              <button class="sdc-flag-btn ${this._flag==='reject'?'active-reject':''}" data-flag="reject">${i18n('sd.reject')}</button>
+              <button class="sdc-flag-btn ${!this._flag?'active':''}" data-flag="">${i18n('sd.unflag')}</button>
             </div>
           </div>
         </div>
 
         <!-- Tags -->
         <div>
-          <div class="sdc-label">Tags</div>
+          <div class="sdc-label">${i18n('sd.tags')}</div>
           <div class="sdc-tag-wrap" id="sdc-tag-wrap">
             ${this._tags.map(t => `
               <span class="sdc-chip" data-tag="${escH(t)}">
                 ${escH(t)}
-                <button class="sdc-chip-remove" data-remove="${escH(t)}" title="Remove">×</button>
+                <button class="sdc-chip-remove" data-remove="${escH(t)}" title="${escH(i18n('sd.remove'))}">×</button>
               </span>`).join('')}
-            <input class="sdc-tag-input" id="sdc-tag-input" placeholder="Add tag…" autocomplete="off">
+            <input class="sdc-tag-input" id="sdc-tag-input" placeholder="${escH(i18n('sd.addTag'))}" autocomplete="off">
           </div>
         </div>
 
         <!-- Caption -->
         <div>
-          <div class="sdc-label">Caption</div>
-          <textarea class="sdc-textarea" id="sdc-caption" placeholder="Add a caption…" rows="3">${escH(ann.caption || '')}</textarea>
+          <div class="sdc-label">${i18n('sd.caption')}</div>
+          <textarea class="sdc-textarea" id="sdc-caption" placeholder="${escH(i18n('sd.addCaption'))}" rows="3">${escH(ann.caption || '')}</textarea>
         </div>
 
         <!-- Location (collapsible) -->
         <div class="sdc-section" id="sdc-sec-geo">
           <div class="sdc-section-header" data-toggle="sdc-sec-geo">
             <span class="material-symbols-outlined sdc-section-toggle" style="font-size:16px">expand_more</span>
-            <span class="sdc-section-title">Location</span>
+            <span class="sdc-section-title">${i18n('sd.location')}</span>
             ${hasGPS ? '<span class="sdc-section-badge">GPS ✓</span>' : ''}
           </div>
           <div class="sdc-section-body">
             ${hasGPS ? `
               <button class="sdc-geocode-btn" id="sdc-geocode-btn">
                 <span class="material-symbols-outlined" style="font-size:14px">my_location</span>
-                Fill from GPS
+                ${i18n('sd.fillFromGps')}
               </button>` : ''}
             <div class="sdc-field">
-              <div class="sdc-label">City</div>
-              <input class="sdc-input" id="sdc-city" value="${escH(geo.city||'')}" placeholder="City">
+              <div class="sdc-label">${i18n('sd.city')}</div>
+              <input class="sdc-input" id="sdc-city" value="${escH(geo.city||'')}" placeholder="${escH(i18n('sd.city'))}">
             </div>
             <div class="sdc-field">
-              <div class="sdc-label">Region / State</div>
-              <input class="sdc-input" id="sdc-region" value="${escH(geo.region||'')}" placeholder="Region">
+              <div class="sdc-label">${i18n('sd.regionState')}</div>
+              <input class="sdc-input" id="sdc-region" value="${escH(geo.region||'')}" placeholder="${escH(i18n('sd.region'))}">
             </div>
             <div class="sdc-field">
-              <div class="sdc-label">Country</div>
-              <input class="sdc-input" id="sdc-country" value="${escH(geo.country||'')}" placeholder="Country">
+              <div class="sdc-label">${i18n('sd.country')}</div>
+              <input class="sdc-input" id="sdc-country" value="${escH(geo.country||'')}" placeholder="${escH(i18n('sd.country'))}">
             </div>
             <div class="sdc-field">
-              <div class="sdc-label">Country Code</div>
-              <input class="sdc-input" id="sdc-country-code" value="${escH(geo.countryCode||'')}" placeholder="e.g. GB" style="width:80px">
+              <div class="sdc-label">${i18n('sd.countryCode')}</div>
+              <input class="sdc-input" id="sdc-country-code" value="${escH(geo.countryCode||'')}" placeholder="${escH(i18n('sd.countryCodeEg'))}" style="width:80px">
             </div>
             ${hasGPS ? `<div class="sdc-readonly">GPS: ${this._sidecar.exif.gpsLat?.toFixed(5)}, ${this._sidecar.exif.gpsLng?.toFixed(5)}</div>` : ''}
           </div>
@@ -361,8 +362,8 @@ export class SidecarDrawer {
         <div class="sdc-section collapsed" id="sdc-sec-exif">
           <div class="sdc-section-header" data-toggle="sdc-sec-exif">
             <span class="material-symbols-outlined sdc-section-toggle" style="font-size:16px">expand_more</span>
-            <span class="sdc-section-title">Camera &amp; EXIF</span>
-            <span class="sdc-section-badge" style="color:var(--ps-text-faint);font-size:10px">read-only</span>
+            <span class="sdc-section-title">${i18n('sd.cameraExif')}</span>
+            <span class="sdc-section-badge" style="color:var(--ps-text-faint);font-size:10px">${i18n('sd.readOnly')}</span>
           </div>
           <div class="sdc-section-body">
             ${this._renderExifBlock(exif)}
@@ -374,8 +375,8 @@ export class SidecarDrawer {
         <div class="sdc-section collapsed" id="sdc-sec-comp">
           <div class="sdc-section-header" data-toggle="sdc-sec-comp">
             <span class="material-symbols-outlined sdc-section-toggle" style="font-size:16px">expand_more</span>
-            <span class="sdc-section-title">Computed</span>
-            <span class="sdc-section-badge" style="color:var(--ps-text-faint);font-size:10px">read-only</span>
+            <span class="sdc-section-title">${i18n('sd.computed')}</span>
+            <span class="sdc-section-badge" style="color:var(--ps-text-faint);font-size:10px">${i18n('sd.readOnly')}</span>
           </div>
           <div class="sdc-section-body">
             ${this._renderComputedBlock(comp)}
@@ -387,13 +388,13 @@ export class SidecarDrawer {
         <div class="sdc-section collapsed" id="sdc-sec-proc">
           <div class="sdc-section-header" data-toggle="sdc-sec-proc">
             <span class="material-symbols-outlined sdc-section-toggle" style="font-size:16px">expand_more</span>
-            <span class="sdc-section-title">Processing log</span>
-            <span class="sdc-section-badge">${procs.length} run${procs.length!==1?'s':''}</span>
+            <span class="sdc-section-title">${i18n('sd.processingLog')}</span>
+            <span class="sdc-section-badge">${escH(i18n('sd.runCount', { count: procs.length }))}</span>
           </div>
           <div class="sdc-section-body">
             ${procs.slice().reverse().map(p => `
               <div class="sdc-proc-entry">
-                <strong>${escH(p.recipe||'Unknown')}</strong> &nbsp;·&nbsp; ${formatAge(p.at)}
+                <strong>${escH(p.recipe||i18n('sd.unknown'))}</strong> &nbsp;·&nbsp; ${formatAge(p.at)}
                 ${p.output ? `<br><span style="font-size:10px;opacity:.6">${escH(p.output)}</span>` : ''}
               </div>`).join('')}
           </div>
@@ -404,10 +405,10 @@ export class SidecarDrawer {
       <div class="sdc-footer">
         <label class="sdc-exif-writeback">
           <input type="checkbox" id="sdc-writeback" checked>
-          Write to image EXIF
+          ${i18n('sd.writeToExif')}
         </label>
-        <button class="btn-secondary" id="sdc-cancel">Cancel</button>
-        <button class="btn-primary" id="sdc-save">Save sidecar</button>
+        <button class="btn-secondary" id="sdc-cancel">${i18n('common.cancel')}</button>
+        <button class="btn-primary" id="sdc-save">${i18n('sd.saveSidecar')}</button>
       </div>
     `;
 
@@ -430,7 +431,7 @@ export class SidecarDrawer {
     ].filter(Boolean);
     if (specs.length) rows.push(`<div class="sdc-readonly">${specs.join(' · ')}</div>`);
     if (exif.dateTaken) rows.push(`<div class="sdc-readonly">${escH(formatDate(exif.dateTaken))}</div>`);
-    if (!rows.length) rows.push('<div class="sdc-readonly" style="opacity:.5">No EXIF data</div>');
+    if (!rows.length) rows.push(`<div class="sdc-readonly" style="opacity:.5">${i18n('sd.noExifData')}</div>`);
     return rows.join('');
   }
 
@@ -496,7 +497,7 @@ export class SidecarDrawer {
     panel.querySelector('#sdc-geocode-btn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       btn.disabled = true;
-      btn.textContent = 'Looking up…';
+      btn.textContent = i18n('sd.lookingUp');
       try {
         const lat = this._sidecar?.exif?.gpsLat;
         const lng = this._sidecar?.exif?.gpsLng;
@@ -506,14 +507,14 @@ export class SidecarDrawer {
         panel.querySelector('#sdc-region').value       = result.region;
         panel.querySelector('#sdc-country').value      = result.country;
         panel.querySelector('#sdc-country-code').value = result.countryCode;
-        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">check</span> Done';
+        btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px">check</span> ${i18n('sd.done')}`;
       } catch (err) {
-        btn.textContent = 'Geocode failed';
+        btn.textContent = i18n('sd.geocodeFailed');
         console.warn('[sidecar] Geocode error:', err);
       } finally {
         setTimeout(() => {
           btn.disabled = false;
-          btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">my_location</span> Fill from GPS';
+          btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px">my_location</span> ${i18n('sd.fillFromGps')}`;
         }, 2000);
       }
     });
@@ -601,7 +602,7 @@ export class SidecarDrawer {
   async _save(panel) {
     const btn = panel.querySelector('#sdc-save');
     btn.disabled = true;
-    btn.textContent = 'Saving…';
+    btn.textContent = i18n('sd.saving');
 
     const exifWriteback = panel.querySelector('#sdc-writeback')?.checked;
 
@@ -651,12 +652,12 @@ export class SidecarDrawer {
 
       this._sidecar = merged;
       this._onSaved?.(this._file, merged);
-      window.AuroraToast?.show({ variant: 'success', title: `Sidecar saved · ${this._file.name}.json` });
+      window.AuroraToast?.show({ variant: 'success', title: i18n('sd.sidecarSaved', { name: this._file.name }) });
       this.close();
     } catch (err) {
-      window.AuroraToast?.show({ variant: 'danger', title: 'Save failed', description: err.message });
+      window.AuroraToast?.show({ variant: 'danger', title: i18n('sd.saveFailed'), description: err.message });
       btn.disabled = false;
-      btn.textContent = 'Save sidecar';
+      btn.textContent = i18n('sd.saveSidecar');
     }
   }
 

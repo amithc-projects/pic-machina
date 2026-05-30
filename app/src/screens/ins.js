@@ -12,6 +12,7 @@ import { ImageProcessor }      from '../engine/index.js';
 import { checkTransformAvailability } from '../engine/capabilities.js';
 import { extractExif }          from '../engine/exif-reader.js';
 import { formatDate }           from '../utils/misc.js';
+import { t }                    from '../i18n/index.js';
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -37,8 +38,8 @@ export async function render(container, hash) {
     container.innerHTML = `<div class="screen"><div class="screen-body" style="align-items:center;justify-content:center">
       <div class="empty-state">
         <span class="material-symbols-outlined">error_outline</span>
-        <div class="empty-state-title">Block not found</div>
-        <button class="btn-primary" onclick="navigate('#bkb')">Back to Blocks</button>
+        <div class="empty-state-title">${t('ins.notFound')}</div>
+        <button class="btn-primary" onclick="navigate('#bkb')">${t('ins.backToBlocks')}</button>
       </div></div></div>`;
     return;
   }
@@ -54,19 +55,19 @@ export async function render(container, hash) {
             <span class="material-symbols-outlined">widgets</span>
             ${escHtml(block.name)}
           </div>
-          <span class="ic-badge">${escHtml(block.category || 'General')}</span>
+          <span class="ic-badge">${escHtml(block.category || t('ins.generalCategory'))}</span>
         </div>
         <div class="flex items-center gap-2">
-          <button class="btn-icon" id="ins-btn-info" title="Image info for last test image">
+          <button class="btn-icon" id="ins-btn-info" title="${t('ins.infoTitle')}">
             <span class="material-symbols-outlined">info</span>
           </button>
           <button class="btn-secondary" id="ins-edit-btn">
             <span class="material-symbols-outlined">edit</span>
-            Edit Block
+            ${t('ins.editBlock')}
           </button>
           <button class="btn-secondary" id="ins-clone-btn">
             <span class="material-symbols-outlined">content_copy</span>
-            Clone
+            ${t('ins.clone')}
           </button>
         </div>
       </div>
@@ -81,17 +82,17 @@ export async function render(container, hash) {
             <div>
               ${block.description ? `<p class="ins-desc">${escHtml(block.description)}</p>` : ''}
               <div class="text-sm text-muted">
-                ${block.nodes.length} step${block.nodes.length !== 1 ? 's' : ''}
+                ${t('ins.stepCount', { count: block.nodes.length })}
                 &nbsp;·&nbsp;
-                Updated ${block.updatedAt ? formatDate(block.updatedAt) : '—'}
+                ${t('ins.updated', { date: block.updatedAt ? formatDate(block.updatedAt) : '—' })}
               </div>
             </div>
           </div>
 
-          <div class="ins-steps-title">Steps</div>
+          <div class="ins-steps-title">${t('ins.steps')}</div>
           <div class="ins-steps-list">
             ${block.nodes.length === 0
-              ? '<div class="empty-state" style="padding:24px"><div class="empty-state-title">No steps</div></div>'
+              ? `<div class="empty-state" style="padding:24px"><div class="empty-state-title">${t('ins.noSteps')}</div></div>`
               : block.nodes.map((n, i) => {
                   const def    = registry.get(n.transformId);
                   const catKey = def?.categoryKey || n.transformId?.split('-')[0] || 'other';
@@ -112,9 +113,9 @@ export async function render(container, hash) {
           <div id="ins-workspace-container" style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0"></div>
           
           <div id="ins-step-scrubber" class="ins-step-scrubber" style="display:none">
-            <span class="text-sm text-muted" style="flex-shrink:0">Step:</span>
+            <span class="text-sm text-muted" style="flex-shrink:0">${t('ins.step')}</span>
             <input type="range" id="ins-step-slider" class="ic-range" min="0" value="0" style="flex:1">
-            <span id="ins-step-label" class="mono text-sm" style="min-width:80px;text-align:right">Original</span>
+            <span id="ins-step-label" class="mono text-sm" style="min-width:80px;text-align:right">${t('ins.original')}</span>
           </div>
         </div>
       </div>
@@ -155,7 +156,7 @@ export async function render(container, hash) {
   container.querySelector('#ins-btn-info')?.addEventListener('click', async () => {
     const tf = testFile ?? window._icTestImage?.file;
     if (!tf) {
-      window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
+      window.AuroraToast?.show({ variant: 'info', title: t('ins.noTestImage') });
       return;
     }
     const panel = await getOrCreateInfoPanel();
@@ -169,7 +170,7 @@ export async function render(container, hash) {
 
   container.querySelector('#ins-clone-btn')?.addEventListener('click', async () => {
     const c = await cloneBlock(block.id);
-    window.AuroraToast?.show({ variant: 'success', title: `"${c.name}" cloned` });
+    window.AuroraToast?.show({ variant: 'success', title: t('ins.cloned', { name: c.name }) });
     navigate(`#bkb?id=${c.id}`);
   });
 
@@ -213,7 +214,7 @@ export async function render(container, hash) {
         const exif = await extractExif(file);
         const ctx  = { filename: file.name, exif, meta: {} };
 
-        stepResults = [{ label: 'Original', dataUrl: url }];
+        stepResults = [{ label: t('ins.original'), dataUrl: url }];
 
         for (let i = 0; i < block.nodes.length; i++) {
           const proc = new ImageProcessor();
@@ -237,8 +238,8 @@ export async function render(container, hash) {
       return {
         beforeUrl: stepResults[0]?.dataUrl,
         afterUrl: stepResults[activeStepIdx]?.dataUrl || stepResults[0]?.dataUrl,
-        beforeLabel: 'Original',
-        afterLabel: activeStepIdx === 0 ? 'Original' : `Step ${activeStepIdx}: ${stepResults[activeStepIdx]?.label}`,
+        beforeLabel: t('ins.original'),
+        afterLabel: activeStepIdx === 0 ? t('ins.original') : t('ins.stepLabel', { num: activeStepIdx, label: stepResults[activeStepIdx]?.label }),
         context: { filename: file.name }
       };
     }
@@ -252,7 +253,7 @@ export async function render(container, hash) {
     const step = stepResults[idx];
     if (!step) return;
     const label = container.querySelector('#ins-step-label');
-    if (label) label.textContent = idx === 0 ? 'Original' : `Step ${idx}: ${step.label}`;
+    if (label) label.textContent = idx === 0 ? t('ins.original') : t('ins.stepLabel', { num: idx, label: step.label });
 
     // Highlight active step row
     container.querySelectorAll('.ins-step-row').forEach((row, i) => {

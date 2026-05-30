@@ -25,13 +25,14 @@ import { globalLightbox }                            from '../components/lightbo
 import { readSidecar }                               from '../data/sidecar.js';
 import { migrateSidecarFiles }                       from '../data/sidecarMigrate.js';
 import { wireFolderState, resetFolderState }          from '../data/folder-state.js';
+import { t as i18n }                                  from '../i18n/index.js';
 
 const IMAGE_EXTS   = new Set(['.jpg','.jpeg','.png','.webp','.gif','.tif','.tiff','.bmp','.heic']);
 const VIDEO_EXTS   = new Set(['.mp4','.mov','.webm','.avi','.mkv']);
 const AUDIO_EXTS   = new Set(['.mp3','.wav','.flac','.ogg','.m4a','.aac']);
 const DOC_EXTS     = new Set(['.pdf','.docx','.doc','.txt','.csv','.json','.html','.md']);
-// Archive types we recognise as Zumilabs Studio deliverables. Only included
-// in listings when the folder has been confirmed as Zumilabs Studio output
+// Archive types we recognise as ZumiLabs Studio deliverables. Only included
+// in listings when the folder has been confirmed as ZumiLabs Studio output
 // (via hasStudioMarker), to avoid showing user-placed zips.
 const ARCHIVE_EXTS = new Set(['.zip', '.pptx']);
 
@@ -114,20 +115,20 @@ export async function render(container, hash) {
           <div class="screen-header">
             <div class="screen-title">
               <span class="material-symbols-outlined">folder_open</span>
-              Folder Viewer
+              ${i18n('fld.folderViewer')}
             </div>
           </div>
           <div class="screen-body" style="align-items:center;justify-content:center">
             <div class="empty-state">
               <span class="material-symbols-outlined" style="font-size:48px">folder_open</span>
-              <div class="empty-state-title">No folder selected</div>
-              <div class="empty-state-desc">Open a folder to browse its contents, or go to Output History to view a completed batch run.</div>
+              <div class="empty-state-title">${i18n('fld.noFolderSelected')}</div>
+              <div class="empty-state-desc">${i18n('fld.noFolderSelectedDesc')}</div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px">
                 <button class="btn-primary" id="fld-browse-folder">
-                  <span class="material-symbols-outlined">folder_open</span> Open Folder
+                  <span class="material-symbols-outlined">folder_open</span> ${i18n('fld.openFolder')}
                 </button>
                 <button class="btn-secondary" id="fld-go-out">
-                  <span class="material-symbols-outlined">history</span> Output History
+                  <span class="material-symbols-outlined">history</span> ${i18n('fld.outputHistory')}
                 </button>
               </div>
             </div>
@@ -148,16 +149,16 @@ export async function render(container, hash) {
   container.innerHTML = `
     <div class="screen fld-screen">
       ${runId ? `<div class="fld-toolbar" style="padding: 8px 16px; display: flex; gap: 8px; align-items: center; background: var(--ps-bg); border-bottom: 1px solid var(--ps-border);">
-        <button class="btn-icon" id="fld-back" title="Back">
+        <button class="btn-icon" id="fld-back" title="${i18n('fld.back')}">
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
         <div style="flex:1"></div>
         <button class="btn-secondary btn-sm" id="fld-btn-showcase" style="margin-right:8px">
-          <span class="material-symbols-outlined" style="font-size:16px">star</span> Add to ShowCase
+          <span class="material-symbols-outlined" style="font-size:16px">star</span> ${i18n('fld.addToShowcase')}
         </button>
-        <button class="fld-chip fld-chip--run is-active" id="fld-run-filter-btn" title="Toggle run results">
+        <button class="fld-chip fld-chip--run is-active" id="fld-run-filter-btn" title="${i18n('fld.toggleRunResults')}">
           <span class="material-symbols-outlined" style="font-size:12px">filter_alt</span>
-          Run results
+          ${i18n('fld.runResults')}
         </button>
       </div>` : ''}
 
@@ -165,7 +166,7 @@ export async function render(container, hash) {
         <div class="fld-main" id="fld-main">
           <div style="display:flex;align-items:center;justify-content:center;height:100%;gap:10px">
             <div class="spinner spinner--lg"></div>
-            <span class="text-sm text-muted">Loading files…</span>
+            <span class="text-sm text-muted">${i18n('fld.loadingFiles')}</span>
           </div>
         </div>
         <div id="fld-meta-panel-host" style="height:100%"></div>
@@ -194,7 +195,7 @@ export async function render(container, hash) {
       const { listImages, getOrCreateOutputSubfolder } = await import('../data/folders.js');
       let outputHandle = run.outputHandleObj || await getFolder('output');
       if (!outputHandle) {
-        window.AuroraToast?.show({ variant: 'warning', title: 'Output folder not accessible' });
+        window.AuroraToast?.show({ variant: 'warning', title: i18n('fld.outputFolderNotAccessible') });
         return;
       }
       const subHandle   = await getOrCreateOutputSubfolder(outputHandle, run.outputFolder || 'output');
@@ -239,12 +240,12 @@ export async function render(container, hash) {
       await saveShowcase(entry);
       window.AuroraToast?.show({
         variant: 'success',
-        title: 'Added to ShowCase',
-        description: `<a href="#shc?id=${entry.id}" style="color:var(--ps-blue)">View entry →</a>`,
+        title: i18n('fld.addedToShowcase'),
+        description: `<a href="#shc?id=${entry.id}" style="color:var(--ps-blue)">${i18n('fld.viewEntry')}</a>`,
       });
     } catch (err) {
       console.error('[fld showcase]', err);
-      window.AuroraToast?.show({ variant: 'danger', title: 'Failed to add to ShowCase', description: err.message });
+      window.AuroraToast?.show({ variant: 'danger', title: i18n('fld.failedToAddShowcase'), description: err.message });
     }
   });
 
@@ -348,7 +349,7 @@ export async function render(container, hash) {
   container.querySelector('#fld-btn-slideshow')?.addEventListener('click', () => {
     const images = filtered.filter(ent => fileType(ent.file.name) === 'image');
     if (!images.length) {
-      window.AuroraToast?.show({ variant: 'warning', title: 'No images to show' });
+      window.AuroraToast?.show({ variant: 'warning', title: i18n('fld.noImagesToShow') });
       return;
     }
     startSlideshow(images);
@@ -370,7 +371,7 @@ export async function render(container, hash) {
     } else {
       const outputHandle = run?.outputHandleObj || await getFolder('output');
       if (!outputHandle) {
-        showEmpty('Output folder not accessible. Grant permission in Batch Setup.');
+        showEmpty(i18n('fld.outputFolderNotAccessibleGrant'));
         return;
       }
 
@@ -379,7 +380,7 @@ export async function render(container, hash) {
       try {
         await outputHandle.getDirectoryHandle(subfolder, { create: false });
       } catch {
-        showEmpty(`Subfolder "${subfolder}" not found.`);
+        showEmpty(i18n('fld.subfolderNotFound', { subfolder }));
         return;
       }
 
@@ -411,7 +412,7 @@ export async function render(container, hash) {
 
     await reloadContents();
   } catch (err) {
-    showEmpty(`Error: ${err.message}`);
+    showEmpty(i18n('fld.errorPrefix', { message: err.message }));
   }
 
   // ── Folder navigation ───────────────────────────────────────
@@ -422,8 +423,8 @@ export async function render(container, hash) {
     migrateSidecarFiles(currentHandle).catch(err =>
       console.warn('[sidecarMigrate] migration failed:', err)
     );
-    // Only surface Zumilabs Studio-style archives (zip / pptx) when the
-    // folder we're browsing was actually written to by Zumilabs Studio (the
+    // Only surface ZumiLabs Studio-style archives (zip / pptx) when the
+    // folder we're browsing was actually written to by ZumiLabs Studio (the
     // engine drops a `.zumilabs-studio/` marker dir in every output folder
     // it creates). Avoids showing user-placed zips in arbitrary folders.
     const allowArchives = await hasStudioMarker(currentHandle);
@@ -478,7 +479,7 @@ export async function render(container, hash) {
 
     let html = '';
     if (!browseMode) {
-      html += `<span class="fld-crumb-recipe">${escHtml(run?.recipeName || 'Output')}</span>`;
+      html += `<span class="fld-crumb-recipe">${escHtml(run?.recipeName || i18n('fld.output'))}</span>`;
       html += `<span class="material-symbols-outlined fld-crumb-sep">chevron_right</span>`;
     } else {
       html += `<span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-text-muted)">folder_open</span>`;
@@ -525,7 +526,7 @@ export async function render(container, hash) {
     const main = container.querySelector('#fld-main');
     if (main) main.innerHTML = `<div class="empty-state" style="height:100%">
       <span class="material-symbols-outlined">folder_off</span>
-      <div class="empty-state-title">No files</div>
+      <div class="empty-state-title">${i18n('fld.noFiles')}</div>
       <div class="empty-state-desc">${escHtml(msg)}</div>
     </div>`;
   }
@@ -562,11 +563,11 @@ export async function render(container, hash) {
 
     if (!filtered.length && !filteredFolders.length && dirStack.length === 0) {
       const emptyMsg = runFilter
-        ? 'No output files found for this run. Toggle "Run results" to see all files in the folder.'
-        : 'No files match the current filter.';
+        ? i18n('fld.noRunOutputFiles')
+        : i18n('fld.noFilesMatchFilter');
       main.innerHTML = `<div class="empty-state" style="height:100%">
         <span class="material-symbols-outlined">filter_none</span>
-        <div class="empty-state-title">No files match</div>
+        <div class="empty-state-title">${i18n('fld.noFilesMatch')}</div>
         <div class="empty-state-desc">${emptyMsg}</div>
       </div>`;
       return;
@@ -577,12 +578,12 @@ export async function render(container, hash) {
       // (e.g. `#fld`). Without this attribute, sidekick would treat the
       // route name as a sub-folder deep link, fail to find it, then clear
       // the hash — which fires zumilabs-studio's router and navigates away.
-      main.innerHTML = `<sidekick-manager id="ic-sk-manager" no-hash-routing hide-inspector style="display:block; width:100%; height:100%"></sidekick-manager>`;
+      main.innerHTML = `<zumilabs-file-browser id="ic-sk-manager" no-hash-routing hide-inspector style="display:block; width:100%; height:100%"></zumilabs-file-browser>`;
       const sk = main.querySelector('#ic-sk-manager');
 
       // Image Editor context-menu action
       sk.selectionActions = [{
-        label: 'Edit in Image Editor',
+        label: i18n('fld.editInImageEditor'),
         icon: '🎨',
         onClick: async (selectedIds) => {
           const { getAllRecipes, saveRecipe } = await import('../data/recipes.js');
@@ -614,7 +615,7 @@ export async function render(container, hash) {
         skipTracking: !!runId,
         navigateTo: runSubfolder || null,
         onReady: () => {
-          console.log('[fld] sidekick-manager ready, restoring folder state');
+          console.log('[fld] zumilabs-file-browser ready, restoring folder state');
           sk._fldReady = true;
           // Apply run-output manifest filter once sidekick is mounted.
           applyRunFilterToSidekick();
@@ -647,13 +648,13 @@ export async function render(container, hash) {
 
       // Multi-select / clear → mirror into selectedSet so any remaining
       // host code that reads it (legacy paths) still works.
-      sk.addEventListener('sidekick:selection', (e) => {
+      sk.addEventListener('filebrowser:selection', (e) => {
         const items = e.detail?.items || [];
         selectedSet.clear();
         items.forEach(name => selectedSet.add(name));
       });
 
-      sk.addEventListener('sidekick:error', (e) =>
+      sk.addEventListener('filebrowser:error', (e) =>
         console.warn('[fld] sidekick error:', e.detail)
       );
     }
@@ -700,16 +701,16 @@ export async function render(container, hash) {
     if (!names.length) return;
 
     const confirmed = await showConfirm({
-      title: `Delete ${names.length} Item${names.length !== 1 ? 's' : ''}?`,
-      body: 'This will permanently remove these files from your computer. This action cannot be undone.',
-      confirmText: 'Delete Forever',
+      title: i18n('fld.deleteItemsTitle', { count: names.length }),
+      body: i18n('fld.deleteItemsBody'),
+      confirmText: i18n('fld.deleteForever'),
       variant: 'danger',
       icon: 'delete_forever'
     });
     if (!confirmed) return;
 
     try {
-      if (!activeSubHandle) throw new Error('Folder not accessible');
+      if (!activeSubHandle) throw new Error(i18n('fld.folderNotAccessible'));
 
       for (const name of names) {
         if (allEntries.find(e => e.file.name === name)) {
@@ -729,8 +730,8 @@ export async function render(container, hash) {
       if (window.AuroraToast) {
         window.AuroraToast.show({
           variant: 'success',
-          title: 'Files deleted',
-          description: `Successfully removed ${names.length} item${names.length !== 1 ? 's' : ''}.`
+          title: i18n('fld.filesDeleted'),
+          description: i18n('fld.removedItems', { count: names.length })
         });
       }
     } catch (err) {
@@ -738,7 +739,7 @@ export async function render(container, hash) {
       if (window.AuroraToast) {
         window.AuroraToast.show({
           variant: 'danger',
-          title: 'Deletion failed',
+          title: i18n('fld.deletionFailed'),
           description: err.message
         });
       }
@@ -823,11 +824,11 @@ export async function render(container, hash) {
       await setRecipeThumbnail(run.recipeId, thumbFile);
       window.AuroraToast?.show({
         variant: 'success',
-        title: 'Recipe thumbnail updated',
-        description: 'The recipe card in the Library will now show this image.',
+        title: i18n('fld.thumbnailUpdated'),
+        description: i18n('fld.thumbnailUpdatedDesc'),
       });
     } catch (err) {
-      window.AuroraToast?.show({ variant: 'danger', title: 'Failed to set thumbnail', description: err.message });
+      window.AuroraToast?.show({ variant: 'danger', title: i18n('fld.failedSetThumbnail'), description: err.message });
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -850,17 +851,17 @@ export async function render(container, hash) {
     overlay.className = 'fld-ss-overlay';
     overlay.innerHTML = `
       <div class="fld-ss-header">
-        <div class="fld-ss-title">Slideshow</div>
+        <div class="fld-ss-title">${i18n('fld.slideshow')}</div>
         <div class="fld-ss-counter">1 / ${images.length}</div>
         <div style="flex:1"></div>
         <div class="fld-ss-controls">
-          <button class="fld-ss-btn" id="fld-ss-prev" title="Previous (Left Arrow)">
+          <button class="fld-ss-btn" id="fld-ss-prev" title="${i18n('fld.previousArrow')}">
             <span class="material-symbols-outlined">chevron_left</span>
           </button>
-          <button class="fld-ss-btn" id="fld-ss-play" title="Play/Pause (Space)">
+          <button class="fld-ss-btn" id="fld-ss-play" title="${i18n('fld.playPause')}">
             <span class="material-symbols-outlined" id="fld-ss-play-icon">pause</span>
           </button>
-          <button class="fld-ss-btn" id="fld-ss-next" title="Next (Right Arrow)">
+          <button class="fld-ss-btn" id="fld-ss-next" title="${i18n('fld.nextArrow')}">
             <span class="material-symbols-outlined">chevron_right</span>
           </button>
           <div class="fld-ss-sep"></div>
@@ -871,7 +872,7 @@ export async function render(container, hash) {
             <option value="10000">10s</option>
           </select>
         </div>
-        <button class="fld-ss-close" id="fld-ss-close" title="Close (Esc)">
+        <button class="fld-ss-close" id="fld-ss-close" title="${i18n('fld.closeEsc')}">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>

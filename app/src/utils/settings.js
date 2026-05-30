@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
     // URL of the AI Image Describer endpoint.
     // Receives a multipart/form-data POST with an `image` file field and an
     // optional `filename` text field. Must return JSON matching (or mappable
-    // to) the Zumilabs Studio sidecar schema — either the full sidecar format
+    // to) the ZumiLabs Studio sidecar schema — either the full sidecar format
     // (with a top-level `analysis` key) or the raw AI analysis format
     // (with top-level keys: scene, subjects, composition, lighting, etc.).
     describerEndpoint: ''

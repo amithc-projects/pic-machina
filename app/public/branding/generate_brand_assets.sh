@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Zumilabs Studio brand asset generator
+# ZumiLabs Studio brand asset generator
 # Requires: ImageMagick 7+ ("magick")
 #
 # Usage:
@@ -180,8 +180,8 @@ fi
 
 cat > "$OUT_DIR/manifests/site.webmanifest" <<'JSON'
 {
-  "name": "Zumilabs Studio",
-  "short_name": "Zumilabs Studio",
+  "name": "ZumiLabs Studio",
+  "short_name": "ZumiLabs Studio",
   "icons": [
     { "src": "/brand-pack/pwa/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/brand-pack/pwa/icon-512.png", "sizes": "512x512", "type": "image/png" },
@@ -207,7 +207,7 @@ cat > "$OUT_DIR/manifests/html-head-snippet.html" <<'HTML'
 HTML
 
 cat > "$OUT_DIR/README-generated-assets.txt" <<EOF
-Generated Zumilabs Studio brand assets.
+Generated ZumiLabs Studio brand assets.
 
 Run:
   ./generate_brand_assets.sh "$SRC_DIR" "$OUT_DIR"

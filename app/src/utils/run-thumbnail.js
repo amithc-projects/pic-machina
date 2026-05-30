@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — run thumbnail helper
+ * ZumiLabs Studio — run thumbnail helper
  *
  * Lazily generates and caches a small JPEG thumbnail for a completed run,
  * derived from one of the run's output files (image, or one frame from a
@@ -37,7 +37,7 @@ import { extractVideoFrame, isVideoFile } from './video-frame.js';
  * The capture itself is mtime-filtered for safety (in case the folder
  * already contained files from other tools / previous runs we didn't
  * track). At end-of-batch, mtime is unambiguous because no other
- * Zumilabs Studio batch is writing concurrently.
+ * ZumiLabs Studio batch is writing concurrently.
  *
  * Mutates `run` in place and returns the captured filenames. Safe to
  * call before `updateRun(run)` — the caller persists.

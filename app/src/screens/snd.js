@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { TimelineView } from '../components/timeline-view.js';
 import { FsaBrowser } from '../components/fsa-browser.js';
 import { getWorkspaceRoot, setWorkspaceRoot, scanWorkspaceProjects, createProjectInWorkspace, verifyPermission } from '../utils/project-io.js';
+import { t as i18n } from '../i18n/index.js';
 
 // -------------- AUDIO HELPERS --------------
 function audioBufferToWav(buffer, opt_channel) {
@@ -104,17 +105,17 @@ function promptExportFormat() {
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
     overlay.innerHTML = `
       <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:28px 32px;min-width:280px;text-align:center;font-family:inherit">
-        <div style="font-size:16px;font-weight:600;color:#f1f5f9;margin-bottom:6px">Export Format</div>
-        <div style="font-size:13px;color:#94a3b8;margin-bottom:22px">Choose the output format for your mix</div>
+        <div style="font-size:16px;font-weight:600;color:#f1f5f9;margin-bottom:6px">${i18n('snd.exportFormat')}</div>
+        <div style="font-size:13px;color:#94a3b8;margin-bottom:22px">${i18n('snd.chooseFormat')}</div>
         <div style="display:flex;gap:12px;justify-content:center">
           <button data-fmt="wav" style="flex:1;padding:12px 20px;border-radius:8px;border:1.5px solid #3b82f6;background:#1e40af22;color:#93c5fd;font-size:14px;font-weight:600;cursor:pointer">
-            <div style="font-size:22px;margin-bottom:4px">🎚️</div>WAV<div style="font-size:11px;font-weight:400;color:#64748b;margin-top:2px">Lossless</div>
+            <div style="font-size:22px;margin-bottom:4px">🎚️</div>WAV<div style="font-size:11px;font-weight:400;color:#64748b;margin-top:2px">${i18n('snd.lossless')}</div>
           </button>
           <button data-fmt="mp3" style="flex:1;padding:12px 20px;border-radius:8px;border:1.5px solid #8b5cf6;background:#4c1d9522;color:#c4b5fd;font-size:14px;font-weight:600;cursor:pointer">
             <div style="font-size:22px;margin-bottom:4px">🎵</div>MP3<div style="font-size:11px;font-weight:400;color:#64748b;margin-top:2px">128 kbps</div>
           </button>
         </div>
-        <button data-fmt="cancel" style="margin-top:16px;background:none;border:none;color:#64748b;font-size:13px;cursor:pointer">Cancel</button>
+        <button data-fmt="cancel" style="margin-top:16px;background:none;border:none;color:#64748b;font-size:13px;cursor:pointer">${i18n('snd.cancel')}</button>
       </div>`;
     overlay.querySelectorAll('button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -286,8 +287,8 @@ function showDialog(title, message, isDestructive, onConfirm) {
            </div>
            <p style="margin: 0; color: #94a3b8; font-size: 14px; line-height: 1.5; font-family: system-ui, sans-serif;">${message}</p>
            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
-              <button class="snd-btn" id="dlg-cancel">Cancel</button>
-              <button class="snd-btn ${btnClass}" id="dlg-confirm">Confirm</button>
+              <button class="snd-btn" id="dlg-cancel">${i18n('snd.cancel')}</button>
+              <button class="snd-btn ${btnClass}" id="dlg-confirm">${i18n('snd.confirm')}</button>
            </div>
         </div>
     `;
@@ -318,8 +319,8 @@ function showPrompt(title) {
                <h3 style="margin: 0; font-size: 16px; color: #e2e8f0; font-family: system-ui, sans-serif;">${title}</h3>
                <input type="text" id="dlg-input" class="ic-input" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white;">
                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
-                  <button class="snd-btn" id="dlg-cancel">Cancel</button>
-                  <button class="snd-btn snd-btn-primary" id="dlg-confirm">Confirm</button>
+                  <button class="snd-btn" id="dlg-cancel">${i18n('snd.cancel')}</button>
+                  <button class="snd-btn snd-btn-primary" id="dlg-confirm">${i18n('snd.confirm')}</button>
                </div>
             </div>
         `;
@@ -497,8 +498,8 @@ export async function render(container) {
     container.innerHTML = `
       <div class="screen" style="display:flex; flex-direction:column; align-items:center; padding: 48px; gap: 24px; overflow-y:auto; height:100%; background:var(--ps-bg-surface);">
         <div style="text-align:center;">
-           <h2 style="font-size:24px; margin-bottom:8px;">Audio Studio</h2>
-           <p class="text-muted" style="font-size:14px;">Select or create a project to get started.</p>
+           <h2 style="font-size:24px; margin-bottom:8px;">${i18n('snd.audioStudio')}</h2>
+           <p class="text-muted" style="font-size:14px;">${i18n('snd.selectOrCreate')}</p>
         </div>
         <div id="snd-workspace-root" style="width:100%; max-width:800px; display:flex; flex-direction:column; gap:16px;"></div>
       </div>
@@ -512,9 +513,9 @@ export async function render(container) {
           rootEl.innerHTML = `
             <div style="display:flex; flex-direction:column; align-items:center; padding:48px; border:2px dashed var(--ps-border); border-radius:12px; background:var(--ps-surface);">
                <span class="material-symbols-outlined text-muted" style="font-size:48px; margin-bottom:16px;">folder_open</span>
-               <h3 style="margin-bottom:8px;">No Workspace Selected</h3>
-               <p class="text-muted" style="margin-bottom:24px; text-align:center;">A workspace is a local folder on your computer where all your projects will be stored.</p>
-               <button class="btn-primary" id="snd-btn-set-workspace">Select Workspace Folder</button>
+               <h3 style="margin-bottom:8px;">${i18n('snd.noWorkspaceSelected')}</h3>
+               <p class="text-muted" style="margin-bottom:24px; text-align:center;">${i18n('snd.workspaceDesc')}</p>
+               <button class="btn-primary" id="snd-btn-set-workspace">${i18n('snd.selectWorkspaceFolder')}</button>
             </div>
           `;
           rootEl.querySelector('#snd-btn-set-workspace').onclick = async () => {
@@ -522,27 +523,27 @@ export async function render(container) {
                 workspaceHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                 await setWorkspaceRoot(workspaceHandle);
                 renderWorkspace();
-             } catch(e) { if(e.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+             } catch(e) { if(e.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: i18n('snd.error'), description: e.message }); }
           };
           return;
        }
        
        if (!(await verifyPermission(workspaceHandle, true))) {
-          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">Permission required to access Workspace.</p><button class="btn-primary" id="snd-btn-grant">Grant Permission</button></div>`;
+          rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><p class="text-[var(--ps-orange)] mb-4">${i18n('snd.permissionRequired')}</p><button class="btn-primary" id="snd-btn-grant">${i18n('snd.grantPermission')}</button></div>`;
           rootEl.querySelector('#snd-btn-grant').onclick = async () => {
              if (await verifyPermission(workspaceHandle, true)) renderWorkspace();
           };
           return;
        }
        
-       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> Scanning workspace...</div>`;
+       rootEl.innerHTML = `<div style="text-align:center; padding:24px;"><span class="material-symbols-outlined spin">autorenew</span> ${i18n('snd.scanningWorkspace')}</div>`;
        const projects = await scanWorkspaceProjects(workspaceHandle);
        
        projects.sort((a,b) => (b.projectData.title || b.projectData.name || '').localeCompare(a.projectData.title || a.projectData.name || ''));
        
        let gridHtml = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> Workspace: <b>${workspaceHandle.name}</b></div>
-         <button class="btn-ghost btn-sm" id="snd-btn-change-workspace" title="Change Workspace"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+         <div class="text-sm text-muted flex flex-items-center gap-2"><span class="material-symbols-outlined text-[16px]">snippet_folder</span> ${i18n('snd.workspaceLabel')} <b>${workspaceHandle.name}</b></div>
+         <button class="btn-ghost btn-sm" id="snd-btn-change-workspace" title="${i18n('snd.changeWorkspace')}"><span class="material-symbols-outlined text-[16px]">edit</span></button>
        </div>`;
        
        gridHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px;">`;
@@ -551,7 +552,7 @@ export async function render(container) {
        gridHtml += `
          <button id="snd-btn-new-project" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; background:rgba(255,255,255,0.02); border:2px dashed var(--ps-border); border-radius:12px; cursor:pointer; color:var(--ps-text-muted); transition:0.2s;" onmouseover="this.style.color='var(--ps-blue)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.color='var(--ps-text-muted)'; this.style.borderColor='var(--ps-border)';">
            <span class="material-symbols-outlined" style="font-size:32px; margin-bottom:8px;">add_circle</span>
-           <span style="font-size:14px; font-weight:600;">New Audio Project</span>
+           <span style="font-size:14px; font-weight:600;">${i18n('snd.newAudioProject')}</span>
          </button>
        `;
        
@@ -568,7 +569,7 @@ export async function render(container) {
            <div class="snd-project-card" data-index="${i}" style="display:flex; flex-direction:column; padding:12px; background:var(--ps-surface); border:1px solid var(--ps-border); border-radius:12px; cursor:pointer; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.borderColor='var(--ps-blue)';" onmouseout="this.style.background='var(--ps-surface)'; this.style.borderColor='var(--ps-border)';">
               ${thumb}
               <span style="font-size:14px; font-weight:600; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${title}</span>
-              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${Object.keys(p.projectData.mediaPoolMeta || {}).length} items</span>
+              <span style="font-size:11px; color:var(--ps-text-muted); margin-top:4px;">${i18n('snd.itemsCount', { count: Object.keys(p.projectData.mediaPoolMeta || {}).length })}</span>
            </div>
          `;
        });
@@ -585,7 +586,7 @@ export async function render(container) {
        };
        
        rootEl.querySelector('#snd-btn-new-project').onclick = async () => {
-          const name = await showPrompt('Project Name:');
+          const name = await showPrompt(i18n('snd.projectNamePrompt'));
           if (!name) return;
           try {
              const initialData = { name: name, mediaPoolMeta: {}, tracks: [], masterFx: [] };
@@ -593,7 +594,7 @@ export async function render(container) {
              project = { name: name, originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
              currentProjectDirHandle = dirHandle;
              render(container);
-          } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: e.message }); }
+          } catch(e) { window.AuroraToast?.show({ variant: 'error', title: i18n('snd.error'), description: e.message }); }
        };
        
        rootEl.querySelectorAll('.snd-project-card').forEach(card => {
@@ -643,7 +644,7 @@ export async function render(container) {
 
                 currentProjectDirHandle = p.dirHandle;
                 render(container);
-             } catch(e) { window.AuroraToast?.show({ variant: 'error', title: 'Error', description: 'Could not open project. Error: ' + e.message }); }
+             } catch(e) { window.AuroraToast?.show({ variant: 'error', title: i18n('snd.error'), description: i18n('snd.couldNotOpenProject', { error: e.message }) }); }
           };
        });
     };
@@ -756,14 +757,14 @@ export async function render(container) {
           <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #22d3ee, #a855f7); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(34,211,238,0.4);">
             <span class="material-symbols-outlined" style="color: white; font-size: 18px;">graphic_eq</span>
           </div>
-          Audio Studio — 
+          ${i18n('snd.audioStudio')} —
           <span contenteditable="true" id="snd-project-name" style="font-weight: 400; color: #94a3b8; margin-left: 4px; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='rgba(255,255,255,0.1)'" onblur="this.style.borderColor='transparent'">${project.name || 'Untitled'}</span>
         </div>
         <div style="display: flex; gap: 16px;">
-          <button id="btn-new-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">add</span> New</button>
-          <button id="btn-save-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">save</span> Save</button>
-          <button id="btn-export" class="snd-btn snd-btn-primary"><span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> Export</button>
-          <button id="btn-close" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">eject</span> Close Audio</button>
+          <button id="btn-new-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">add</span> ${i18n('snd.new')}</button>
+          <button id="btn-save-proj" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">save</span> ${i18n('snd.save')}</button>
+          <button id="btn-export" class="snd-btn snd-btn-primary"><span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> ${i18n('snd.export')}</button>
+          <button id="btn-close" class="snd-btn" style="background: rgba(255,255,255,0.05);"><span class="material-symbols-outlined" style="font-size: 16px;">eject</span> ${i18n('snd.closeAudio')}</button>
         </div>
       </div>
       
@@ -774,11 +775,11 @@ export async function render(container) {
         <div id="snd-intro" style="position: absolute; inset: 0; z-index: 50; background: #0d0d14; display: none; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s;">
             <div style="display: flex; gap: 24px;">
                 <label class="snd-btn snd-btn-primary" style="padding: 24px 48px; font-size: 18px; border-radius: 16px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                   <span class="material-symbols-outlined" style="font-size: 32px;">audio_file</span> Import Audio
+                   <span class="material-symbols-outlined" style="font-size: 32px;">audio_file</span> ${i18n('snd.importAudio')}
                    <input type="file" id="snd-upload" accept="audio/*,video/*" style="display: none;">
                 </label>
             </div>
-            <p style="margin-top: 24px; color: #94a3b8;">Supports WAV, MP3, MP4, WebM</p>
+            <p style="margin-top: 24px; color: #94a3b8;">${i18n('snd.supportsFormats')}</p>
         </div>
 
         <!-- Left Sidebar -->
@@ -788,17 +789,17 @@ export async function render(container) {
 
             <div id="snd-sfx-generator-panel" style="display: none; flex-direction: column; padding: 16px; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);">
               <div class="fx-title" style="margin: 0; border: none; padding: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px; margin-bottom: 4px;">
-                <span>AI SFX & MIC RECORDING</span>
+                <span>${i18n('snd.aiSfxMicRecording')}</span>
                 <button class="btn-ghost" id="snd-btn-close-sfx" style="padding: 2px; color: #94a3b8; cursor: pointer; background: transparent; border: none; display: flex; align-items: center;">
                   <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
                 </button>
               </div>
-              <textarea id="snd-sfx-prompt" placeholder="e.g. a horse walks across gravel, cinematic..." class="snd-select" style="height: 60px; font-size: 12px; resize: none;"></textarea>
+              <textarea id="snd-sfx-prompt" placeholder="${i18n('snd.sfxPromptPlaceholder')}" class="snd-select" style="height: 60px; font-size: 12px; resize: none;"></textarea>
               <div style="display: flex; gap: 8px; align-items: center;">
-                <span class="text-xs text-muted" style="white-space: nowrap;">Duration:</span>
+                <span class="text-xs text-muted" style="white-space: nowrap;">${i18n('snd.duration')}</span>
                 <input type="number" id="snd-sfx-duration" value="4" min="1" max="22" class="snd-select" style="width: 60px; padding: 4px 8px; font-size: 12px;">
-                <button id="snd-btn-trigger-sfx" class="snd-btn snd-btn-primary" style="flex: 1; padding: 6px 12px; font-size: 12px; height: 32px;">Generate</button>
-                <button id="snd-btn-record" class="snd-btn" style="padding: 6px 10px; height: 32px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center;" title="Record from Microphone">
+                <button id="snd-btn-trigger-sfx" class="snd-btn snd-btn-primary" style="flex: 1; padding: 6px 12px; font-size: 12px; height: 32px;">${i18n('snd.generate')}</button>
+                <button id="snd-btn-record" class="snd-btn" style="padding: 6px 10px; height: 32px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); display: flex; align-items: center; justify-content: center;" title="${i18n('snd.recordFromMic')}">
                   <span class="material-symbols-outlined" style="font-size: 18px;">mic</span>
                 </button>
               </div>
@@ -806,12 +807,12 @@ export async function render(container) {
             </div>
 
             <div style="padding: 20px 20px 0 20px; display:flex; justify-content:space-between; align-items:center;">
-               <div class="fx-title" style="margin:0; border:none; padding:0;">AUDIO POOL</div>
+               <div class="fx-title" style="margin:0; border:none; padding:0;">${i18n('snd.audioPool')}</div>
                <div style="display: flex; gap: 8px; align-items: center;">
-                 <button class="btn-ghost" id="snd-btn-toggle-sfx" title="AI Sound FX & Mic Recorder" style="padding: 4px; color: #a855f7; cursor:pointer; background: transparent; border: none; display: flex; align-items: center;">
+                 <button class="btn-ghost" id="snd-btn-toggle-sfx" title="${i18n('snd.aiSoundFxMicRecorder')}" style="padding: 4px; color: #a855f7; cursor:pointer; background: transparent; border: none; display: flex; align-items: center;">
                     <span class="material-symbols-outlined" style="font-size:20px;">auto_awesome</span>
                  </button>
-                 <button class="btn-ghost" id="snd-btn-import-folder" title="Asset Browser" style="padding: 4px; color: #06b6d4; cursor:pointer; background: transparent; border: none; display: flex; align-items: center;">
+                 <button class="btn-ghost" id="snd-btn-import-folder" title="${i18n('snd.assetBrowser')}" style="padding: 4px; color: #06b6d4; cursor:pointer; background: transparent; border: none; display: flex; align-items: center;">
                     <span class="material-symbols-outlined" style="font-size:20px;">folder_special</span>
                  </button>
                </div>
@@ -844,7 +845,7 @@ export async function render(container) {
 
             <div id="diarize-overlay" style="display:none; position: absolute; inset:0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; flex-direction: column; color: #22d3ee;">
                <span class="material-symbols-outlined" style="font-size: 48px; animation: spin 2s linear infinite;">sync</span>
-               <div id="diarize-status" style="margin-top: 16px; font-weight: 600;">Running AI Inference...</div>
+               <div id="diarize-status" style="margin-top: 16px; font-weight: 600;">${i18n('snd.runningAiInference')}</div>
             </div>
 
         </div>
@@ -858,35 +859,35 @@ export async function render(container) {
           <div class="snd-scroll" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 24px;">
             
             <div id="clip-tools-container" style="display:none; flex-direction: column; gap: 12px;">
-                <div class="fx-title">ACTIONS</div>
+                <div class="fx-title">${i18n('snd.actions')}</div>
                 <div id="dynamic-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;"></div>
                 <div id="rate-container" style="margin-top: 8px;">
-                   <label class="snd-text-mono" style="color: #94a3b8; display: flex; justify-content: space-between;"><span>Playback Rate</span><span id="rate-val">1.0x</span></label>
+                   <label class="snd-text-mono" style="color: #94a3b8; display: flex; justify-content: space-between;"><span>${i18n('snd.playbackRate')}</span><span id="rate-val">1.0x</span></label>
                    <input type="range" id="clip-rate" class="snd-slider" min="0.5" max="2" step="0.1" value="1" style="margin-top: 8px;">
                 </div>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 12px;">
-                <div class="fx-title">EFFECTS RACK</div>
+                <div class="fx-title">${i18n('snd.effectsRack')}</div>
                 <div id="fx-multi-msg" style="display:none; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                    <p style="margin-top: 0; margin-bottom: 8px;">Applying an effect will add it to all selected clips.</p>
+                    <p style="margin-top: 0; margin-bottom: 8px;">${i18n('snd.applyEffectAllHint')}</p>
                     <div id="fx-staging-area" style="display: flex; flex-direction: column; gap: 12px;"></div>
                     <label style="display: flex; align-items: center; gap: 8px; margin-top: 12px; color: #e2e8f0; cursor: pointer;">
-                        <input type="checkbox" id="fx-replace-checkbox"> Replace existing effects
+                        <input type="checkbox" id="fx-replace-checkbox"> ${i18n('snd.replaceExistingEffects')}
                     </label>
-                    <button class="snd-btn snd-btn-blue" id="btn-apply-fx-multi" style="width: 100%; margin-top: 8px; display: none;">Apply to All Selected</button>
+                    <button class="snd-btn snd-btn-blue" id="btn-apply-fx-multi" style="width: 100%; margin-top: 8px; display: none;">${i18n('snd.applyToAllSelected')}</button>
                 </div>
                 <div id="kf-navigator" style="display: none; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; margin-bottom: 12px;">
                     <button class="snd-btn" id="btn-kf-prev" style="padding: 4px 8px;">&lt;</button>
                     <div style="display: flex; flex-direction: column; align-items: center;">
-                        <span id="kf-label" class="snd-text-mono" style="font-size: 12px; color: #22d3ee;">Base Settings</span>
-                        <button id="btn-kf-delete" class="snd-btn snd-btn-pink" style="display:none; padding: 2px 6px; font-size: 10px; margin-top: 4px;">Delete KF</button>
+                        <span id="kf-label" class="snd-text-mono" style="font-size: 12px; color: #22d3ee;">${i18n('snd.baseSettings')}</span>
+                        <button id="btn-kf-delete" class="snd-btn snd-btn-pink" style="display:none; padding: 2px 6px; font-size: 10px; margin-top: 4px;">${i18n('snd.deleteKf')}</button>
                     </div>
                     <button class="snd-btn" id="btn-kf-next" style="padding: 4px 8px;">&gt;</button>
                 </div>
                 <div id="fx-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
                 <select id="fx-add-select" class="snd-select">
-                    <option value="">+ Add Effect...</option>
+                    <option value="">${i18n('snd.addEffect')}</option>
                     ${Object.keys(FX_CATALOG).map(k => `<option value="${k}">${FX_CATALOG[k].name}</option>`).join('')}
                 </select>
             </div>
@@ -971,7 +972,7 @@ export async function render(container) {
       poolEl.innerHTML = '';
       
       if (Object.keys(project.mediaPool).length === 0) {
-          poolEl.innerHTML = '<div style="color:#64748b; font-size:12px; text-align:center; padding: 20px;">Pool is empty.<br>Import audio to get started.</div>';
+          poolEl.innerHTML = `<div style="color:#64748b; font-size:12px; text-align:center; padding: 20px;">${i18n('snd.poolEmpty')}</div>`;
           return;
       }
       
@@ -1092,9 +1093,9 @@ export async function render(container) {
       const isSingleClip = affectedClips.length === 1 && numTracks === 0;
       
       if (numTracks > 0 || numClips > 0) {
-          const title = numTracks > 0 ? (numTracks > 1 ? `${numTracks} Tracks Selected` : 'Track Selected') 
-                                      : (numClips > 1 ? `${numClips} Clips Selected` : 'Clip Selected');
-          const sub = numTracks > 0 ? `${affectedClips.length} total clips affected` : (isSingleClip ? affectedClips[0].name : `${affectedClips.length} clips affected`);
+          const title = numTracks > 0 ? (numTracks > 1 ? i18n('snd.tracksSelected', { count: numTracks }) : i18n('snd.trackSelected'))
+                                      : (numClips > 1 ? i18n('snd.clipsSelected', { count: numClips }) : i18n('snd.clipSelected'));
+          const sub = numTracks > 0 ? i18n('snd.totalClipsAffected', { count: affectedClips.length }) : (isSingleClip ? affectedClips[0].name : i18n('snd.clipsAffected', { count: affectedClips.length }));
           
           hdr.innerHTML = `<h2 style="font-size: 16px; margin: 0; color: #f472b6;">${title}</h2>
                            <p style="font-size: 11px; margin: 4px 0 0; color: #94a3b8;">${sub}</p>`;
@@ -1103,27 +1104,27 @@ export async function render(container) {
           const hasAction = (id) => isSingleClip ? affectedClips[0].appliedActions?.has(id) : affectedClips.every(c => c.appliedActions?.has(id));
           
           let actionsHtml = `
-              <button class="snd-btn ${hasAction('norm') ? 'snd-btn-primary' : ''}" id="btn-norm">Normalize</button>
-              <button class="snd-btn ${hasAction('rev') ? 'snd-btn-primary' : ''}" id="btn-rev">Reverse</button>
-              <button class="snd-btn ${hasAction('inv') ? 'snd-btn-primary' : ''}" id="btn-inv">Invert Phase</button>
-              <button class="snd-btn ${hasAction('fade-in') ? 'snd-btn-primary' : ''}" id="btn-fade-in">Fade In 1s</button>
-              <button class="snd-btn ${hasAction('fade-out') ? 'snd-btn-primary' : ''}" id="btn-fade-out">Fade Out 1s</button>
-              <button class="snd-btn" id="btn-auto-split"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">content_cut</span> Auto-Split</button>
+              <button class="snd-btn ${hasAction('norm') ? 'snd-btn-primary' : ''}" id="btn-norm">${i18n('snd.normalize')}</button>
+              <button class="snd-btn ${hasAction('rev') ? 'snd-btn-primary' : ''}" id="btn-rev">${i18n('snd.reverse')}</button>
+              <button class="snd-btn ${hasAction('inv') ? 'snd-btn-primary' : ''}" id="btn-inv">${i18n('snd.invertPhase')}</button>
+              <button class="snd-btn ${hasAction('fade-in') ? 'snd-btn-primary' : ''}" id="btn-fade-in">${i18n('snd.fadeIn1s')}</button>
+              <button class="snd-btn ${hasAction('fade-out') ? 'snd-btn-primary' : ''}" id="btn-fade-out">${i18n('snd.fadeOut1s')}</button>
+              <button class="snd-btn" id="btn-auto-split"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">content_cut</span> ${i18n('snd.autoSplit')}</button>
           `;
           if (numTracks > 0) {
-              actionsHtml += `<button class="snd-btn snd-btn-purple" id="btn-remove-gaps"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">compress</span> Remove Gaps</button>`;
+              actionsHtml += `<button class="snd-btn snd-btn-purple" id="btn-remove-gaps"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">compress</span> ${i18n('snd.removeGaps')}</button>`;
           }
           if (numTracks === 1) {
-              actionsHtml += `<button class="snd-btn snd-btn-blue" id="btn-diarize" style="grid-column: 1 / -1;"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">group</span> Diarize Track</button>`;
+              actionsHtml += `<button class="snd-btn snd-btn-blue" id="btn-diarize" style="grid-column: 1 / -1;"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">group</span> ${i18n('snd.diarizeTrack')}</button>`;
           }
           if (numClips === 2 && numTracks === 0) {
               // Only allow joining if they are on the same track
               const tracksWithSelection = project.tracks.filter(t => t.clips.some(c => affectedClips.includes(c)));
               if (tracksWithSelection.length === 1) {
-                  actionsHtml += `<button class="snd-btn snd-btn-blue" id="btn-join-clips" style="grid-column: 1 / -1;"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">join_inner</span> Join Selected Clips</button>`;
+                  actionsHtml += `<button class="snd-btn snd-btn-blue" id="btn-join-clips" style="grid-column: 1 / -1;"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">join_inner</span> ${i18n('snd.joinSelectedClips')}</button>`;
               }
           }
-          actionsHtml += `<button class="snd-btn snd-btn-pink" id="btn-delete" style="grid-column: 1 / -1;">Delete Selected</button>`;
+          actionsHtml += `<button class="snd-btn snd-btn-pink" id="btn-delete" style="grid-column: 1 / -1;">${i18n('snd.deleteSelected')}</button>`;
           actionsGrid.innerHTML = actionsHtml;
           
           if (isSingleClip) {
@@ -1134,8 +1135,8 @@ export async function render(container) {
               container.querySelector('#rate-container').style.display = 'none';
           }
       } else {
-          hdr.innerHTML = `<h2 style="font-size: 16px; margin: 0; color: #22d3ee;">Master Bus</h2>
-                           <p style="font-size: 11px; margin: 4px 0 0; color: #94a3b8;">Applied to final mixdown</p>`;
+          hdr.innerHTML = `<h2 style="font-size: 16px; margin: 0; color: #22d3ee;">${i18n('snd.masterBus')}</h2>
+                           <p style="font-size: 11px; margin: 4px 0 0; color: #94a3b8;">${i18n('snd.appliedToMixdown')}</p>`;
           tools.style.display = 'none';
       }
       
@@ -1210,12 +1211,12 @@ export async function render(container) {
               kfNav.style.display = 'flex';
               if (activeKeyframeIdx >= clip.keyframes.length) activeKeyframeIdx = clip.keyframes.length - 1;
               if (activeKeyframeIdx === -1) {
-                  kfLabel.textContent = 'Base Settings';
+                  kfLabel.textContent = i18n('snd.baseSettings');
                   kfDelBtn.style.display = 'none';
                   fxList.innerHTML = renderFxListHtml(clip.fx);
                   bindFxSliders(clip.fx);
               } else {
-                  kfLabel.textContent = `Keyframe ${activeKeyframeIdx + 1} of ${clip.keyframes.length}`;
+                  kfLabel.textContent = i18n('snd.keyframeOf', { num: activeKeyframeIdx + 1, total: clip.keyframes.length });
                   kfDelBtn.style.display = 'block';
                   fxList.innerHTML = renderFxListHtml(clip.fx, clip.keyframes[activeKeyframeIdx]);
                   bindFxSliders(clip.fx, clip.keyframes[activeKeyframeIdx]);
@@ -1380,7 +1381,7 @@ export async function render(container) {
               },
               onDeleteSelected: () => {
                   if (selectedItems.clips.size > 0) {
-                      showDialog('Delete Clip', 'Delete selected clip(s)?', true, () => {
+                      showDialog(i18n('snd.deleteClip'), i18n('snd.deleteClipBody'), true, () => {
                           project.tracks.forEach(t => {
                               t.clips = t.clips.filter(c => !selectedItems.clips.has(c.id));
                           });
@@ -1390,7 +1391,7 @@ export async function render(container) {
                           renderInspector();
                       });
                   } else if (selectedItems.tracks.size > 0) {
-                      showDialog('Delete Track', 'Delete selected track(s)?', true, () => {
+                      showDialog(i18n('snd.deleteTrackSimple'), i18n('snd.deleteTrackSimpleBody'), true, () => {
                           project.tracks = project.tracks.filter(t => !selectedItems.tracks.has(t.id));
                           selectedItems.tracks.clear();
                           rebuildPlayback();
@@ -1427,7 +1428,7 @@ export async function render(container) {
                   const splitOffsetSec = clickX / pixelsPerSecond;
                   
                   showContextMenu(e.clientX, e.clientY, [
-                      { label: 'Add Keyframe Here', icon: 'key', action: () => {
+                      { label: i18n('snd.addKeyframeHere'), icon: 'key', action: () => {
                           if (!clip.keyframes) clip.keyframes = [];
                           const snapshot = getInterpolatedFxParams(clip, splitOffsetSec);
                           clip.keyframes.push({ offset: splitOffsetSec, fxParams: snapshot });
@@ -1436,7 +1437,7 @@ export async function render(container) {
                           renderTimeline();
                           renderInspector();
                       }},
-                      { label: 'Split Clip Here', icon: 'content_cut', action: () => {
+                      { label: i18n('snd.splitClipHere'), icon: 'content_cut', action: () => {
                           const sourceOffset = splitOffsetSec * (clip.rate || 1);
                           if (sourceOffset <= 0.1 || sourceOffset >= clip.duration - 0.1) return;
                           
@@ -1496,7 +1497,7 @@ export async function render(container) {
                   muteBtn.style.border = 'none';
                   muteBtn.style.color = track.muted ? '#f87171' : '#94a3b8';
                   muteBtn.style.cursor = 'pointer';
-                  muteBtn.title = track.muted ? "Unmute Track" : "Mute Track";
+                  muteBtn.title = track.muted ? i18n('snd.unmuteTrack') : i18n('snd.muteTrack');
                   muteBtn.onclick = () => {
                       track.muted = !track.muted;
                       rebuildPlayback();
@@ -1509,9 +1510,9 @@ export async function render(container) {
                   delBtn.style.border = 'none';
                   delBtn.style.color = '#94a3b8';
                   delBtn.style.cursor = 'pointer';
-                  delBtn.title = "Delete Track";
+                  delBtn.title = i18n('snd.deleteTrack');
                   delBtn.onclick = () => {
-                      showDialog('Delete Track?', `Are you sure you want to completely delete "${track.name}" and all its clips?`, true, () => {
+                      showDialog(i18n('snd.deleteTrackTitle'), i18n('snd.deleteTrackBody', { name: track.name }), true, () => {
                           project.tracks = project.tracks.filter(t => t.id !== track.id);
                           selectedItems.tracks.delete(track.id);
                           selectedItems.clips.forEach(cid => {
@@ -1565,7 +1566,7 @@ export async function render(container) {
                           kfEl.style.border = '2px solid #000000';
                           kfEl.style.boxShadow = '0 0 5px rgba(0,0,0,1)';
                           kfEl.style.zIndex = '10';
-                          kfEl.title = `Keyframe ${idx+1}`;
+                          kfEl.title = i18n('snd.keyframeNum', { num: idx+1 });
                           kfEl.style.pointerEvents = 'none';
                           el.appendChild(kfEl);
                       });
@@ -1731,7 +1732,7 @@ export async function render(container) {
           renderAudioPool();
       } catch (err) {
           console.error("Audio Load Error:", err);
-          window.AuroraToast?.show({ variant: 'error', title: 'Import Failed', description: "Failed to load audio: " + err.message });
+          window.AuroraToast?.show({ variant: 'error', title: i18n('snd.importFailed'), description: i18n('snd.failedToLoadAudio', { error: err.message }) });
           container.querySelector('#snd-intro').style.opacity = '1';
           container.querySelector('#snd-intro').style.pointerEvents = 'auto';
       }
@@ -1747,7 +1748,7 @@ export async function render(container) {
           return buf._name === file.name || buf._name.startsWith(file.name + ' (Ch ');
       });
       if (isDuplicate) {
-          window.AuroraToast?.show({ variant: 'info', title: 'Already In Pool', description: `${file.name} is already in the audio pool.` });
+          window.AuroraToast?.show({ variant: 'info', title: i18n('snd.alreadyInPool'), description: i18n('snd.alreadyInPoolDesc', { name: file.name }) });
           return;
       }
       try {
@@ -1768,10 +1769,10 @@ export async function render(container) {
               project.mediaPool[poolId] = decodedBuffer;
           }
           renderAudioPool();
-          window.AuroraToast?.show({ variant: 'success', title: 'Audio Imported', description: file.name });
+          window.AuroraToast?.show({ variant: 'success', title: i18n('snd.audioImported'), description: file.name });
       } catch (err) {
           console.error("Import failed:", err);
-          window.AuroraToast?.show({ variant: 'error', title: 'Import Failed', description: "Import failed: " + err.message });
+          window.AuroraToast?.show({ variant: 'error', title: i18n('snd.importFailed'), description: i18n('snd.importFailedDesc', { error: err.message }) });
       }
   };
 
@@ -1837,7 +1838,7 @@ export async function render(container) {
       btnTriggerSfx.addEventListener('click', async () => {
           const promptText = sfxPromptEl.value.trim();
           if (!promptText) {
-              window.AuroraToast?.show({ variant: 'error', title: 'Empty Prompt', description: 'Please enter a sound effect prompt.' });
+              window.AuroraToast?.show({ variant: 'error', title: i18n('snd.emptyPrompt'), description: i18n('snd.emptyPromptDesc') });
               return;
           }
           
@@ -1845,7 +1846,7 @@ export async function render(container) {
           
           btnTriggerSfx.disabled = true;
           sfxStatusEl.style.display = 'block';
-          sfxStatusEl.textContent = 'Generating sound effect...';
+          sfxStatusEl.textContent = i18n('snd.generatingSfx');
           sfxStatusEl.style.color = '#94a3b8';
           
           try {
@@ -1853,7 +1854,7 @@ export async function render(container) {
               const settings = getSettings();
               const apiKey = settings.elevenlabs?.apiKey;
               if (!apiKey) {
-                  throw new Error('Please configure your Eleven Labs API Key in settings first.');
+                  throw new Error(i18n('snd.configureElevenLabs'));
               }
               
               const format = 'mp3_44100_96';
@@ -1887,13 +1888,13 @@ export async function render(container) {
               
               await importAudioFile(sfxFile);
               
-              sfxStatusEl.textContent = 'Success! Added to Audio Pool.';
+              sfxStatusEl.textContent = i18n('snd.sfxSuccess');
               sfxStatusEl.style.color = '#22c55e';
               setTimeout(() => { sfxStatusEl.style.display = 'none'; }, 4000);
               sfxPromptEl.value = '';
           } catch (err) {
               console.error(err);
-              sfxStatusEl.textContent = `Error: ${err.message}`;
+              sfxStatusEl.textContent = i18n('snd.errorMsg', { error: err.message });
               sfxStatusEl.style.color = '#ef4444';
           } finally {
               btnTriggerSfx.disabled = false;
@@ -1936,7 +1937,7 @@ export async function render(container) {
                           micStream.getTracks().forEach(track => track.stop());
                       }
                       
-                      sfxStatusEl.textContent = 'Processing recording...';
+                      sfxStatusEl.textContent = i18n('snd.processingRecording');
                       sfxStatusEl.style.color = '#22d3ee';
                       
                       try {
@@ -1946,21 +1947,21 @@ export async function render(container) {
                           const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                           
                           const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                          audioBuffer._name = `Mic Record (${timeStr})`;
+                          audioBuffer._name = i18n('snd.micRecordName', { time: timeStr });
                           
                           const poolId = 'pool_mic_' + Date.now();
                           project.mediaPool[poolId] = audioBuffer;
                           
                           renderAudioPool();
                           
-                          sfxStatusEl.textContent = `Recording saved: ${audioBuffer._name}`;
+                          sfxStatusEl.textContent = i18n('snd.recordingSavedStatus', { name: audioBuffer._name });
                           sfxStatusEl.style.color = '#22c55e';
                           setTimeout(() => { sfxStatusEl.style.display = 'none'; }, 4000);
-                          
-                          window.AuroraToast?.show({ variant: 'success', title: 'Recording Saved', description: `Added to audio pool.` });
+
+                          window.AuroraToast?.show({ variant: 'success', title: i18n('snd.recordingSaved'), description: i18n('snd.recordingSavedDesc') });
                       } catch (err) {
                           console.error("Mic decode error:", err);
-                          sfxStatusEl.textContent = `Processing error: ${err.message}`;
+                          sfxStatusEl.textContent = i18n('snd.processingError', { error: err.message });
                           sfxStatusEl.style.color = '#ef4444';
                       }
                   });
@@ -1972,27 +1973,27 @@ export async function render(container) {
                   btnRecord.style.background = '#ef4444';
                   btnRecord.style.borderColor = '#ef4444';
                   btnRecord.innerHTML = `<span class="material-symbols-outlined snd-recording-pulse" style="font-size: 18px;">stop</span>`;
-                  btnRecord.title = "Stop Recording";
+                  btnRecord.title = i18n('snd.stopRecording');
                   
                   if (btnTriggerSfx) btnTriggerSfx.disabled = true;
                   
                   sfxStatusEl.style.display = 'block';
                   sfxStatusEl.style.color = '#ef4444';
                   let elapsed = 0;
-                  sfxStatusEl.textContent = `Recording... 0:00`;
-                  
+                  sfxStatusEl.textContent = i18n('snd.recordingTime', { time: '0:00' });
+
                   recordTimerId = setInterval(() => {
                       elapsed++;
                       const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
                       const secs = (elapsed % 60).toString().padStart(2, '0');
-                      sfxStatusEl.textContent = `Recording... ${mins}:${secs}`;
+                      sfxStatusEl.textContent = i18n('snd.recordingTime', { time: `${mins}:${secs}` });
                   }, 1000);
                   
               } catch (err) {
                   console.error("Mic access failed:", err);
-                  window.AuroraToast?.show({ variant: 'error', title: 'Mic Access Failed', description: err.message });
+                  window.AuroraToast?.show({ variant: 'error', title: i18n('snd.micAccessFailed'), description: err.message });
                   sfxStatusEl.style.display = 'block';
-                  sfxStatusEl.textContent = `Mic Error: ${err.message}`;
+                  sfxStatusEl.textContent = i18n('snd.micError', { error: err.message });
                   sfxStatusEl.style.color = '#ef4444';
               }
           } else {
@@ -2010,7 +2011,7 @@ export async function render(container) {
               btnRecord.style.background = 'rgba(239, 68, 68, 0.1)';
               btnRecord.style.borderColor = 'rgba(239, 68, 68, 0.4)';
               btnRecord.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">mic</span>`;
-              btnRecord.title = "Record from Microphone";
+              btnRecord.title = i18n('snd.recordFromMic');
               
               if (btnTriggerSfx) btnTriggerSfx.disabled = false;
           }
@@ -2018,7 +2019,7 @@ export async function render(container) {
   }
 
   container.querySelector('#btn-close').addEventListener('click', () => {
-      showDialog('Close Session', 'Are you sure you want to close this audio session? Unsaved changes will be lost.', true, () => {
+      showDialog(i18n('snd.closeSession'), i18n('snd.closeSessionBody'), true, () => {
           if (isPlaying) container.querySelector('#btn-stop').click();
           project = { originalToneBuffer: null, tracks: [], masterFx: [], mediaPool: {} };
           activeToneNodes.forEach(n => n.dispose && n.dispose());
@@ -2143,7 +2144,7 @@ export async function render(container) {
           const w = await projFile.createWritable();
           await w.write(JSON.stringify(projClean, null, 2));
           await w.close();
-          window.AuroraToast?.show({ variant: 'success', title: 'Saved', description: 'Project saved successfully' });
+          window.AuroraToast?.show({ variant: 'success', title: i18n('snd.saved'), description: i18n('snd.projectSavedDesc') });
           
           const assetsDir = await currentProjectDirHandle.getDirectoryHandle('assets', { create: true });
           for (const [bufId, audioBuf] of buffers.entries()) {
@@ -2166,7 +2167,7 @@ export async function render(container) {
           // alert('Project saved to workspace!');
       } catch (err) {
           console.error(err);
-          if (err.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: 'Save Failed', description: "Failed to save project: " + err.message });
+          if (err.name !== 'AbortError') window.AuroraToast?.show({ variant: 'error', title: i18n('snd.saveFailed'), description: i18n('snd.failedToSaveProject', { error: err.message }) });
       }
   });
   
@@ -2434,7 +2435,7 @@ export async function render(container) {
       if (id === 'btn-fade-out') toggleClipAction(affectedClips, 'fade-out');
       
       if (id === 'btn-delete') {
-          showDialog('Delete Selected?', `Are you sure you want to destructively delete ${affectedClips.length} clip(s)?`, true, () => {
+          showDialog(i18n('snd.deleteSelectedTitle'), i18n('snd.deleteSelectedBody', { count: affectedClips.length }), true, () => {
               project.tracks.forEach(t => {
                   t.clips = t.clips.filter(c => !affectedClips.includes(c));
               });
@@ -2507,15 +2508,15 @@ export async function render(container) {
       if (id === 'btn-diarize') {
           let targetTrack = project.tracks.find(t => selectedItems.tracks.has(t.id));
           if (!targetTrack || targetTrack.clips.length !== 1) {
-              window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: 'Diarization requires selecting a single track containing exactly one continuous clip.' });
+              window.AuroraToast?.show({ variant: 'warning', title: i18n('snd.notice'), description: i18n('snd.diarizeRequiresSingle') });
               return;
           }
-          
-          showDialog('Diarize Track?', 'This will run AI analysis to separate speakers into different tracks. This might take a few moments. Continue?', true, async () => {
+
+          showDialog(i18n('snd.diarizeTrackTitle'), i18n('snd.diarizeTrackBody'), true, async () => {
               const mdl = document.getElementById('mdl');
               mdl.style.display = 'flex';
-              document.getElementById('mdl-title').textContent = 'Diarizing Audio...';
-              document.getElementById('mdl-desc').textContent = 'Loading Pyannote segmentation model...';
+              document.getElementById('mdl-title').textContent = i18n('snd.diarizingAudio');
+              document.getElementById('mdl-desc').textContent = i18n('snd.loadingPyannote');
               
               try {
                   const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0/dist/transformers.min.js');
@@ -2524,12 +2525,12 @@ export async function render(container) {
                   const segmenter = await pipeline('audio-frame-classification', 'onnx-community/pyannote-segmentation-3.0', {
                       progress_callback: (info) => {
                           if(info.status === 'downloading') {
-                              document.getElementById('mdl-desc').textContent = `Downloading AI model: ${info.name}...`;
+                              document.getElementById('mdl-desc').textContent = i18n('snd.downloadingModel', { name: info.name });
                           }
                       }
                   });
                   
-                  document.getElementById('mdl-desc').textContent = 'Downsampling audio to 16kHz for inference...';
+                  document.getElementById('mdl-desc').textContent = i18n('snd.downsampling');
                   
                   const clip = targetTrack.clips[0];
                   const offlineCtx = new OfflineAudioContext(1, clip.buffer.duration * 16000, 16000);
@@ -2541,13 +2542,13 @@ export async function render(container) {
                   
                   const audioData = downsampledBuf.getChannelData(0);
                   
-                  document.getElementById('mdl-desc').textContent = 'Analyzing speakers (this may take a while)...';
+                  document.getElementById('mdl-desc').textContent = i18n('snd.analyzingSpeakers');
                   const result = await segmenter(audioData, { sample_rate: 16000 });
                   
                   mdl.style.display = 'none';
                   
                   if (!result || result.length === 0) {
-                      window.AuroraToast?.show({ variant: 'warning', title: 'Notice', description: 'No speech segments detected.' });
+                      window.AuroraToast?.show({ variant: 'warning', title: i18n('snd.notice'), description: i18n('snd.noSpeechDetected') });
                       return;
                   }
                   
@@ -2556,7 +2557,7 @@ export async function render(container) {
                       if (!speakerTracks[seg.label]) {
                           speakerTracks[seg.label] = {
                               id: 'trk_' + seg.label,
-                              name: `Speaker ${seg.label}`,
+                              name: i18n('snd.speakerName', { label: seg.label }),
                               color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
                               muted: false,
                               clips: []
@@ -2593,7 +2594,7 @@ export async function render(container) {
                   renderInspector();
               } catch (err) {
                   mdl.style.display = 'none';
-                  window.AuroraToast?.show({ variant: 'error', title: 'Diarization Failed', description: err.message });
+                  window.AuroraToast?.show({ variant: 'error', title: i18n('snd.diarizationFailed'), description: err.message });
               }
           });
       }
@@ -2628,7 +2629,7 @@ export async function render(container) {
       if (!format) return;
 
       const btn = container.querySelector('#btn-export');
-      btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> Rendering...';
+      btn.innerHTML = `<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> ${i18n('snd.rendering')}`;
       btn.disabled = true;
 
       try {
@@ -2671,9 +2672,9 @@ export async function render(container) {
           a.download = projectNameSafe + '_' + Date.now() + '.' + format;
           a.click();
       } catch (err) {
-          window.AuroraToast?.show({ variant: 'error', title: 'Export Failed', description: err.message });
+          window.AuroraToast?.show({ variant: 'error', title: i18n('snd.exportFailed'), description: err.message });
       } finally {
-          btn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> Export Final';
+          btn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">download_for_offline</span> ${i18n('snd.exportFinal')}`;
           btn.disabled = false;
       }
   });

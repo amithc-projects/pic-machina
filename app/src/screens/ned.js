@@ -21,6 +21,7 @@ import { getStoredSeekTime, setStoredSeekTime, mountVideoScrubber } from '../uti
 import { fileFilterForRecipe, getFolder } from '../data/folders.js';
 import { renderTimeRangeSection, bindTimeRangeControls, injectTimeRangeStyles } from '../utils/time-range-strip.js';
 import { wireFolderState, allowedTypesAttrForRecipe } from '../data/folder-state.js';
+import { t as i18n } from '../i18n/index.js';
 
 // Category accent colours
 const CAT_COLORS = {
@@ -70,8 +71,8 @@ export async function render(container, hash) {
     container.innerHTML = `<div class="screen"><div class="screen-body" style="align-items:center;justify-content:center">
       <div class="empty-state">
         <span class="material-symbols-outlined">error_outline</span>
-        <div class="empty-state-title">Node not found</div>
-        <button class="btn-primary" id="ned-back-btn">Back</button>
+        <div class="empty-state-title">${i18n('ned.nodeNotFound')}</div>
+        <button class="btn-primary" id="ned-back-btn">${i18n('common.back')}</button>
       </div></div></div>`;
     container.querySelector('#ned-back-btn')?.addEventListener('click', () => window.history.back());
     return;
@@ -107,19 +108,19 @@ export async function render(container, hash) {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button class="btn-icon" onclick="window.location.hash='#hlp?id=${def?.id || node.transformId}'" title="View Documentation for this Step">
+          <button class="btn-icon" onclick="window.location.hash='#hlp?id=${def?.id || node.transformId}'" title="${i18n('ned.viewDocs')}">
             <span class="material-symbols-outlined" style="color:var(--ps-blue)">help</span>
           </button>
-          <button class="btn-icon" id="ned-btn-info" title="Image info for test image">
+          <button class="btn-icon" id="ned-btn-info" title="${i18n('ned.imageInfo')}">
             <span class="material-symbols-outlined">info</span>
           </button>
           <button class="btn-secondary" id="ned-btn-reset">
             <span class="material-symbols-outlined">restart_alt</span>
-            Reset
+            ${i18n('ned.reset')}
           </button>
           <button class="btn-primary" id="ned-done-btn">
             <span class="material-symbols-outlined">check</span>
-            Done
+            ${i18n('ned.done')}
           </button>
         </div>
       </div>
@@ -130,12 +131,12 @@ export async function render(container, hash) {
           <div class="ned-params-scroll">
             <div class="ned-section-title">
               <span class="material-symbols-outlined" style="font-size:14px">settings</span>
-              Parameters
+              ${i18n('ned.parameters')}
             </div>
 
             ${node.type === 'transform' && def ? `
               <div class="ned-fields">
-                ${paramsHtml || '<div class="text-sm text-muted" style="padding:12px">No parameters for this step.</div>'}
+                ${paramsHtml || `<div class="text-sm text-muted" style="padding:12px">${i18n('ned.noParameters')}</div>`}
               </div>` : ''}
 
             ${conditionHtml}
@@ -148,25 +149,25 @@ export async function render(container, hash) {
             <!-- Label override -->
             <div class="ned-section-title" style="margin-top:16px">
               <span class="material-symbols-outlined" style="font-size:14px">label</span>
-              Display Label
+              ${i18n('ned.displayLabel')}
             </div>
             <div class="ned-fields">
               <div class="ned-field">
-                <label class="ned-field-label" for="ned-label-input">Step Label</label>
-                <input type="text" id="ned-label-input" class="ic-input" value="${escHtml(node.label || '')}" placeholder="Custom label…">
+                <label class="ned-field-label" for="ned-label-input">${i18n('ned.stepLabel')}</label>
+                <input type="text" id="ned-label-input" class="ic-input" value="${escHtml(node.label || '')}" placeholder="${i18n('ned.customLabelPlaceholder')}">
               </div>
             </div>
           </div>
 
           <!-- Fixed action bar always visible at bottom -->
           <div class="ned-params-actions">
-            <button class="btn-secondary" id="ned-btn-reset-bottom" title="Reset all parameters to defaults">
+            <button class="btn-secondary" id="ned-btn-reset-bottom" title="${i18n('ned.resetAllTitle')}">
               <span class="material-symbols-outlined" style="font-size:14px">restart_alt</span>
-              Reset
+              ${i18n('ned.reset')}
             </button>
             <button class="btn-primary" id="ned-done-btn-bottom">
               <span class="material-symbols-outlined" style="font-size:14px">check</span>
-              Done
+              ${i18n('ned.done')}
             </button>
           </div>
         </div>
@@ -229,7 +230,7 @@ export async function render(container, hash) {
   }
 
   let _previewTimer = null;
-  let sk = null; // sidekick-manager element — set after workspace setup
+  let sk = null; // zumilabs-file-browser element — set after workspace setup
   function schedulePreview() {
     clearTimeout(_previewTimer);
     _previewTimer = setTimeout(() => {
@@ -271,8 +272,8 @@ export async function render(container, hash) {
     ? { includeVideo: true, onlyVideo: true }
     : fileFilterForRecipe(recipe);
 
-  // Create sidekick-manager element
-  const skEl = document.createElement('sidekick-manager');
+  // Create zumilabs-file-browser element
+  const skEl = document.createElement('zumilabs-file-browser');
   skEl.setAttribute('compare-mode', 'transform');
   skEl.setAttribute('no-hash-routing', '');
   const nedAllowedTypes = allowedTypesAttrForRecipe(recipe, { videoOnly: stepIsVideoOnly });
@@ -288,9 +289,9 @@ export async function render(container, hash) {
   wsContainer.appendChild(scrubberMount);
 
   // ── Track active file → scrubber + info panel; restore folder state ──
-  // Attach BEFORE compareInfo/compareRender so the sidekick:ready listener
+  // Attach BEFORE compareInfo/compareRender so the filebrowser:ready listener
   // is registered before the element fires it.
-  sk.addEventListener('sidekick:workspace', (e) => {
+  sk.addEventListener('filebrowser:workspace', (e) => {
     if (e.detail?.currentHandle) _nedCurrentDirHandle = e.detail.currentHandle;
   });
 
@@ -348,16 +349,16 @@ export async function render(container, hash) {
   }
   function _buildNedControls() {
     return `<div style="display:flex;align-items:center;justify-content:center;width:100%;gap:12px">
-      <span style="${_nlbl}">Before</span>
+      <span style="${_nlbl}">${i18n('ned.before')}</span>
       <div style="display:flex;gap:4px">
-        ${_nedCmpBtn('ned-cmp-ref-btn','ref','original', nedCompareRef==='original','Compare against the original image','Original')}
-        ${_nedCmpBtn('ned-cmp-ref-btn','ref','prev',     nedCompareRef==='prev',    'Compare against the previous step output','Prev Step')}
+        ${_nedCmpBtn('ned-cmp-ref-btn','ref','original', nedCompareRef==='original',i18n('ned.compareOriginalTitle'),i18n('ned.original'))}
+        ${_nedCmpBtn('ned-cmp-ref-btn','ref','prev',     nedCompareRef==='prev',    i18n('ned.comparePrevTitle'),i18n('ned.prevStep'))}
       </div>
       <div style="width:1px;height:22px;background:#374151;flex-shrink:0"></div>
-      <span style="${_nlbl}">After</span>
+      <span style="${_nlbl}">${i18n('ned.after')}</span>
       <div style="display:flex;gap:4px">
-        ${_nedCmpBtn('ned-cmp-result-btn','result','step',  nedResultRef==='step', 'Show result of this step only','This Step')}
-        ${_nedCmpBtn('ned-cmp-result-btn','result','final', nedResultRef==='final','Show final result of all steps','Final Result')}
+        ${_nedCmpBtn('ned-cmp-result-btn','result','step',  nedResultRef==='step', i18n('ned.showStepTitle'),i18n('ned.thisStep'))}
+        ${_nedCmpBtn('ned-cmp-result-btn','result','final', nedResultRef==='final',i18n('ned.showFinalTitle'),i18n('ned.finalResult'))}
       </div>
     </div>`;
   }
@@ -415,7 +416,7 @@ export async function render(container, hash) {
     const VIDEO_EXTS = new Set(['mp4', 'mov', 'webm', 'avi', 'mkv']);
     const fileIsVideo = VIDEO_EXTS.has(file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase());
     if (!fileIsVideo && (def.sourceTransformId || def.categoryKey === 'video-effect')) {
-      return { noPreview: true, noPreviewReason: 'This step only applies to video files. Select a video to preview.' };
+      return { noPreview: true, noPreviewReason: i18n('ned.videoOnlyReason') };
     }
 
     const params = collectParams(container, def.params || [], 'ned');
@@ -433,7 +434,7 @@ export async function render(container, hash) {
 
     let notice = null;
     if (node.transformId === 'flow-geo-timeline' && (!exif?.gps?.lat)) {
-      notice = 'Timeline requires an image with GPS Exif data. This step will skip images lacking location metadata.';
+      notice = i18n('ned.gpsNotice');
     }
     const noticeEl = container.querySelector('#ned-notice');
     if (noticeEl) {
@@ -539,8 +540,8 @@ export async function render(container, hash) {
     return {
       beforeUrl,
       afterUrl,
-      beforeLabel: nedCompareRef === 'prev' ? 'Prev Step' : 'Original',
-      afterLabel:  nedResultRef  === 'final' ? 'All Steps'  : 'This Step',
+      beforeLabel: nedCompareRef === 'prev' ? i18n('ned.prevStep') : i18n('ned.original'),
+      afterLabel:  nedResultRef  === 'final' ? i18n('ned.allSteps')  : i18n('ned.thisStep'),
       context
     };
   };
@@ -549,7 +550,7 @@ export async function render(container, hash) {
   container.querySelector('#ned-btn-info')?.addEventListener('click', async () => {
     const file = testFile ?? window._icTestImage?.file;
     if (!file) {
-      window.AuroraToast?.show({ variant: 'info', title: 'No test image selected yet' });
+      window.AuroraToast?.show({ variant: 'info', title: i18n('ned.noTestImage') });
       return;
     }
     const panel = await getOrCreateInfoPanel();
@@ -580,9 +581,9 @@ export async function render(container, hash) {
   // ── Reset ─────────────────────────────────────────────────
   const _resetFn = async () => {
     const confirmed = await showConfirm({
-      title: 'Reset Parameters?',
-      body: 'This will restore all settings in this step to their factory defaults. This action cannot be undone.',
-      confirmText: 'Reset',
+      title: i18n('ned.resetConfirmTitle'),
+      body: i18n('ned.resetConfirmBody'),
+      confirmText: i18n('ned.reset'),
       variant: 'warning',
       icon: 'restart_alt'
     });
@@ -646,7 +647,7 @@ export async function render(container, hash) {
     const bindBranchActions = () => {
       container.querySelector('#ned-btn-add-branch')?.addEventListener('click', () => {
         const nextLetter = String.fromCharCode(65 + (node.branches || []).length);
-        node.branches.push({ id: uuid(), label: `Variant ${nextLetter}`, nodes: [] });
+        node.branches.push({ id: uuid(), label: i18n('ned.variantName', { letter: nextLetter }), nodes: [] });
         refreshBranchEditor();
       });
 
@@ -655,9 +656,9 @@ export async function render(container, hash) {
           const idx = parseInt(btn.dataset.idx);
           if (node.branches.length <= 1) return;
           const confirmed = await showConfirm({
-            title: 'Remove Variant?',
-            body: 'This will delete the selected branch and every transformation step within it.',
-            confirmText: 'Remove Variant',
+            title: i18n('ned.removeVariantTitle'),
+            body: i18n('ned.removeVariantBody'),
+            confirmText: i18n('ned.removeVariant'),
             variant: 'danger',
             icon: 'delete_sweep'
           });
@@ -832,7 +833,7 @@ export async function render(container, hash) {
     window.addEventListener('mouseup', _onUp);
 
     // Capture image dimensions when a file is focused
-    sk.addEventListener('sidekick:file-focus', async e => {
+    sk.addEventListener('filebrowser:file-focus', async e => {
       if (!e.detail?.handle) return;
       try {
         const f = await e.detail.handle.getFile();
@@ -1218,7 +1219,7 @@ export async function render(container, hash) {
       if (!input) return;
       input.value = JSON.stringify(pts);
       const countEl = container.querySelector('.ned-path-points-count');
-      if (countEl) countEl.textContent = `${pts.length} points`;
+      if (countEl) countEl.textContent = i18n('ned.pointsCount', { count: pts.length });
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
@@ -1419,44 +1420,44 @@ export async function render(container, hash) {
         <div style="flex-shrink:0;padding:12px 18px;display:flex;flex-direction:column;gap:10px;background:var(--ps-bg-surface);border-top:1px solid var(--ps-border);">
           <!-- Row 1: Swatches -->
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <span style="font-size:11px;color:var(--ps-text-muted)">Color Swatches:</span>
+            <span style="font-size:11px;color:var(--ps-text-muted)">${i18n('ned.colorSwatches')}</span>
             <div id="ned-paint-swatches" style="display:flex;gap:6px;align-items:center;"></div>
-            <span style="font-size:11px;color:var(--ps-text-muted);margin-left:12px;">Custom:</span>
+            <span style="font-size:11px;color:var(--ps-text-muted);margin-left:12px;">${i18n('ned.custom')}</span>
             <input type="color" id="ned-paint-brush-color" value="#ff0000" style="width:36px;height:24px;border:1px solid var(--ps-border);border-radius:4px;cursor:pointer;padding:0;background:none;">
           </div>
           <!-- Row 2: Sliders & Controls -->
           <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
             <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:11px;color:var(--ps-text-muted)">Size:</span>
+              <span style="font-size:11px;color:var(--ps-text-muted)">${i18n('ned.size')}</span>
               <input type="range" id="ned-paint-brush-size" min="2" max="150" value="15" style="width:100px">
               <span id="ned-paint-brush-size-val" style="font-size:11px;width:35px;color:var(--ps-text-muted)">15px</span>
             </div>
             
             <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:11px;color:var(--ps-text-muted)">Feather:</span>
+              <span style="font-size:11px;color:var(--ps-text-muted)">${i18n('ned.feather')}</span>
               <input type="range" id="ned-paint-brush-feather" min="0" max="100" value="20" style="width:100px">
               <span id="ned-paint-brush-feather-val" style="font-size:11px;width:35px;color:var(--ps-text-muted)">20%</span>
             </div>
             
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:11px;">
               <input type="checkbox" id="ned-paint-brush-speed" checked style="cursor:pointer;">
-              <span>Speed-sensitive Size</span>
+              <span>${i18n('ned.speedSensitiveSize')}</span>
             </label>
             
             <button class="btn-secondary" id="ned-paint-erase-btn" style="font-size:11px;display:flex;align-items:center;gap:4px;">
               <span class="material-symbols-outlined" style="font-size:14px;">ink_eraser</span>
-              <span>Erase Mode</span>
+              <span>${i18n('ned.eraseMode')}</span>
             </button>
             
             <button class="btn-secondary" id="ned-paint-clear-btn" style="font-size:11px;display:flex;align-items:center;gap:4px;">
               <span class="material-symbols-outlined" style="font-size:14px;">delete</span>
-              <span>Clear All</span>
+              <span>${i18n('ned.clearAll')}</span>
             </button>
             
             <div style="flex:1"></div>
             
-            <button class="btn-secondary" id="ned-paint-cancel-btn">Cancel</button>
-            <button class="btn-primary"   id="ned-paint-confirm-btn">Confirm</button>
+            <button class="btn-secondary" id="ned-paint-cancel-btn">${i18n('ned.cancel')}</button>
+            <button class="btn-primary"   id="ned-paint-confirm-btn">${i18n('ned.confirm')}</button>
           </div>
         </div>`;
       wsContainer.appendChild(drawHost);
@@ -1601,12 +1602,12 @@ export async function render(container, hash) {
         drawHost.remove();
         
         const editBtn = container.querySelector(`[data-param-id="${paramId}"]`);
-        if (editBtn) editBtn.textContent = 'Edit Paint';
+        if (editBtn) editBtn.textContent = i18n('ned.editPaint');
         const parentField = editBtn?.closest('.ned-field');
         if (parentField && !parentField.querySelector('span[style*="4ade80"]')) {
           const tick = document.createElement('span');
           tick.style.cssText = 'color:#4ade80;font-size:11px;white-space:nowrap;margin-left:8px';
-          tick.textContent = '✓ Painted';
+          tick.textContent = i18n('ned.painted');
           editBtn.after(tick);
         }
         schedulePreview();
@@ -1638,14 +1639,14 @@ export async function render(container, hash) {
           <canvas id="ned-mask-canvas" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;cursor:crosshair;touch-action:none;opacity:0.75;mix-blend-mode:screen;"></canvas>
         </div>
         <div style="flex-shrink:0;padding:10px 16px;display:flex;gap:10px;align-items:center;background:var(--ps-bg-surface);border-top:1px solid var(--ps-border);">
-          <span style="font-size:11px;color:var(--ps-text-muted)">Brush:</span>
+          <span style="font-size:11px;color:var(--ps-text-muted)">${i18n('ned.brush')}</span>
           <input type="range" id="ned-mask-brush-size" min="5" max="120" value="30" style="width:100px">
-          <button class="btn-secondary" id="ned-mask-erase-btn" style="font-size:11px">Erase</button>
-          <button class="btn-secondary" id="ned-mask-clear-btn" style="font-size:11px">Clear</button>
+          <button class="btn-secondary" id="ned-mask-erase-btn" style="font-size:11px">${i18n('ned.erase')}</button>
+          <button class="btn-secondary" id="ned-mask-clear-btn" style="font-size:11px">${i18n('ned.clear')}</button>
           <div style="flex:1"></div>
-          <span style="font-size:10px;color:var(--ps-text-muted)">Paint white = keep area visible</span>
-          <button class="btn-secondary" id="ned-mask-cancel-btn">Cancel</button>
-          <button class="btn-primary"   id="ned-mask-confirm-btn">Confirm</button>
+          <span style="font-size:10px;color:var(--ps-text-muted)">${i18n('ned.maskHint')}</span>
+          <button class="btn-secondary" id="ned-mask-cancel-btn">${i18n('ned.cancel')}</button>
+          <button class="btn-primary"   id="ned-mask-confirm-btn">${i18n('ned.confirm')}</button>
         </div>`;
       wsContainer.appendChild(drawHost);
 
@@ -1700,7 +1701,7 @@ export async function render(container, hash) {
 
       drawHost.querySelector('#ned-mask-erase-btn').addEventListener('click', () => {
         eraseMode = !eraseMode;
-        drawHost.querySelector('#ned-mask-erase-btn').textContent = eraseMode ? 'Paint' : 'Erase';
+        drawHost.querySelector('#ned-mask-erase-btn').textContent = eraseMode ? i18n('ned.paint') : i18n('ned.erase');
       });
       drawHost.querySelector('#ned-mask-clear-btn').addEventListener('click', () => {
         mc.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
@@ -1712,12 +1713,12 @@ export async function render(container, hash) {
         drawHost.remove();
         // Refresh the button label
         const editBtn = container.querySelector(`[data-param-id="${paramId}"]`);
-        if (editBtn) editBtn.textContent = 'Edit Mask';
+        if (editBtn) editBtn.textContent = i18n('ned.editMask');
         const parentField = editBtn?.closest('.ned-field');
         if (parentField && !parentField.querySelector('span[style*="4ade80"]')) {
           const tick = document.createElement('span');
           tick.style.cssText = 'color:#4ade80;font-size:11px;white-space:nowrap;margin-left:8px';
-          tick.textContent = '✓ Painted';
+          tick.textContent = i18n('ned.painted');
           editBtn.after(tick);
         }
         schedulePreview();
@@ -1734,24 +1735,24 @@ function buildConditionEditor(cond = {}) {
   return `
     <div class="ned-section-title" style="margin-top:16px">
       <span class="material-symbols-outlined" style="font-size:14px">alt_route</span>
-      Condition
+      ${i18n('ned.condition')}
     </div>
     <div class="ned-fields">
       <div class="ned-field">
-        <label class="ned-field-label">Field</label>
+        <label class="ned-field-label">${i18n('ned.field')}</label>
         <select id="ned-cond-field" class="ic-input">
           ${fields.map(f => `<option value="${f}" ${f === cond.field ? 'selected' : ''}>${f}</option>`).join('')}
-          <option value="${cond.field || ''}" ${!fields.includes(cond.field) ? 'selected' : ''}>${cond.field || '(custom)'}</option>
+          <option value="${cond.field || ''}" ${!fields.includes(cond.field) ? 'selected' : ''}>${cond.field || i18n('ned.custom2')}</option>
         </select>
       </div>
       <div class="ned-field">
-        <label class="ned-field-label">Operator</label>
+        <label class="ned-field-label">${i18n('ned.operator')}</label>
         <select id="ned-cond-op" class="ic-input">
           ${ops.map(o => `<option value="${o}" ${o === cond.operator ? 'selected' : ''}>${o}</option>`).join('')}
         </select>
       </div>
       <div class="ned-field">
-        <label class="ned-field-label">Value</label>
+        <label class="ned-field-label">${i18n('ned.value')}</label>
         <input type="text" id="ned-cond-value" class="ic-input" value="${escHtml(String(cond.value ?? ''))}">
       </div>
     </div>`;
@@ -1770,25 +1771,25 @@ function buildBranchEditor(node) {
   return `
     <div class="ned-section-title" style="margin-top:16px">
       <span class="material-symbols-outlined" style="font-size:14px">device_hub</span>
-      Branch Variants
+      ${i18n('ned.branchVariants')}
     </div>
     <div class="ned-fields">
       ${(node.branches || []).map((b, i) => `
         <div class="ned-field">
           <div class="flex items-center gap-2">
             <div style="flex:1">
-              <label class="ned-field-label">Variant ${i + 1} Label</label>
-              <input type="text" class="ic-input ned-branch-label" data-branch-idx="${i}" value="${escHtml(b.label || '')}" placeholder="Variant label…">
+              <label class="ned-field-label">${i18n('ned.variantLabel', { num: i + 1 })}</label>
+              <input type="text" class="ic-input ned-branch-label" data-branch-idx="${i}" value="${escHtml(b.label || '')}" placeholder="${i18n('ned.variantLabelPlaceholder')}">
             </div>
             ${node.branches.length > 1 ? `
-              <button class="btn-icon ned-btn-del-branch" data-idx="${i}" title="Remove variant" style="margin-top:18px">
+              <button class="btn-icon ned-btn-del-branch" data-idx="${i}" title="${i18n('ned.removeVariant')}" style="margin-top:18px">
                 <span class="material-symbols-outlined" style="font-size:16px;color:var(--ps-red)">delete</span>
               </button>` : ''}
           </div>
         </div>`).join('')}
       <button class="btn-secondary" id="ned-btn-add-branch" style="margin-top:4px">
         <span class="material-symbols-outlined" style="font-size:14px">add</span>
-        Add Variant
+        ${i18n('ned.addVariant')}
       </button>
     </div>`;
 }

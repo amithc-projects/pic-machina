@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Capabilities & Requirements
+ * ZumiLabs Studio — Capabilities & Requirements
  *
  * Centralises the logic for checking whether a transform's prerequisites are
  * met (e.g. a model has been downloaded, a Chrome flag is enabled).
@@ -79,7 +79,7 @@ const RESOLVERS = {
     }
   },
 
-  /** Zumilabs Studio Pro licence (mocked via settings for now) */
+  /** ZumiLabs Studio Pro licence (mocked via settings for now) */
   'premium': async (req) => {
     const { getSettings } = await import('../utils/settings.js');
     const s = getSettings();

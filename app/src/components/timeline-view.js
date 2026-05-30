@@ -1,3 +1,5 @@
+import { t as i18n } from '../i18n/index.js';
+
 export class TimelineView {
     constructor(container, options = {}) {
         this.container = container;
@@ -34,17 +36,17 @@ export class TimelineView {
             <div class="timeline-view-wrapper" style="display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; background: var(--ps-bg-surface, #1e1e1e);">
                 <!-- Toolbar -->
                 <div class="timeline-toolbar" style="display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid var(--ps-border, #333);">
-                    <button class="btn-ghost tl-btn-split" title="Split Clip">
+                    <button class="btn-ghost tl-btn-split" title="${i18n('tl.splitClip')}">
                         <span class="material-symbols-outlined">content_cut</span>
                     </button>
-                    <button class="btn-ghost tl-btn-magnet is-active" title="Magnetic Snapping" style="color: var(--ps-blue, #3b82f6);">
+                    <button class="btn-ghost tl-btn-magnet is-active" title="${i18n('tl.magneticSnapping')}" style="color: var(--ps-blue, #3b82f6);">
                         <span class="material-symbols-outlined">link</span>
                     </button>
-                    <button class="btn-ghost tl-btn-delete" title="Delete Selected">
+                    <button class="btn-ghost tl-btn-delete" title="${i18n('tl.deleteSelected')}">
                         <span class="material-symbols-outlined">delete</span>
                     </button>
                     <div style="width: 8px;"></div>
-                    <button class="btn-ghost" id="tme-btn-play-timeline" title="Play/Pause (Cmd+F)" style="color: var(--ps-accent); background: rgba(0,255,100,0.1); border-radius: 4px;">
+                    <button class="btn-ghost" id="tme-btn-play-timeline" title="${i18n('tl.playPause')}" style="color: var(--ps-accent); background: rgba(0,255,100,0.1); border-radius: 4px;">
                         <span class="material-symbols-outlined" style="font-size: 22px;">play_arrow</span>
                     </button>
                     <div style="flex: 1;"></div>
@@ -59,12 +61,12 @@ export class TimelineView {
                     <!-- Track Headers -->
                     <div class="timeline-headers" style="width: ${this.options.trackHeaderWidth}px; flex-shrink: 0; position: sticky; left: 0; background: var(--ps-bg-surface, #1e1e1e); z-index: 10; border-right: 1px solid var(--ps-border, #333);">
                         <div class="timeline-corner" style="height: 30px; border-bottom: 1px solid var(--ps-border, #333); display: flex; align-items: center; justify-content: center; padding: 0 6px;">
-                            <button class="tl-btn-add-track" title="Add a video, FX, or audio track"
+                            <button class="tl-btn-add-track" title="${i18n('tl.addTrackTip')}"
                                 style="background: none; border: 1px dashed #666; color: #ccc; padding: 2px 8px; height: 22px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 4px; line-height: 1; transition: border-color 0.15s, color 0.15s, background 0.15s;"
                                 onmouseenter="this.style.borderColor='#3b82f6';this.style.color='#fff';this.style.background='rgba(59,130,246,0.1)';"
                                 onmouseleave="this.style.borderColor='#666';this.style.color='#ccc';this.style.background='none';">
                                 <span class="material-symbols-outlined" style="font-size: 14px;">add</span>
-                                <span>Add Track</span>
+                                <span>${i18n('tl.addTrack')}</span>
                             </button>
                         </div>
                         <div class="timeline-header-list"></div>

@@ -1,9 +1,9 @@
 /**
- * Zumilabs Studio — Shared Stock Media Downloader
+ * ZumiLabs Studio — Shared Stock Media Downloader
  *
  * Operates on the provider-agnostic asset shape produced by the
  * registry in media-providers.js. Writes each asset into a user-selected
- * FileSystemDirectoryHandle, alongside a Zumilabs Studio sidecar JSON
+ * FileSystemDirectoryHandle, alongside a ZumiLabs Studio sidecar JSON
  * (see docs/sidecar.schema.json) populated from the provider's metadata,
  * plus a single attribution.txt summarising the batch.
  */
@@ -101,7 +101,7 @@ export async function downloadMany(assets, dirHandle, onProgress) {
       return `${filename}\n  ${asset.kind === 'video' ? 'Video' : 'Photo'} by ${credit}${creditUrl ? ' (' + creditUrl + ')' : ''}\n  Source: ${asset.pageUrl} (${provider})\n`;
     });
     const header =
-      'Media downloaded via Zumilabs Studio from third-party stock providers.\n' +
+      'Media downloaded via ZumiLabs Studio from third-party stock providers.\n' +
       'Pexels License:   https://www.pexels.com/license/\n' +
       'Unsplash License: https://unsplash.com/license\n' +
       'Each file has a matching .json sidecar with provider metadata.\n' +

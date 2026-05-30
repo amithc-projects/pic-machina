@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Get Media Screen
+ * ZumiLabs Studio — Get Media Screen
  *
  * Search and download free stock photos and videos from Pexels and
  * Unsplash. Source is switchable via the Source dropdown. Both
@@ -13,6 +13,7 @@ import { showToast } from '../aurora/toast.js';
 import { listProviders, getProvider } from '../utils/media-providers.js';
 import { downloadMany, buildFilename } from '../utils/media-download.js';
 import { showMediaPreview } from '../utils/media-preview.js';
+import { t } from '../i18n/index.js';
 
 const PER_PAGE = 24;
 
@@ -45,10 +46,10 @@ export async function render(container) {
       <header style="display:flex; flex-direction:column; gap:6px;">
         <h2 style="margin:0; display:flex; align-items:center; gap:8px;">
           <span class="material-symbols-outlined" style="color:#10b981;">image_search</span>
-          Import Media
+          ${t('gmd.title')}
         </h2>
         <p style="margin:0; color:var(--ps-text-muted); font-size:13px;">
-          Search Pexels, Unsplash and Pixabay for free photos and videos. Preview, multi-select, and download to a folder.
+          ${t('gmd.subtitle')}
         </p>
       </header>
 
@@ -56,60 +57,60 @@ export async function render(container) {
 
       <section style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; background:var(--ps-bg-app); padding:12px; border-radius:8px; border:1px solid var(--ps-border);">
         <label style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
-          Source
+          ${t('gmd.source')}
           <select id="gmd-source" class="ic-input" style="width:auto;">
             ${providers.map(p => `<option value="${p.id}">${p.label}</option>`).join('')}
           </select>
         </label>
 
         <label id="gmd-mode-wrap" style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
-          Mode
+          ${t('gmd.mode')}
           <select id="gmd-mode" class="ic-input" style="width:auto;">
-            <option value="search">Search</option>
-            <option value="collections">Collections</option>
+            <option value="search">${t('gmd.modeSearch')}</option>
+            <option value="collections">${t('gmd.modeCollections')}</option>
           </select>
         </label>
 
         <label id="gmd-q-wrap" style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted); flex:1; min-width:200px; position:relative;">
-          Query
-          <input id="gmd-q" type="search" class="ic-input" placeholder="Search query…" autocomplete="off" />
+          ${t('gmd.query')}
+          <input id="gmd-q" type="search" class="ic-input" placeholder="${t('gmd.queryPlaceholder')}" autocomplete="off" />
           <div id="gmd-history-drop" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--ps-bg-app); border:1px solid var(--ps-border); border-radius:6px; margin-top:2px; z-index:200; max-height:260px; overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,0.4);"></div>
         </label>
 
         <label id="gmd-kind-wrap" style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
-          Kind
+          ${t('gmd.kind')}
           <select id="gmd-kind" class="ic-input" style="width:auto;">
-            <option value="both">Photos + Videos</option>
-            <option value="photo">Photos</option>
-            <option value="video">Videos</option>
+            <option value="both">${t('gmd.kindBoth')}</option>
+            <option value="photo">${t('gmd.kindPhotos')}</option>
+            <option value="video">${t('gmd.kindVideos')}</option>
           </select>
         </label>
 
         <label style="display:flex; flex-direction:column; gap:2px; font-size:11px; color:var(--ps-text-muted);">
-          Orientation
+          ${t('gmd.orientation')}
           <select id="gmd-orient" class="ic-input" style="width:auto;">
-            <option value="">Any</option>
-            <option value="landscape">Landscape</option>
-            <option value="portrait">Portrait</option>
-            <option value="square">Square</option>
+            <option value="">${t('gmd.orientAny')}</option>
+            <option value="landscape">${t('gmd.orientLandscape')}</option>
+            <option value="portrait">${t('gmd.orientPortrait')}</option>
+            <option value="square">${t('gmd.orientSquare')}</option>
           </select>
         </label>
 
         <button id="gmd-go" class="btn-primary" disabled>
           <span class="material-symbols-outlined" style="font-size:16px;">search</span>
-          <span id="gmd-go-label">Search</span>
+          <span id="gmd-go-label">${t('gmd.search')}</span>
         </button>
       </section>
 
       <div id="gmd-toolbar" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px;">
         <div id="gmd-status" style="font-size:12px; color:var(--ps-text-muted);"></div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <span id="gmd-selcount" style="font-size:12px; color:var(--ps-text-muted);">0 selected</span>
-          <button id="gmd-selall" class="btn-secondary" style="font-size:11px; padding:5px 10px;">Select page</button>
-          <button id="gmd-clear" class="btn-secondary" style="font-size:11px; padding:5px 10px;">Clear</button>
+          <span id="gmd-selcount" style="font-size:12px; color:var(--ps-text-muted);">${t('gmd.selected', { count: 0 })}</span>
+          <button id="gmd-selall" class="btn-secondary" style="font-size:11px; padding:5px 10px;">${t('gmd.selectPage')}</button>
+          <button id="gmd-clear" class="btn-secondary" style="font-size:11px; padding:5px 10px;">${t('gmd.clear')}</button>
           <button id="gmd-download" class="btn-primary" disabled>
             <span class="material-symbols-outlined" style="font-size:16px;">download</span>
-            Download selected
+            ${t('gmd.downloadSelected')}
           </button>
         </div>
       </div>
@@ -118,7 +119,7 @@ export async function render(container) {
 
       <footer style="display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--ps-text-faint); border-top:1px solid var(--ps-border); padding-top:8px;">
         <span id="gmd-rate"></span>
-        <span id="gmd-credit">Powered by Pexels &amp; Unsplash</span>
+        <span id="gmd-credit">${t('gmd.poweredBy')}</span>
       </footer>
     </div>
   `;
@@ -207,23 +208,23 @@ export async function render(container) {
 
     // Mode-specific button label / placeholder
     if (state.mode === 'search') {
-      elGoLabel.textContent = 'Search';
-      elQ.placeholder = `Search ${p.label}…`;
+      elGoLabel.textContent = t('gmd.search');
+      elQ.placeholder = t('gmd.searchProvider', { provider: p.label });
       elQ.disabled = false;
       elGo.disabled = !elQ.value.trim();
     } else if (state.mode === 'collections') {
-      elGoLabel.textContent = 'Browse';
-      elQ.placeholder = `Browse ${p.label} collections (no query needed)`;
+      elGoLabel.textContent = t('gmd.browse');
+      elQ.placeholder = t('gmd.browseProvider', { provider: p.label });
       elQ.disabled = true;
       elGo.disabled = false;
     } else if (state.mode === 'collection-detail') {
-      elGoLabel.textContent = 'Back to collections';
+      elGoLabel.textContent = t('gmd.backToCollections');
       elQ.placeholder = state.activeCollection?.title || '';
       elQ.disabled = true;
       elGo.disabled = false;
     }
 
-    elCredit.innerHTML = `Powered by <a href="${p.siteUrl}" target="_blank" rel="noopener" style="color:var(--ps-accent);">${p.label}</a>`;
+    elCredit.innerHTML = t('gmd.poweredByProvider', { url: p.siteUrl, provider: p.label });
   }
 
   function renderBanner() {
@@ -233,10 +234,10 @@ export async function render(container) {
         <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.4); border-radius:8px; padding:12px 14px; display:flex; align-items:flex-start; gap:10px;">
           <span class="material-symbols-outlined" style="color:#f59e0b;">key</span>
           <div style="flex:1; font-size:12px; line-height:1.5;">
-            <strong style="color:var(--ps-text);">${p.label} not configured.</strong>
-            Add your ${p.configHint} in
-            <a href="#sys" style="color:var(--ps-accent);">Settings &rsaquo; Stock Media Providers</a>
-            to enable this source.
+            <strong style="color:var(--ps-text);">${t('gmd.notConfigured', { provider: p.label })}</strong>
+            ${t('gmd.addKeyPre', { hint: p.configHint })}
+            <a href="#sys" style="color:var(--ps-accent);">${t('gmd.settingsLink')}</a>
+            ${t('gmd.addKeyPost')}
           </div>
         </div>`;
     } else {
@@ -249,14 +250,14 @@ export async function render(container) {
     state.rate = rate;
     if (rate.remaining != null) {
       const reset = rate.reset ? ' · resets ' + new Date(rate.reset * 1000).toLocaleTimeString() : '';
-      elRate.textContent = `${provider().label} API: ${rate.remaining}${rate.limit ? '/' + rate.limit : ''} remaining${reset}`;
+      elRate.textContent = t('gmd.rateInfo', { provider: provider().label, remaining: `${rate.remaining}${rate.limit ? '/' + rate.limit : ''}`, reset });
     }
   }
 
   function assetKey(a) { return `${a.provider}:${a.kind}:${a.id}`; }
 
   function updateSelectionUi() {
-    elSelCount.textContent = `${state.selected.size} selected`;
+    elSelCount.textContent = t('gmd.selected', { count: state.selected.size });
     elDownload.disabled = state.selected.size === 0;
   }
 
@@ -304,9 +305,9 @@ export async function render(container) {
     const ratio = (asset.width && asset.height) ? `${asset.width}/${asset.height}` : '4/3';
     const kindBadge = isVid
       ? `<div style="position:absolute; top:6px; left:6px; background:rgba(30,80,180,0.85); color:#fff; font-size:10px; padding:2px 7px; border-radius:4px; display:flex; align-items:center; gap:3px;">
-          <span class="material-symbols-outlined" style="font-size:12px;">play_circle</span>${asset.duration ? asset.duration + 's' : 'Video'}</div>`
+          <span class="material-symbols-outlined" style="font-size:12px;">play_circle</span>${asset.duration ? asset.duration + 's' : t('gmd.video')}</div>`
       : `<div style="position:absolute; top:6px; left:6px; background:rgba(16,100,60,0.85); color:#fff; font-size:10px; padding:2px 7px; border-radius:4px; display:flex; align-items:center; gap:3px;">
-          <span class="material-symbols-outlined" style="font-size:12px;">photo_camera</span>Photo</div>`;
+          <span class="material-symbols-outlined" style="font-size:12px;">photo_camera</span>${t('gmd.photo')}</div>`;
     return `
       <div class="gmd-card${selected ? ' gmd-card--selected' : ''}" data-key="${escapeHtml(key)}"
            style="background:var(--ps-bg-app); border:2px solid var(--ps-border); border-radius:8px; overflow:hidden; cursor:pointer; transition:border-color 0.15s;">
@@ -316,9 +317,9 @@ export async function render(container) {
           <div class="gmd-sel-indicator"><span class="material-symbols-outlined" style="font-size:14px;">check</span></div>
         </div>
         <div style="padding:8px 10px; font-size:11px; color:var(--ps-text-muted); display:flex; justify-content:space-between; gap:6px;">
-          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(asset.photographer)}">${escapeHtml(asset.photographer || 'Unknown')}</span>
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(asset.photographer)}">${escapeHtml(asset.photographer || t('gmd.unknown'))}</span>
           <span style="color:var(--ps-text-faint); display:flex; align-items:center; gap:3px;">
-            <span class="material-symbols-outlined" style="font-size:13px;">visibility</span>preview
+            <span class="material-symbols-outlined" style="font-size:13px;">visibility</span>${t('gmd.preview')}
           </span>
         </div>
       </div>`;
@@ -341,7 +342,7 @@ export async function render(container) {
     revokeThumbBlobs();
     if (!assets.length) {
       elResults.innerHTML = `<div style="width:100%; text-align:center; padding:40px; color:var(--ps-text-muted); font-size:13px;">
-        ${state.loading ? 'Loading…' : 'No results.'}
+        ${state.loading ? t('gmd.loading') : t('gmd.noResults')}
       </div>`;
       return;
     }
@@ -372,7 +373,7 @@ export async function render(container) {
     revokeThumbBlobs();
     if (!collections.length) {
       elResults.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--ps-text-muted); font-size:13px;">
-        ${state.loading ? 'Loading…' : 'No collections.'}
+        ${state.loading ? t('gmd.loading') : t('gmd.noCollections')}
       </div>`;
       return;
     }
@@ -386,7 +387,7 @@ export async function render(container) {
         </div>
         <div style="padding:10px 12px; display:flex; flex-direction:column; gap:4px;">
           <div style="font-size:13px; font-weight:500; color:var(--ps-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(c.title)}</div>
-          <div style="font-size:11px; color:var(--ps-text-muted);">${c.totalCount} item${c.totalCount === 1 ? '' : 's'}</div>
+          <div style="font-size:11px; color:var(--ps-text-muted);">${t('gmd.itemCount', { count: c.totalCount })}</div>
         </div>
       </div>
     `);
@@ -412,10 +413,10 @@ export async function render(container) {
           const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
           const result = await downloadMany([asset], dirHandle, () => {});
           if (result.failed.length) throw result.failed[0].error;
-          showToast({ variant: 'success', title: 'Downloaded', description: buildFilename(asset) });
+          showToast({ variant: 'success', title: t('gmd.downloaded'), description: buildFilename(asset) });
         } catch (e) {
           if (e?.name !== 'AbortError') {
-            showToast({ variant: 'error', title: 'Download failed', description: e.message });
+            showToast({ variant: 'error', title: t('gmd.downloadFailed'), description: e.message });
           }
         }
       }
@@ -439,7 +440,7 @@ export async function render(container) {
     }
     // Search mode
     if (!p.hasKey()) {
-      showToast({ variant: 'warning', title: `${p.label} not configured`, description: 'Add an API key in Settings.' });
+      showToast({ variant: 'warning', title: t('gmd.notConfiguredShort', { provider: p.label }), description: t('gmd.addApiKey') });
       return;
     }
     const q = elQ.value.trim();
@@ -449,7 +450,7 @@ export async function render(container) {
     state.orientation = elOrient.value;
     saveHistory(q);
     state.loading = true;
-    elStatus.textContent = `Searching ${p.label}…`;
+    elStatus.textContent = t('gmd.searching', { provider: p.label });
     state.assets = [];
     renderAssetGrid([]);
     try {
@@ -457,9 +458,9 @@ export async function render(container) {
       if (r.unauthenticated) { renderBanner(); elStatus.textContent = ''; return; }
       state.assets = r.assets || [];
       updateRate(r.rate);
-      elStatus.textContent = `${state.assets.length} result(s) for "${q}" on ${p.label}`;
+      elStatus.textContent = t('gmd.resultsFor', { count: state.assets.length, query: q, provider: p.label });
     } catch (err) {
-      showToast({ variant: 'error', title: `${p.label} search failed`, description: err.message });
+      showToast({ variant: 'error', title: t('gmd.searchFailed', { provider: p.label }), description: err.message });
       elStatus.textContent = '';
     } finally {
       state.loading = false;
@@ -471,7 +472,7 @@ export async function render(container) {
     const p = provider();
     if (!p.hasKey()) { renderBanner(); return; }
     state.loading = true;
-    elStatus.textContent = `Loading ${p.label} collections…`;
+    elStatus.textContent = t('gmd.loadingCollections', { provider: p.label });
     state.collections = [];
     renderCollectionsGrid([]);
     try {
@@ -479,9 +480,9 @@ export async function render(container) {
       if (r.unauthenticated) { renderBanner(); elStatus.textContent = ''; return; }
       state.collections = r.collections || [];
       updateRate(r.rate);
-      elStatus.textContent = `${state.collections.length} collection(s) on ${p.label}`;
+      elStatus.textContent = t('gmd.collectionsCount', { count: state.collections.length, provider: p.label });
     } catch (err) {
-      showToast({ variant: 'error', title: 'Could not load collections', description: err.message });
+      showToast({ variant: 'error', title: t('gmd.collectionsLoadFailed'), description: err.message });
       elStatus.textContent = '';
     } finally {
       state.loading = false;
@@ -495,7 +496,7 @@ export async function render(container) {
     state.activeCollection = collection;
     refreshControls();
     state.loading = true;
-    elStatus.textContent = `Loading "${collection.title}"…`;
+    elStatus.textContent = t('gmd.loadingCollection', { title: collection.title });
     state.assets = [];
     renderAssetGrid([]);
     try {
@@ -503,9 +504,9 @@ export async function render(container) {
       if (r.unauthenticated) { renderBanner(); elStatus.textContent = ''; return; }
       state.assets = r.assets || [];
       updateRate(r.rate);
-      elStatus.textContent = `${state.assets.length} item(s) in "${collection.title}"`;
+      elStatus.textContent = t('gmd.itemsIn', { count: state.assets.length, title: collection.title });
     } catch (err) {
-      showToast({ variant: 'error', title: 'Could not load collection', description: err.message });
+      showToast({ variant: 'error', title: t('gmd.collectionLoadFailed'), description: err.message });
       elStatus.textContent = '';
     } finally {
       state.loading = false;
@@ -519,7 +520,7 @@ export async function render(container) {
     try {
       dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
     } catch (e) {
-      if (e.name !== 'AbortError') showToast({ variant: 'error', title: 'Folder selection failed', description: e.message });
+      if (e.name !== 'AbortError') showToast({ variant: 'error', title: t('gmd.folderSelectFailed'), description: e.message });
       return;
     }
     const assets = Array.from(state.selected.values());
@@ -535,13 +536,13 @@ export async function render(container) {
       const fail = result.failed.length;
       showToast({
         variant: fail === 0 ? 'success' : (ok === 0 ? 'error' : 'warning'),
-        title: fail === 0 ? 'Download complete' : 'Finished with errors',
+        title: fail === 0 ? t('gmd.downloadComplete') : t('gmd.finishedWithErrors'),
         description: fail === 0
-          ? `${ok} file(s) saved + attribution.txt`
-          : `${ok} succeeded, ${fail} failed`
+          ? t('gmd.filesSaved', { count: ok })
+          : t('gmd.someFailed', { ok, fail })
       });
     } catch (err) {
-      showToast({ variant: 'error', title: 'Download failed', description: err.message });
+      showToast({ variant: 'error', title: t('gmd.downloadFailed'), description: err.message });
     } finally {
       elDownload.innerHTML = original;
       updateSelectionUi();
@@ -567,7 +568,7 @@ export async function render(container) {
     state.activeCollection = null;
     refreshControls();
     elResults.innerHTML = '';
-    elStatus.textContent = state.mode === 'collections' ? 'Click Browse to load collections.' : 'Type a query and press Enter.';
+    elStatus.textContent = state.mode === 'collections' ? t('gmd.clickBrowse') : t('gmd.typeQuery');
   });
 
   elGo.addEventListener('click', runSearch);
@@ -592,6 +593,6 @@ export async function render(container) {
   renderBanner();
   requestAnimationFrame(() => elQ.focus());
   elStatus.textContent = provider().hasKey()
-    ? 'Type a query and press Enter.'
-    : `Add a ${provider().configHint} in Settings to get started.`;
+    ? t('gmd.typeQuery')
+    : t('gmd.addKeyToStart', { hint: provider().configHint });
 }

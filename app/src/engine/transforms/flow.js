@@ -239,7 +239,7 @@ registry.register({
   timeline: 'unsupported',
   icon: 'photo_library',
   description: 'Collect all photos and compose an animated polaroid stack — each photo appears on a desk in sequence. Outputs GIF or MP4.',
-  requires: [{ type: 'premium', id: 'pro', label: 'Zumilabs Studio Pro' }],
+  requires: [{ type: 'premium', id: 'pro', label: 'ZumiLabs Studio Pro' }],
   params: [
     { name: 'filename',     label: 'Output Filename',       type: 'text',    defaultValue: 'photo-stack' },
     { name: 'format',       label: 'Output Format',         type: 'select',
@@ -473,7 +473,7 @@ registry.register({
   timeline: 'unsupported',
   icon: 'layers',
   description: 'Collect frames and animate them appearing on a desk surface one by one. Add overlay-polaroid-frame upstream to get polaroid borders.',
-  requires: [{ type: 'premium', id: 'pro', label: 'Zumilabs Studio Pro' }],
+  requires: [{ type: 'premium', id: 'pro', label: 'ZumiLabs Studio Pro' }],
   params: [
     { name: 'filename',    label: 'Output Filename',    type: 'text',   defaultValue: 'stack' },
     { name: 'format',      label: 'Output Format',      type: 'select',
@@ -772,7 +772,7 @@ registry.register({
   timeline: 'unsupported',
   icon: 'playlist_add',
   description: 'Join all selected video files end-to-end into a single output video. Input order follows file selection order.',
-  requires: [{ type: 'premium', id: 'pro', label: 'Zumilabs Studio Pro' }],
+  requires: [{ type: 'premium', id: 'pro', label: 'ZumiLabs Studio Pro' }],
   params: [
     { name: 'filename', label: 'Output Filename',      type: 'text',   defaultValue: 'concatenated.mp4' },
     { name: 'fps',      label: 'Output Frame Rate',    type: 'number', defaultValue: 30   },

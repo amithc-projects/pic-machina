@@ -1,4 +1,5 @@
 import { getSettings, saveSettings } from '../utils/settings.js';
+import { t } from '../i18n/index.js';
 
 export async function render(container, hash) {
   const settings = getSettings();
@@ -12,68 +13,60 @@ export async function render(container, hash) {
   // Add the selectPlan function to window so the inline handlers can access it
   window._icSelectPlan = selectPlan;
 
+  const feat = (key) => t(key, { returnObjects: true });
+  const li = (cls, text, bold) => `<li><span class="material-symbols-outlined ${cls}">check_circle</span> ${bold ? `<b>${text}</b>` : text}</li>`;
+
   container.innerHTML = `
     <div class="h-full bg-[var(--ps-bg)] flex flex-col items-center overflow-y-auto px-4 py-12">
       <div class="text-center" style="margin-bottom: 56px;">
-        <h1 class="text-4xl font-bold text-[var(--ps-text)] mb-4">Choose Your Plan</h1>
-        <p class="text-[var(--ps-text-muted)] text-lg">Select the right tier for your workflow needs.</p>
+        <h1 class="text-4xl font-bold text-[var(--ps-text)] mb-4">${t('lic.heading')}</h1>
+        <p class="text-[var(--ps-text-muted)] text-lg">${t('lic.subheading')}</p>
       </div>
 
       <div class="flex flex-wrap justify-center gap-6 max-w-[1000px] w-full">
         <!-- FREE PLAN -->
         <div class="lic-card ${currentLicense === 'Free' ? 'is-active' : ''}">
           <div class="lic-card-header">
-            <h2 class="text-xl font-bold mb-2">Free</h2>
-            <div class="text-3xl font-bold mb-1">$0 <span class="text-sm font-normal text-[var(--ps-text-muted)]">/ forever</span></div>
-            <p class="text-sm text-[var(--ps-text-muted)] h-10">Essential tools for personal projects.</p>
+            <h2 class="text-xl font-bold mb-2">${t('lic.free.name')}</h2>
+            <div class="text-3xl font-bold mb-1">$0 <span class="text-sm font-normal text-[var(--ps-text-muted)]">${t('lic.free.per')}</span></div>
+            <p class="text-sm text-[var(--ps-text-muted)] h-10">${t('lic.free.desc')}</p>
           </div>
           <ul class="lic-features mb-8">
-            <li><span class="material-symbols-outlined text-green-500">check_circle</span> Basic image processing</li>
-            <li><span class="material-symbols-outlined text-green-500">check_circle</span> Standard export formats</li>
-            <li><span class="material-symbols-outlined text-green-500">check_circle</span> Create custom recipes</li>
-            <li><span class="material-symbols-outlined text-green-500">check_circle</span> Access to community templates</li>
+            ${feat('lic.free.features').map(f => li('text-green-500', f, false)).join('')}
           </ul>
           <button class="lic-btn w-full mt-auto ${currentLicense === 'Free' ? 'lic-btn-active' : 'lic-btn-free'}" onclick="window._icSelectPlan('Free')">
-            ${currentLicense === 'Free' ? 'Current Plan' : 'Downgrade to Free'}
+            ${currentLicense === 'Free' ? t('lic.currentPlan') : t('lic.free.cta')}
           </button>
         </div>
 
         <!-- PRO PLAN -->
         <div class="lic-card lic-card-pro ${currentLicense === 'Pro' ? 'is-active' : ''}">
-          <div class="lic-badge-popular">Most Popular</div>
+          <div class="lic-badge-popular">${t('lic.pro.popular')}</div>
           <div class="lic-card-header pt-6">
-            <h2 class="text-xl font-bold mb-2 text-blue-400">Pro</h2>
-            <div class="text-3xl font-bold mb-1">$29 <span class="text-sm font-normal text-[var(--ps-text-muted)]">/ month</span></div>
-            <p class="text-sm text-[var(--ps-text-muted)] h-10">Advanced capabilities for creative professionals.</p>
+            <h2 class="text-xl font-bold mb-2 text-blue-400">${t('lic.pro.name')}</h2>
+            <div class="text-3xl font-bold mb-1">$29 <span class="text-sm font-normal text-[var(--ps-text-muted)]">${t('lic.pro.per')}</span></div>
+            <p class="text-sm text-[var(--ps-text-muted)] h-10">${t('lic.pro.desc')}</p>
           </div>
           <ul class="lic-features mb-8">
-            <li><span class="material-symbols-outlined text-blue-400">check_circle</span> <b>Everything in Free, plus:</b></li>
-            <li><span class="material-symbols-outlined text-blue-400">check_circle</span> Advanced AI integrations</li>
-            <li><span class="material-symbols-outlined text-blue-400">check_circle</span> Video & Audio generation workflows</li>
-            <li><span class="material-symbols-outlined text-blue-400">check_circle</span> Unlimited batch processing</li>
-            <li><span class="material-symbols-outlined text-blue-400">check_circle</span> Graphic Novel and Style transfers</li>
+            ${feat('lic.pro.features').map((f, i) => li('text-blue-400', f, i === 0)).join('')}
           </ul>
           <button class="lic-btn w-full mt-auto ${currentLicense === 'Pro' ? 'lic-btn-active' : 'lic-btn-pro'}" onclick="window._icSelectPlan('Pro')">
-            ${currentLicense === 'Pro' ? 'Current Plan' : 'Select Pro'}
+            ${currentLicense === 'Pro' ? t('lic.currentPlan') : t('lic.pro.cta')}
           </button>
         </div>
 
         <!-- ENTERPRISE PLAN -->
         <div class="lic-card ${currentLicense === 'Enterprise' ? 'is-active' : ''}">
           <div class="lic-card-header">
-            <h2 class="text-xl font-bold mb-2 text-purple-400">Enterprise</h2>
-            <div class="text-3xl font-bold mb-1">Custom</div>
-            <p class="text-sm text-[var(--ps-text-muted)] h-10">For teams needing scale and collaboration.</p>
+            <h2 class="text-xl font-bold mb-2 text-purple-400">${t('lic.enterprise.name')}</h2>
+            <div class="text-3xl font-bold mb-1">${t('lic.enterprise.price')}</div>
+            <p class="text-sm text-[var(--ps-text-muted)] h-10">${t('lic.enterprise.desc')}</p>
           </div>
           <ul class="lic-features mb-8">
-            <li><span class="material-symbols-outlined text-purple-400">check_circle</span> <b>Everything in Pro, plus:</b></li>
-            <li><span class="material-symbols-outlined text-purple-400">check_circle</span> Integrations with Enterprise software</li>
-            <li><span class="material-symbols-outlined text-purple-400">check_circle</span> Shared recipe repository</li>
-            <li><span class="material-symbols-outlined text-purple-400">check_circle</span> Share with Slack</li>
-            <li><span class="material-symbols-outlined text-purple-400">check_circle</span> Priority 24/7 support</li>
+            ${feat('lic.enterprise.features').map((f, i) => li('text-purple-400', f, i === 0)).join('')}
           </ul>
           <button class="lic-btn w-full mt-auto ${currentLicense === 'Enterprise' ? 'lic-btn-active' : 'lic-btn-ent'}" onclick="window._icSelectPlan('Enterprise')">
-            ${currentLicense === 'Enterprise' ? 'Current Plan' : 'Select Enterprise'}
+            ${currentLicense === 'Enterprise' ? t('lic.currentPlan') : t('lic.enterprise.cta')}
           </button>
         </div>
       </div>

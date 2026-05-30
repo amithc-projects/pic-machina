@@ -227,6 +227,7 @@ export async function getRecipeBundle(recipeId) {
  * Imports a recipe bundle, saving blocks first then the recipe.
  */
 export async function saveRecipeBundle(bundle) {
+  // Back-compat: accept legacy 'PicMachinaRecipeBundle' from pre-rebrand exports. Do not remove.
   if (bundle.type !== 'ZumilabsStudioRecipeBundle' && bundle.type !== 'PicMachinaRecipeBundle') {
     throw new Error('Invalid recipe bundle format');
   }

@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — POW: Power Users
+ * ZumiLabs Studio — POW: Power Users
  *
  * In-depth tour of the engine for technical users. Covers the live pipeline
  * diagram, node categories, automation, and Claude skills. (Previously the
@@ -25,6 +25,7 @@
 
 import { getAllRecipes } from '../data/recipes.js';
 import { listDownloadedModels } from '../data/models.js';
+import { t as i18n } from '../i18n/index.js';
 
 // ─── Utils ────────────────────────────────────────────────────
 function go(hash) {
@@ -65,16 +66,16 @@ export async function render(container) {
       <header class="gsd-header">
         <div class="gsd-header__title">
           <span class="material-symbols-outlined" style="color:#60a5fa">rocket_launch</span>
-          <h1>Get Started</h1>
+          <h1>${i18n('pow.getStarted')}</h1>
         </div>
         <div class="gsd-header__right">
           <div class="gsd-pill gsd-pill--status">
             <span class="gsd-dot gsd-dot--green"></span>
-            <span class="mono">engine ready · ${counts.modelCount} model${counts.modelCount === 1 ? '' : 's'} loaded</span>
+            <span class="mono">${i18n('pow.engineReady', { count: counts.modelCount })}</span>
           </div>
-          <div class="gsd-hero-switch" role="tablist" aria-label="Hero variant">
-            <button class="gsd-hero-switch__btn is-active" data-variant="pipeline" role="tab" aria-selected="true">Live Pipeline</button>
-            <button class="gsd-hero-switch__btn" data-variant="tour" role="tab" aria-selected="false">Guided Tour</button>
+          <div class="gsd-hero-switch" role="tablist" aria-label="${i18n('pow.heroVariant')}">
+            <button class="gsd-hero-switch__btn is-active" data-variant="pipeline" role="tab" aria-selected="true">${i18n('pow.livePipeline')}</button>
+            <button class="gsd-hero-switch__btn" data-variant="tour" role="tab" aria-selected="false">${i18n('pow.guidedTour')}</button>
           </div>
         </div>
       </header>
@@ -135,33 +136,31 @@ function renderLivePipelineHero(host, counts) {
         <div class="gsd-hero__copy">
           <div class="gsd-pill gsd-pill--accent">
             <span class="gsd-dot gsd-dot--blue pulse-dot"></span>
-            <span class="mono">Local · Private · Fast</span>
+            <span class="mono">${i18n('pow.localPrivateFast')}</span>
           </div>
           <h1 class="gsd-hero__headline">
-            Imagine the outcome.
-            <span class="serif"> Automate</span> the rest.
+            ${i18n('pow.heroHeadline')}
           </h1>
           <p class="gsd-hero__lede">
-            A visual node engine that turns messy folders of media into
-            perfectly-processed deliverables. Runs entirely on your machine.
+            ${i18n('pow.heroLede')}
           </p>
           <div class="gsd-hero__ctas">
             <button class="gsd-btn gsd-btn--primary" data-action="new-recipe">
               <span class="material-symbols-outlined">add</span>
-              Create New Recipe
+              ${i18n('pow.createNewRecipe')}
             </button>
             <button class="gsd-btn gsd-btn--secondary" data-action="browse-recipes">
               <span class="material-symbols-outlined">library_books</span>
-              Browse ${counts.recipeCount} Recipes
+              ${i18n('pow.browseRecipes', { count: counts.recipeCount })}
             </button>
             <button class="gsd-btn gsd-btn--ghost mono" data-action="launcher">
-              ⌘ K <span style="opacity:.7">— open launcher</span>
+              ⌘ K <span style="opacity:.7">${i18n('pow.openLauncherDash')}</span>
             </button>
           </div>
           <div class="gsd-stats">
-            <div><div class="gsd-stats__k mono">${counts.recipeCount}</div><div class="gsd-stats__v">recipes ready</div></div>
-            <div><div class="gsd-stats__k mono">${counts.categoryCount}</div><div class="gsd-stats__v">node categories</div></div>
-            <div><div class="gsd-stats__k mono">100%</div><div class="gsd-stats__v">on-device</div></div>
+            <div><div class="gsd-stats__k mono">${counts.recipeCount}</div><div class="gsd-stats__v">${i18n('pow.recipesReady')}</div></div>
+            <div><div class="gsd-stats__k mono">${counts.categoryCount}</div><div class="gsd-stats__v">${i18n('pow.nodeCategories')}</div></div>
+            <div><div class="gsd-stats__k mono">100%</div><div class="gsd-stats__v">${i18n('pow.onDevice')}</div></div>
           </div>
         </div>
         <div class="gsd-pipeline-card">
@@ -171,7 +170,7 @@ function renderLivePipelineHero(host, counts) {
             <span class="gsd-traffic gsd-traffic--green"></span>
             <span class="mono gsd-pipeline-card__filename">cinematic_portrait.recipe</span>
             <span class="gsd-pipeline-card__running">
-              <span class="gsd-dot gsd-dot--green pulse-dot"></span> running
+              <span class="gsd-dot gsd-dot--green pulse-dot"></span> ${i18n('pow.running')}
             </span>
           </div>
           <svg class="gsd-pipeline-svg" viewBox="0 0 560 240">
@@ -194,7 +193,7 @@ function renderLivePipelineHero(host, counts) {
           </div>
           <div class="gsd-pipeline-card__chip float-slow">
             <span class="material-symbols-outlined" style="font-size:14px">auto_awesome</span>
-            Live demo
+            ${i18n('pow.liveDemo')}
           </div>
         </div>
       </div>
@@ -286,11 +285,11 @@ function renderLivePipelineHero(host, counts) {
 // ═══════════════════════════════════════════════════════════════
 function renderGuidedTourHero(host) {
   const steps = [
-    { n: 1, label: 'Drop files',  sub: 'Any folder, any format.', icon: 'upload',         color: 'var(--gsd-teal)'   },
-    { n: 2, label: 'Pick a recipe', sub: 'Or build your own.',    icon: 'library_books',  color: 'var(--gsd-cyan)'   },
-    { n: 3, label: 'Tweak',       sub: 'Parameters are live.',    icon: 'tune',           color: 'var(--gsd-amber)'  },
-    { n: 4, label: 'Preview',     sub: 'Before / after.',         icon: 'image',          color: 'var(--gsd-orange)' },
-    { n: 5, label: 'Run',         sub: 'Bulk or batch.',          icon: 'play_arrow',     color: 'var(--gsd-green)'  },
+    { n: 1, label: i18n('pow.tourStep1'), sub: i18n('pow.tourStep1Sub'), icon: 'upload',         color: 'var(--gsd-teal)'   },
+    { n: 2, label: i18n('pow.tourStep2'), sub: i18n('pow.tourStep2Sub'), icon: 'library_books',  color: 'var(--gsd-cyan)'   },
+    { n: 3, label: i18n('pow.tourStep3'), sub: i18n('pow.tourStep3Sub'), icon: 'tune',           color: 'var(--gsd-amber)'  },
+    { n: 4, label: i18n('pow.tourStep4'), sub: i18n('pow.tourStep4Sub'), icon: 'image',          color: 'var(--gsd-orange)' },
+    { n: 5, label: i18n('pow.tourStep5'), sub: i18n('pow.tourStep5Sub'), icon: 'play_arrow',     color: 'var(--gsd-green)'  },
   ];
 
   host.innerHTML = `
@@ -302,25 +301,24 @@ function renderGuidedTourHero(host) {
           <div>
             <div class="gsd-pill gsd-pill--green">
               <span class="gsd-dot gsd-dot--green pulse-dot"></span>
-              <span class="mono">Five-step first run</span>
+              <span class="mono">${i18n('pow.fiveStepFirstRun')}</span>
             </div>
             <h1 class="gsd-hero__headline gsd-hero__headline--tour">
-              From <span class="serif">zero</span> to a finished<br>batch in under a minute.
+              ${i18n('pow.tourHeadline')}
             </h1>
           </div>
           <div class="gsd-tour__copy">
             <p>
-              Follow the rail below or skip straight to a recipe. Everything
-              runs locally — your files never leave this machine.
+              ${i18n('pow.tourCopy')}
             </p>
             <div class="gsd-tour__ctas">
               <button class="gsd-btn gsd-btn--primary" data-action="start-tour">
                 <span class="material-symbols-outlined">play_arrow</span>
-                Start the tour
+                ${i18n('pow.startTour')}
               </button>
               <button class="gsd-btn gsd-btn--secondary" data-action="skip-tour">
                 <span class="material-symbols-outlined">close</span>
-                Skip
+                ${i18n('pow.skip')}
               </button>
             </div>
           </div>
@@ -331,7 +329,7 @@ function renderGuidedTourHero(host) {
             <button class="gsd-tour__step ${i === 0 ? 'is-current' : ''}" data-step="${i}" style="--step-color:${s.color}">
               <div class="gsd-tour__step-head">
                 <div class="gsd-tour__step-n mono">${s.n}</div>
-                <div class="mono gsd-tour__step-label-small">Step ${s.n}</div>
+                <div class="mono gsd-tour__step-label-small">${i18n('pow.stepN', { n: s.n })}</div>
               </div>
               <div>
                 <div class="gsd-tour__step-title">${s.label}</div>
@@ -393,11 +391,11 @@ function paneDrop() {
         <div class="gsd-dropzone__icon">
           <span class="material-symbols-outlined">upload</span>
         </div>
-        <div class="gsd-dropzone__title">Drop files or a folder here</div>
-        <div class="mono gsd-dropzone__formats">.jpg · .png · .mp4 · .webp · .heic · and more</div>
+        <div class="gsd-dropzone__title">${i18n('pow.dropFilesHere')}</div>
+        <div class="mono gsd-dropzone__formats">${i18n('pow.dropFormats')}</div>
       </div>
       <div>
-        <div class="gsd-pane__sub">Recently dropped</div>
+        <div class="gsd-pane__sub">${i18n('pow.recentlyDropped')}</div>
         ${items.map((f) => `
           <div class="gsd-pane__row">
             <span class="material-symbols-outlined" style="color:${f.col}">${f.icon}</span>
@@ -429,7 +427,7 @@ function paneRecipe() {
           <span class="material-symbols-outlined">library_books</span>
           <span>cine<span class="caret">|</span></span>
         </div>
-        <span class="mono gsd-recipe-search__count">6 / 83 matches</span>
+        <span class="mono gsd-recipe-search__count">${i18n('pow.recipeMatches')}</span>
       </div>
       <div class="gsd-recipe-grid">
         ${recipes.map((r, i) => `
@@ -456,7 +454,7 @@ function paneTweak() {
   return `
     <div class="gsd-pane gsd-pane--tweak">
       <div>
-        <div class="mono gsd-pane__sub">Node · Cinematic LUT</div>
+        <div class="mono gsd-pane__sub">${i18n('pow.nodeCinematicLut')}</div>
         ${params.map((p) => `
           <div class="gsd-tweak-row">
             <div class="gsd-tweak-row__head">
@@ -471,7 +469,7 @@ function paneTweak() {
         `).join('')}
       </div>
       <div class="gsd-tweak-preview">
-        <span class="mono gsd-tweak-preview__chip">preview · live</span>
+        <span class="mono gsd-tweak-preview__chip">${i18n('pow.previewLive')}</span>
         <span class="material-symbols-outlined">image</span>
       </div>
     </div>
@@ -481,7 +479,7 @@ function paneTweak() {
 function paneBeforeAfter() {
   return `
     <div class="gsd-pane gsd-pane--ba">
-      ${['before', 'after'].map((label, i) => `
+      ${[i18n('pow.before'), i18n('pow.after')].map((label, i) => `
         <div class="gsd-ba-frame ${i === 1 ? 'is-after' : ''}">
           <span class="mono gsd-ba-frame__label">${label}</span>
           <span class="material-symbols-outlined">image</span>
@@ -501,20 +499,20 @@ function paneRun() {
     <div class="gsd-pane gsd-pane--run">
       <div class="gsd-run-head">
         <div>
-          <div class="gsd-run-head__title">cinematic_portrait · batch run</div>
-          <div class="mono gsd-run-head__sub">124 items · 7 nodes · est. 48s</div>
+          <div class="gsd-run-head__title">${i18n('pow.runHeadTitle')}</div>
+          <div class="mono gsd-run-head__sub">${i18n('pow.runHeadSub')}</div>
         </div>
         <div class="gsd-pill gsd-pill--green">
           <span class="gsd-dot gsd-dot--green pulse-dot"></span>
-          <span class="mono">running</span>
+          <span class="mono">${i18n('pow.running')}</span>
         </div>
       </div>
       <div class="gsd-run-bar"><div></div></div>
       <div class="gsd-run-grid">${tiles}</div>
       <div class="gsd-run-legend">
-        <span><span class="mono" style="color:var(--gsd-teal)">●</span> done 25</span>
-        <span><span class="mono" style="color:var(--gsd-amber)">●</span> processing 1</span>
-        <span><span class="mono" style="color:var(--gsd-mute)">●</span> queued 98</span>
+        <span><span class="mono" style="color:var(--gsd-teal)">●</span> ${i18n('pow.legendDone')}</span>
+        <span><span class="mono" style="color:var(--gsd-amber)">●</span> ${i18n('pow.legendProcessing')}</span>
+        <span><span class="mono" style="color:var(--gsd-mute)">●</span> ${i18n('pow.legendQueued')}</span>
       </div>
     </div>
   `;
@@ -558,13 +556,13 @@ async function renderPipelineDiagram(host, counts) {
   }
 
   const rows = [
-    { label: 'Process',   sub: 'Extract · parse · metadata',     icon: 'code',        color: 'var(--gsd-teal)',   cat: 'Metadata' },
-    { label: 'Analyse',   sub: 'Local AI · detect · understand', icon: 'search',      color: 'var(--gsd-cyan)',   cat: 'AI & Composition' },
-    { label: 'Amend',     sub: 'LUTs · color · structure',       icon: 'tune',        color: 'var(--gsd-orange)', cat: 'Color & Tone' },
-    { label: 'Annotate',  sub: 'Captions · watermarks · titles', icon: 'text_fields', color: 'var(--gsd-amber)',  cat: 'Overlays & Typography' },
-    { label: 'Aggregate', sub: 'Compose · grid · collage',       icon: 'grid_view',   color: 'var(--gsd-violet)', cat: 'Flow Control' },
-    { label: 'Create',    sub: 'Generate new media from data',   icon: 'auto_awesome',color: 'var(--gsd-pink)',   cat: 'Geometric & Framing' },
-    { label: 'Organise',  sub: 'Route into intelligent folders', icon: 'account_tree',color: 'var(--gsd-blue)',   cat: 'Video Effects' },
+    { label: i18n('pow.rowProcess'),   sub: i18n('pow.rowProcessSub'),   icon: 'code',        color: 'var(--gsd-teal)',   cat: 'Metadata' },
+    { label: i18n('pow.rowAnalyse'),   sub: i18n('pow.rowAnalyseSub'),   icon: 'search',      color: 'var(--gsd-cyan)',   cat: 'AI & Composition' },
+    { label: i18n('pow.rowAmend'),     sub: i18n('pow.rowAmendSub'),     icon: 'tune',        color: 'var(--gsd-orange)', cat: 'Color & Tone' },
+    { label: i18n('pow.rowAnnotate'),  sub: i18n('pow.rowAnnotateSub'),  icon: 'text_fields', color: 'var(--gsd-amber)',  cat: 'Overlays & Typography' },
+    { label: i18n('pow.rowAggregate'), sub: i18n('pow.rowAggregateSub'), icon: 'grid_view',   color: 'var(--gsd-violet)', cat: 'Flow Control' },
+    { label: i18n('pow.rowCreate'),    sub: i18n('pow.rowCreateSub'),    icon: 'auto_awesome',color: 'var(--gsd-pink)',   cat: 'Geometric & Framing' },
+    { label: i18n('pow.rowOrganise'),  sub: i18n('pow.rowOrganiseSub'),  icon: 'account_tree',color: 'var(--gsd-blue)',   cat: 'Video Effects' },
   ];
 
   host.innerHTML = `
@@ -572,14 +570,14 @@ async function renderPipelineDiagram(host, counts) {
       <div class="gsd-pipeline-diagram__bg"></div>
       <div class="gsd-pipeline-diagram__inner">
         <div class="gsd-section-title">
-          <h2>What can Zumilabs Studio do?</h2>
-          <span class="mono">${counts.categoryCount} node categories · ${counts.recipeCount} recipes</span>
+          <h2>${i18n('pow.whatCanDo')}</h2>
+          <span class="mono">${i18n('pow.categoriesRecipes', { categories: counts.categoryCount, recipes: counts.recipeCount })}</span>
         </div>
         <div class="gsd-pipeline-diagram__grid">
           <div class="gsd-pipeline-diagram__io">
-            <div class="mono gsd-pipeline-diagram__io-tag">Input</div>
-            <div class="gsd-pipeline-diagram__io-title">Any media</div>
-            <div class="gsd-pipeline-diagram__io-sub">Folders, zips, cameras, cloud drives.</div>
+            <div class="mono gsd-pipeline-diagram__io-tag">${i18n('pow.input')}</div>
+            <div class="gsd-pipeline-diagram__io-title">${i18n('pow.anyMedia')}</div>
+            <div class="gsd-pipeline-diagram__io-sub">${i18n('pow.anyMediaSub')}</div>
             <div class="gsd-pipeline-diagram__formats">
               ${['jpg', 'png', 'mp4', 'heic', 'raw', 'gif', 'webp'].map((x) => `<span class="mono">.${x}</span>`).join('')}
             </div>
@@ -600,16 +598,16 @@ async function renderPipelineDiagram(host, counts) {
                   <div class="gsd-pipeline-row__sub">${r.sub}</div>
                 </div>
                 <div class="mono gsd-pipeline-row__count">
-                  ${perCategory[r.cat] != null ? perCategory[r.cat] : '—'} nodes
+                  ${i18n('pow.nodesCount', { count: perCategory[r.cat] != null ? perCategory[r.cat] : '—' })}
                 </div>
                 <div class="gsd-pipeline-row__tick"></div>
               </div>
             `).join('')}
           </div>
           <div class="gsd-pipeline-diagram__io">
-            <div class="mono gsd-pipeline-diagram__io-tag">Output</div>
-            <div class="gsd-pipeline-diagram__io-title">Deliverables</div>
-            <div class="gsd-pipeline-diagram__io-sub">Organised, named, and ready to ship.</div>
+            <div class="mono gsd-pipeline-diagram__io-tag">${i18n('pow.output')}</div>
+            <div class="gsd-pipeline-diagram__io-title">${i18n('pow.deliverables')}</div>
+            <div class="gsd-pipeline-diagram__io-sub">${i18n('pow.deliverablesSub')}</div>
             <div class="gsd-pipeline-diagram__out-paths">
               ${['/exports/final/', '/contact_sheets/', '/social_instagram/', '/client_drop.zip'].map((p) => `
                 <div class="mono"><span style="color:var(--gsd-green)">→</span> ${p}</div>
@@ -628,32 +626,32 @@ async function renderPipelineDiagram(host, counts) {
 function renderPersonas(host) {
   const personas = [
     {
-      k: 'individuals', label: 'Individuals', icon: 'person', color: 'var(--gsd-teal)',
-      desc: 'Auto-categorise messy photo dumps, compile vacation memories into simple timelapses, and efficiently format images for sharing or archiving without heavy editing software.',
-      stat: '4 starter recipes', samples: ['Holiday collage', 'Backup & rename', 'Face-group'],
+      k: 'individuals', label: i18n('pow.personaIndividuals'), icon: 'person', color: 'var(--gsd-teal)',
+      desc: i18n('pow.personaIndividualsDesc'),
+      stat: i18n('pow.personaIndividualsStat'), samples: i18n('pow.personaIndividualsSamples', { returnObjects: true }),
     },
     {
-      k: 'photographers', label: 'Photographers', icon: 'photo_camera', color: 'var(--gsd-orange)',
-      desc: 'Batch process exports, apply uniform watermarks, auto-generate client contact sheets, extract EXIF for cataloguing, and standardise color profiles across large shoots.',
-      stat: '18 pro recipes', samples: ['Contact sheet', 'Watermark · uniform', 'EXIF → CSV'],
+      k: 'photographers', label: i18n('pow.personaPhotographers'), icon: 'photo_camera', color: 'var(--gsd-orange)',
+      desc: i18n('pow.personaPhotographersDesc'),
+      stat: i18n('pow.personaPhotographersStat'), samples: i18n('pow.personaPhotographersSamples', { returnObjects: true }),
     },
     {
-      k: 'creators', label: 'Content Creators', icon: 'videocam', color: 'var(--gsd-pink)',
-      desc: 'Adapt multi-format media for Instagram, TikTok, and YouTube. Automatically overlay branding, pull highlights, and convert snippets into engaging GIFs.',
-      stat: '22 social recipes', samples: ['TikTok 9:16', 'Highlights reel', 'Thumbnail kit'],
+      k: 'creators', label: i18n('pow.personaCreators'), icon: 'videocam', color: 'var(--gsd-pink)',
+      desc: i18n('pow.personaCreatorsDesc'),
+      stat: i18n('pow.personaCreatorsStat'), samples: i18n('pow.personaCreatorsSamples', { returnObjects: true }),
     },
     {
-      k: 'enterprise', label: 'Enterprise Users', icon: 'apartment', color: 'var(--gsd-blue)',
-      desc: 'Build robust product photography pipelines, clear backgrounds via local AI, standardise margins across thousands of SKUs, and strip sensitive metadata for compliance.',
-      stat: '9 enterprise recipes', samples: ['SKU pipeline', 'BG clear · AI', 'Metadata sanitise'],
+      k: 'enterprise', label: i18n('pow.personaEnterprise'), icon: 'apartment', color: 'var(--gsd-blue)',
+      desc: i18n('pow.personaEnterpriseDesc'),
+      stat: i18n('pow.personaEnterpriseStat'), samples: i18n('pow.personaEnterpriseSamples', { returnObjects: true }),
     },
   ];
 
   host.innerHTML = `
     <div class="gsd-personas">
       <div class="gsd-section-title">
-        <h2>Who uses Zumilabs Studio?</h2>
-        <span class="mono">Pick a persona · see starter recipes</span>
+        <h2>${i18n('pow.whoUses')}</h2>
+        <span class="mono">${i18n('pow.pickPersona')}</span>
       </div>
       <div class="gsd-personas__grid">
         <div class="gsd-personas__rail">
@@ -690,7 +688,7 @@ function renderPersonas(host) {
         </div>
       </div>
       <p class="gsd-persona-detail__desc">${p.desc}</p>
-      <div class="mono gsd-persona-detail__samples-tag">Starter recipes</div>
+      <div class="mono gsd-persona-detail__samples-tag">${i18n('pow.starterRecipes')}</div>
       <div class="gsd-persona-detail__samples">
         ${p.samples.map((s) => `
           <button class="gsd-persona-chip" data-action="use-sample">
@@ -701,7 +699,7 @@ function renderPersonas(host) {
         `).join('')}
         <button class="gsd-persona-chip gsd-persona-chip--primary" data-action="persona-preset">
           <span class="material-symbols-outlined">add</span>
-          Start from ${p.label.toLowerCase()} preset
+          ${i18n('pow.startFromPreset', { preset: p.label.toLowerCase() })}
         </button>
       </div>
     `;
@@ -724,11 +722,7 @@ function renderPersonas(host) {
 // SMART AUTOMATION — "Just Ask Claude"
 // ═══════════════════════════════════════════════════════════════
 function renderAutomation(host) {
-  const prompts = [
-    'deblur photos older than 2020 and re-save as webp',
-    'build a contact sheet per folder with watermark',
-    'extract faces, group, and rename by person',
-  ];
+  const prompts = i18n('pow.automationPrompts', { returnObjects: true });
 
   host.innerHTML = `
     <div class="gsd-automation">
@@ -737,17 +731,15 @@ function renderAutomation(host) {
         <div>
           <div class="gsd-pill gsd-pill--violet">
             <span class="material-symbols-outlined" style="font-size:14px">auto_awesome</span>
-            <span class="mono">Just Ask Claude</span>
+            <span class="mono">${i18n('pow.justAskClaude')}</span>
           </div>
-          <h3 class="gsd-automation__headline">Smart automation, made simple.</h3>
+          <h3 class="gsd-automation__headline">${i18n('pow.smartAutomation')}</h3>
           <p class="gsd-automation__lede">
-            Describe what you want in plain English. Claude builds the
-            recipe — every node, every parameter — and you just hit Run.
-            No technical skills required.
+            ${i18n('pow.smartAutomationLede')}
           </p>
         </div>
         <div class="gsd-automation__terminal">
-          <div class="mono gsd-pane__sub" style="margin-bottom:10px">Prompt</div>
+          <div class="mono gsd-pane__sub" style="margin-bottom:10px">${i18n('pow.prompt')}</div>
           <div class="mono gsd-automation__prompt" id="gsd-auto-prompt"><span class="caret" style="color:var(--gsd-blue-2)">▎</span></div>
           <div class="gsd-automation__foot">
             <div class="gsd-automation__dots" id="gsd-auto-dots">
@@ -755,7 +747,7 @@ function renderAutomation(host) {
             </div>
             <button class="gsd-btn gsd-btn--primary gsd-btn--sm" data-action="generate">
               <span class="material-symbols-outlined">auto_fix_high</span>
-              Generate
+              ${i18n('pow.generate')}
             </button>
           </div>
         </div>
@@ -806,13 +798,11 @@ function renderClaudeSkills(host) {
         <div class="gsd-skills__header">
           <div class="gsd-pill gsd-pill--teal">
             <span class="material-symbols-outlined" style="font-size:14px">psychology</span>
-            <span class="mono">Claude Skills</span>
+            <span class="mono">${i18n('pow.claudeSkills')}</span>
           </div>
-          <h3 class="gsd-skills__headline">Supercharge Zumilabs Studio with AI</h3>
+          <h3 class="gsd-skills__headline">${i18n('pow.superchargeAI')}</h3>
           <p class="gsd-skills__lede">
-            These Claude.ai Project skills let you use AI to build recipes and
-            analyse images without writing a single line of code. Set them up once
-            in a Claude Project — then just chat.
+            ${i18n('pow.superchargeLede')}
           </p>
         </div>
 
@@ -824,53 +814,51 @@ function renderClaudeSkills(host) {
               <span class="material-symbols-outlined" style="color:#a78bfa;font-size:24px">receipt_long</span>
             </div>
             <div class="gsd-skill-card__body">
-              <div class="gsd-skill-card__title">Recipe Architect</div>
+              <div class="gsd-skill-card__title">${i18n('pow.recipeArchitect')}</div>
               <div class="gsd-skill-card__desc">
-                Describe an image editing workflow in plain English — Claude generates
-                a complete, ready-to-import Zumilabs Studio recipe JSON with every node
-                and parameter already configured.
+                ${i18n('pow.recipeArchitectDesc')}
               </div>
 
               <div class="gsd-skill-steps">
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">1</span>
-                  <span>Go to <a href="https://claude.ai" target="_blank" rel="noopener" class="gsd-link">claude.ai</a> and create a new <strong>Project</strong></span>
+                  <span>${i18n('pow.architectStep1')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">2</span>
-                  <span>Open <strong>Project Instructions</strong> and paste the contents of <code>claude-recipe-prompt.md</code></span>
+                  <span>${i18n('pow.architectStep2')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">3</span>
-                  <span>Add <code>node-catalog.json</code> and <code>recipe-bundle-schema.json</code> to <strong>Project Knowledge</strong></span>
+                  <span>${i18n('pow.architectStep3')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">4</span>
-                  <span>Chat: <em>"Make a recipe that crops to square, adds a soft glow, and watermarks the bottom-right"</em></span>
+                  <span>${i18n('pow.architectStep4')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">5</span>
-                  <span>Copy the JSON → <strong>Library → Import JSON</strong> → done!</span>
+                  <span>${i18n('pow.architectStep5')}</span>
                 </div>
               </div>
 
               <div class="gsd-skill-card__files">
-                <div class="gsd-skill-files__label">Files needed</div>
+                <div class="gsd-skill-files__label">${i18n('pow.filesNeeded')}</div>
                 <div class="gsd-skill-files__list">
                   <button class="gsd-file-chip" data-download="claude-recipe-prompt.md">
                     <span class="material-symbols-outlined">description</span>
                     claude-recipe-prompt.md
-                    <span class="gsd-file-chip__badge">System Prompt</span>
+                    <span class="gsd-file-chip__badge">${i18n('pow.badgeSystemPrompt')}</span>
                   </button>
                   <button class="gsd-file-chip" data-download="node-catalog.json">
                     <span class="material-symbols-outlined">data_object</span>
                     node-catalog.json
-                    <span class="gsd-file-chip__badge">Node Dictionary</span>
+                    <span class="gsd-file-chip__badge">${i18n('pow.badgeNodeDictionary')}</span>
                   </button>
                   <button class="gsd-file-chip" data-download="recipe-bundle-schema.json">
                     <span class="material-symbols-outlined">schema</span>
                     recipe-bundle-schema.json
-                    <span class="gsd-file-chip__badge">Output Schema</span>
+                    <span class="gsd-file-chip__badge">${i18n('pow.badgeOutputSchema')}</span>
                   </button>
                 </div>
               </div>
@@ -884,58 +872,55 @@ function renderClaudeSkills(host) {
             </div>
             <div class="gsd-skill-card__body">
               <div class="gsd-skill-card__title">
-                Image Describer
-                <span class="gsd-badge-new">New</span>
+                ${i18n('pow.imageDescriber')}
+                <span class="gsd-badge-new">${i18n('pow.badgeNew')}</span>
               </div>
               <div class="gsd-skill-card__desc">
-                Upload any image — Claude produces rich AI analysis JSON (scene,
-                subjects, colour palette, composition, generative prompts, DAM notes)
-                in the exact format Zumilabs Studio's metadata sidecar expects. Works
-                standalone or wired to the <strong>AI endpoint</strong> in Settings.
+                ${i18n('pow.imageDescriberDesc')}
               </div>
 
               <div class="gsd-skill-steps">
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">1</span>
-                  <span>Create a new Claude.ai <strong>Project</strong></span>
+                  <span>${i18n('pow.describerStep1')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">2</span>
-                  <span>Paste <code>claude-image-prompt.md</code> into <strong>Project Instructions</strong></span>
+                  <span>${i18n('pow.describerStep2')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">3</span>
-                  <span>Add <code>sidecar.schema.json</code> to <strong>Project Knowledge</strong></span>
+                  <span>${i18n('pow.describerStep3')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">4</span>
-                  <span>Upload an image and say: <em>"Describe this image for Zumilabs Studio"</em></span>
+                  <span>${i18n('pow.describerStep4')}</span>
                 </div>
                 <div class="gsd-skill-step">
                   <span class="gsd-skill-step__num">5</span>
-                  <span>Copy the JSON → paste into any <code>.jpg.json</code> sidecar file, <strong>or</strong> host a simple endpoint and use <strong>Describe with AI</strong> in the metadata panel</span>
+                  <span>${i18n('pow.describerStep5')}</span>
                 </div>
               </div>
 
               <div class="gsd-skill-card__files">
-                <div class="gsd-skill-files__label">Files needed</div>
+                <div class="gsd-skill-files__label">${i18n('pow.filesNeeded')}</div>
                 <div class="gsd-skill-files__list">
                   <button class="gsd-file-chip" data-download="claude-image-prompt.md">
                     <span class="material-symbols-outlined">description</span>
                     claude-image-prompt.md
-                    <span class="gsd-file-chip__badge">System Prompt</span>
+                    <span class="gsd-file-chip__badge">${i18n('pow.badgeSystemPrompt')}</span>
                   </button>
                   <button class="gsd-file-chip" data-download="sidecar.schema.json">
                     <span class="material-symbols-outlined">schema</span>
                     sidecar.schema.json
-                    <span class="gsd-file-chip__badge">Output Schema</span>
+                    <span class="gsd-file-chip__badge">${i18n('pow.badgeOutputSchema')}</span>
                   </button>
                 </div>
               </div>
 
               <div class="gsd-skill-card__tip">
                 <span class="material-symbols-outlined" style="font-size:14px;color:var(--gsd-cyan)">tips_and_updates</span>
-                <span>Connect it to the <strong>AI endpoint</strong> setting for one-click analysis directly inside the metadata panel — no copy-paste required.</span>
+                <span>${i18n('pow.describerTip')}</span>
               </div>
             </div>
           </div>
@@ -965,7 +950,7 @@ function renderClaudeSkills(host) {
       } catch (err) {
         console.warn('[GSD] Download failed:', err);
         btn.style.opacity = '';
-        window.AuroraToast?.show({ variant: 'warning', title: `Could not download ${filename}`, description: 'Try opening the /docs/ folder directly.' });
+        window.AuroraToast?.show({ variant: 'warning', title: i18n('pow.couldNotDownload', { filename }), description: i18n('pow.tryOpeningDocs') });
       }
     });
   });
@@ -976,15 +961,15 @@ function renderClaudeSkills(host) {
 // ═══════════════════════════════════════════════════════════════
 function renderShortcuts(host) {
   const items = [
-    { keys: ['⌘', 'K'],      label: 'Open launcher'     },
-    { keys: ['⌘', 'N'],      label: 'New recipe'        },
-    { keys: ['⌘', '⇧', 'O'], label: 'Open folder'       },
-    { keys: ['⌘', 'R'],      label: 'Run last recipe'   },
-    { keys: ['⌘', '/'],      label: 'Ask Claude'        },
+    { keys: ['⌘', 'K'],      label: i18n('pow.scOpenLauncher')  },
+    { keys: ['⌘', 'N'],      label: i18n('pow.scNewRecipe')     },
+    { keys: ['⌘', '⇧', 'O'], label: i18n('pow.scOpenFolder')    },
+    { keys: ['⌘', 'R'],      label: i18n('pow.scRunLast')       },
+    { keys: ['⌘', '/'],      label: i18n('pow.scAskClaude')     },
   ];
   host.innerHTML = `
     <div class="gsd-shortcuts">
-      <div class="mono gsd-shortcuts__tag">Shortcuts</div>
+      <div class="mono gsd-shortcuts__tag">${i18n('pow.shortcuts')}</div>
       ${items.map((x) => `
         <div class="gsd-shortcuts__item">
           <div class="gsd-shortcuts__keys">
@@ -994,7 +979,7 @@ function renderShortcuts(host) {
         </div>
       `).join('')}
       <div style="flex:1"></div>
-      <div class="mono gsd-shortcuts__meta">100% local · on-device processing</div>
+      <div class="mono gsd-shortcuts__meta">${i18n('pow.shortcutsMeta')}</div>
     </div>
   `;
 }

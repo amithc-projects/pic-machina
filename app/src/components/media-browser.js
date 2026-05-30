@@ -1,3 +1,5 @@
+import { t as i18n } from '../i18n/index.js';
+
 export function getFileType(filename, isFolder = false) {
   if (isFolder) return 'folder';
   const ext = filename.toLowerCase().split('.').pop();
@@ -192,37 +194,37 @@ export class MediaBrowser {
         <div class="ic-mb-top-row">
           <div class="ic-mb-breadcrumbs" id="mb-bc-wrapper"></div>
           <div class="ic-mb-toolbar">
-            <input type="text" class="ic-mb-search" placeholder="Search files..." value="${escHtml(this.searchQuery)}">
+            <input type="text" class="ic-mb-search" placeholder="${i18n('mb.searchFiles')}" value="${escHtml(this.searchQuery)}">
             <div class="ic-mb-actions">
               <span id="mb-sel-count" style="font-size:12px; color:var(--ps-text-muted); margin-right:8px; font-weight:600;"></span>
-              <button class="btn-secondary btn-sm" id="mb-btn-select-all" title="Select all"><span class="material-symbols-outlined text-[16px]">done_all</span></button>
-              <button class="btn-secondary btn-sm" id="mb-btn-deselect-all" title="Deselect all"><span class="material-symbols-outlined text-[16px]">remove_done</span></button>
-              ${this.options.onDownloadSelected ? `<button class="btn-secondary btn-sm" id="mb-btn-download" title="Download selected"><span class="material-symbols-outlined text-[16px]">download</span></button>` : ''}
-              ${this.options.onDeleteSelected ? `<button class="btn-secondary btn-sm text-[var(--ps-red)]" id="mb-btn-delete" title="Delete selected"><span class="material-symbols-outlined text-[16px]">delete</span></button>` : ''}
+              <button class="btn-secondary btn-sm" id="mb-btn-select-all" title="${i18n('mb.selectAll')}"><span class="material-symbols-outlined text-[16px]">done_all</span></button>
+              <button class="btn-secondary btn-sm" id="mb-btn-deselect-all" title="${i18n('mb.deselectAll')}"><span class="material-symbols-outlined text-[16px]">remove_done</span></button>
+              ${this.options.onDownloadSelected ? `<button class="btn-secondary btn-sm" id="mb-btn-download" title="${i18n('mb.downloadSelected')}"><span class="material-symbols-outlined text-[16px]">download</span></button>` : ''}
+              ${this.options.onDeleteSelected ? `<button class="btn-secondary btn-sm text-[var(--ps-red)]" id="mb-btn-delete" title="${i18n('mb.deleteSelected')}"><span class="material-symbols-outlined text-[16px]">delete</span></button>` : ''}
             </div>
           </div>
         </div>
         <div class="ic-mb-bottom-row">
           <div class="ic-mb-filters" id="mb-filters">
-            <button class="ic-mb-filter" data-type="all">All <span class="ic-mb-filter-count"></span></button>
-            <button class="ic-mb-filter" data-type="image"><span class="material-symbols-outlined text-[14px]">image</span> Images <span class="ic-mb-filter-count"></span></button>
-            <button class="ic-mb-filter" data-type="video"><span class="material-symbols-outlined text-[14px]">movie</span> Video <span class="ic-mb-filter-count"></span></button>
-            <button class="ic-mb-filter" data-type="audio"><span class="material-symbols-outlined text-[14px]">music_note</span> Audio <span class="ic-mb-filter-count"></span></button>
-            <button class="ic-mb-filter" data-type="document"><span class="material-symbols-outlined text-[14px]">description</span> Documents <span class="ic-mb-filter-count"></span></button>
-            <button class="ic-mb-filter" data-type="archive"><span class="material-symbols-outlined text-[14px]">folder_zip</span> Archives <span class="ic-mb-filter-count"></span></button>
-            <button class="ic-mb-filter" data-type="other">Other <span class="ic-mb-filter-count"></span></button>
+            <button class="ic-mb-filter" data-type="all">${i18n('mb.all')} <span class="ic-mb-filter-count"></span></button>
+            <button class="ic-mb-filter" data-type="image"><span class="material-symbols-outlined text-[14px]">image</span> ${i18n('mb.images')} <span class="ic-mb-filter-count"></span></button>
+            <button class="ic-mb-filter" data-type="video"><span class="material-symbols-outlined text-[14px]">movie</span> ${i18n('mb.video')} <span class="ic-mb-filter-count"></span></button>
+            <button class="ic-mb-filter" data-type="audio"><span class="material-symbols-outlined text-[14px]">music_note</span> ${i18n('mb.audio')} <span class="ic-mb-filter-count"></span></button>
+            <button class="ic-mb-filter" data-type="document"><span class="material-symbols-outlined text-[14px]">description</span> ${i18n('mb.documents')} <span class="ic-mb-filter-count"></span></button>
+            <button class="ic-mb-filter" data-type="archive"><span class="material-symbols-outlined text-[14px]">folder_zip</span> ${i18n('mb.archives')} <span class="ic-mb-filter-count"></span></button>
+            <button class="ic-mb-filter" data-type="other">${i18n('mb.other')} <span class="ic-mb-filter-count"></span></button>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <select id="mb-sort-select" style="background:var(--ps-surface); border:1px solid var(--ps-border); color:var(--ps-text); border-radius:6px; padding:4px 8px; font-size:12px; outline:none; cursor:pointer;">
-              <option value="name">Sort by Name</option>
-              <option value="type">Sort by Type</option>
-              <option value="size">Sort by Size</option>
+              <option value="name">${i18n('mb.sortByName')}</option>
+              <option value="type">${i18n('mb.sortByType')}</option>
+              <option value="size">${i18n('mb.sortBySize')}</option>
             </select>
             <div class="ic-mb-modes">
-              <button class="ic-mb-mode-btn" data-mode="grid" title="Grid View"><span class="material-symbols-outlined text-[18px]">grid_view</span></button>
-              <button class="ic-mb-mode-btn" data-mode="list" title="List View"><span class="material-symbols-outlined text-[18px]">view_list</span></button>
-              <button class="ic-mb-mode-btn" data-mode="filmstrip" title="Filmstrip View"><span class="material-symbols-outlined text-[18px]">view_carousel</span></button>
-              ${this.options.enableCompare ? `<button class="ic-mb-mode-btn" data-mode="compare" title="Compare Mode"><span class="material-symbols-outlined text-[18px]">compare</span></button>` : ''}
+              <button class="ic-mb-mode-btn" data-mode="grid" title="${i18n('mb.gridView')}"><span class="material-symbols-outlined text-[18px]">grid_view</span></button>
+              <button class="ic-mb-mode-btn" data-mode="list" title="${i18n('mb.listView')}"><span class="material-symbols-outlined text-[18px]">view_list</span></button>
+              <button class="ic-mb-mode-btn" data-mode="filmstrip" title="${i18n('mb.filmstripView')}"><span class="material-symbols-outlined text-[18px]">view_carousel</span></button>
+              ${this.options.enableCompare ? `<button class="ic-mb-mode-btn" data-mode="compare" title="${i18n('mb.compareMode')}"><span class="material-symbols-outlined text-[18px]">compare</span></button>` : ''}
             </div>
           </div>
         </div>
@@ -258,14 +260,14 @@ export class MediaBrowser {
     // Always update breadcrumbs
     let bcHtml = '';
     if (this.options.onChangeFolderClick) {
-      bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-change-folder" title="Browse for new folder"><span class="material-symbols-outlined text-[18px]">folder_open</span></button>`;
+      bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-change-folder" title="${i18n('mb.browseForNewFolder')}"><span class="material-symbols-outlined text-[18px]">folder_open</span></button>`;
     }
     if (this.options.canGoUp) {
       if (bcHtml) bcHtml += `<span class="ic-mb-crumb-sep">/</span>`;
-      bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-up" title="Up one folder">..</button>`;
+      bcHtml += `<button class="ic-mb-crumb-btn" id="mb-btn-up" title="${i18n('mb.upOneFolder')}">..</button>`;
     }
     
-    const currentFolderName = this.options.currentFolderName || 'Current Folder';
+    const currentFolderName = this.options.currentFolderName || i18n('mb.currentFolder');
     
     if (bc && bc.length > 0) {
       bc.forEach((crumb, idx) => {
@@ -280,7 +282,7 @@ export class MediaBrowser {
     if (this.options.childFolders && this.options.childFolders.length > 0) {
       bcHtml += `
         <div class="ic-mb-child-dropdown-wrap ml-1">
-           <button class="ic-mb-crumb-btn" id="mb-btn-child-folders" title="Subfolders"><span class="material-symbols-outlined text-[16px]">expand_more</span></button>
+           <button class="ic-mb-crumb-btn" id="mb-btn-child-folders" title="${i18n('mb.subfolders')}"><span class="material-symbols-outlined text-[16px]">expand_more</span></button>
            <div class="ic-mb-child-dropdown" id="mb-child-dropdown"></div>
         </div>
       `;
@@ -319,7 +321,7 @@ export class MediaBrowser {
     }
     
     const selCountEl = this.headerEl.querySelector('#mb-sel-count');
-    if (selCountEl) selCountEl.textContent = this.selectedIds.size > 0 ? `${this.selectedIds.size} selected` : '';
+    if (selCountEl) selCountEl.textContent = this.selectedIds.size > 0 ? i18n('mb.selectedCount', { count: this.selectedIds.size }) : '';
 
     this.headerEl.querySelectorAll('.ic-mb-mode-btn').forEach(btn => {
       btn.classList.toggle('is-active', btn.dataset.mode === this.mode);
@@ -426,7 +428,7 @@ export class MediaBrowser {
     this.mainEl.innerHTML = '';
     
     if (this.filtered.length === 0) {
-      this.mainEl.innerHTML = '<div class="flex items-center justify-center h-full text-[var(--ps-text-muted)]">No items found.</div>';
+      this.mainEl.innerHTML = `<div class="flex items-center justify-center h-full text-[var(--ps-text-muted)]">${i18n('mb.noItemsFound')}</div>`;
       return;
     }
 
@@ -512,14 +514,14 @@ export class MediaBrowser {
   }
 
   getTooltipText(ent) {
-    if (ent.isFolder) return ent.name === '..' ? 'Go up one directory' : `Folder: ${ent.name}`;
-    const lines = [`Name: ${ent.name}`];
+    if (ent.isFolder) return ent.name === '..' ? i18n('mb.goUpOneDirectory') : i18n('mb.folderName', { name: ent.name });
+    const lines = [i18n('mb.tooltipName', { name: ent.name })];
     if (ent.file) {
-      lines.push(`Size: ${formatBytes(ent.file.size)}`);
-      lines.push(`Updated: ${new Date(ent.file.lastModified).toLocaleString()}`);
+      lines.push(i18n('mb.tooltipSize', { size: formatBytes(ent.file.size) }));
+      lines.push(i18n('mb.tooltipUpdated', { date: new Date(ent.file.lastModified).toLocaleString() }));
     }
     if (ent.sidecar?.width && ent.sidecar?.height) {
-      lines.push(`Dimensions: ${ent.sidecar.width} x ${ent.sidecar.height}`);
+      lines.push(i18n('mb.tooltipDimensions', { width: ent.sidecar.width, height: ent.sidecar.height }));
     }
     return lines.join('\n');
   }
@@ -538,7 +540,7 @@ export class MediaBrowser {
           const img = new Image();
           img.onload = () => {
             if (this._hoverId === hoverId) {
-              this.tooltipEl.textContent += `\nDimensions: ${img.naturalWidth} x ${img.naturalHeight}`;
+              this.tooltipEl.textContent += '\n' + i18n('mb.tooltipDimensions', { width: img.naturalWidth, height: img.naturalHeight });
             }
             URL.revokeObjectURL(url);
           };
@@ -547,7 +549,7 @@ export class MediaBrowser {
           const vid = document.createElement('video');
           vid.onloadedmetadata = () => {
             if (this._hoverId === hoverId) {
-              this.tooltipEl.textContent += `\nDimensions: ${vid.videoWidth} x ${vid.videoHeight}`;
+              this.tooltipEl.textContent += '\n' + i18n('mb.tooltipDimensions', { width: vid.videoWidth, height: vid.videoHeight });
             }
             URL.revokeObjectURL(url);
           };
@@ -606,9 +608,9 @@ export class MediaBrowser {
       let actionHtml = '';
       if (this.options.onAddAsset && !ent.isFolder && ent.name !== '..') {
         if (isAdded) {
-          actionHtml = `<div class="ic-mb-grid-action" style="position:absolute; top:8px; right:8px; z-index:5;"><span class="material-symbols-outlined" style="color: var(--ps-blue); background: var(--ps-bg-surface); border-radius: 50%; font-size: 20px; padding: 2px;" title="Already added">check_circle</span></div>`;
+          actionHtml = `<div class="ic-mb-grid-action" style="position:absolute; top:8px; right:8px; z-index:5;"><span class="material-symbols-outlined" style="color: var(--ps-blue); background: var(--ps-bg-surface); border-radius: 50%; font-size: 20px; padding: 2px;" title="${i18n('mb.alreadyAdded')}">check_circle</span></div>`;
         } else {
-          actionHtml = `<div class="ic-mb-grid-action" style="position:absolute; top:8px; right:8px; z-index:5;"><button class="btn-ghost mb-add-btn" style="padding: 2px; color: var(--ps-blue); background: var(--ps-bg-surface); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; border: none;" title="Add to Pool"><span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span></button></div>`;
+          actionHtml = `<div class="ic-mb-grid-action" style="position:absolute; top:8px; right:8px; z-index:5;"><button class="btn-ghost mb-add-btn" style="padding: 2px; color: var(--ps-blue); background: var(--ps-bg-surface); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; border: none;" title="${i18n('mb.addToPool')}"><span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span></button></div>`;
         }
       }
 
@@ -640,7 +642,7 @@ export class MediaBrowser {
       const warning = document.createElement('div');
       warning.className = 'ic-mb-hidden-warning';
       warning.style.cssText = 'padding:16px; margin: 16px; background:rgba(var(--ps-orange-rgb, 255,165,0), 0.1); border:1px solid var(--ps-orange); border-radius:8px; color:var(--ps-orange); font-size:14px; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px;';
-      warning.innerHTML = `<span class="material-symbols-outlined">warning</span> <b>${this.options.hiddenFilesCount} file(s) hidden</b> ${this.options.hiddenFilesMessage || 'due to recipe requirements.'}`;
+      warning.innerHTML = `<span class="material-symbols-outlined">warning</span> <b>${i18n('mb.filesHidden', { count: this.options.hiddenFilesCount })}</b> ${this.options.hiddenFilesMessage || i18n('mb.dueToRecipeRequirements')}`;
       this.mainEl.appendChild(warning);
     }
   }
@@ -653,9 +655,9 @@ export class MediaBrowser {
     list.innerHTML = `
       <div class="ic-mb-list-row is-header ${this.options.onAddAsset ? 'has-action' : ''}">
         <div></div>
-        <div>Name</div>
-        <div>Type</div>
-        <div>Size</div>
+        <div>${i18n('mb.colName')}</div>
+        <div>${i18n('mb.colType')}</div>
+        <div>${i18n('mb.colSize')}</div>
         ${this.options.onAddAsset ? '<div></div>' : ''}
       </div>
     `;
@@ -674,9 +676,9 @@ export class MediaBrowser {
       let actionHtml = '';
       if (this.options.onAddAsset && !ent.isFolder && ent.name !== '..') {
         if (isAdded) {
-          actionHtml = `<div class="ic-mb-action-col" style="display:flex; justify-content:center;"><span class="material-symbols-outlined" style="color: var(--ps-blue); cursor: default;" title="Already added">check_circle</span></div>`;
+          actionHtml = `<div class="ic-mb-action-col" style="display:flex; justify-content:center;"><span class="material-symbols-outlined" style="color: var(--ps-blue); cursor: default;" title="${i18n('mb.alreadyAdded')}">check_circle</span></div>`;
         } else {
-          actionHtml = `<div class="ic-mb-action-col" style="display:flex; justify-content:center;"><button class="btn-ghost mb-add-btn" style="padding: 4px; color: var(--ps-blue); cursor: pointer; display: flex; align-items: center; justify-content: center; background: transparent; border: none;" title="Add to Pool"><span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span></button></div>`;
+          actionHtml = `<div class="ic-mb-action-col" style="display:flex; justify-content:center;"><button class="btn-ghost mb-add-btn" style="padding: 4px; color: var(--ps-blue); cursor: pointer; display: flex; align-items: center; justify-content: center; background: transparent; border: none;" title="${i18n('mb.addToPool')}"><span class="material-symbols-outlined" style="font-size: 20px;">add_circle</span></button></div>`;
         }
       } else if (this.options.onAddAsset) {
         actionHtml = '<div></div>';
@@ -738,7 +740,7 @@ export class MediaBrowser {
       viewerHtml = `<div class="flex flex-col items-center justify-center text-[var(--ps-blue)] w-full h-full"><span class="material-symbols-outlined text-[64px] mb-4">${icon}</span><span class="text-lg">${escHtml(activeEnt.name)}</span></div>`;
     } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls style="width:100%; height:100%; object-fit:contain;"></video>`;
     else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}" style="width:100%; height:100%; object-fit:contain;">`;
-    else viewerHtml = `<div class="text-[var(--ps-text-muted)] flex items-center justify-center w-full h-full">Preview not available</div>`;
+    else viewerHtml = `<div class="text-[var(--ps-text-muted)] flex items-center justify-center w-full h-full">${i18n('mb.previewNotAvailable')}</div>`;
 
     fs.innerHTML = `
       <div class="ic-mb-fs-viewer">${viewerHtml}</div>
@@ -832,7 +834,7 @@ export class MediaBrowser {
 
   _syncSelectionUI() {
     const selCountEl = this.headerEl.querySelector('#mb-sel-count');
-    if (selCountEl) selCountEl.textContent = this.selectedIds.size > 0 ? `${this.selectedIds.size} selected` : '';
+    if (selCountEl) selCountEl.textContent = this.selectedIds.size > 0 ? i18n('mb.selectedCount', { count: this.selectedIds.size }) : '';
 
     if (this.mode === 'filmstrip' || this.mode === 'compare') {
       const strip = this.mainEl.querySelector('.ic-mb-fs-strip');
@@ -909,7 +911,7 @@ export class MediaBrowser {
       viewerHtml = `<div class="flex flex-col items-center justify-center text-[var(--ps-blue)] w-full h-full"><span class="material-symbols-outlined text-[64px] mb-4">${icon}</span><span class="text-lg">${escHtml(activeEnt.name)}</span></div>`;
     } else if (activeType === 'video') viewerHtml = `<video src="${activeUrl}" controls style="width:100%; height:100%; object-fit:contain;"></video>`;
     else if (activeType === 'image') viewerHtml = `<img src="${activeUrl}" style="width:100%; height:100%; object-fit:contain;">`;
-    else viewerHtml = `<div class="text-[var(--ps-text-muted)] flex items-center justify-center w-full h-full">Preview not available</div>`;
+    else viewerHtml = `<div class="text-[var(--ps-text-muted)] flex items-center justify-center w-full h-full">${i18n('mb.previewNotAvailable')}</div>`;
 
     viewerEl.innerHTML = viewerHtml;
   }

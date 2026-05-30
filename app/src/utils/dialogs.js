@@ -1,9 +1,11 @@
 /**
- * Zumilabs Studio — Dialog Utilities
+ * ZumiLabs Studio — Dialog Utilities
  *
  * Provides premium, Aurora-styled custom dialogs (confirm/alert) 
  * using the native HTML5 <dialog> element.
  */
+
+import { t as i18n } from '../i18n/index.js';
 
 /**
  * Shows a custom confirm dialog. Returns a Promise<boolean>.
@@ -19,8 +21,8 @@
 export async function showConfirm({ 
   title, 
   body, 
-  confirmText = 'Confirm', 
-  cancelText = 'Cancel', 
+  confirmText = i18n('dlg.confirm'),
+  cancelText = i18n('dlg.cancel'),
   variant = 'danger',
   icon = 'help'
 }) {
@@ -88,7 +90,7 @@ export async function showConfirm({
 export async function showAlert({ 
   title, 
   body, 
-  confirmText = 'OK', 
+  confirmText = i18n('dlg.ok'),
   variant = 'primary',
   icon = 'info'
 }) {
@@ -143,11 +145,11 @@ export async function showAlert({
 export async function showThreeWayConfirm({ 
   title, 
   body, 
-  btn1Text = 'Leave Gap', 
+  btn1Text = i18n('dlg.leaveGap'),
   btn1Value = 'leave',
-  btn2Text = 'Shift Sequence',
+  btn2Text = i18n('dlg.shiftSequence'),
   btn2Value = 'shift',
-  cancelText = 'Cancel', 
+  cancelText = i18n('dlg.cancel'),
   variant = 'primary',
   icon = 'format_list_numbered'
 }) {

@@ -1,5 +1,5 @@
 /**
- * Zumilabs Studio — Stock Media Preview Modal
+ * ZumiLabs Studio — Stock Media Preview Modal
  *
  * Lightweight <dialog>-based preview for normalised stock assets.
  * Mirrors the modal pattern from utils/info-modal.js.
@@ -11,6 +11,8 @@
  * around that we fetch the asset via fetch() (CORS-enabled on both
  * CDNs) and serve it from a same-origin blob: URL.
  */
+
+import { t as i18n } from '../i18n/index.js';
 
 let activeModal = null;
 
@@ -37,20 +39,20 @@ export function showMediaPreview(asset, opts = {}) {
       <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--ps-border); background:var(--ps-bg);">
         <div style="display:flex; flex-direction:column; gap:2px;">
           <div style="font-size:14px; font-weight:600; color:var(--ps-text);">
-            ${asset.kind === 'video' ? 'Video' : 'Photo'} by ${escapeHtml(asset.photographer || 'Unknown')}
+            ${asset.kind === 'video' ? i18n('mpv.videoBy', { name: asset.photographer || i18n('mpv.unknown') }) : i18n('mpv.photoBy', { name: asset.photographer || i18n('mpv.unknown') })}
           </div>
           <div style="font-size:11px; color:var(--ps-text-muted);">
             ${provider}${dims ? ' · ' + dims : ''}${dur ? ' · ' + dur : ''}
-            ${asset.pageUrl ? ` · <a href="${asset.pageUrl}" target="_blank" rel="noopener" style="color:var(--ps-accent);">View on ${provider}</a>` : ''}
+            ${asset.pageUrl ? ` · <a href="${asset.pageUrl}" target="_blank" rel="noopener" style="color:var(--ps-accent);">${i18n('mpv.viewOn', { provider })}</a>` : ''}
           </div>
         </div>
-        <button class="btn-icon" id="mp-close" title="Close (Esc)"><span class="material-symbols-outlined">close</span></button>
+        <button class="btn-icon" id="mp-close" title="${i18n('mpv.closeEsc')}"><span class="material-symbols-outlined">close</span></button>
       </div>
 
       <div id="mp-viewer" style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#000; overflow:hidden; position:relative;">
         <div id="mp-loading" style="color:#aaa; font-size:13px; display:flex; flex-direction:column; align-items:center; gap:8px;">
           <span class="material-symbols-outlined" style="font-size:32px; animation:spin 1.2s linear infinite;">progress_activity</span>
-          <span id="mp-loading-text">Loading preview…</span>
+          <span id="mp-loading-text">${i18n('mpv.loadingPreview')}</span>
         </div>
       </div>
 
@@ -61,11 +63,11 @@ export function showMediaPreview(asset, opts = {}) {
         <div style="display:flex; gap:8px;">
           <button class="btn-secondary" id="mp-toggle">
             <span class="material-symbols-outlined" style="font-size:16px;">${opts.isSelected ? 'check_box' : 'check_box_outline_blank'}</span>
-            <span id="mp-toggle-label">${opts.isSelected ? 'Selected' : 'Add to selection'}</span>
+            <span id="mp-toggle-label">${opts.isSelected ? i18n('mpv.selected') : i18n('mpv.addToSelection')}</span>
           </button>
           <button class="btn-primary" id="mp-download">
             <span class="material-symbols-outlined" style="font-size:16px;">download</span>
-            Download
+            ${i18n('mpv.download')}
           </button>
         </div>
       </div>
@@ -90,7 +92,7 @@ export function showMediaPreview(asset, opts = {}) {
     opts.onToggleSelect?.();
     const newSelected = !opts.isSelected;
     opts.isSelected = newSelected;
-    modal.querySelector('#mp-toggle-label').textContent = newSelected ? 'Selected' : 'Add to selection';
+    modal.querySelector('#mp-toggle-label').textContent = newSelected ? i18n('mpv.selected') : i18n('mpv.addToSelection');
     modal.querySelector('#mp-toggle .material-symbols-outlined').textContent = newSelected ? 'check_box' : 'check_box_outline_blank';
   });
 
@@ -118,13 +120,13 @@ async function loadAssetIntoViewer(modal, asset) {
     : (asset.previewUrl || asset.thumb);
 
   if (!url) {
-    loadingText.textContent = 'No preview available.';
+    loadingText.textContent = i18n('mpv.noPreviewAvailable');
     return;
   }
 
   try {
     if (asset.kind === 'video') {
-      loadingText.textContent = 'Buffering video…';
+      loadingText.textContent = i18n('mpv.bufferingVideo');
     }
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -151,7 +153,7 @@ async function loadAssetIntoViewer(modal, asset) {
     }
   } catch (err) {
     console.error('[media-preview] load failed', err);
-    loadingText.innerHTML = `Could not load preview.<br><span style="font-size:11px; opacity:0.7;">${escapeHtml(err.message || '')}</span>`;
+    loadingText.innerHTML = `${i18n('mpv.couldNotLoad')}<br><span style="font-size:11px; opacity:0.7;">${escapeHtml(err.message || '')}</span>`;
   }
 }
 

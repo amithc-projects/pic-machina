@@ -107,7 +107,7 @@ async function migrateLegacyDatabase() {
     return;
   }
 
-  console.info('[Zumilabs Studio] Migrating legacy PicMachina database...');
+  console.info('[ZumiLabs Studio] Migrating legacy PicMachina database...');
 
   const stores = ['recipes', 'blocks', 'runs', 'folders', 'assets', 'templates', 'showcases', 'models', 'timelines', 'voices'];
 
@@ -157,9 +157,9 @@ async function migrateLegacyDatabase() {
     });
 
     localStorage.setItem('db_migration_to_zumilabs_studio', 'done');
-    console.info('[Zumilabs Studio] Legacy database successfully migrated.');
+    console.info('[ZumiLabs Studio] Legacy database successfully migrated.');
   } catch (err) {
-    console.warn('[Zumilabs Studio] Database migration failed or was interrupted:', err);
+    console.warn('[ZumiLabs Studio] Database migration failed or was interrupted:', err);
   }
 }
 
@@ -169,7 +169,7 @@ export async function initDB() {
   try {
     await migrateLegacyDatabase();
   } catch (err) {
-    console.warn('[Zumilabs Studio] Pre-migration check failed:', err);
+    console.warn('[ZumiLabs Studio] Pre-migration check failed:', err);
   }
 
   return new Promise((resolve, reject) => {
@@ -187,7 +187,7 @@ export async function initDB() {
       // Silently restore from file system shadow if IDB has no user data
       import('../utils/backup.js').then(({ shadowRestore }) => {
         shadowRestore().then(restored => {
-          if (restored) console.info('[Zumilabs Studio] User data restored from file system shadow.');
+          if (restored) console.info('[ZumiLabs Studio] User data restored from file system shadow.');
         });
       });
       resolve(_db);

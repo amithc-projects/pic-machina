@@ -17,7 +17,7 @@
 
 // Sidecar files use dot-prefix + .json extension: `.photo.jpg.json`
 // This makes the JSON nature of the file explicit in the filename and matches
-// the ux-file-manager (sidekick-manager) scanner which looks for .{name}.json.
+// the ux-file-manager (zumilabs-file-browser) scanner which looks for .{name}.json.
 const SIDECAR_PREFIX = '.';
 const SIDECAR_EXT = '.json';
 
