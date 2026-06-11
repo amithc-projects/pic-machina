@@ -7,7 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "i18n:validate": "node scripts/i18n-validate.mjs"
+    "i18n:validate": "node scripts/i18n-validate.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:coverage": "vitest run --coverage",
+    "test:browser": "vitest run --config vitest.browser.config.js",
+    "test:browser:coverage": "vitest run --config vitest.browser.config.js --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:screens": "playwright test tests/e2e/screens/",
+    "test:all": "npm test && npm run test:browser && npm run test:e2e"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.0.0-next.2",
@@ -36,7 +46,15 @@
     "utif": "^3.1.0"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.0",
+    "@playwright/test": "^1.60.0",
+    "@vitest/browser": "^4.1.8",
+    "@vitest/browser-playwright": "^4.1.8",
+    "@vitest/coverage-v8": "^4.1.8",
+    "fake-indexeddb": "^6.2.5",
+    "playwright": "^1.60.0",
     "vite": "^5.4.0",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^4.1.8"
   }
 }

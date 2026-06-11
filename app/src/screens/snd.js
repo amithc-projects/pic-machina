@@ -319,45 +319,86 @@ function scaleAudioBuffer(buffer, gain) {
     return newBuf;
 }
 
-function applyNoiseReduction(buffer, thresholdDb, reductionDb) {
+async function resampleAudioBuffer(audioBuffer, targetSampleRate) {
+    if (audioBuffer.sampleRate === targetSampleRate) {
+        return audioBuffer;
+    }
+    const numChannels = audioBuffer.numberOfChannels;
+    const offlineCtx = new OfflineAudioContext(
+        numChannels,
+        Math.round(audioBuffer.duration * targetSampleRate),
+        targetSampleRate
+    );
+    const bufferSource = offlineCtx.createBufferSource();
+    bufferSource.buffer = audioBuffer;
+    bufferSource.connect(offlineCtx.destination);
+    bufferSource.start();
+    return await offlineCtx.startRendering();
+}
+
+async function applyNoiseReduction(buffer, thresholdDb, reductionDb) {
+    // 1. Load the RNNoise WASM module dynamically
+    const createRNNWasmModuleSync = (await import('../utils/rnnoise-sync.js')).default;
+    const Module = await createRNNWasmModuleSync();
+
+    // 2. Resample buffer to 48kHz (RNNoise requirement)
+    const resampledBuffer = await resampleAudioBuffer(buffer, 48000);
+    const numChannels = resampledBuffer.numberOfChannels;
+    const length = resampledBuffer.length;
+
     const ctx = getAudioCtx();
-    const sr = buffer.sampleRate;
-    const blockSize = Math.floor(sr * 0.05); 
-    const numChannels = buffer.numberOfChannels;
-    const len = buffer.length;
+    const processedBuffer48k = ctx.createBuffer(numChannels, length, 48000);
 
-    const thresholdLinear = Math.pow(10, thresholdDb / 20);
-    const attenuation = Math.pow(10, -Math.abs(reductionDb) / 20); 
+    const frameSize = 480;
+    const attenuation = Math.pow(10, -Math.abs(reductionDb) / 20);
 
-    const newBuf = ctx.createBuffer(numChannels, len, sr);
-    let currentGain = 1.0;
+    for (let c = 0; c < numChannels; c++) {
+        const inputData = resampledBuffer.getChannelData(c);
+        const outputData = processedBuffer48k.getChannelData(c);
 
-    for (let offset = 0; offset < len; offset += blockSize) {
-        const size = Math.min(blockSize, len - offset);
-        
-        let sumSq = 0;
-        for (let c = 0; c < numChannels; c++) {
-            const data = buffer.getChannelData(c);
+        const state = Module._rnnoise_create(0);
+        const inputPtr = Module._malloc(frameSize * 4);
+        const outputPtr = Module._malloc(frameSize * 4);
+
+        const scaledFrame = new Float32Array(frameSize);
+
+        for (let offset = 0; offset < length; offset += frameSize) {
+            const size = Math.min(frameSize, length - offset);
+
+            // Extract and scale samples to 16-bit float range [-32768, 32767]
+            for (let i = 0; i < frameSize; i++) {
+                if (i < size) {
+                    scaledFrame[i] = inputData[offset + i] * 32768.0;
+                } else {
+                    scaledFrame[i] = 0.0;
+                }
+            }
+
+            Module.HEAPF32.set(scaledFrame, inputPtr / 4);
+            Module._rnnoise_process_frame(state, outputPtr, inputPtr);
+
+            const outFrame = new Float32Array(Module.HEAPF32.buffer, outputPtr, frameSize);
             for (let i = 0; i < size; i++) {
-                const sample = data[offset + i];
-                sumSq += sample * sample;
+                const originalVal = inputData[offset + i];
+                const denoisedVal = outFrame[i] / 32768.0;
+                
+                // Blend denoised and original based on reductionDb attenuation
+                const blendedVal = denoisedVal * (1 - attenuation) + originalVal * attenuation;
+                
+                // Clamp to [-1, 1]
+                outputData[offset + i] = Math.max(-1.0, Math.min(1.0, blendedVal));
             }
         }
-        const rms = Math.sqrt(sumSq / (size * numChannels + 1e-8));
-        const targetGain = (rms < thresholdLinear) ? attenuation : 1.0;
 
-        for (let i = 0; i < size; i++) {
-            const progress = i / size;
-            const gain = currentGain + (targetGain - currentGain) * progress;
-            for (let c = 0; c < numChannels; c++) {
-                newBuf.getChannelData(c)[offset + i] = buffer.getChannelData(c)[offset + i] * gain;
-            }
-        }
-        currentGain = targetGain;
+        Module._rnnoise_destroy(state);
+        Module._free(inputPtr);
+        Module._free(outputPtr);
     }
 
-    return newBuf;
+    // 3. Resample processed buffer back to original sample rate
+    return await resampleAudioBuffer(processedBuffer48k, buffer.sampleRate);
 }
+
 
 function applyAutoDucking(clip, controlTrack, thresholdDb, duckAmountDb, fadeDownTime, fadeUpTime) {
     const controlClips = controlTrack.clips;
@@ -749,6 +790,36 @@ function showPrompt(title) {
         overlay.querySelector('#dlg-cancel').onclick = () => { document.body.removeChild(overlay); resolve(null); };
         overlay.querySelector('#dlg-confirm').onclick = () => { document.body.removeChild(overlay); resolve(input.value); };
     });
+}
+
+function showProcessingOverlay(message) {
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.background = 'rgba(0,0,0,0.85)';
+    overlay.style.backdropFilter = 'blur(5px)';
+    overlay.style.zIndex = '99999';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.gap = '20px';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.color = '#f472b6';
+    overlay.style.fontFamily = 'system-ui, sans-serif';
+    overlay.style.fontSize = '18px';
+    overlay.style.fontWeight = '600';
+
+    overlay.innerHTML = `
+        <div class="snd-spinner" style="width: 50px; height: 50px; border: 4px solid rgba(244,114,182,0.2); border-left-color: #f472b6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <div>${message}</div>
+        <style>
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
 }
 
 function showCustomForm(title, fields, onConfirm) {
@@ -3605,37 +3676,48 @@ export async function render(container) {
           showCustomForm(i18n('snd.noiseReduction'), [
               { id: 'noiseThreshold', label: i18n('snd.noiseThreshold'), type: 'number', value: -45 },
               { id: 'reductionAmount', label: i18n('snd.reductionAmount'), type: 'number', value: 12 }
-          ], (results) => {
+          ], async (results) => {
               const thresh = results.noiseThreshold;
               const reduction = results.reductionAmount;
               if (isNaN(thresh) || isNaN(reduction)) return;
               
-              affectedClips.forEach(c => {
-                  let currentBuffer = c.buffer || (c.poolId ? project.mediaPool[c.poolId] : null);
-                  if (c.originalBuffer) {
-                      currentBuffer = c.originalBuffer;
+              // Show progress overlay
+              const loader = showProcessingOverlay(i18n('snd.rendering') || 'Processing Audio...');
+              
+              try {
+                  for (const c of affectedClips) {
+                      let currentBuffer = c.buffer || (c.poolId ? project.mediaPool[c.poolId] : null);
+                      if (c.originalBuffer) {
+                          currentBuffer = c.originalBuffer;
+                      }
+                      if (!currentBuffer) continue;
+                      
+                      const processedBuffer = await applyNoiseReduction(currentBuffer, thresh, reduction);
+                      c.originalBuffer = processedBuffer;
+                      c.poolId = null;
+                      c.sourceStart = 0;
+                      recomputeClipBuffer(c);
                   }
-                  if (!currentBuffer) return;
                   
-                  const processedBuffer = applyNoiseReduction(currentBuffer, thresh, reduction);
-                  c.originalBuffer = processedBuffer;
-                  c.poolId = null;
-                  c.sourceStart = 0;
-                  recomputeClipBuffer(c);
-              });
-              
-              trackEvent('audio_noise_reduction_applied', {
-                  component: 'daw',
-                  properties: {
-                      threshold_db: thresh,
-                      reduction_db: reduction,
-                      clip_count: affectedClips.length
-                  }
-              });
-              
-              rebuildPlayback();
-              renderInspector();
-              renderTimeline();
+                  trackEvent('audio_noise_reduction_applied', {
+                      component: 'daw',
+                      properties: {
+                          threshold_db: thresh,
+                          reduction_db: reduction,
+                          clip_count: affectedClips.length
+                      }
+                  });
+                  
+                  rebuildPlayback();
+                  renderInspector();
+                  renderTimeline();
+              } catch (err) {
+                  console.error("Error applying noise reduction:", err);
+                  alert("Failed to apply noise reduction: " + err.message);
+              } finally {
+                  // Remove loader
+                  document.body.removeChild(loader);
+              }
           });
       }
 
