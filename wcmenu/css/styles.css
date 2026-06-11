@@ -375,64 +375,92 @@ img { max-width: 100%; }
   margin-top: .05rem;
 }
 
+/* ===== DISH IMAGE ===== */
+.recipe-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+  background: var(--dark3);
+}
+.recipe-img-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  background: linear-gradient(135deg, var(--dark3) 0%, var(--dark2) 100%);
+}
+.placeholder-emoji { font-size: 3rem; line-height: 1; }
+.placeholder-txt { font-size: .8rem; color: var(--text-muted); }
+.recipe-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity .4s ease;
+}
+.recipe-img.hidden { opacity: 0; pointer-events: none; }
+
 /* ===== YOUTUBE SECTION ===== */
 .youtube-section {
   border-top: 1px solid var(--border);
-  padding: 1.5rem;
+  padding: 1.2rem 1.5rem 1.5rem;
+}
+
+/* YouTube branded preview card — clicking opens YouTube search */
+.yt-preview-card {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.2rem;
+  background: #0f0f0f;
+  border: 1px solid #272727;
+  border-radius: 10px;
+  padding: 1.1rem 1.4rem;
+  text-decoration: none;
+  color: #fff;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, transform .15s;
 }
-.youtube-label {
-  font-size: .85rem;
-  color: var(--text-muted);
+.yt-preview-card:hover {
+  background: #1a1a1a;
+  border-color: #ff0000;
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: #fff;
+}
+.yt-play-ring {
   flex-shrink: 0;
+  width: 3.5rem;
+  height: 3.5rem;
 }
-.yt-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  background: #ff0000;
-  color: #fff;
-  border: none;
-  padding: .6rem 1.2rem;
-  border-radius: 6px;
-  font-size: .9rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background .2s, transform .1s;
-}
-.yt-btn:hover {
-  background: #cc0000;
-  text-decoration: none;
-  color: #fff;
-  transform: scale(1.03);
-}
-.yt-icon { font-size: 1.1rem; }
-.yt-embed-toggle {
-  background: var(--dark3);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: .5rem 1rem;
-  border-radius: 6px;
-  font-size: .85rem;
-  cursor: pointer;
-  transition: all .2s;
-}
-.yt-embed-toggle:hover { border-color: var(--gold); color: var(--gold); }
+.yt-play-svg { width: 100%; height: 100%; }
+.yt-bg { fill: #ff0000; }
+.yt-preview-card:hover .yt-bg { fill: #cc0000; }
+.yt-triangle { fill: #fff; }
 
-.yt-embed-frame {
-  width: 100%;
-  aspect-ratio: 16/9;
-  border: none;
-  border-radius: 8px;
-  margin-top: .5rem;
-  background: #000;
+.yt-preview-text {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  min-width: 0;
 }
-.yt-embed-container { width: 100%; }
-.yt-embed-container.hidden { display: none; }
+.yt-preview-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.yt-preview-cta {
+  font-size: .82rem;
+  color: #aaa;
+}
+.yt-preview-card:hover .yt-preview-cta { color: #ff6666; }
 
 /* ===== FOOTER ===== */
 .site-footer {
