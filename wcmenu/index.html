@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Cup 2026 — Culinary Journey Through 48 Nations</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <meta name="description" content="Explore traditional 3-course menus from all 48 nations competing in the 2026 FIFA World Cup, complete with full recipes and video guides.">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-emblem">🏆⚽🏆</div>
+      <h1>World Cup 2026</h1>
+      <p class="tagline">A Culinary Journey Through <strong>48 Nations</strong></p>
+      <p class="host-line">Hosted by 🇺🇸 USA &nbsp;|&nbsp; 🇨🇦 Canada &nbsp;|&nbsp; 🇲🇽 Mexico</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="🔍  Search a country…" autocomplete="off" />
+      </div>
+      <div class="conf-filters" role="group" aria-label="Filter by confederation">
+        <button class="filter-btn active" data-filter="all">All 48</button>
+        <button class="filter-btn" data-filter="UEFA">🌍 Europe</button>
+        <button class="filter-btn" data-filter="CONMEBOL">🌎 S. America</button>
+        <button class="filter-btn" data-filter="CONCACAF">🌎 CONCACAF</button>
+        <button class="filter-btn" data-filter="CAF">🌍 Africa</button>
+        <button class="filter-btn" data-filter="AFC">🌏 Asia</button>
+        <button class="filter-btn" data-filter="OFC">🌏 Oceania</button>
+      </div>
+    </section>
+
+    <section class="stats-bar">
+      <span id="countDisplay">48 countries</span>
+      <span class="stat-sep">|</span>
+      <span>144 recipes</span>
+      <span class="stat-sep">|</span>
+      <span>3-course menus</span>
+    </section>
+
+    <div class="countries-grid" id="countriesGrid"></div>
+  </main>
+
+  <footer class="site-footer">
+    <p>⚽ FIFA World Cup 2026 &nbsp;·&nbsp; June – July 2026 &nbsp;·&nbsp; Celebrating food & football ⚽</p>
+  </footer>
+
+  <script src="js/data-uefa.js"></script>
+  <script src="js/data-americas.js"></script>
+  <script src="js/data-africa-asia.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

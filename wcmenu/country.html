@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Country Menu — World Cup 2026</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="country-page">
+  <header class="site-header compact">
+    <div class="header-inner">
+      <a href="index.html" class="back-link">← All Countries</a>
+      <div class="header-emblem">⚽</div>
+      <h1>World Cup 2026</h1>
+    </div>
+  </header>
+
+  <main id="countryMain">
+    <div class="country-hero" id="countryHero">
+      <div class="country-flag" id="countryFlag"></div>
+      <div class="country-info">
+        <h2 id="countryName"></h2>
+        <span class="conf-badge" id="confBadge"></span>
+        <p class="menu-intro" id="menuIntro"></p>
+      </div>
+    </div>
+
+    <nav class="course-tabs" role="tablist">
+      <button class="tab-btn active" role="tab" data-course="starter" aria-selected="true">
+        🥗 Starter
+      </button>
+      <button class="tab-btn" role="tab" data-course="main" aria-selected="false">
+        🍽️ Main
+      </button>
+      <button class="tab-btn" role="tab" data-course="dessert" aria-selected="false">
+        🍮 Dessert
+      </button>
+    </nav>
+
+    <section class="course-panel" id="coursePanelStarter"></section>
+    <section class="course-panel hidden" id="coursePanelMain"></section>
+    <section class="course-panel hidden" id="coursePanelDessert"></section>
+  </main>
+
+  <footer class="site-footer">
+    <p>⚽ FIFA World Cup 2026 &nbsp;·&nbsp; <a href="index.html">Back to all countries</a> ⚽</p>
+  </footer>
+
+  <script src="js/data-uefa.js"></script>
+  <script src="js/data-americas.js"></script>
+  <script src="js/data-africa-asia.js"></script>
+  <script src="js/country.js"></script>
+</body>
+</html>
