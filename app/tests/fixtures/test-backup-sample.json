@@ -1,0 +1,211 @@
+{
+  "version": 1,
+  "checksum": "ZumilabsStudioExport",
+  "metadata": {
+    "exportedAt": "2024-01-01T00:00:00.000Z",
+    "description": "E2E test fixture — pre-built database snapshot"
+  },
+  "data": {
+    "recipes": [
+      {
+        "id": "test-recipe-web-optimise",
+        "name": "E2E: Web Optimise",
+        "description": "Test recipe — resize and export as WebP.",
+        "isSystem": false,
+        "coverColor": "#0077ff",
+        "tags": ["test", "web"],
+        "createdAt": 1700000000000,
+        "updatedAt": 1700000000000,
+        "nodes": [
+          {
+            "id": "n1", "type": "transform", "transformId": "geo-resize",
+            "params": { "width": "1920", "height": "", "maintainAspect": true, "algo": "Lanczos" },
+            "label": "Resize to 1920px"
+          },
+          {
+            "id": "n2", "type": "transform", "transformId": "meta-strip",
+            "params": { "level": "GPS Only" },
+            "label": "Strip GPS"
+          },
+          {
+            "id": "n3", "type": "transform", "transformId": "flow-export",
+            "params": { "suffix": "-web", "format": "image/webp", "quality": 85 },
+            "label": "Export WebP"
+          }
+        ]
+      },
+      {
+        "id": "test-recipe-portrait",
+        "name": "E2E: Portrait Pack",
+        "description": "Test recipe — square crop, vignette, export JPEG.",
+        "isSystem": false,
+        "coverColor": "#e11d48",
+        "tags": ["test", "portrait"],
+        "createdAt": 1700000001000,
+        "updatedAt": 1700000001000,
+        "nodes": [
+          {
+            "id": "n1", "type": "transform", "transformId": "geo-crop",
+            "params": { "x": "0", "y": "0", "width": "100%", "height": "100%" },
+            "label": "Crop"
+          },
+          {
+            "id": "n2", "type": "transform", "transformId": "color-vignette",
+            "params": { "strength": 30, "color": "#000000" },
+            "label": "Vignette"
+          },
+          {
+            "id": "n3", "type": "transform", "transformId": "flow-export",
+            "params": { "suffix": "-portrait", "format": "image/jpeg", "quality": 90 },
+            "label": "Export JPEG"
+          }
+        ]
+      },
+      {
+        "id": "test-recipe-branch",
+        "name": "E2E: Multi-Format Export",
+        "description": "Test recipe with branch node — JPEG and WebP variants.",
+        "isSystem": false,
+        "coverColor": "#7c3aed",
+        "tags": ["test", "branch", "multi-format"],
+        "createdAt": 1700000002000,
+        "updatedAt": 1700000002000,
+        "nodes": [
+          {
+            "id": "n1", "type": "transform", "transformId": "geo-resize",
+            "params": { "width": "1200", "height": "", "maintainAspect": true, "algo": "Lanczos" },
+            "label": "Resize 1200px"
+          },
+          {
+            "id": "branch1", "type": "branch", "label": "Format Split",
+            "branches": [
+              {
+                "id": "br-jpeg", "label": "JPEG",
+                "nodes": [
+                  {
+                    "id": "b1n1", "type": "transform", "transformId": "flow-export",
+                    "params": { "suffix": "-jpeg", "format": "image/jpeg", "quality": 90 },
+                    "label": "Export JPEG"
+                  }
+                ]
+              },
+              {
+                "id": "br-webp", "label": "WebP",
+                "nodes": [
+                  {
+                    "id": "b2n1", "type": "transform", "transformId": "flow-export",
+                    "params": { "suffix": "-webp", "format": "image/webp", "quality": 85 },
+                    "label": "Export WebP"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "test-recipe-conditional",
+        "name": "E2E: Smart Orientation",
+        "description": "Test recipe with conditional — different crop for portrait vs landscape.",
+        "isSystem": false,
+        "coverColor": "#059669",
+        "tags": ["test", "conditional", "orientation"],
+        "createdAt": 1700000003000,
+        "updatedAt": 1700000003000,
+        "nodes": [
+          {
+            "id": "cond1",
+            "type": "conditional",
+            "condition": { "field": "IsPortrait", "operator": "eq", "value": true },
+            "label": "Is Portrait?",
+            "thenNodes": [
+              {
+                "id": "t1", "type": "transform", "transformId": "geo-crop",
+                "params": { "x": "0", "y": "0", "width": "100%", "height": "80%" },
+                "label": "Portrait crop"
+              }
+            ],
+            "elseNodes": [
+              {
+                "id": "e1", "type": "transform", "transformId": "geo-crop",
+                "params": { "x": "10%", "y": "0", "width": "80%", "height": "100%" },
+                "label": "Landscape crop"
+              }
+            ]
+          },
+          {
+            "id": "n2", "type": "transform", "transformId": "flow-export",
+            "params": { "suffix": "-smart", "format": "image/jpeg", "quality": 88 },
+            "label": "Export"
+          }
+        ]
+      },
+      {
+        "id": "test-recipe-color",
+        "name": "E2E: Colour Grade",
+        "description": "Test recipe — warm colour grade, vignette, copyright watermark.",
+        "isSystem": false,
+        "coverColor": "#d97706",
+        "tags": ["test", "colour", "grade"],
+        "createdAt": 1700000004000,
+        "updatedAt": 1700000004000,
+        "nodes": [
+          {
+            "id": "n1", "type": "transform", "transformId": "color-tuning",
+            "params": { "contrast": 10, "saturation": 15, "vibrance": 20, "invert": false },
+            "label": "Colour Boost"
+          },
+          {
+            "id": "n2", "type": "transform", "transformId": "color-vignette",
+            "params": { "strength": 25, "color": "#000000" },
+            "label": "Soft Vignette"
+          },
+          {
+            "id": "n3", "type": "transform", "transformId": "meta-set-exif",
+            "params": { "field": "copyright", "value": "© E2E Test {{exif.dateTaken | date(\"YYYY\")}}" },
+            "label": "Set Copyright"
+          },
+          {
+            "id": "n4", "type": "transform", "transformId": "flow-export",
+            "params": { "suffix": "-graded", "format": "image/jpeg", "quality": 92 },
+            "label": "Export"
+          }
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "id": "test-block-export-variants",
+        "name": "E2E: Export Variants",
+        "description": "Test block — three export sizes.",
+        "isSystem": false,
+        "category": "Export",
+        "createdAt": 1700000010000,
+        "updatedAt": 1700000010000,
+        "nodes": [
+          {
+            "id": "bb1", "type": "branch", "label": "Sizes",
+            "branches": [
+              {
+                "id": "bb-lg", "label": "Large",
+                "nodes": [
+                  { "id": "bbn1", "type": "transform", "transformId": "geo-resize", "params": { "width": "1600", "height": "", "maintainAspect": true, "algo": "Lanczos" }, "label": "1600px" },
+                  { "id": "bbn2", "type": "transform", "transformId": "flow-export", "params": { "suffix": "_lg", "format": "image/jpeg", "quality": 90 }, "label": "Export LG" }
+                ]
+              },
+              {
+                "id": "bb-sm", "label": "Small",
+                "nodes": [
+                  { "id": "bbn3", "type": "transform", "transformId": "geo-resize", "params": { "width": "400", "height": "", "maintainAspect": true, "algo": "Lanczos" }, "label": "400px" },
+                  { "id": "bbn4", "type": "transform", "transformId": "flow-export", "params": { "suffix": "_sm", "format": "image/jpeg", "quality": 75 }, "label": "Export SM" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "templates": [],
+    "showcases": []
+  }
+}

@@ -1,0 +1,583 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for src/utils/video-scrubber.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/utils</a> video-scrubber.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/69</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/20</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/15</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/62</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
+ * Video frame scrubber component.
+ *
+ * Renders a filmstrip + draggable playhead so users can choose which
+ * frame of a video is used for the recipe-builder / node-editor preview.
+ * The chosen time is persisted to localStorage so it survives navigation.
+ *
+ * Usage:
+ *   const scrubber = await mountVideoScrubber(hostEl, file, {
+ *     initialTime: 2.5,          // seconds (optional)
+ *     onSeek: (t) =&gt; { ... }     // called when the user moves the playhead
+ *   });
+ *   scrubber.destroy();          // remove when done
+ */
+&nbsp;
+import { extractVideoFilmstrip, getVideoDuration } from './video-frame.js';
+import { t as i18n } from '../i18n/index.js';
+&nbsp;
+const STRIP_FRAME_COUNT = <span class="cstat-no" title="statement not covered" >16;</span>
+const STORAGE_KEY = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(f</span>ilename) =&gt; <span class="cstat-no" title="statement not covered" >`ic-seek:${filename}`;</span></span>
+&nbsp;
+/** Load or return the persisted seek time for a file (null if none). */
+export function <span class="fstat-no" title="function not covered" >getStoredSeekTime(</span>filename) {
+  const v = <span class="cstat-no" title="statement not covered" >localStorage.getItem(STORAGE_KEY(filename));</span>
+<span class="cstat-no" title="statement not covered" >  return v !== null ? parseFloat(v) : null;</span>
+}
+&nbsp;
+/** Persist a seek time for a file. */
+export function <span class="fstat-no" title="function not covered" >setStoredSeekTime(</span>filename, t) {
+<span class="cstat-no" title="statement not covered" >  localStorage.setItem(STORAGE_KEY(filename), String(t));</span>
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >fmtTime(</span>s) {
+<span class="cstat-no" title="statement not covered" >  if (!isFinite(s)) <span class="cstat-no" title="statement not covered" >return '0:00';</span></span>
+  const m = <span class="cstat-no" title="statement not covered" >Math.floor(s / 60);</span>
+  const sec = <span class="cstat-no" title="statement not covered" >Math.floor(s % 60);</span>
+<span class="cstat-no" title="statement not covered" >  return `${m}:${sec.toString().padStart(2, '0')}`;</span>
+}
+&nbsp;
+/**
+ * Mount a scrubber into hostEl for the given video File.
+ * @returns {{ destroy: () =&gt; void, getCurrentTime: () =&gt; number }}
+ */
+export async function <span class="fstat-no" title="function not covered" >mountVideoScrubber(</span>hostEl, file, { initialTime = <span class="branch-0 cbranch-no" title="branch not covered" >null,</span> onSeek } = <span class="branch-0 cbranch-no" title="branch not covered" >{})</span> {
+<span class="cstat-no" title="statement not covered" >  hostEl.innerHTML = `</span>
+    &lt;div class="vs-root"&gt;
+      &lt;div class="vs-bar"&gt;
+        &lt;span class="material-symbols-outlined vs-icon"&gt;movie&lt;/span&gt;
+        &lt;span class="vs-label"&gt;${i18n('vs.previewFrame', { name: file.name })}&lt;/span&gt;
+        &lt;span class="vs-time" id="vs-time"&gt;—&lt;/span&gt;
+        &lt;span class="vs-dur" id="vs-dur"&gt;&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;div class="vs-strip-wrap" id="vs-strip-wrap"&gt;
+        &lt;div class="vs-strip-loading"&gt;
+          &lt;div class="spinner"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="vs-head" id="vs-head" style="display:none"&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;style&gt;
+      .vs-root { display:flex; flex-direction:column; padding:6px 12px 8px; border-top:1px solid var(--ps-border); background:var(--ps-bg-surface); user-select:none; }
+      .vs-bar { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+      .vs-icon { font-size:14px; color:var(--ps-text-muted); }
+      .vs-label { font-size:11px; color:var(--ps-text-muted); font-weight:500; text-transform:uppercase; letter-spacing:.04em; flex:1; }
+      .vs-time { font-size:12px; font-family:var(--font-mono); color:var(--ps-blue); font-weight:600; }
+      .vs-dur { font-size:11px; font-family:var(--font-mono); color:var(--ps-text-faint); }
+      .vs-strip-wrap { position:relative; height:52px; border-radius:6px; overflow:hidden; background:var(--ps-bg-app); cursor:crosshair; }
+      .vs-strip-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+      .vs-strip-imgs { display:flex; height:100%; width:100%; }
+      .vs-strip-imgs img { flex:1; height:100%; object-fit:cover; display:block; min-width:0; }
+      .vs-head {
+        position:absolute; top:0; bottom:0; width:3px; background:var(--ps-blue);
+        margin-left:-1px; pointer-events:none; border-radius:2px;
+        box-shadow:0 0 6px rgba(0,119,255,0.7);
+      }
+      .vs-head::before {
+        content:''; position:absolute; top:-1px; left:50%; transform:translateX(-50%);
+        width:11px; height:11px; background:var(--ps-blue); border-radius:50%;
+        box-shadow:0 0 0 2px rgba(255,255,255,0.25);
+      }
+      .vs-head::after {
+        content:''; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%);
+        width:11px; height:11px; background:var(--ps-blue); border-radius:50%;
+        box-shadow:0 0 0 2px rgba(255,255,255,0.25);
+      }
+    &lt;/style&gt;`;
+&nbsp;
+  const stripWrap = <span class="cstat-no" title="statement not covered" >hostEl.querySelector('#vs-strip-wrap');</span>
+  const head      = <span class="cstat-no" title="statement not covered" >hostEl.querySelector('#vs-head');</span>
+  const timeEl    = <span class="cstat-no" title="statement not covered" >hostEl.querySelector('#vs-time');</span>
+  const durEl     = <span class="cstat-no" title="statement not covered" >hostEl.querySelector('#vs-dur');</span>
+&nbsp;
+  let duration = <span class="cstat-no" title="statement not covered" >0;</span>
+  let currentT = <span class="cstat-no" title="statement not covered" >initialTime ?? 0;</span>
+&nbsp;
+  const setHead = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(t</span>) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    currentT = Math.max(0, Math.min(t, duration));</span>
+<span class="cstat-no" title="statement not covered" >    timeEl.textContent = fmtTime(currentT);</span>
+<span class="cstat-no" title="statement not covered" >    if (duration &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >      head.style.left = `${(currentT / duration) * 100}%`;</span>
+    }
+  };
+&nbsp;
+  const posToTime = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(c</span>lientX) =&gt; {</span>
+    const rect = <span class="cstat-no" title="statement not covered" >stripWrap.getBoundingClientRect();</span>
+    const ratio = <span class="cstat-no" title="statement not covered" >Math.max(0, Math.min((clientX - rect.left) / rect.width, 1));</span>
+<span class="cstat-no" title="statement not covered" >    return ratio * duration;</span>
+  };
+&nbsp;
+  const emit = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(t</span>) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    setHead(t);</span>
+<span class="cstat-no" title="statement not covered" >    setStoredSeekTime(file.name, currentT);</span>
+<span class="cstat-no" title="statement not covered" >    onSeek?.(currentT);</span>
+  };
+&nbsp;
+  // Pointer drag handling
+  let dragging = <span class="cstat-no" title="statement not covered" >false;</span>
+<span class="cstat-no" title="statement not covered" >  stripWrap.addEventListener('pointerdown', <span class="fstat-no" title="function not covered" >e </span>=&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    if (e.button !== 0) <span class="cstat-no" title="statement not covered" >return;</span></span>
+<span class="cstat-no" title="statement not covered" >    dragging = true;</span>
+<span class="cstat-no" title="statement not covered" >    stripWrap.setPointerCapture(e.pointerId);</span>
+<span class="cstat-no" title="statement not covered" >    emit(posToTime(e.clientX));</span>
+  });
+<span class="cstat-no" title="statement not covered" >  stripWrap.addEventListener('pointermove', <span class="fstat-no" title="function not covered" >e </span>=&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    if (!dragging) <span class="cstat-no" title="statement not covered" >return;</span></span>
+<span class="cstat-no" title="statement not covered" >    emit(posToTime(e.clientX));</span>
+  });
+<span class="cstat-no" title="statement not covered" >  stripWrap.addEventListener('pointerup', <span class="fstat-no" title="function not covered" >()</span> =&gt; { <span class="cstat-no" title="statement not covered" >dragging = false; </span>});</span>
+<span class="cstat-no" title="statement not covered" >  stripWrap.addEventListener('pointercancel', <span class="fstat-no" title="function not covered" >()</span> =&gt; { <span class="cstat-no" title="statement not covered" >dragging = false; </span>});</span>
+&nbsp;
+  // Load filmstrip and duration asynchronously
+<span class="cstat-no" title="statement not covered" >  try {</span>
+    const [{ duration: dur }, { urls }] = <span class="cstat-no" title="statement not covered" >await Promise.all([</span>
+      getVideoDuration(file),
+      extractVideoFilmstrip(file, STRIP_FRAME_COUNT, 52),
+    ]);
+<span class="cstat-no" title="statement not covered" >    duration = dur;</span>
+<span class="cstat-no" title="statement not covered" >    durEl.textContent = `/ ${fmtTime(dur)}`;</span>
+&nbsp;
+    // Replace loading spinner with thumbnails
+    const loadingEl = <span class="cstat-no" title="statement not covered" >hostEl.querySelector('.vs-strip-loading');</span>
+    const imgWrap = <span class="cstat-no" title="statement not covered" >document.createElement('div');</span>
+<span class="cstat-no" title="statement not covered" >    imgWrap.className = 'vs-strip-imgs';</span>
+<span class="cstat-no" title="statement not covered" >    urls.forEach(<span class="fstat-no" title="function not covered" >u </span>=&gt; {</span>
+      const img = <span class="cstat-no" title="statement not covered" >document.createElement('img');</span>
+<span class="cstat-no" title="statement not covered" >      img.src = u;</span>
+<span class="cstat-no" title="statement not covered" >      img.draggable = false;</span>
+<span class="cstat-no" title="statement not covered" >      imgWrap.appendChild(img);</span>
+    });
+<span class="cstat-no" title="statement not covered" >    loadingEl.replaceWith(imgWrap);</span>
+&nbsp;
+    // Position playhead at initial/saved time
+    const savedT = <span class="cstat-no" title="statement not covered" >initialTime !== null ? initialTime : (getStoredSeekTime(file.name) ?? Math.min(3, dur * 0.4));</span>
+<span class="cstat-no" title="statement not covered" >    head.style.display = '';</span>
+<span class="cstat-no" title="statement not covered" >    setHead(savedT);</span>
+  } catch (err) {
+<span class="cstat-no" title="statement not covered" >    console.warn('[VideoScrubber] Failed to load filmstrip:', err.message);</span>
+    const loadingEl = <span class="cstat-no" title="statement not covered" >hostEl.querySelector('.vs-strip-loading');</span>
+<span class="cstat-no" title="statement not covered" >    if (loadingEl) <span class="cstat-no" title="statement not covered" >loadingEl.innerHTML = `&lt;span style="font-size:11px;color:var(--ps-text-muted);padding:4px"&gt;${i18n('vs.previewUnavailable')}&lt;/span&gt;`;</span></span>
+  }
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  return {</span>
+    destroy: <span class="fstat-no" title="function not covered" >()</span> =&gt; { <span class="cstat-no" title="statement not covered" >hostEl.innerHTML = ''; </span>},
+    getCurrentTime: <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >currentT,</span>
+  };
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-06-01T11:51:03.507Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    
