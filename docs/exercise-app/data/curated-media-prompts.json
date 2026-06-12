@@ -104,5 +104,47 @@
         "7": "She arrives at the exact top-of-plank position of frame one, settled and still, so the clip loops seamlessly."
       }
     }
+  },
+  "wide-grip-lat-pulldown": {
+    "image": {
+      "camera": "three-quarter rear camera so her back, the overhead pulley and the wide bar are all clearly visible, full body and machine in frame",
+      "pose_a": "full-body photo of the athlete seated at a black steel lat pulldown cable machine with a high pulley, padded seat and thigh pads: arms fully extended overhead gripping a long straight wide-grip bar, torso upright with a slight backward lean, lats stretched, thighs secured under the pads",
+      "pose_b": "full-body photo of the athlete seated at a black steel lat pulldown cable machine, frozen at the bottom of the pull: the wide bar drawn down to her upper chest, elbows driven down and back, shoulder blades squeezed together, lats flared and visibly engaged, chest lifted, cable taut from the high pulley"
+    },
+    "video": {
+      "camera": "locked-off three-quarter rear camera, her full body, the seat, the high pulley and the entire travel of the bar always in frame, no cuts, no camera movement",
+      "summary": "8-second seamless loop: exactly four wide-grip lat pulldown reps, one rep every 2 seconds — one second pulling the bar down to the upper chest, one second controlling it back to full stretch — starting and ending with arms fully extended overhead",
+      "beats": {
+        "0": "Seated with thighs under the pads and arms fully extended overhead gripping the wide bar, she pulls the bar smoothly down to her upper chest, elbows driving down and back, shoulder blades squeezing.",
+        "1": "She controls the bar back up along the same path until her arms reach full overhead stretch, cable staying taut.",
+        "2": "Second rep: the bar travels down to her collarbone, chest lifted, slight backward lean, lats flaring.",
+        "3": "Controlled return to the full overhead stretch, torso steady, no swinging.",
+        "4": "Third rep: smooth pull down to the upper chest with the same two-second cadence.",
+        "5": "The bar rises back to full extension, her grip and posture unchanged.",
+        "6": "Fourth rep: final pull down to the upper chest, elbows down and back, squeeze at the bottom.",
+        "7": "She controls the bar back up until her arms are fully extended overhead in exactly the same stretched position as the first frame so the clip loops seamlessly."
+      }
+    }
+  },
+  "stairmaster": {
+    "image": {
+      "camera": "three-quarter front-side camera, full body and the whole machine in frame",
+      "pose_a": "full-body photo of the athlete climbing a commercial stepmill machine — a rotating staircase of four visible steps with side handrails and a small console: frozen mid-stride with her right foot planted on a higher step, left knee driving up toward the next step, hands resting lightly on the rails, body leaning slightly forward with athletic intent",
+      "pose_b": "full-body photo of the athlete on a commercial stepmill machine, frozen at full stride extension: lower leg pressing down powerfully on a step with the knee extending, opposite foot just lifting off the step below, eyes ahead, posture tall, a light sheen of effort"
+    },
+    "video": {
+      "camera": "locked-off three-quarter front-side camera, full body and the entire rotating staircase always in frame, no cuts, no camera movement",
+      "summary": "8-second seamless loop: continuous steady climbing on a stepmill at one step per second, eight steps total alternating right and left, the rotating staircase moving smoothly downward beneath her, her body remaining at the same height in frame, ending mid-stride in exactly the phase the clip starts in",
+      "beats": {
+        "0": "She steps up with her right foot onto the next rotating step, hands resting lightly on the rails, posture tall.",
+        "1": "Left foot steps up in rhythm as the staircase rotates smoothly downward beneath her, keeping her at constant height in frame.",
+        "2": "Right foot up; her breathing is rhythmic, her gaze ahead at the console.",
+        "3": "Left foot up; steady one-step-per-second cadence, knees driving, heels pressing through each step.",
+        "4": "Right foot up; slight natural arm and shoulder movement, hands staying in light contact with the rails.",
+        "5": "Left foot up; the rotating steps continue their constant smooth descent.",
+        "6": "Right foot up, the same controlled climbing rhythm, body position unchanged in frame.",
+        "7": "Left foot steps up so she finishes in exactly the same mid-stride phase, body position and step alignment as the first frame so the clip loops seamlessly."
+      }
+    }
   }
 }
