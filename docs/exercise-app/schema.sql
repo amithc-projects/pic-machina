@@ -245,6 +245,29 @@ CREATE TABLE exercise_tag (
   PRIMARY KEY (exercise_id, tag_id)
 );
 
+-- AI media-generation prompts for each exercise's original thumbnail and
+-- video content. Prompts are STYLE-AGNOSTIC: the shared global style block
+-- (model/wardrobe/set/lighting) lives in app config and is prepended at
+-- generation time, so restyling the whole library never touches these rows.
+CREATE TYPE prompt_target AS ENUM ('image', 'video');
+
+CREATE TABLE exercise_media_prompt (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  exercise_id uuid NOT NULL REFERENCES exercise(id) ON DELETE CASCADE,
+  target      prompt_target NOT NULL,
+  -- image: 'pose_a' / 'pose_b' (two recognisable points in the movement)
+  -- video: 'loop_8s' (single seamless loop) or 'part_1' / 'part_2' when the
+  --        movement needs two stitched clips
+  variant     text NOT NULL,
+  camera      text NOT NULL,                          -- framing/angle directive
+  prompt      text NOT NULL,                          -- subject prompt, no style
+  beats       jsonb,                                  -- video: {"0".."7": per-second action}
+  is_curated  boolean NOT NULL DEFAULT false,         -- hand-written vs generated
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (exercise_id, target, variant),
+  CHECK (target = 'video' OR beats IS NULL)
+);
+
 -- ----------------------------------------------------------------------------
 -- 4. PROGRAMME & WORKOUT TEMPLATES
 -- Templates are immutable-ish definitions; execution data lives in section 7.

@@ -1,0 +1,108 @@
+{
+  "_comment": "Hand-curated media generation prompts. Merged over the generated set by build_media_prompts.py (flagged is_curated). Style-agnostic: the global style block is prepended at generation time.",
+  "burpee": {
+    "image": {
+      "camera": "side-on camera, full body in frame, wide enough to show floor and air space above her head",
+      "pose_a": "full-body action photo of the athlete mid-burpee, frozen at the bottom of the push-up phase: body in a rigid straight line just above the floor, chest hovering a few centimetres off the ground, hands planted under her shoulders, toes tucked, neck neutral, eyes down",
+      "pose_b": "full-body action photo of the athlete at the peak of the burpee jump: fully airborne 30 cm off the floor, body stretched tall, arms reaching straight overhead with fingers extended, toes pointed, slight motion energy in her hair"
+    },
+    "video": {
+      "camera": "locked-off side-on camera, full body always in frame with headroom for the jump, no cuts, no camera movement",
+      "summary": "8-second seamless loop: exactly two full burpee reps at a steady athletic pace, one rep every 4 seconds, ending in the identical standing position the clip starts in",
+      "beats": {
+        "0": "She stands tall, feet shoulder-width apart, then crouches and plants both hands on the floor just inside her feet.",
+        "1": "She jumps her feet back into a high plank and lowers her chest to the floor in one fluid push-up descent.",
+        "2": "She presses powerfully back up to plank and snaps her feet forward to land just behind her hands.",
+        "3": "She explodes upward into a vertical jump, arms sweeping straight overhead, then lands softly with bent knees back into standing.",
+        "4": "Without pausing she crouches again and plants both hands on the floor, beginning the second identical rep.",
+        "5": "Feet jump back to plank; chest lowers to the floor in the same smooth push-up.",
+        "6": "She presses up and snaps her feet forward to her hands, loading the legs.",
+        "7": "She jumps vertically with arms overhead and lands softly, finishing standing tall in exactly the same pose and position as frame one so the clip loops seamlessly."
+      }
+    }
+  },
+  "jumping-jacks": {
+    "image": {
+      "camera": "straight-on front camera, full body in frame, symmetrical composition",
+      "pose_a": "full-body action photo of the athlete frozen at the open star position of a jumping jack: fully airborne a few centimetres off the floor, feet wider than shoulders, both arms swept up at 45 degrees above her head forming an X shape, energetic expression",
+      "pose_b": "full-body action photo of the athlete frozen at the closed position of a jumping jack: feet together just leaving the floor, arms slapping down to her sides, body tall and compact, mid-bounce"
+    },
+    "video": {
+      "camera": "locked-off straight-on front camera, full body in frame, perfectly centred, no cuts, no camera movement",
+      "summary": "8-second seamless loop: exactly four full jumping jacks at a bright steady rhythm, one rep every 2 seconds, starting and ending feet-together with arms at her sides",
+      "beats": {
+        "0": "From standing with feet together and arms at her sides, she jumps her feet out wide while her arms sweep overhead into a star shape.",
+        "1": "She jumps her feet back together as her arms swing back down to her sides, landing lightly on the balls of her feet.",
+        "2": "Second rep: feet jump out wide, arms sweep overhead, light and rhythmic.",
+        "3": "Feet snap back together, arms return to her sides, posture tall.",
+        "4": "Third rep: out wide with arms overhead, hair and body showing gentle bounce energy.",
+        "5": "Back together, arms to sides, steady breathing rhythm.",
+        "6": "Fourth rep: feet out wide, arms sweeping fully overhead one last time.",
+        "7": "She lands back with feet together and arms at her sides in exactly the same pose as frame one so the clip loops seamlessly."
+      }
+    }
+  },
+  "two-hand-kettlebell-swing": {
+    "image": {
+      "camera": "side-on camera, full body in frame, kettlebell path fully visible",
+      "pose_a": "full-body action photo of the athlete frozen at the top of a kettlebell swing: standing tall in a hard hip lockout, glutes squeezed, both hands gripping a single dark cast-iron kettlebell floating at chest height with arms straight, body forming a vertical line",
+      "pose_b": "full-body action photo of the athlete frozen at the bottom of a kettlebell swing: hips hinged deep with a flat back, the kettlebell swung back between and slightly behind her legs, shins vertical, eyes forward, loaded like a spring"
+    },
+    "video": {
+      "camera": "locked-off side-on camera, full body and the entire arc of the kettlebell always in frame, no cuts, no camera movement",
+      "summary": "8-second seamless loop: exactly four powerful kettlebell swings, one rep every 2 seconds, hips driving the bell to chest height each time, starting and ending at the same mid-swing hinge point",
+      "beats": {
+        "0": "From a deep hip hinge with the kettlebell swung back between her legs, she snaps her hips forward and the bell floats up to chest height with straight arms.",
+        "1": "The bell falls back along the same arc as she hinges at the hips, flat back, the bell passing back between her legs.",
+        "2": "Second swing: explosive hip snap, glutes squeeze, the bell rises smoothly to chest height.",
+        "3": "Controlled descent back into the hinge, arms relaxed, all the work in the hips.",
+        "4": "Third swing up to chest height, body reaching a strong vertical plank-like lockout at the top.",
+        "5": "The bell swings back down and through her legs, breathing sharp and rhythmic.",
+        "6": "Fourth swing: hips fire, the bell floats to chest height one final time.",
+        "7": "The bell descends back into the exact deep hinge position of frame one so the clip loops seamlessly."
+      }
+    }
+  },
+  "dumbbell-thruster": {
+    "image": {
+      "camera": "three-quarter front camera, full body in frame with headroom above her extended arms",
+      "pose_a": "full-body action photo of the athlete frozen at the bottom of a dumbbell thruster: in a deep squat with thighs below parallel, a dumbbell racked on each shoulder, elbows lifted, chest proud, heels planted",
+      "pose_b": "full-body action photo of the athlete frozen at the lockout of a dumbbell thruster: standing fully extended, both dumbbells pressed directly overhead with arms locked and biceps by her ears, body in one strong vertical line"
+    },
+    "video": {
+      "camera": "locked-off three-quarter front camera, full body in frame with headroom for the overhead press, no cuts, no camera movement",
+      "summary": "8-second seamless loop: exactly two smooth dumbbell thrusters, one rep every 4 seconds, squat flowing directly into the overhead press in one continuous motion",
+      "beats": {
+        "0": "Standing with a dumbbell racked on each shoulder, she begins descending into a squat, hips back, chest tall.",
+        "1": "She reaches full squat depth, thighs below parallel, elbows high, dumbbells steady on her shoulders.",
+        "2": "She drives up explosively, the momentum flowing straight into the press as the dumbbells leave her shoulders.",
+        "3": "Full lockout: arms extended overhead, body tall, then the dumbbells lower back under control to her shoulders.",
+        "4": "Second rep begins: she descends into the squat with the same smooth tempo.",
+        "5": "Bottom of the squat, depth below parallel, chest proud, core braced.",
+        "6": "Explosive drive upward, dumbbells pressing overhead to a strong lockout.",
+        "7": "The dumbbells lower back to her shoulders as she settles into exactly the same standing rack position as frame one so the clip loops seamlessly."
+      }
+    }
+  },
+  "pushups": {
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete frozen at the bottom of a push-up: body in a rigid straight line from head to heels, chest one fist's height off the floor, elbows bent at 45 degrees from her torso, core braced, neck neutral",
+      "pose_b": "full-body action photo of the athlete frozen at the top of a push-up: arms fully locked out in a high plank, body in one perfect straight line from shoulders to heels, shoulder blades protracted, gaze down at the floor"
+    },
+    "video": {
+      "camera": "locked-off low side-on camera at floor level, full body in frame, no cuts, no camera movement",
+      "summary": "8-second seamless loop: exactly two strict push-ups at a controlled tempo, 2 seconds down and 2 seconds up, body rigid as a plank throughout, starting and ending at the top position",
+      "beats": {
+        "0": "From a high plank with hands under shoulders, she begins lowering, elbows tracking at 45 degrees, body one straight line.",
+        "1": "She reaches the bottom, chest hovering just above the floor, everything tight and controlled.",
+        "2": "She presses the floor away, rising steadily, hips and shoulders moving as one unit.",
+        "3": "Full lockout at the top of the high plank, body straight, a brief composed pause.",
+        "4": "Second rep: she lowers again with the same controlled two-second descent.",
+        "5": "Bottom position, chest just off the floor, elbows tucked, core rigid.",
+        "6": "Smooth powerful press back up, body perfectly aligned.",
+        "7": "She arrives at the exact top-of-plank position of frame one, settled and still, so the clip loops seamlessly."
+      }
+    }
+  }
+}
