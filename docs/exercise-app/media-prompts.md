@@ -2,7 +2,7 @@
 
 Every exercise has style-agnostic generation prompts for its thumbnail images
 and 8-second loopable video. Full set: [`data/media-prompts.json`](data/media-prompts.json)
-(917 exercises), loadable into the `exercise_media_prompt` table via
+(971 exercises), loadable into the `exercise_media_prompt` table via
 [`seed_media_prompts.sql`](seed_media_prompts.sql). Regenerate both with
 [`scripts/build_media_prompts.py`](scripts/build_media_prompts.py).
 

@@ -1,6 +1,6 @@
 # Exercise App — Master Exercise Database
 
-**917 exercises**, ready to seed the schema in [`schema.sql`](schema.sql).
+**971 exercises**, ready to seed the schema in [`schema.sql`](schema.sql).
 Browse the combined index in
 [`data/master-exercise-list.csv`](data/master-exercise-list.csv).
 
@@ -10,6 +10,7 @@ Browse the combined index in
 |---|---|---|---|
 | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) | 873 | **Unlicense (public domain)** | `data/exercises.json` — name, category, level, force, mechanic, equipment, primary/secondary muscles, step-by-step instructions, reference photos |
 | Original supplement | 44 | Ours | `data/supplemental-exercises.json` — HIIT/conditioning/mobility staples missing from the base set |
+| Yoga & stretching pack | 54 | Ours | `data/yoga-stretch-exercises.json` — the full Bikram 26 sequence, 19 foundational poses from other yoga traditions (Wheel, Dancer's, the Warriors, Pigeon, Crow, …), and 9 stretches/mobility drills not covered by the base set |
 
 free-exercise-db was chosen as the base because it is genuinely public domain
 (no attribution or share-alike obligations), unlike the other large open
@@ -25,17 +26,18 @@ anyway, the public-domain text dataset is the cleanest foundation.
 | Modality | Count |
 |---|---|
 | strength | 590 |
-| stretching | 123 |
+| stretching | 128 |
 | plyometrics | 64 |
+| yoga | 45 |
 | powerlifting | 38 |
 | olympic_weightlifting | 35 |
 | cardio | 27 |
 | strongman | 22 |
 | hiit | 13 |
-| mobility | 5 |
+| mobility | 9 |
 
-17 muscle groups, 21 equipment types, 3,943 instruction steps (55 of them
-dedicated setup steps from the supplement).
+17 muscle groups, 21 equipment types, 4,212 instruction steps (109 of them
+dedicated setup steps from the original packs).
 
 The 44 supplemental exercises fill the base set's HIIT/conditioning gap:
 burpee, squat thrust, sprawl, jumping jacks, high knees, butt kicks, skater

@@ -40,10 +40,14 @@ sprawl,Sprawl,hiit,intermediate,push,compound,body only,quadriceps; abdominals,c
 squat-thrust-half-burpee,Squat Thrust (Half Burpee),hiit,beginner,push,compound,body only,quadriceps; abdominals,shoulders; glutes; hamstrings,30,original
 wall-ball-shot,Wall Ball Shot,hiit,intermediate,push,compound,medicine ball,quadriceps; shoulders,glutes; triceps; abdominals,60,original
 90-90-hip-switch,90/90 Hip Switch,mobility,beginner,static,isolation,body only,abductors; glutes,adductors,15,original
+band-shoulder-dislocates,Band Shoulder Dislocates,mobility,beginner,static,isolation,bands,shoulders,chest; traps,15,original
 cat-cow,Cat-Cow,mobility,beginner,static,isolation,body only,lower back,abdominals; neck,10,original
+cossack-squat,Cossack Squat,mobility,intermediate,push,compound,body only,adductors; quadriceps,hamstrings; glutes; calves,30,original
 couch-stretch,Couch Stretch,mobility,beginner,static,isolation,body only,quadriceps,glutes; abdominals,15,original
 downward-dog-to-cobra,Downward Dog to Cobra,mobility,beginner,static,compound,body only,hamstrings; shoulders,calves; lower back; abdominals; chest,10,original
+jefferson-curl,Jefferson Curl,mobility,intermediate,pull,compound,dumbbell,hamstrings; lower back,middle back; glutes,30,original
 open-book-thoracic-rotation,Open Book Thoracic Rotation,mobility,beginner,static,isolation,body only,middle back,shoulders; chest,10,original
+wall-angels,Wall Angels,mobility,beginner,pull,isolation,body only,shoulders; middle back,traps; neck,20,original
 clean,Clean,olympic_weightlifting,intermediate,pull,compound,barbell,hamstrings,calves; forearms; glutes; lower back; quadriceps; shoulders; traps,120,free-exercise-db
 clean-and-jerk,Clean and Jerk,olympic_weightlifting,expert,push,compound,barbell,shoulders,abdominals; glutes; hamstrings; lower back; quadriceps; traps; triceps,120,free-exercise-db
 clean-deadlift,Clean Deadlift,olympic_weightlifting,beginner,pull,compound,barbell,hamstrings,forearms; glutes; lower back; middle back; quadriceps; traps,120,free-exercise-db
@@ -781,6 +785,7 @@ anterior-tibialis-smr,Anterior Tibialis-SMR,stretching,intermediate,static,,othe
 arm-circles,Arm Circles,stretching,beginner,push,isolation,,shoulders,traps,15,free-exercise-db
 behind-head-chest-stretch,Behind Head Chest Stretch,stretching,expert,static,isolation,other,chest,shoulders,15,free-exercise-db
 brachialis-smr,Brachialis-SMR,stretching,intermediate,static,,foam roll,biceps,,15,free-exercise-db
+butterfly-stretch,Butterfly Stretch,stretching,beginner,static,isolation,body only,adductors,glutes; lower back,10,original
 calf-stretch-elbows-against-wall,Calf Stretch Elbows Against Wall,stretching,beginner,static,isolation,,calves,,15,free-exercise-db
 calf-stretch-hands-against-wall,Calf Stretch Hands Against Wall,stretching,beginner,static,isolation,,calves,,15,free-exercise-db
 calves-smr,Calves-SMR,stretching,intermediate,static,,foam roll,calves,,15,free-exercise-db
@@ -800,6 +805,7 @@ elbow-circles,Elbow Circles,stretching,beginner,pull,isolation,,shoulders,traps,
 elbows-back,Elbows Back,stretching,beginner,static,isolation,,chest,shoulders,15,free-exercise-db
 foot-smr,Foot-SMR,stretching,intermediate,static,,other,calves,,15,free-exercise-db
 frog-hops,Frog Hops,stretching,intermediate,push,compound,,quadriceps,calves; glutes; hamstrings,15,free-exercise-db
+frog-stretch,Frog Stretch,stretching,intermediate,static,isolation,body only,adductors,glutes,15,original
 front-leg-raises,Front Leg Raises,stretching,beginner,pull,,body only,hamstrings,,15,free-exercise-db
 groin-and-back-stretch,Groin and Back Stretch,stretching,intermediate,static,compound,,adductors,,15,free-exercise-db
 groiners,Groiners,stretching,intermediate,pull,compound,body only,adductors,,15,free-exercise-db
@@ -852,6 +858,7 @@ rhomboids-smr,Rhomboids-SMR,stretching,intermediate,static,,foam roll,middle bac
 round-the-world-shoulder-stretch,Round The World Shoulder Stretch,stretching,beginner,static,,other,shoulders,biceps; chest,15,free-exercise-db
 runner-s-stretch,Runner's Stretch,stretching,beginner,static,,,hamstrings,calves,15,free-exercise-db
 scissor-kick,Scissor Kick,stretching,beginner,pull,isolation,body only,abdominals,,15,free-exercise-db
+scorpion-stretch,Scorpion Stretch,stretching,intermediate,static,compound,body only,chest; abdominals,lower back; shoulders; glutes,10,original
 seated-biceps,Seated Biceps,stretching,expert,static,isolation,body only,biceps,chest; shoulders,15,free-exercise-db
 seated-calf-stretch,Seated Calf Stretch,stretching,beginner,static,,,calves,hamstrings; lower back,15,free-exercise-db
 seated-floor-hamstring-stretch,Seated Floor Hamstring Stretch,stretching,beginner,static,,,hamstrings,calves,15,free-exercise-db
@@ -869,6 +876,7 @@ side-lying-groin-stretch,Side Lying Groin Stretch,stretching,beginner,static,iso
 side-neck-stretch,Side Neck Stretch,stretching,beginner,static,isolation,,neck,,15,free-exercise-db
 side-wrist-pull,Side Wrist Pull,stretching,beginner,static,isolation,,shoulders,forearms; lats,15,free-exercise-db
 sit-squats,Sit Squats,stretching,beginner,push,,,quadriceps,abductors; glutes; hamstrings,15,free-exercise-db
+sleeper-stretch,Sleeper Stretch,stretching,beginner,static,isolation,body only,shoulders,middle back,10,original
 spinal-stretch,Spinal Stretch,stretching,beginner,static,isolation,,middle back,lats; lower back; neck; traps,15,free-exercise-db
 split-squats,Split Squats,stretching,intermediate,push,,,hamstrings,calves; glutes; quadriceps,15,free-exercise-db
 standing-biceps-stretch,Standing Biceps Stretch,stretching,beginner,static,isolation,other,biceps,chest; shoulders,15,free-exercise-db
@@ -884,6 +892,7 @@ standing-toe-touches,Standing Toe Touches,stretching,beginner,static,,,hamstring
 stomach-vacuum,Stomach Vacuum,stretching,beginner,static,isolation,body only,abdominals,,15,free-exercise-db
 superman,Superman,stretching,beginner,static,compound,body only,lower back,glutes; hamstrings,15,free-exercise-db
 the-straddle,The Straddle,stretching,beginner,static,,,hamstrings,adductors; calves,15,free-exercise-db
+thread-the-needle-stretch,Thread the Needle Stretch,stretching,beginner,static,compound,body only,middle back; shoulders,traps; neck,10,original
 toe-touchers,Toe Touchers,stretching,beginner,pull,isolation,body only,abdominals,,15,free-exercise-db
 torso-rotation,Torso Rotation,stretching,beginner,pull,,exercise ball,abdominals,,15,free-exercise-db
 tricep-side-stretch,Tricep Side Stretch,stretching,beginner,static,,,triceps,shoulders,15,free-exercise-db
@@ -916,3 +925,48 @@ sled-drag-harness,Sled Drag - Harness,strongman,beginner,push,compound,other,qua
 sled-push,Sled Push,strongman,beginner,push,compound,other,quadriceps,calves; chest; glutes; hamstrings; triceps,120,free-exercise-db
 tire-flip,Tire Flip,strongman,intermediate,pull,compound,other,quadriceps,calves; chest; forearms; glutes; hamstrings; lower back; shoulders; traps; triceps,120,free-exercise-db
 yoke-walk,Yoke Walk,strongman,intermediate,,compound,other,quadriceps,abdominals; abductors; adductors; calves; glutes; hamstrings; lower back,120,free-exercise-db
+awkward-pose-utkatasana,Awkward Pose (Utkatasana),yoga,beginner,static,compound,body only,quadriceps,glutes; calves; shoulders,15,original
+balancing-stick-pose-tuladandasana,Balancing Stick Pose (Tuladandasana),yoga,intermediate,static,compound,body only,glutes; lower back,hamstrings; shoulders; abdominals,15,original
+bikram-sit-up,Bikram Sit-Up,yoga,beginner,pull,compound,body only,abdominals,hamstrings; neck,10,original
+blowing-in-firm-pose-kapalbhati-in-vajrasana,Blowing in Firm Pose (Kapalbhati in Vajrasana),yoga,beginner,static,,body only,abdominals,,10,original
+boat-pose-navasana,Boat Pose (Navasana),yoga,intermediate,static,compound,body only,abdominals,quadriceps; lower back,15,original
+bow-pose-dhanurasana,Bow Pose (Dhanurasana),yoga,intermediate,static,compound,body only,lower back; quadriceps,chest; shoulders; abdominals,15,original
+bridge-pose-setu-bandha-sarvangasana,Bridge Pose (Setu Bandha Sarvangasana),yoga,beginner,static,compound,body only,glutes; lower back,hamstrings; chest; quadriceps,15,original
+camel-pose-ustrasana,Camel Pose (Ustrasana),yoga,intermediate,static,compound,body only,chest; quadriceps,lower back; shoulders; abdominals; neck,20,original
+cobra-pose-bhujangasana,Cobra Pose (Bhujangasana),yoga,beginner,static,compound,body only,lower back,chest; shoulders; glutes,10,original
+crow-pose-bakasana,Crow Pose (Bakasana),yoga,expert,static,compound,body only,shoulders; abdominals,forearms; triceps; chest,20,original
+dancer-s-pose-natarajasana,Dancer's Pose (Natarajasana),yoga,intermediate,static,compound,body only,quadriceps; shoulders,hamstrings; chest; glutes; abdominals,15,original
+dead-body-pose-savasana,Dead Body Pose (Savasana),yoga,beginner,static,,body only,lower back,neck,0,original
+downward-facing-dog-adho-mukha-svanasana,Downward Facing Dog (Adho Mukha Svanasana),yoga,beginner,static,compound,body only,hamstrings; shoulders,calves; lats; abdominals,10,original
+eagle-pose-garudasana,Eagle Pose (Garudasana),yoga,intermediate,static,compound,body only,quadriceps; shoulders,calves; abductors; abdominals,15,original
+extended-side-angle-pose-utthita-parsvakonasana,Extended Side Angle Pose (Utthita Parsvakonasana),yoga,intermediate,static,compound,body only,quadriceps; abdominals,adductors; shoulders; lats,10,original
+fixed-firm-pose-supta-vajrasana,Fixed Firm Pose (Supta Vajrasana),yoga,intermediate,static,compound,body only,quadriceps,lower back; abdominals,15,original
+four-limbed-staff-pose-chaturanga-dandasana,Four-Limbed Staff Pose (Chaturanga Dandasana),yoga,intermediate,static,compound,body only,triceps; chest,abdominals; shoulders,15,original
+full-locust-pose-poorna-salabhasana,Full Locust Pose (Poorna Salabhasana),yoga,intermediate,static,compound,body only,lower back,shoulders; glutes; chest,15,original
+half-moon-balance-ardha-chandrasana,Half Moon Balance (Ardha Chandrasana),yoga,intermediate,static,compound,body only,quadriceps; abductors,hamstrings; abdominals; glutes,15,original
+half-moon-pose-with-hands-to-feet-ardha-chandrasana-with-pada-hastasana,Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana),yoga,intermediate,static,compound,body only,abdominals; lower back,shoulders; hamstrings; lats,15,original
+half-tortoise-pose-ardha-kurmasana,Half Tortoise Pose (Ardha Kurmasana),yoga,beginner,static,compound,body only,shoulders; lower back,lats; neck,10,original
+happy-baby-pose-ananda-balasana,Happy Baby Pose (Ananda Balasana),yoga,beginner,static,compound,body only,adductors; glutes,lower back; hamstrings,10,original
+head-to-knee-pose-with-stretching-pose-janushirasana-with-paschimotthanasana,Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana),yoga,intermediate,static,compound,body only,hamstrings,calves; lower back; neck,15,original
+legs-up-the-wall-pose-viparita-karani,Legs-Up-the-Wall Pose (Viparita Karani),yoga,beginner,static,,body only,hamstrings,lower back,0,original
+locust-pose-salabhasana,Locust Pose (Salabhasana),yoga,intermediate,static,compound,body only,lower back; glutes,hamstrings,15,original
+low-lunge-anjaneyasana,Low Lunge (Anjaneyasana),yoga,beginner,static,compound,body only,quadriceps; glutes,abdominals; abductors,10,original
+pigeon-pose-eka-pada-rajakapotasana,Pigeon Pose (Eka Pada Rajakapotasana),yoga,intermediate,static,compound,body only,glutes; abductors,quadriceps; lower back,15,original
+puppy-pose-uttana-shishosana,Puppy Pose (Uttana Shishosana),yoga,beginner,static,compound,body only,shoulders; lats,middle back; chest,10,original
+rabbit-pose-sasangasana,Rabbit Pose (Sasangasana),yoga,intermediate,static,compound,body only,middle back; lower back,neck; traps,15,original
+reverse-warrior-viparita-virabhadrasana,Reverse Warrior (Viparita Virabhadrasana),yoga,beginner,static,compound,body only,quadriceps; abdominals,adductors; shoulders; lats,10,original
+spine-twisting-pose-ardha-matsyendrasana,Spine Twisting Pose (Ardha Matsyendrasana),yoga,beginner,static,compound,body only,middle back; lower back,glutes; neck; shoulders,10,original
+standing-bow-pose-dandayamana-dhanurasana,Standing Bow Pose (Dandayamana Dhanurasana),yoga,intermediate,static,compound,body only,quadriceps; chest,shoulders; hamstrings; glutes; abdominals,20,original
+standing-deep-breathing-pranayama,Standing Deep Breathing (Pranayama),yoga,beginner,static,,body only,abdominals,neck; shoulders,10,original
+standing-head-to-knee-dandayamana-janushirasana,Standing Head to Knee (Dandayamana Janushirasana),yoga,expert,static,compound,body only,hamstrings; quadriceps,abdominals; calves; lower back,20,original
+standing-separate-leg-head-to-knee-pose-dandayamana-bibhaktapada-janushirasana,Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana),yoga,intermediate,static,compound,body only,hamstrings; abdominals,lower back; calves; neck,15,original
+standing-separate-leg-stretching-pose-dandayamana-bibhaktapada-paschimotthanasana,Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana),yoga,beginner,static,compound,body only,hamstrings; adductors,lower back; calves,15,original
+toe-stand-pose-padangustasana,Toe Stand Pose (Padangustasana),yoga,expert,static,compound,body only,calves; quadriceps,abdominals; glutes,20,original
+tree-pose-tadasana-vrksasana,Tree Pose (Tadasana Vrksasana),yoga,beginner,static,compound,body only,quadriceps; calves,abductors; abdominals; glutes,10,original
+triangle-pose-trikanasana,Triangle Pose (Trikanasana),yoga,intermediate,static,compound,body only,quadriceps; adductors,abdominals; shoulders; abductors,15,original
+upward-facing-dog-urdhva-mukha-svanasana,Upward Facing Dog (Urdhva Mukha Svanasana),yoga,beginner,static,compound,body only,lower back; chest,shoulders; triceps; quadriceps,10,original
+warrior-i-virabhadrasana-i,Warrior I (Virabhadrasana I),yoga,beginner,static,compound,body only,quadriceps; glutes,calves; shoulders; abdominals,10,original
+warrior-ii-virabhadrasana-ii,Warrior II (Virabhadrasana II),yoga,beginner,static,compound,body only,quadriceps; adductors,abductors; shoulders; calves,10,original
+warrior-iii-virabhadrasana-iii,Warrior III (Virabhadrasana III),yoga,intermediate,static,compound,body only,hamstrings; glutes,lower back; abdominals; calves,15,original
+wheel-pose-urdhva-dhanurasana,Wheel Pose (Urdhva Dhanurasana),yoga,expert,static,compound,body only,lower back; shoulders,chest; quadriceps; glutes; triceps,30,original
+wind-removing-pose-pavanamuktasana,Wind Removing Pose (Pavanamuktasana),yoga,beginner,static,compound,body only,lower back; glutes,abdominals,10,original

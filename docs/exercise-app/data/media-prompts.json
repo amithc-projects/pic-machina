@@ -24547,5 +24547,1355 @@
         }
       }
     }
+  },
+  "standing-deep-breathing-pranayama": {
+    "name": "Standing Deep Breathing (Pranayama)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Standing Deep Breathing (Pranayama), bodyweight only, no equipment, frozen at the moment described as: \"Exhale through your mouth for six counts, dropping your head back and bringing your elbows and forearms together in front of your face\" — textbook exercise form, the pose clearly recognisable as Standing Deep Breathing (Pranayama), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Standing Deep Breathing (Pranayama), bodyweight only, no equipment, frozen at the moment described as: \"Keep your knees relaxed and your spine long throughout\" — textbook exercise form, the pose clearly recognisable as Standing Deep Breathing (Pranayama), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Standing Deep Breathing (Pranayama), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Inhale slowly through your nose for six counts, raising your elbows up beside your ears like wings while your knuckles stay under your chin.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Exhale through your mouth for six counts, dropping your head back and bringing your elbows and forearms together in front of your face.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your knees relaxed and your spine long throughout.",
+          "5": "Repeat for the prescribed number of slow breath cycles.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "half-moon-pose-with-hands-to-feet-ardha-chandrasana-with-pada-hastasana": {
+    "name": "Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana), bodyweight only, no equipment, frozen at the moment described as: \"Return to centre and repeat the side bend to the left\" — textbook exercise form, the pose clearly recognisable as Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana), bodyweight only, no equipment, frozen at the moment described as: \"Return to centre, then hinge back from the hips into a gentle standing backbend, pushing your hips forward\" — textbook exercise form, the pose clearly recognisable as Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Press your hips to the left and bend your whole torso to the right in one unbroken line, arms glued to your ears. Hold and breathe.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Return to centre and repeat the side bend to the left.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Return to centre, then hinge back from the hips into a gentle standing backbend, pushing your hips forward.",
+          "5": "Come up, fold forward and take hold of your heels from behind, drawing your chest to your thighs with elbows behind your calves.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "awkward-pose-utkatasana": {
+    "name": "Awkward Pose (Utkatasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Awkward Pose (Utkatasana), bodyweight only, no equipment, frozen at the moment described as: \"Part two: rise onto the balls of your feet, then sit again with hips hovering at knee height, balancing on your toes. Hold\" — textbook exercise form, the pose clearly recognisable as Awkward Pose (Utkatasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Awkward Pose (Utkatasana), bodyweight only, no equipment, frozen at the moment described as: \"Part three: with knees together on tiptoes, lower your hips all the way to your heels and hold, spine tall\" — textbook exercise form, the pose clearly recognisable as Awkward Pose (Utkatasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Awkward Pose (Utkatasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Part one: sit down as if into an invisible chair until your thighs are parallel to the floor, spine upright. Hold.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Part two: rise onto the balls of your feet, then sit again with hips hovering at knee height, balancing on your toes. Hold.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Part three: with knees together on tiptoes, lower your hips all the way to your heels and hold, spine tall.",
+          "5": "Keep your arms reaching forward and breathe steadily through every stage.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "eagle-pose-garudasana": {
+    "name": "Eagle Pose (Garudasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Eagle Pose (Garudasana), bodyweight only, no equipment, frozen at the moment described as: \"Pull your wrapped elbows down and away from your face while sinking lower into the standing leg\" — textbook exercise form, the pose clearly recognisable as Eagle Pose (Garudasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Eagle Pose (Garudasana), bodyweight only, no equipment, frozen at the moment described as: \"Square your hips and shoulders forward, fix your gaze on one point and hold, breathing evenly\" — textbook exercise form, the pose clearly recognisable as Eagle Pose (Garudasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Eagle Pose (Garudasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Sit your hips down and back, then lift your right leg over your left thigh, hooking the foot behind the left calf if possible.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Pull your wrapped elbows down and away from your face while sinking lower into the standing leg.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Square your hips and shoulders forward, fix your gaze on one point and hold, breathing evenly.",
+          "5": "Unwind slowly and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "standing-head-to-knee-dandayamana-janushirasana": {
+    "name": "Standing Head to Knee (Dandayamana Janushirasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Standing Head to Knee (Dandayamana Janushirasana), bodyweight only, no equipment, frozen at the moment described as: \"Tuck your elbows down beside your calf and round forward, bringing your forehead toward your knee\" — textbook exercise form, the pose clearly recognisable as Standing Head to Knee (Dandayamana Janushirasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Standing Head to Knee (Dandayamana Janushirasana), bodyweight only, no equipment, frozen at the moment described as: \"Hold with steady breath, standing leg solid as a lamp post\" — textbook exercise form, the pose clearly recognisable as Standing Head to Knee (Dandayamana Janushirasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Standing Head to Knee (Dandayamana Janushirasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Keeping the standing knee locked, slowly kick your right leg forward until it is parallel to the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Tuck your elbows down beside your calf and round forward, bringing your forehead toward your knee.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Hold with steady breath, standing leg solid as a lamp post.",
+          "5": "Reverse out with the same control and repeat on the other side. Only progress to each stage when the previous one is stable.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "standing-bow-pose-dandayamana-dhanurasana": {
+    "name": "Standing Bow Pose (Dandayamana Dhanurasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Standing Bow Pose (Dandayamana Dhanurasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep kicking until your body forms a standing bow, chest level with the floor and back leg rising high behind you\" — textbook exercise form, the pose clearly recognisable as Standing Bow Pose (Dandayamana Dhanurasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Standing Bow Pose (Dandayamana Dhanurasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep both shoulders rotating square to the front and your gaze fixed ahead\" — textbook exercise form, the pose clearly recognisable as Standing Bow Pose (Dandayamana Dhanurasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Standing Bow Pose (Dandayamana Dhanurasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Kick your right foot up and back into your hand while your torso and left arm tilt forward as a counterbalance.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Keep kicking until your body forms a standing bow, chest level with the floor and back leg rising high behind you.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep both shoulders rotating square to the front and your gaze fixed ahead.",
+          "5": "Release with control and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "balancing-stick-pose-tuladandasana": {
+    "name": "Balancing Stick Pose (Tuladandasana)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Balancing Stick Pose (Tuladandasana), bodyweight only, no equipment, frozen at the moment described as: \"Stretch forward through your fingertips and back through your pointed toes — one unbroken line like a capital T\" — textbook exercise form, the pose clearly recognisable as Balancing Stick Pose (Tuladandasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Balancing Stick Pose (Tuladandasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your hips level and both knees locked; breathe steadily for the hold\" — textbook exercise form, the pose clearly recognisable as Balancing Stick Pose (Tuladandasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Balancing Stick Pose (Tuladandasana), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Hinge forward from the hips in one piece, lifting your left leg behind you until body and leg form a straight horizontal line.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Stretch forward through your fingertips and back through your pointed toes — one unbroken line like a capital T.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your hips level and both knees locked; breathe steadily for the hold.",
+          "5": "Return upright with control and repeat on the other leg.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "standing-separate-leg-stretching-pose-dandayamana-bibhaktapada-paschimotthanasana": {
+    "name": "Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana), bodyweight only, no equipment, frozen at the moment described as: \"Pull gently with your arms, drawing the crown of your head toward the floor between your feet\" — textbook exercise form, the pose clearly recognisable as Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your weight in the balls of your feet and your legs straight\" — textbook exercise form, the pose clearly recognisable as Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Hinge forward from the hips with a flat back and take hold of the outside edges of your feet.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Pull gently with your arms, drawing the crown of your head toward the floor between your feet.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your weight in the balls of your feet and your legs straight.",
+          "5": "Hold and breathe, letting the hamstrings and inner thighs release.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "triangle-pose-trikanasana": {
+    "name": "Triangle Pose (Trikanasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Triangle Pose (Trikanasana), bodyweight only, no equipment, frozen at the moment described as: \"Tilt your torso sideways, placing your right fingertips lightly at your right big toe while your left arm reaches straight up\" — textbook exercise form, the pose clearly recognisable as Triangle Pose (Trikanasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Triangle Pose (Trikanasana), bodyweight only, no equipment, frozen at the moment described as: \"Turn your head to gaze at the raised hand, chest and hips staying open to the side\" — textbook exercise form, the pose clearly recognisable as Triangle Pose (Trikanasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Triangle Pose (Trikanasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Bend your right knee to a right angle so the thigh is parallel to the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Tilt your torso sideways, placing your right fingertips lightly at your right big toe while your left arm reaches straight up.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Turn your head to gaze at the raised hand, chest and hips staying open to the side.",
+          "5": "Press both feet firmly into the floor, hold and breathe, then repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "standing-separate-leg-head-to-knee-pose-dandayamana-bibhaktapada-janushirasana": {
+    "name": "Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana), bodyweight only, no equipment, frozen at the moment described as: \"Bend the front knee as much as needed so forehead and knee stay in contact\" — textbook exercise form, the pose clearly recognisable as Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your arms framing your head and your back foot grounded\" — textbook exercise form, the pose clearly recognisable as Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Tuck your chin to your chest and round down, bringing your forehead toward your right knee.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Bend the front knee as much as needed so forehead and knee stay in contact.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your arms framing your head and your back foot grounded.",
+          "5": "Compress, breathe, come up with a flat strong body, and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "tree-pose-tadasana-vrksasana": {
+    "name": "Tree Pose (Tadasana Vrksasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Tree Pose (Tadasana Vrksasana), bodyweight only, no equipment, frozen at the moment described as: \"Bring your palms together in front of your chest, or reach them overhead\" — textbook exercise form, the pose clearly recognisable as Tree Pose (Tadasana Vrksasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Tree Pose (Tadasana Vrksasana), bodyweight only, no equipment, frozen at the moment described as: \"Lengthen through the crown of your head, fix your gaze on a still point, and breathe\" — textbook exercise form, the pose clearly recognisable as Tree Pose (Tadasana Vrksasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Tree Pose (Tadasana Vrksasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Press the foot and thigh gently into each other and let your right knee open to the side.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Bring your palms together in front of your chest, or reach them overhead.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Lengthen through the crown of your head, fix your gaze on a still point, and breathe.",
+          "5": "Hold steadily, then change legs.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "toe-stand-pose-padangustasana": {
+    "name": "Toe Stand Pose (Padangustasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Toe Stand Pose (Padangustasana), bodyweight only, no equipment, frozen at the moment described as: \"Sit your hips down onto your raised left heel, spine tall, then bring your palms together at your chest\" — textbook exercise form, the pose clearly recognisable as Toe Stand Pose (Padangustasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Toe Stand Pose (Padangustasana), bodyweight only, no equipment, frozen at the moment described as: \"Balance with steady breath, knees in one line\" — textbook exercise form, the pose clearly recognisable as Toe Stand Pose (Padangustasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Toe Stand Pose (Padangustasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Hinge forward and bend the standing leg, lowering your hips with control until you balance on the ball of your left foot.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Sit your hips down onto your raised left heel, spine tall, then bring your palms together at your chest.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Balance with steady breath, knees in one line.",
+          "5": "Press back up through the standing leg and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "dead-body-pose-savasana": {
+    "name": "Dead Body Pose (Savasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Dead Body Pose (Savasana), bodyweight only, no equipment, frozen at the moment described as: \"Breathe naturally through your nose, releasing tension from your face, shoulders and hands\" — textbook exercise form, the pose clearly recognisable as Dead Body Pose (Savasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Dead Body Pose (Savasana), bodyweight only, no equipment, frozen at the moment described as: \"Stay perfectly still and present for the prescribed time\" — textbook exercise form, the pose clearly recognisable as Dead Body Pose (Savasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Dead Body Pose (Savasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Close your eyes and let your whole body become completely heavy and still.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Breathe naturally through your nose, releasing tension from your face, shoulders and hands.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "The same phase of the movement continues smoothly.",
+          "5": "Stay perfectly still and present for the prescribed time.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "wind-removing-pose-pavanamuktasana": {
+    "name": "Wind Removing Pose (Pavanamuktasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Wind Removing Pose (Pavanamuktasana), bodyweight only, no equipment, frozen at the moment described as: \"Switch and hug the left knee toward the left shoulder. Hold\" — textbook exercise form, the pose clearly recognisable as Wind Removing Pose (Pavanamuktasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Wind Removing Pose (Pavanamuktasana), bodyweight only, no equipment, frozen at the moment described as: \"Finally draw both knees to your chest, wrapping your arms around your shins, and let your lower back release into the floor\" — textbook exercise form, the pose clearly recognisable as Wind Removing Pose (Pavanamuktasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Wind Removing Pose (Pavanamuktasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Draw your right knee toward your right shoulder and interlace your fingers below the knee, pulling it gently down. Hold and breathe.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Switch and hug the left knee toward the left shoulder. Hold.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Finally draw both knees to your chest, wrapping your arms around your shins, and let your lower back release into the floor.",
+          "5": "Keep your shoulders and head relaxed on the ground throughout.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "bikram-sit-up": {
+    "name": "Bikram Sit-Up",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Bikram Sit-Up, bodyweight only, no equipment, frozen at the moment described as: \"Exhale sharply in two bursts as you fold forward and reach for your flexed toes\" — textbook exercise form, the pose clearly recognisable as Bikram Sit-Up, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Bikram Sit-Up, bodyweight only, no equipment, frozen at the moment described as: \"Keep your legs locked and lengthen your spine over your legs\" — textbook exercise form, the pose clearly recognisable as Bikram Sit-Up, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Bikram Sit-Up, bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Inhale, then sit up in one motion with arms staying beside your ears.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Exhale sharply in two bursts as you fold forward and reach for your flexed toes.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your legs locked and lengthen your spine over your legs.",
+          "5": "Roll back down with control to begin the next rep.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "cobra-pose-bhujangasana": {
+    "name": "Cobra Pose (Bhujangasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Cobra Pose (Bhujangasana), bodyweight only, no equipment, frozen at the moment described as: \"Roll your shoulders down and back, elbows staying bent and close to your body\" — textbook exercise form, the pose clearly recognisable as Cobra Pose (Bhujangasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Cobra Pose (Bhujangasana), bodyweight only, no equipment, frozen at the moment described as: \"Press the tops of your feet and hips into the floor; gaze gently upward\" — textbook exercise form, the pose clearly recognisable as Cobra Pose (Bhujangasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Cobra Pose (Bhujangasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Using your back muscles more than your arms, peel your chest off the floor to navel height.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Roll your shoulders down and back, elbows staying bent and close to your body.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Press the tops of your feet and hips into the floor; gaze gently upward.",
+          "5": "Hold with steady breath, then lower slowly.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "locust-pose-salabhasana": {
+    "name": "Locust Pose (Salabhasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Locust Pose (Salabhasana), bodyweight only, no equipment, frozen at the moment described as: \"For the final stage, press into your arms and lift both legs together off the floor, knees locked\" — textbook exercise form, the pose clearly recognisable as Locust Pose (Salabhasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Locust Pose (Salabhasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your chin on the floor and shoulders touching the ground\" — textbook exercise form, the pose clearly recognisable as Locust Pose (Salabhasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Locust Pose (Salabhasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Keeping both hips on your hands, lift your right leg straight up as high as possible. Hold, then lower and lift the left leg.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "For the final stage, press into your arms and lift both legs together off the floor, knees locked.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your chin on the floor and shoulders touching the ground.",
+          "5": "Lower slowly and rest a breath between stages.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "full-locust-pose-poorna-salabhasana": {
+    "name": "Full Locust Pose (Poorna Salabhasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Full Locust Pose (Poorna Salabhasana), bodyweight only, no equipment, frozen at the moment described as: \"Reach your fingertips back like wingtips and keep your legs together and locked\" — textbook exercise form, the pose clearly recognisable as Full Locust Pose (Poorna Salabhasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Full Locust Pose (Poorna Salabhasana), bodyweight only, no equipment, frozen at the moment described as: \"Lift your chin and gaze forward; only your hips and lower belly stay on the floor\" — textbook exercise form, the pose clearly recognisable as Full Locust Pose (Poorna Salabhasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Full Locust Pose (Poorna Salabhasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "In one motion lift your chest, arms and legs off the floor, flying upward from the waist.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Reach your fingertips back like wingtips and keep your legs together and locked.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Lift your chin and gaze forward; only your hips and lower belly stay on the floor.",
+          "5": "Hold with strong steady breath, then release down slowly.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "bow-pose-dhanurasana": {
+    "name": "Bow Pose (Dhanurasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Bow Pose (Dhanurasana), bodyweight only, no equipment, frozen at the moment described as: \"Balance on your abdomen, body curved like an archer's bow, arms straight like the bowstring\" — textbook exercise form, the pose clearly recognisable as Bow Pose (Dhanurasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Bow Pose (Dhanurasana), bodyweight only, no equipment, frozen at the moment described as: \"Lift your chin and roll your weight gently with the breath\" — textbook exercise form, the pose clearly recognisable as Bow Pose (Dhanurasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Bow Pose (Dhanurasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Kick your feet up and back into your hands, letting the kick lift your chest and thighs off the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Balance on your abdomen, body curved like an archer's bow, arms straight like the bowstring.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Lift your chin and roll your weight gently with the breath.",
+          "5": "Release with control, lowering chest and knees together.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "fixed-firm-pose-supta-vajrasana": {
+    "name": "Fixed Firm Pose (Supta Vajrasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Fixed Firm Pose (Supta Vajrasana), bodyweight only, no equipment, frozen at the moment described as: \"If comfortable, lower your back and shoulders all the way to the floor and reach your arms overhead, holding opposite elbows\" — textbook exercise form, the pose clearly recognisable as Fixed Firm Pose (Supta Vajrasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Fixed Firm Pose (Supta Vajrasana), bodyweight only, no equipment, frozen at the moment described as: \"Let the front of your thighs lengthen; breathe slowly into your belly\" — textbook exercise form, the pose clearly recognisable as Fixed Firm Pose (Supta Vajrasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Fixed Firm Pose (Supta Vajrasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Walk your hands back behind you and lower onto your elbows, keeping both knees on the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "If comfortable, lower your back and shoulders all the way to the floor and reach your arms overhead, holding opposite elbows.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Let the front of your thighs lengthen; breathe slowly into your belly.",
+          "5": "Come up the same way you went down — onto elbows first, never twisting.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "half-tortoise-pose-ardha-kurmasana": {
+    "name": "Half Tortoise Pose (Ardha Kurmasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Half Tortoise Pose (Ardha Kurmasana), bodyweight only, no equipment, frozen at the moment described as: \"Stretch your arms as far forward as possible, lengthening through the sides of your body\" — textbook exercise form, the pose clearly recognisable as Half Tortoise Pose (Ardha Kurmasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Half Tortoise Pose (Ardha Kurmasana), bodyweight only, no equipment, frozen at the moment described as: \"Relax your neck and breathe deeply into your back\" — textbook exercise form, the pose clearly recognisable as Half Tortoise Pose (Ardha Kurmasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Half Tortoise Pose (Ardha Kurmasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Keeping hips on your heels, hinge forward from the hips in one straight line until your little fingers and forehead touch the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Stretch your arms as far forward as possible, lengthening through the sides of your body.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Relax your neck and breathe deeply into your back.",
+          "5": "Come up in one piece with arms still beside your ears.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "camel-pose-ustrasana": {
+    "name": "Camel Pose (Ustrasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Camel Pose (Ustrasana), bodyweight only, no equipment, frozen at the moment described as: \"When ready, reach back and place your palms on your heels, letting your head drop gently back\" — textbook exercise form, the pose clearly recognisable as Camel Pose (Ustrasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Camel Pose (Ustrasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep pressing the hips forward so the bend spreads along your whole spine\" — textbook exercise form, the pose clearly recognisable as Camel Pose (Ustrasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Camel Pose (Ustrasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Lift your chest and arch back slowly, pushing your hips forward over your knees.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "When ready, reach back and place your palms on your heels, letting your head drop gently back.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep pressing the hips forward so the bend spreads along your whole spine.",
+          "5": "Hold with open breath, then bring your hands back to your hips and rise with care.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "rabbit-pose-sasangasana": {
+    "name": "Rabbit Pose (Sasangasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Rabbit Pose (Sasangasana), bodyweight only, no equipment, frozen at the moment described as: \"Lift your hips toward the ceiling, rolling forward like a wheel until your arms are straight\" — textbook exercise form, the pose clearly recognisable as Rabbit Pose (Sasangasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Rabbit Pose (Sasangasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep a firm grip on your heels and your forehead touching your knees, spine rounding into a full stretch\" — textbook exercise form, the pose clearly recognisable as Rabbit Pose (Sasangasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Rabbit Pose (Sasangasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Tuck your chin and curl forward, placing the top of your head on the floor against your knees.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Lift your hips toward the ceiling, rolling forward like a wheel until your arms are straight.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep a firm grip on your heels and your forehead touching your knees, spine rounding into a full stretch.",
+          "5": "Breathe into your upper back, then unroll slowly, head coming up last.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "head-to-knee-pose-with-stretching-pose-janushirasana-with-paschimotthanasana": {
+    "name": "Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana), bodyweight only, no equipment, frozen at the moment described as: \"Hold, breathe, then repeat on the other side\" — textbook exercise form, the pose clearly recognisable as Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana), bodyweight only, no equipment, frozen at the moment described as: \"For the stretching stage, extend both legs together, grip your feet and fold your whole torso forward over your legs\" — textbook exercise form, the pose clearly recognisable as Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Turn your torso over the straight leg, grip your flexed right foot with both hands and bring your forehead toward your knee, bending the knee if needed.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Hold, breathe, then repeat on the other side.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "For the stretching stage, extend both legs together, grip your feet and fold your whole torso forward over your legs.",
+          "5": "Pull gently with the arms while keeping the spine long; let the head release last.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "spine-twisting-pose-ardha-matsyendrasana": {
+    "name": "Spine Twisting Pose (Ardha Matsyendrasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Spine Twisting Pose (Ardha Matsyendrasana), bodyweight only, no equipment, frozen at the moment described as: \"Inhale to lengthen your spine tall, then exhale and twist your torso to the right, looking over your right shoulder\" — textbook exercise form, the pose clearly recognisable as Spine Twisting Pose (Ardha Matsyendrasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Spine Twisting Pose (Ardha Matsyendrasana), bodyweight only, no equipment, frozen at the moment described as: \"Deepen the twist gently with each exhale, hips staying grounded\" — textbook exercise form, the pose clearly recognisable as Spine Twisting Pose (Ardha Matsyendrasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Spine Twisting Pose (Ardha Matsyendrasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Place your right hand on the floor behind you and hook your left elbow outside your right knee.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Inhale to lengthen your spine tall, then exhale and twist your torso to the right, looking over your right shoulder.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Deepen the twist gently with each exhale, hips staying grounded.",
+          "5": "Unwind slowly and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "blowing-in-firm-pose-kapalbhati-in-vajrasana": {
+    "name": "Blowing in Firm Pose (Kapalbhati in Vajrasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Blowing in Firm Pose (Kapalbhati in Vajrasana), bodyweight only, no equipment, frozen at the moment described as: \"Let the inhale happen passively between blows — only the exhale is active\" — textbook exercise form, the pose clearly recognisable as Blowing in Firm Pose (Kapalbhati in Vajrasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Blowing in Firm Pose (Kapalbhati in Vajrasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your shoulders, face and arms relaxed; only the abdomen moves\" — textbook exercise form, the pose clearly recognisable as Blowing in Firm Pose (Kapalbhati in Vajrasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Blowing in Firm Pose (Kapalbhati in Vajrasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Exhale forcefully through your mouth with a sharp snap of the belly button toward the spine.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Let the inhale happen passively between blows — only the exhale is active.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your shoulders, face and arms relaxed; only the abdomen moves.",
+          "5": "Continue at a steady rhythm for the prescribed number of breaths.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "downward-facing-dog-adho-mukha-svanasana": {
+    "name": "Downward Facing Dog (Adho Mukha Svanasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Downward Facing Dog (Adho Mukha Svanasana), bodyweight only, no equipment, frozen at the moment described as: \"Press the floor away through your whole hands, letting your head hang relaxed between your arms\" — textbook exercise form, the pose clearly recognisable as Downward Facing Dog (Adho Mukha Svanasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Downward Facing Dog (Adho Mukha Svanasana), bodyweight only, no equipment, frozen at the moment described as: \"Reach your heels toward the floor with a soft bend in the knees if needed, spine staying long\" — textbook exercise form, the pose clearly recognisable as Downward Facing Dog (Adho Mukha Svanasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Downward Facing Dog (Adho Mukha Svanasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Lift your hips up and back until your body forms an inverted V.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Press the floor away through your whole hands, letting your head hang relaxed between your arms.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Reach your heels toward the floor with a soft bend in the knees if needed, spine staying long.",
+          "5": "Hold and breathe deeply, pedalling the feet gently if it helps the legs release.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "upward-facing-dog-urdhva-mukha-svanasana": {
+    "name": "Upward Facing Dog (Urdhva Mukha Svanasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Upward Facing Dog (Urdhva Mukha Svanasana), bodyweight only, no equipment, frozen at the moment described as: \"Only your palms and the tops of your feet touch the ground; shoulders roll down away from your ears\" — textbook exercise form, the pose clearly recognisable as Upward Facing Dog (Urdhva Mukha Svanasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Upward Facing Dog (Urdhva Mukha Svanasana), bodyweight only, no equipment, frozen at the moment described as: \"Open your chest forward and upward, gaze slightly lifted\" — textbook exercise form, the pose clearly recognisable as Upward Facing Dog (Urdhva Mukha Svanasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Upward Facing Dog (Urdhva Mukha Svanasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Press into your hands and straighten your arms, lifting your chest and your thighs off the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Only your palms and the tops of your feet touch the ground; shoulders roll down away from your ears.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Open your chest forward and upward, gaze slightly lifted.",
+          "5": "Hold with steady breath, then lower or push back into Downward Dog.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "wheel-pose-urdhva-dhanurasana": {
+    "name": "Wheel Pose (Urdhva Dhanurasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Wheel Pose (Urdhva Dhanurasana), bodyweight only, no equipment, frozen at the moment described as: \"Straighten your arms and legs together, arching your whole body into a high backbend\" — textbook exercise form, the pose clearly recognisable as Wheel Pose (Urdhva Dhanurasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Wheel Pose (Urdhva Dhanurasana), bodyweight only, no equipment, frozen at the moment described as: \"Push the floor away, letting your chest move toward the wall behind you and your head hang free\" — textbook exercise form, the pose clearly recognisable as Wheel Pose (Urdhva Dhanurasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Wheel Pose (Urdhva Dhanurasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Press into hands and feet and lift your hips, pausing briefly with the crown of your head lightly on the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Straighten your arms and legs together, arching your whole body into a high backbend.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Push the floor away, letting your chest move toward the wall behind you and your head hang free.",
+          "5": "Hold with strong breath, then tuck your chin and lower down slowly with control.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "dancer-s-pose-natarajasana": {
+    "name": "Dancer's Pose (Natarajasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Dancer's Pose (Natarajasana), bodyweight only, no equipment, frozen at the moment described as: \"Let your chest tilt slightly forward as the back leg rises, body opening into a graceful standing backbend\" — textbook exercise form, the pose clearly recognisable as Dancer's Pose (Natarajasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Dancer's Pose (Natarajasana), bodyweight only, no equipment, frozen at the moment described as: \"Square your hips toward the front and fix your gaze past your reaching fingertips\" — textbook exercise form, the pose clearly recognisable as Dancer's Pose (Natarajasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Dancer's Pose (Natarajasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Reach your left arm forward and up as you press your right foot back and up into your hand.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Let your chest tilt slightly forward as the back leg rises, body opening into a graceful standing backbend.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Square your hips toward the front and fix your gaze past your reaching fingertips.",
+          "5": "Hold with poise and steady breath, then lower slowly and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "warrior-i-virabhadrasana-i": {
+    "name": "Warrior I (Virabhadrasana I)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Warrior I (Virabhadrasana I), bodyweight only, no equipment, frozen at the moment described as: \"Sweep both arms overhead, palms facing each other, shoulders relaxed away from the ears\" — textbook exercise form, the pose clearly recognisable as Warrior I (Virabhadrasana I), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Warrior I (Virabhadrasana I), bodyweight only, no equipment, frozen at the moment described as: \"Press the outer edge of the back foot down and lift through the chest\" — textbook exercise form, the pose clearly recognisable as Warrior I (Virabhadrasana I), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Warrior I (Virabhadrasana I), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Bend your right knee until it stacks over the ankle, thigh moving toward parallel.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Sweep both arms overhead, palms facing each other, shoulders relaxed away from the ears.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Press the outer edge of the back foot down and lift through the chest.",
+          "5": "Hold and breathe, then switch sides.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "warrior-ii-virabhadrasana-ii": {
+    "name": "Warrior II (Virabhadrasana II)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Warrior II (Virabhadrasana II), bodyweight only, no equipment, frozen at the moment described as: \"Extend your arms parallel to the floor, reaching actively front and back\" — textbook exercise form, the pose clearly recognisable as Warrior II (Virabhadrasana II), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Warrior II (Virabhadrasana II), bodyweight only, no equipment, frozen at the moment described as: \"Keep your torso vertical and centred between your legs; gaze over the front fingertips\" — textbook exercise form, the pose clearly recognisable as Warrior II (Virabhadrasana II), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Warrior II (Virabhadrasana II), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Bend your right knee over the ankle while the back leg stays straight and strong.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Extend your arms parallel to the floor, reaching actively front and back.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your torso vertical and centred between your legs; gaze over the front fingertips.",
+          "5": "Sink and hold with steady breath, then repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "warrior-iii-virabhadrasana-iii": {
+    "name": "Warrior III (Virabhadrasana III)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Warrior III (Virabhadrasana III), bodyweight only, no equipment, frozen at the moment described as: \"Keep your hips level — the lifted leg's toes point straight down\" — textbook exercise form, the pose clearly recognisable as Warrior III (Virabhadrasana III), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Warrior III (Virabhadrasana III), bodyweight only, no equipment, frozen at the moment described as: \"Reach long through fingertips and heel in opposite directions, gaze at the floor just ahead\" — textbook exercise form, the pose clearly recognisable as Warrior III (Virabhadrasana III), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Warrior III (Virabhadrasana III), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Hinge forward from the hips, lifting your left leg straight behind you until torso, arms and leg form one horizontal line.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Keep your hips level — the lifted leg's toes point straight down.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Reach long through fingertips and heel in opposite directions, gaze at the floor just ahead.",
+          "5": "Hold with steady balance, then rise and change sides.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "reverse-warrior-viparita-virabhadrasana": {
+    "name": "Reverse Warrior (Viparita Virabhadrasana)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Reverse Warrior (Viparita Virabhadrasana), bodyweight only, no equipment, frozen at the moment described as: \"Let your left hand rest lightly on your back leg without putting weight into it\" — textbook exercise form, the pose clearly recognisable as Reverse Warrior (Viparita Virabhadrasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Reverse Warrior (Viparita Virabhadrasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep the front knee bent and sinking — the legs do not move as the torso arcs\" — textbook exercise form, the pose clearly recognisable as Reverse Warrior (Viparita Virabhadrasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Reverse Warrior (Viparita Virabhadrasana), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Flip your right palm up and reach the arm overhead as your torso leans back into a gentle side bend.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Let your left hand rest lightly on your back leg without putting weight into it.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep the front knee bent and sinking — the legs do not move as the torso arcs.",
+          "5": "Breathe into the long right side of your body, then repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "extended-side-angle-pose-utthita-parsvakonasana": {
+    "name": "Extended Side Angle Pose (Utthita Parsvakonasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Extended Side Angle Pose (Utthita Parsvakonasana), bodyweight only, no equipment, frozen at the moment described as: \"Sweep your left arm over your ear, creating one long line from back heel to fingertips\" — textbook exercise form, the pose clearly recognisable as Extended Side Angle Pose (Utthita Parsvakonasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Extended Side Angle Pose (Utthita Parsvakonasana), bodyweight only, no equipment, frozen at the moment described as: \"Spiral your chest open toward the ceiling, gazing up under the raised arm\" — textbook exercise form, the pose clearly recognisable as Extended Side Angle Pose (Utthita Parsvakonasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Extended Side Angle Pose (Utthita Parsvakonasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Lower your right forearm onto your right thigh, or your fingertips to the floor outside the front foot.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Sweep your left arm over your ear, creating one long line from back heel to fingertips.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Spiral your chest open toward the ceiling, gazing up under the raised arm.",
+          "5": "Press through the outer edge of the back foot, hold, then switch sides.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "half-moon-balance-ardha-chandrasana": {
+    "name": "Half Moon Balance (Ardha Chandrasana)",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Half Moon Balance (Ardha Chandrasana), bodyweight only, no equipment, frozen at the moment described as: \"Stack your hips and shoulders sideways, opening your whole body to the left\" — textbook exercise form, the pose clearly recognisable as Half Moon Balance (Ardha Chandrasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Half Moon Balance (Ardha Chandrasana), bodyweight only, no equipment, frozen at the moment described as: \"Extend your left arm straight up and, if balanced, turn your gaze toward it\" — textbook exercise form, the pose clearly recognisable as Half Moon Balance (Ardha Chandrasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Half Moon Balance (Ardha Chandrasana), bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Shift your weight into the right leg and float your left leg up behind you to hip height.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Stack your hips and shoulders sideways, opening your whole body to the left.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Extend your left arm straight up and, if balanced, turn your gaze toward it.",
+          "5": "Hold with steady breath, lower with control, and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "pigeon-pose-eka-pada-rajakapotasana": {
+    "name": "Pigeon Pose (Eka Pada Rajakapotasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Pigeon Pose (Eka Pada Rajakapotasana), bodyweight only, no equipment, frozen at the moment described as: \"Stay upright on your fingertips for a deeper hip opening, or fold your torso forward over the front shin\" — textbook exercise form, the pose clearly recognisable as Pigeon Pose (Eka Pada Rajakapotasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Pigeon Pose (Eka Pada Rajakapotasana), bodyweight only, no equipment, frozen at the moment described as: \"Relax your shoulders and breathe slowly into the stretch in your outer hip and glute\" — textbook exercise form, the pose clearly recognisable as Pigeon Pose (Eka Pada Rajakapotasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Pigeon Pose (Eka Pada Rajakapotasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Square your hips toward the floor, letting them sink evenly — pad the right hip if it lifts.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Stay upright on your fingertips for a deeper hip opening, or fold your torso forward over the front shin.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Relax your shoulders and breathe slowly into the stretch in your outer hip and glute.",
+          "5": "Walk your hands back, step out, and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "bridge-pose-setu-bandha-sarvangasana": {
+    "name": "Bridge Pose (Setu Bandha Sarvangasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Bridge Pose (Setu Bandha Sarvangasana), bodyweight only, no equipment, frozen at the moment described as: \"Interlace your fingers under your back and walk your shoulders together beneath you\" — textbook exercise form, the pose clearly recognisable as Bridge Pose (Setu Bandha Sarvangasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Bridge Pose (Setu Bandha Sarvangasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your knees tracking straight ahead and your chest lifting toward your chin\" — textbook exercise form, the pose clearly recognisable as Bridge Pose (Setu Bandha Sarvangasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Bridge Pose (Setu Bandha Sarvangasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Press into your feet and lift your hips toward the ceiling, rolling up through the spine.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Interlace your fingers under your back and walk your shoulders together beneath you.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your knees tracking straight ahead and your chest lifting toward your chin.",
+          "5": "Hold with smooth breath, then release the hands and roll down one vertebra at a time.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "boat-pose-navasana": {
+    "name": "Boat Pose (Navasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Boat Pose (Navasana), bodyweight only, no equipment, frozen at the moment described as: \"Extend your arms forward at shoulder height, palms facing in\" — textbook exercise form, the pose clearly recognisable as Boat Pose (Navasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Boat Pose (Navasana), bodyweight only, no equipment, frozen at the moment described as: \"For the full pose, straighten your legs so your body forms a V; keep your chest lifted, never rounding\" — textbook exercise form, the pose clearly recognisable as Boat Pose (Navasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Boat Pose (Navasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Lean back slightly and float your feet off the floor, shins parallel to the ground.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Extend your arms forward at shoulder height, palms facing in.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "For the full pose, straighten your legs so your body forms a V; keep your chest lifted, never rounding.",
+          "5": "Hold with steady breath, lower with control.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "crow-pose-bakasana": {
+    "name": "Crow Pose (Bakasana)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Crow Pose (Bakasana), bodyweight only, no equipment, frozen at the moment described as: \"Shift your weight forward onto your hands, gazing at a point ahead of your fingertips — never straight down\" — textbook exercise form, the pose clearly recognisable as Crow Pose (Bakasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Crow Pose (Bakasana), bodyweight only, no equipment, frozen at the moment described as: \"Lift one foot, then the other, balancing with your heels drawing toward your hips\" — textbook exercise form, the pose clearly recognisable as Crow Pose (Bakasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Crow Pose (Bakasana), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Bend your elbows slightly and snug your knees high onto the backs of your upper arms.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Shift your weight forward onto your hands, gazing at a point ahead of your fingertips — never straight down.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Lift one foot, then the other, balancing with your heels drawing toward your hips.",
+          "5": "Hold with the core gripping strongly, then lower your feet softly back to the floor.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "four-limbed-staff-pose-chaturanga-dandasana": {
+    "name": "Four-Limbed Staff Pose (Chaturanga Dandasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Four-Limbed Staff Pose (Chaturanga Dandasana), bodyweight only, no equipment, frozen at the moment described as: \"Lower in one piece until your upper arms are parallel to the floor — no lower\" — textbook exercise form, the pose clearly recognisable as Four-Limbed Staff Pose (Chaturanga Dandasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Four-Limbed Staff Pose (Chaturanga Dandasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your shoulders level with your elbows and your body rigid from head to heels\" — textbook exercise form, the pose clearly recognisable as Four-Limbed Staff Pose (Chaturanga Dandasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Four-Limbed Staff Pose (Chaturanga Dandasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Shift slightly forward onto your toes, then bend your elbows straight back, hugging them against your ribs.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Lower in one piece until your upper arms are parallel to the floor — no lower.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your shoulders level with your elbows and your body rigid from head to heels.",
+          "5": "Hold the hover with steady breath, then push back up or move into Upward Dog.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "happy-baby-pose-ananda-balasana": {
+    "name": "Happy Baby Pose (Ananda Balasana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Happy Baby Pose (Ananda Balasana), bodyweight only, no equipment, frozen at the moment described as: \"Gently pull your feet down so your knees draw toward the floor beside your ribs\" — textbook exercise form, the pose clearly recognisable as Happy Baby Pose (Ananda Balasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Happy Baby Pose (Ananda Balasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep your tailbone and shoulders melting into the floor\" — textbook exercise form, the pose clearly recognisable as Happy Baby Pose (Ananda Balasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Happy Baby Pose (Ananda Balasana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Grip the outside edges of your feet with your hands, knees staying wide of your torso.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Gently pull your feet down so your knees draw toward the floor beside your ribs.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep your tailbone and shoulders melting into the floor.",
+          "5": "Rock softly side to side if it feels good, breathing slowly throughout.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "low-lunge-anjaneyasana": {
+    "name": "Low Lunge (Anjaneyasana)",
+    "curated": false,
+    "image": {
+      "camera": "side-on camera, full body in frame with headroom",
+      "pose_a": "full-body action photo of the athlete performing Low Lunge (Anjaneyasana), bodyweight only, no equipment, frozen at the moment described as: \"Sweep both arms overhead, lifting through the chest\" — textbook exercise form, the pose clearly recognisable as Low Lunge (Anjaneyasana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Low Lunge (Anjaneyasana), bodyweight only, no equipment, frozen at the moment described as: \"Keep the front knee over the ankle and the tailbone gently tucked\" — textbook exercise form, the pose clearly recognisable as Low Lunge (Anjaneyasana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "side-on camera, full body in frame with headroom",
+        "prompt": "8-second seamless loopable video of the athlete performing Low Lunge (Anjaneyasana), bodyweight only, no equipment. side-on camera, full body in frame with headroom. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Let your hips sink forward and down until you feel a deep stretch along the front of the left hip and thigh.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Sweep both arms overhead, lifting through the chest.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep the front knee over the ankle and the tailbone gently tucked.",
+          "5": "Hold and breathe, then switch sides.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "legs-up-the-wall-pose-viparita-karani": {
+    "name": "Legs-Up-the-Wall Pose (Viparita Karani)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Legs-Up-the-Wall Pose (Viparita Karani), bodyweight only, no equipment, frozen at the moment described as: \"Let your whole back release into the floor and your breath slow\" — textbook exercise form, the pose clearly recognisable as Legs-Up-the-Wall Pose (Viparita Karani), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Legs-Up-the-Wall Pose (Viparita Karani), bodyweight only, no equipment, frozen at the moment described as: \"Stay for the prescribed time, letting the legs drain and the nervous system settle\" — textbook exercise form, the pose clearly recognisable as Legs-Up-the-Wall Pose (Viparita Karani), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Legs-Up-the-Wall Pose (Viparita Karani), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Rest your legs vertically against the wall, arms relaxed by your sides, palms up.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Let your whole back release into the floor and your breath slow.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Stay for the prescribed time, letting the legs drain and the nervous system settle.",
+          "5": "Bend your knees and roll to one side to come out.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "puppy-pose-uttana-shishosana": {
+    "name": "Puppy Pose (Uttana Shishosana)",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Puppy Pose (Uttana Shishosana), bodyweight only, no equipment, frozen at the moment described as: \"Rest your forehead (or chin) on the mat, arms active and reaching\" — textbook exercise form, the pose clearly recognisable as Puppy Pose (Uttana Shishosana), sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Puppy Pose (Uttana Shishosana), bodyweight only, no equipment, frozen at the moment described as: \"Let your heart sink and your upper back open with each exhale\" — textbook exercise form, the pose clearly recognisable as Puppy Pose (Uttana Shishosana), sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Puppy Pose (Uttana Shishosana), bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Keeping your hips high over your knees, walk your hands far forward and melt your chest toward the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Rest your forehead (or chin) on the mat, arms active and reaching.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Let your heart sink and your upper back open with each exhale.",
+          "5": "Walk the hands back under your shoulders to come out.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "thread-the-needle-stretch": {
+    "name": "Thread the Needle Stretch",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Thread the Needle Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Let your upper back rotate while your hips stay high and square\" — textbook exercise form, the pose clearly recognisable as Thread the Needle Stretch, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Thread the Needle Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Press lightly through the left hand to deepen the twist between your shoulder blades\" — textbook exercise form, the pose clearly recognisable as Thread the Needle Stretch, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Thread the Needle Stretch, bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Slide your right arm palm-up underneath your left arm, lowering your right shoulder and ear to the floor.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Let your upper back rotate while your hips stay high and square.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Press lightly through the left hand to deepen the twist between your shoulder blades.",
+          "5": "Breathe into the stretch, unwind, and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "butterfly-stretch": {
+    "name": "Butterfly Stretch",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Butterfly Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Sit tall through the spine, then hinge gently forward from the hips for a deeper stretch\" — textbook exercise form, the pose clearly recognisable as Butterfly Stretch, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Butterfly Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Let gravity ease the knees toward the floor — never bounce or press them down\" — textbook exercise form, the pose clearly recognisable as Butterfly Stretch, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Butterfly Stretch, bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Hold your feet or ankles and draw your heels comfortably toward your hips.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Sit tall through the spine, then hinge gently forward from the hips for a deeper stretch.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Let gravity ease the knees toward the floor — never bounce or press them down.",
+          "5": "Hold and breathe slowly into the inner thighs.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "frog-stretch": {
+    "name": "Frog Stretch",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Frog Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Stop where the inner-thigh stretch is strong but breathable, keeping the spine neutral\" — textbook exercise form, the pose clearly recognisable as Frog Stretch, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Frog Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Rock gently forward and back, or simply hold at your edge\" — textbook exercise form, the pose clearly recognisable as Frog Stretch, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Frog Stretch, bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Lower onto your forearms and slowly rock your hips back toward your heels.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Stop where the inner-thigh stretch is strong but breathable, keeping the spine neutral.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Rock gently forward and back, or simply hold at your edge.",
+          "5": "Walk your knees together carefully to come out.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "scorpion-stretch": {
+    "name": "Scorpion Stretch",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Scorpion Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Let your right hip lift and rotate while your chest and arms stay anchored to the floor\" — textbook exercise form, the pose clearly recognisable as Scorpion Stretch, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Scorpion Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Pause at the end range, feeling the stretch through your hip flexor, trunk and chest\" — textbook exercise form, the pose clearly recognisable as Scorpion Stretch, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Scorpion Stretch, bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Bend your right knee and sweep your right foot up and across your body toward your left hand.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Let your right hip lift and rotate while your chest and arms stay anchored to the floor.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Pause at the end range, feeling the stretch through your hip flexor, trunk and chest.",
+          "5": "Return slowly and alternate sides at a controlled pace.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "sleeper-stretch": {
+    "name": "Sleeper Stretch",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Sleeper Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Keep your shoulder blade pinned beneath you and your torso from rolling backward\" — textbook exercise form, the pose clearly recognisable as Sleeper Stretch, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Sleeper Stretch, bodyweight only, no equipment, frozen at the moment described as: \"Press only to a gentle stretch at the back of the shoulder — never into pain\" — textbook exercise form, the pose clearly recognisable as Sleeper Stretch, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Sleeper Stretch, bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "With your left hand, gently press your right forearm down toward the floor, rotating the shoulder internally.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Keep your shoulder blade pinned beneath you and your torso from rolling backward.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Press only to a gentle stretch at the back of the shoulder — never into pain.",
+          "5": "Hold, release slowly, and repeat on the other side.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "band-shoulder-dislocates": {
+    "name": "Band Shoulder Dislocates",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Band Shoulder Dislocates with a resistance band, frozen at the moment described as: \"Reverse the arc back over your head to the front\" — textbook exercise form, the pose clearly recognisable as Band Shoulder Dislocates, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Band Shoulder Dislocates with a resistance band, frozen at the moment described as: \"Keep both arms straight and the movement slow — widen your grip if it pinches\" — textbook exercise form, the pose clearly recognisable as Band Shoulder Dislocates, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Band Shoulder Dislocates with a resistance band. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "With straight arms, raise the band up and over your head in a wide arc until it touches behind your hips.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Reverse the arc back over your head to the front.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Keep both arms straight and the movement slow — widen your grip if it pinches.",
+          "5": "Gradually narrow the grip over weeks as your shoulders open up.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "cossack-squat": {
+    "name": "Cossack Squat",
+    "curated": false,
+    "image": {
+      "camera": "low side-on camera at floor level, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Cossack Squat, bodyweight only, no equipment, frozen at the moment described as: \"Keep the right heel planted and your chest as upright as possible\" — textbook exercise form, the pose clearly recognisable as Cossack Squat, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Cossack Squat, bodyweight only, no equipment, frozen at the moment described as: \"Push back up through the right leg to the wide stance\" — textbook exercise form, the pose clearly recognisable as Cossack Squat, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "low side-on camera at floor level, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Cossack Squat, bodyweight only, no equipment. low side-on camera at floor level, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Shift your weight onto your right leg and sit down into a deep squat over that side, left leg staying straight with toes pulling up toward the ceiling.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Keep the right heel planted and your chest as upright as possible.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Push back up through the right leg to the wide stance.",
+          "5": "Flow smoothly across to the other side and alternate with control.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "jefferson-curl": {
+    "name": "Jefferson Curl",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Jefferson Curl with dumbbells, frozen at the moment described as: \"Keep your legs straight and your hips stacked over your heels as your spine curls into a full stretch\" — textbook exercise form, the pose clearly recognisable as Jefferson Curl, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Jefferson Curl with dumbbells, frozen at the moment described as: \"Pause briefly at your end range without forcing depth\" — textbook exercise form, the pose clearly recognisable as Jefferson Curl, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Jefferson Curl with dumbbells. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Tuck your chin and roll down one vertebra at a time, letting the weight hang and pull you gently toward your toes.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Keep your legs straight and your hips stacked over your heels as your spine curls into a full stretch.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Pause briefly at your end range without forcing depth.",
+          "5": "Re-stack the spine slowly from the tailbone up, head arriving last. Keep the load light — this is a mobility drill, not a lift.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
+  },
+  "wall-angels": {
+    "name": "Wall Angels",
+    "curated": false,
+    "image": {
+      "camera": "three-quarter front camera, full body in frame",
+      "pose_a": "full-body action photo of the athlete performing Wall Angels, bodyweight only, no equipment, frozen at the moment described as: \"Slowly slide your arms up the wall as far as you can without anything peeling away\" — textbook exercise form, the pose clearly recognisable as Wall Angels, sharp focus on body position",
+      "pose_b": "full-body action photo of the athlete performing Wall Angels, bodyweight only, no equipment, frozen at the moment described as: \"Slide them back down, drawing the elbows toward your ribs\" — textbook exercise form, the pose clearly recognisable as Wall Angels, sharp focus on body position"
+    },
+    "video": {
+      "loop_8s": {
+        "camera": "three-quarter front camera, full body in frame",
+        "prompt": "8-second seamless loopable video of the athlete performing Wall Angels, bodyweight only, no equipment. three-quarter front camera, full body in frame. One continuous locked-off take, no cuts, no camera movement, steady natural rhythm; the final frame must match the first frame exactly so the clip loops.",
+        "beats": {
+          "0": "Place your arms against the wall in a goalpost position: elbows bent 90 degrees at shoulder height, backs of hands touching the wall.",
+          "1": "The same phase of the movement continues smoothly.",
+          "2": "Slowly slide your arms up the wall as far as you can without anything peeling away.",
+          "3": "The same phase of the movement continues smoothly.",
+          "4": "Slide them back down, drawing the elbows toward your ribs.",
+          "5": "Move slowly and keep ribs down and contact constant throughout.",
+          "6": "The same phase of the movement continues smoothly.",
+          "7": "She returns to the exact position and pose of second 0 so the clip loops seamlessly."
+        }
+      }
+    }
   }
 }

@@ -27,7 +27,8 @@ CREATE EXTENSION IF NOT EXISTS citext;         -- case-insensitive emails
 -- app-specific additions (hiit, mobility, balance, recovery).
 CREATE TYPE exercise_modality AS ENUM (
   'strength', 'cardio', 'hiit', 'plyometrics', 'stretching', 'mobility',
-  'olympic_weightlifting', 'powerlifting', 'strongman', 'balance', 'recovery'
+  'yoga', 'olympic_weightlifting', 'powerlifting', 'strongman', 'balance',
+  'recovery'
 );
 
 CREATE TYPE force_type        AS ENUM ('push', 'pull', 'static');

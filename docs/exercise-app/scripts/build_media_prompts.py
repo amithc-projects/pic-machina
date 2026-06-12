@@ -17,6 +17,7 @@ generated ones and are flagged is_curated.
 
 Reads:
   data/exercises.json, data/supplemental-exercises.json,
+  data/yoga-stretch-exercises.json,
   data/curated-media-prompts.json
 Writes:
   data/media-prompts.json
@@ -124,6 +125,7 @@ def video_prompt(ex, equip, camera):
 def main():
     base = json.loads((ROOT / "data" / "exercises.json").read_text())
     extra = json.loads((ROOT / "data" / "supplemental-exercises.json").read_text())
+    extra += json.loads((ROOT / "data" / "yoga-stretch-exercises.json").read_text())
     curated = json.loads((ROOT / "data" / "curated-media-prompts.json").read_text())
     curated.pop("_comment", None)
 

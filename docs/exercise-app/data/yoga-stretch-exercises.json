@@ -1,0 +1,1189 @@
+[
+  {
+    "id": "Bikram_01_Standing_Deep_Breathing",
+    "name": "Standing Deep Breathing (Pranayama)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": null,
+    "equipment": "body only",
+    "primaryMuscles": ["abdominals"],
+    "secondaryMuscles": ["neck", "shoulders"],
+    "setup": [
+      "Stand tall with feet together, interlace your fingers and tuck your knuckles under your chin."
+    ],
+    "instructions": [
+      "Inhale slowly through your nose for six counts, raising your elbows up beside your ears like wings while your knuckles stay under your chin.",
+      "Exhale through your mouth for six counts, dropping your head back and bringing your elbows and forearms together in front of your face.",
+      "Keep your knees relaxed and your spine long throughout.",
+      "Repeat for the prescribed number of slow breath cycles."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Bikram_02_Half_Moon_Hands_To_Feet",
+    "name": "Half Moon Pose with Hands to Feet (Ardha Chandrasana with Pada Hastasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["abdominals", "lower back"],
+    "secondaryMuscles": ["shoulders", "hamstrings", "lats"],
+    "setup": [
+      "Stand with feet together, raise your arms overhead and interlace your fingers in a steeple grip with index fingers extended."
+    ],
+    "instructions": [
+      "Press your hips to the left and bend your whole torso to the right in one unbroken line, arms glued to your ears. Hold and breathe.",
+      "Return to centre and repeat the side bend to the left.",
+      "Return to centre, then hinge back from the hips into a gentle standing backbend, pushing your hips forward.",
+      "Come up, fold forward and take hold of your heels from behind, drawing your chest to your thighs with elbows behind your calves."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_03_Awkward_Pose",
+    "name": "Awkward Pose (Utkatasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps"],
+    "secondaryMuscles": ["glutes", "calves", "shoulders"],
+    "setup": [
+      "Stand with feet hip-width apart and parallel, arms extended forward at shoulder height, palms down."
+    ],
+    "instructions": [
+      "Part one: sit down as if into an invisible chair until your thighs are parallel to the floor, spine upright. Hold.",
+      "Part two: rise onto the balls of your feet, then sit again with hips hovering at knee height, balancing on your toes. Hold.",
+      "Part three: with knees together on tiptoes, lower your hips all the way to your heels and hold, spine tall.",
+      "Keep your arms reaching forward and breathe steadily through every stage."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_04_Eagle_Pose",
+    "name": "Eagle Pose (Garudasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "shoulders"],
+    "secondaryMuscles": ["calves", "abductors", "abdominals"],
+    "setup": [
+      "Stand tall and sweep your right arm under your left, wrapping the forearms so your palms meet."
+    ],
+    "instructions": [
+      "Sit your hips down and back, then lift your right leg over your left thigh, hooking the foot behind the left calf if possible.",
+      "Pull your wrapped elbows down and away from your face while sinking lower into the standing leg.",
+      "Square your hips and shoulders forward, fix your gaze on one point and hold, breathing evenly.",
+      "Unwind slowly and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_05_Standing_Head_To_Knee",
+    "name": "Standing Head to Knee (Dandayamana Janushirasana)",
+    "force": "static",
+    "level": "expert",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["hamstrings", "quadriceps"],
+    "secondaryMuscles": ["abdominals", "calves", "lower back"],
+    "setup": [
+      "Stand on your left leg, lock the knee, and interlace all ten fingers around the sole of your right foot, lifting the knee toward your chest."
+    ],
+    "instructions": [
+      "Keeping the standing knee locked, slowly kick your right leg forward until it is parallel to the floor.",
+      "Tuck your elbows down beside your calf and round forward, bringing your forehead toward your knee.",
+      "Hold with steady breath, standing leg solid as a lamp post.",
+      "Reverse out with the same control and repeat on the other side. Only progress to each stage when the previous one is stable."
+    ],
+    "category": "yoga",
+    "restSeconds": 20,
+    "images": []
+  },
+  {
+    "id": "Bikram_06_Standing_Bow",
+    "name": "Standing Bow Pose (Dandayamana Dhanurasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "chest"],
+    "secondaryMuscles": ["shoulders", "hamstrings", "glutes", "abdominals"],
+    "setup": [
+      "Stand on your left leg. Reach your right hand back and grip the inside of your right foot; extend your left arm straight up beside your ear."
+    ],
+    "instructions": [
+      "Kick your right foot up and back into your hand while your torso and left arm tilt forward as a counterbalance.",
+      "Keep kicking until your body forms a standing bow, chest level with the floor and back leg rising high behind you.",
+      "Keep both shoulders rotating square to the front and your gaze fixed ahead.",
+      "Release with control and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 20,
+    "images": []
+  },
+  {
+    "id": "Bikram_07_Balancing_Stick",
+    "name": "Balancing Stick Pose (Tuladandasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["glutes", "lower back"],
+    "secondaryMuscles": ["hamstrings", "shoulders", "abdominals"],
+    "setup": [
+      "Stand tall, arms overhead with palms together and index fingers steepled, and step your right foot one stride forward."
+    ],
+    "instructions": [
+      "Hinge forward from the hips in one piece, lifting your left leg behind you until body and leg form a straight horizontal line.",
+      "Stretch forward through your fingertips and back through your pointed toes — one unbroken line like a capital T.",
+      "Keep your hips level and both knees locked; breathe steadily for the hold.",
+      "Return upright with control and repeat on the other leg."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_08_Standing_Separate_Leg_Stretching",
+    "name": "Standing Separate Leg Stretching Pose (Dandayamana Bibhaktapada Paschimotthanasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["hamstrings", "adductors"],
+    "secondaryMuscles": ["lower back", "calves"],
+    "setup": [
+      "Step your feet wide apart, about one leg-length, toes turned slightly in."
+    ],
+    "instructions": [
+      "Hinge forward from the hips with a flat back and take hold of the outside edges of your feet.",
+      "Pull gently with your arms, drawing the crown of your head toward the floor between your feet.",
+      "Keep your weight in the balls of your feet and your legs straight.",
+      "Hold and breathe, letting the hamstrings and inner thighs release."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_09_Triangle",
+    "name": "Triangle Pose (Trikanasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "adductors"],
+    "secondaryMuscles": ["abdominals", "shoulders", "abductors"],
+    "setup": [
+      "Step your feet wide apart, turn your right foot out 90 degrees, and extend both arms to shoulder height."
+    ],
+    "instructions": [
+      "Bend your right knee to a right angle so the thigh is parallel to the floor.",
+      "Tilt your torso sideways, placing your right fingertips lightly at your right big toe while your left arm reaches straight up.",
+      "Turn your head to gaze at the raised hand, chest and hips staying open to the side.",
+      "Press both feet firmly into the floor, hold and breathe, then repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_10_Standing_Separate_Leg_Head_To_Knee",
+    "name": "Standing Separate Leg Head to Knee Pose (Dandayamana Bibhaktapada Janushirasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["hamstrings", "abdominals"],
+    "secondaryMuscles": ["lower back", "calves", "neck"],
+    "setup": [
+      "From a wide stance, turn your whole body to face your right foot, hips square, arms overhead with palms together."
+    ],
+    "instructions": [
+      "Tuck your chin to your chest and round down, bringing your forehead toward your right knee.",
+      "Bend the front knee as much as needed so forehead and knee stay in contact.",
+      "Keep your arms framing your head and your back foot grounded.",
+      "Compress, breathe, come up with a flat strong body, and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_11_Tree_Pose",
+    "name": "Tree Pose (Tadasana Vrksasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "calves"],
+    "secondaryMuscles": ["abductors", "abdominals", "glutes"],
+    "setup": [
+      "Stand tall on your left leg and draw your right foot up, placing the sole high against your inner left thigh."
+    ],
+    "instructions": [
+      "Press the foot and thigh gently into each other and let your right knee open to the side.",
+      "Bring your palms together in front of your chest, or reach them overhead.",
+      "Lengthen through the crown of your head, fix your gaze on a still point, and breathe.",
+      "Hold steadily, then change legs."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Bikram_12_Toe_Stand",
+    "name": "Toe Stand Pose (Padangustasana)",
+    "force": "static",
+    "level": "expert",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["calves", "quadriceps"],
+    "secondaryMuscles": ["abdominals", "glutes"],
+    "setup": [
+      "From Tree Pose with your right foot on your left thigh, fix your gaze on a point on the floor about a metre ahead."
+    ],
+    "instructions": [
+      "Hinge forward and bend the standing leg, lowering your hips with control until you balance on the ball of your left foot.",
+      "Sit your hips down onto your raised left heel, spine tall, then bring your palms together at your chest.",
+      "Balance with steady breath, knees in one line.",
+      "Press back up through the standing leg and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 20,
+    "images": []
+  },
+  {
+    "id": "Bikram_13_Dead_Body_Pose",
+    "name": "Dead Body Pose (Savasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": null,
+    "equipment": "body only",
+    "primaryMuscles": ["lower back"],
+    "secondaryMuscles": ["neck"],
+    "setup": [
+      "Lie flat on your back with heels together, feet relaxed open, arms by your sides with palms facing up."
+    ],
+    "instructions": [
+      "Close your eyes and let your whole body become completely heavy and still.",
+      "Breathe naturally through your nose, releasing tension from your face, shoulders and hands.",
+      "Stay perfectly still and present for the prescribed time."
+    ],
+    "category": "yoga",
+    "restSeconds": 0,
+    "images": []
+  },
+  {
+    "id": "Bikram_14_Wind_Removing_Pose",
+    "name": "Wind Removing Pose (Pavanamuktasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["lower back", "glutes"],
+    "secondaryMuscles": ["abdominals"],
+    "setup": [
+      "Lie flat on your back with legs extended."
+    ],
+    "instructions": [
+      "Draw your right knee toward your right shoulder and interlace your fingers below the knee, pulling it gently down. Hold and breathe.",
+      "Switch and hug the left knee toward the left shoulder. Hold.",
+      "Finally draw both knees to your chest, wrapping your arms around your shins, and let your lower back release into the floor.",
+      "Keep your shoulders and head relaxed on the ground throughout."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Bikram_15_Sit_Up",
+    "name": "Bikram Sit-Up",
+    "force": "pull",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["abdominals"],
+    "secondaryMuscles": ["hamstrings", "neck"],
+    "setup": [
+      "Lie on your back with legs extended, feet flexed, arms stretched overhead with biceps by your ears."
+    ],
+    "instructions": [
+      "Inhale, then sit up in one motion with arms staying beside your ears.",
+      "Exhale sharply in two bursts as you fold forward and reach for your flexed toes.",
+      "Keep your legs locked and lengthen your spine over your legs.",
+      "Roll back down with control to begin the next rep."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Bikram_16_Cobra_Pose",
+    "name": "Cobra Pose (Bhujangasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["lower back"],
+    "secondaryMuscles": ["chest", "shoulders", "glutes"],
+    "setup": [
+      "Lie on your stomach with legs together, palms flat under your shoulders, elbows hugged into your ribs."
+    ],
+    "instructions": [
+      "Using your back muscles more than your arms, peel your chest off the floor to navel height.",
+      "Roll your shoulders down and back, elbows staying bent and close to your body.",
+      "Press the tops of your feet and hips into the floor; gaze gently upward.",
+      "Hold with steady breath, then lower slowly."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Bikram_17_Locust_Pose",
+    "name": "Locust Pose (Salabhasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["lower back", "glutes"],
+    "secondaryMuscles": ["hamstrings"],
+    "setup": [
+      "Lie on your stomach with your chin on the floor and arms straight beneath your body, palms down under your hips."
+    ],
+    "instructions": [
+      "Keeping both hips on your hands, lift your right leg straight up as high as possible. Hold, then lower and lift the left leg.",
+      "For the final stage, press into your arms and lift both legs together off the floor, knees locked.",
+      "Keep your chin on the floor and shoulders touching the ground.",
+      "Lower slowly and rest a breath between stages."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_18_Full_Locust_Pose",
+    "name": "Full Locust Pose (Poorna Salabhasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["lower back"],
+    "secondaryMuscles": ["shoulders", "glutes", "chest"],
+    "setup": [
+      "Lie on your stomach with arms out to the sides at shoulder height like aeroplane wings, palms down, legs together."
+    ],
+    "instructions": [
+      "In one motion lift your chest, arms and legs off the floor, flying upward from the waist.",
+      "Reach your fingertips back like wingtips and keep your legs together and locked.",
+      "Lift your chin and gaze forward; only your hips and lower belly stay on the floor.",
+      "Hold with strong steady breath, then release down slowly."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_19_Bow_Pose",
+    "name": "Bow Pose (Dhanurasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["lower back", "quadriceps"],
+    "secondaryMuscles": ["chest", "shoulders", "abdominals"],
+    "setup": [
+      "Lie on your stomach, bend both knees and reach back to grip the outside of each foot near the toes."
+    ],
+    "instructions": [
+      "Kick your feet up and back into your hands, letting the kick lift your chest and thighs off the floor.",
+      "Balance on your abdomen, body curved like an archer's bow, arms straight like the bowstring.",
+      "Lift your chin and roll your weight gently with the breath.",
+      "Release with control, lowering chest and knees together."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_20_Fixed_Firm_Pose",
+    "name": "Fixed Firm Pose (Supta Vajrasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps"],
+    "secondaryMuscles": ["lower back", "abdominals"],
+    "setup": [
+      "Kneel with your knees together and sit your hips on the floor between your heels, feet hugging your hips."
+    ],
+    "instructions": [
+      "Walk your hands back behind you and lower onto your elbows, keeping both knees on the floor.",
+      "If comfortable, lower your back and shoulders all the way to the floor and reach your arms overhead, holding opposite elbows.",
+      "Let the front of your thighs lengthen; breathe slowly into your belly.",
+      "Come up the same way you went down — onto elbows first, never twisting."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_21_Half_Tortoise_Pose",
+    "name": "Half Tortoise Pose (Ardha Kurmasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["shoulders", "lower back"],
+    "secondaryMuscles": ["lats", "neck"],
+    "setup": [
+      "Kneel and sit back on your heels, then raise your arms overhead with palms together and thumbs crossed."
+    ],
+    "instructions": [
+      "Keeping hips on your heels, hinge forward from the hips in one straight line until your little fingers and forehead touch the floor.",
+      "Stretch your arms as far forward as possible, lengthening through the sides of your body.",
+      "Relax your neck and breathe deeply into your back.",
+      "Come up in one piece with arms still beside your ears."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Bikram_22_Camel_Pose",
+    "name": "Camel Pose (Ustrasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["chest", "quadriceps"],
+    "secondaryMuscles": ["lower back", "shoulders", "abdominals", "neck"],
+    "setup": [
+      "Kneel upright with knees and feet hip-width apart, hands supporting your lower back, fingers pointing down."
+    ],
+    "instructions": [
+      "Lift your chest and arch back slowly, pushing your hips forward over your knees.",
+      "When ready, reach back and place your palms on your heels, letting your head drop gently back.",
+      "Keep pressing the hips forward so the bend spreads along your whole spine.",
+      "Hold with open breath, then bring your hands back to your hips and rise with care."
+    ],
+    "category": "yoga",
+    "restSeconds": 20,
+    "images": []
+  },
+  {
+    "id": "Bikram_23_Rabbit_Pose",
+    "name": "Rabbit Pose (Sasangasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["middle back", "lower back"],
+    "secondaryMuscles": ["neck", "traps"],
+    "setup": [
+      "Kneel sitting on your heels and grip your heels firmly with your hands, thumbs outside."
+    ],
+    "instructions": [
+      "Tuck your chin and curl forward, placing the top of your head on the floor against your knees.",
+      "Lift your hips toward the ceiling, rolling forward like a wheel until your arms are straight.",
+      "Keep a firm grip on your heels and your forehead touching your knees, spine rounding into a full stretch.",
+      "Breathe into your upper back, then unroll slowly, head coming up last."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_24_Head_To_Knee_With_Stretching",
+    "name": "Head to Knee Pose with Stretching Pose (Janushirasana with Paschimotthanasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["hamstrings"],
+    "secondaryMuscles": ["calves", "lower back", "neck"],
+    "setup": [
+      "Sit with your right leg extended and your left foot tucked against your right inner thigh."
+    ],
+    "instructions": [
+      "Turn your torso over the straight leg, grip your flexed right foot with both hands and bring your forehead toward your knee, bending the knee if needed.",
+      "Hold, breathe, then repeat on the other side.",
+      "For the stretching stage, extend both legs together, grip your feet and fold your whole torso forward over your legs.",
+      "Pull gently with the arms while keeping the spine long; let the head release last."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bikram_25_Spine_Twisting_Pose",
+    "name": "Spine Twisting Pose (Ardha Matsyendrasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["middle back", "lower back"],
+    "secondaryMuscles": ["glutes", "neck", "shoulders"],
+    "setup": [
+      "Sit with your left knee bent on the floor and step your right foot over the left thigh, planting it flat."
+    ],
+    "instructions": [
+      "Place your right hand on the floor behind you and hook your left elbow outside your right knee.",
+      "Inhale to lengthen your spine tall, then exhale and twist your torso to the right, looking over your right shoulder.",
+      "Deepen the twist gently with each exhale, hips staying grounded.",
+      "Unwind slowly and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Bikram_26_Blowing_In_Firm",
+    "name": "Blowing in Firm Pose (Kapalbhati in Vajrasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": null,
+    "equipment": "body only",
+    "primaryMuscles": ["abdominals"],
+    "secondaryMuscles": [],
+    "setup": [
+      "Kneel sitting on your heels with your spine tall and palms resting on your knees."
+    ],
+    "instructions": [
+      "Exhale forcefully through your mouth with a sharp snap of the belly button toward the spine.",
+      "Let the inhale happen passively between blows — only the exhale is active.",
+      "Keep your shoulders, face and arms relaxed; only the abdomen moves.",
+      "Continue at a steady rhythm for the prescribed number of breaths."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Downward_Facing_Dog",
+    "name": "Downward Facing Dog (Adho Mukha Svanasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["hamstrings", "shoulders"],
+    "secondaryMuscles": ["calves", "lats", "abdominals"],
+    "setup": [
+      "Start on all fours with hands shoulder-width apart, fingers spread, toes tucked."
+    ],
+    "instructions": [
+      "Lift your hips up and back until your body forms an inverted V.",
+      "Press the floor away through your whole hands, letting your head hang relaxed between your arms.",
+      "Reach your heels toward the floor with a soft bend in the knees if needed, spine staying long.",
+      "Hold and breathe deeply, pedalling the feet gently if it helps the legs release."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Upward_Facing_Dog",
+    "name": "Upward Facing Dog (Urdhva Mukha Svanasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["lower back", "chest"],
+    "secondaryMuscles": ["shoulders", "triceps", "quadriceps"],
+    "setup": [
+      "Lie face down with palms beside your lower ribs and the tops of your feet on the floor."
+    ],
+    "instructions": [
+      "Press into your hands and straighten your arms, lifting your chest and your thighs off the floor.",
+      "Only your palms and the tops of your feet touch the ground; shoulders roll down away from your ears.",
+      "Open your chest forward and upward, gaze slightly lifted.",
+      "Hold with steady breath, then lower or push back into Downward Dog."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Wheel_Pose",
+    "name": "Wheel Pose (Urdhva Dhanurasana)",
+    "force": "static",
+    "level": "expert",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["lower back", "shoulders"],
+    "secondaryMuscles": ["chest", "quadriceps", "glutes", "triceps"],
+    "setup": [
+      "Lie on your back, bend your knees with feet flat near your hips, and place your palms on the floor beside your ears, fingers pointing toward your shoulders."
+    ],
+    "instructions": [
+      "Press into hands and feet and lift your hips, pausing briefly with the crown of your head lightly on the floor.",
+      "Straighten your arms and legs together, arching your whole body into a high backbend.",
+      "Push the floor away, letting your chest move toward the wall behind you and your head hang free.",
+      "Hold with strong breath, then tuck your chin and lower down slowly with control."
+    ],
+    "category": "yoga",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Dancers_Pose",
+    "name": "Dancer's Pose (Natarajasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "shoulders"],
+    "secondaryMuscles": ["hamstrings", "chest", "glutes", "abdominals"],
+    "setup": [
+      "Stand tall on your left leg, bend your right knee and grip the inside of your right ankle behind you."
+    ],
+    "instructions": [
+      "Reach your left arm forward and up as you press your right foot back and up into your hand.",
+      "Let your chest tilt slightly forward as the back leg rises, body opening into a graceful standing backbend.",
+      "Square your hips toward the front and fix your gaze past your reaching fingertips.",
+      "Hold with poise and steady breath, then lower slowly and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Warrior_I",
+    "name": "Warrior I (Virabhadrasana I)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "glutes"],
+    "secondaryMuscles": ["calves", "shoulders", "abdominals"],
+    "setup": [
+      "From standing, step your left foot back about a leg-length, back foot angled out 45 degrees, hips squared to the front."
+    ],
+    "instructions": [
+      "Bend your right knee until it stacks over the ankle, thigh moving toward parallel.",
+      "Sweep both arms overhead, palms facing each other, shoulders relaxed away from the ears.",
+      "Press the outer edge of the back foot down and lift through the chest.",
+      "Hold and breathe, then switch sides."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Warrior_II",
+    "name": "Warrior II (Virabhadrasana II)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "adductors"],
+    "secondaryMuscles": ["abductors", "shoulders", "calves"],
+    "setup": [
+      "Step your feet wide apart, turn your right foot out 90 degrees and your left toes slightly in, hips opening to the side."
+    ],
+    "instructions": [
+      "Bend your right knee over the ankle while the back leg stays straight and strong.",
+      "Extend your arms parallel to the floor, reaching actively front and back.",
+      "Keep your torso vertical and centred between your legs; gaze over the front fingertips.",
+      "Sink and hold with steady breath, then repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Warrior_III",
+    "name": "Warrior III (Virabhadrasana III)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["hamstrings", "glutes"],
+    "secondaryMuscles": ["lower back", "abdominals", "calves"],
+    "setup": [
+      "Stand on your right leg with your arms extended overhead, palms facing each other."
+    ],
+    "instructions": [
+      "Hinge forward from the hips, lifting your left leg straight behind you until torso, arms and leg form one horizontal line.",
+      "Keep your hips level — the lifted leg's toes point straight down.",
+      "Reach long through fingertips and heel in opposite directions, gaze at the floor just ahead.",
+      "Hold with steady balance, then rise and change sides."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Reverse_Warrior",
+    "name": "Reverse Warrior (Viparita Virabhadrasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "abdominals"],
+    "secondaryMuscles": ["adductors", "shoulders", "lats"],
+    "setup": [
+      "Begin in Warrior II with your right knee bent and arms extended."
+    ],
+    "instructions": [
+      "Flip your right palm up and reach the arm overhead as your torso leans back into a gentle side bend.",
+      "Let your left hand rest lightly on your back leg without putting weight into it.",
+      "Keep the front knee bent and sinking — the legs do not move as the torso arcs.",
+      "Breathe into the long right side of your body, then repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Extended_Side_Angle",
+    "name": "Extended Side Angle Pose (Utthita Parsvakonasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "abdominals"],
+    "secondaryMuscles": ["adductors", "shoulders", "lats"],
+    "setup": [
+      "From Warrior II with your right knee bent, prepare to tilt your torso toward the front leg."
+    ],
+    "instructions": [
+      "Lower your right forearm onto your right thigh, or your fingertips to the floor outside the front foot.",
+      "Sweep your left arm over your ear, creating one long line from back heel to fingertips.",
+      "Spiral your chest open toward the ceiling, gazing up under the raised arm.",
+      "Press through the outer edge of the back foot, hold, then switch sides."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Half_Moon_Balance",
+    "name": "Half Moon Balance (Ardha Chandrasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "abductors"],
+    "secondaryMuscles": ["hamstrings", "abdominals", "glutes"],
+    "setup": [
+      "From a forward fold over your right leg, place your right fingertips on the floor (or a block) about 30 cm ahead of your toes."
+    ],
+    "instructions": [
+      "Shift your weight into the right leg and float your left leg up behind you to hip height.",
+      "Stack your hips and shoulders sideways, opening your whole body to the left.",
+      "Extend your left arm straight up and, if balanced, turn your gaze toward it.",
+      "Hold with steady breath, lower with control, and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Pigeon_Pose",
+    "name": "Pigeon Pose (Eka Pada Rajakapotasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["glutes", "abductors"],
+    "secondaryMuscles": ["quadriceps", "lower back"],
+    "setup": [
+      "From all fours, slide your right knee forward behind your right wrist, shin angled across the mat, and extend your left leg straight back."
+    ],
+    "instructions": [
+      "Square your hips toward the floor, letting them sink evenly — pad the right hip if it lifts.",
+      "Stay upright on your fingertips for a deeper hip opening, or fold your torso forward over the front shin.",
+      "Relax your shoulders and breathe slowly into the stretch in your outer hip and glute.",
+      "Walk your hands back, step out, and repeat on the other side."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Bridge_Pose",
+    "name": "Bridge Pose (Setu Bandha Sarvangasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["glutes", "lower back"],
+    "secondaryMuscles": ["hamstrings", "chest", "quadriceps"],
+    "setup": [
+      "Lie on your back with knees bent, feet flat and hip-width apart close to your hips, arms alongside your body."
+    ],
+    "instructions": [
+      "Press into your feet and lift your hips toward the ceiling, rolling up through the spine.",
+      "Interlace your fingers under your back and walk your shoulders together beneath you.",
+      "Keep your knees tracking straight ahead and your chest lifting toward your chin.",
+      "Hold with smooth breath, then release the hands and roll down one vertebra at a time."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Boat_Pose",
+    "name": "Boat Pose (Navasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["abdominals"],
+    "secondaryMuscles": ["quadriceps", "lower back"],
+    "setup": [
+      "Sit with knees bent, feet flat, hands lightly behind your knees, spine long."
+    ],
+    "instructions": [
+      "Lean back slightly and float your feet off the floor, shins parallel to the ground.",
+      "Extend your arms forward at shoulder height, palms facing in.",
+      "For the full pose, straighten your legs so your body forms a V; keep your chest lifted, never rounding.",
+      "Hold with steady breath, lower with control."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Crow_Pose",
+    "name": "Crow Pose (Bakasana)",
+    "force": "static",
+    "level": "expert",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["shoulders", "abdominals"],
+    "secondaryMuscles": ["forearms", "triceps", "chest"],
+    "setup": [
+      "Squat down and plant your palms shoulder-width apart on the floor, fingers spread wide."
+    ],
+    "instructions": [
+      "Bend your elbows slightly and snug your knees high onto the backs of your upper arms.",
+      "Shift your weight forward onto your hands, gazing at a point ahead of your fingertips — never straight down.",
+      "Lift one foot, then the other, balancing with your heels drawing toward your hips.",
+      "Hold with the core gripping strongly, then lower your feet softly back to the floor."
+    ],
+    "category": "yoga",
+    "restSeconds": 20,
+    "images": []
+  },
+  {
+    "id": "Four_Limbed_Staff_Pose",
+    "name": "Four-Limbed Staff Pose (Chaturanga Dandasana)",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["triceps", "chest"],
+    "secondaryMuscles": ["abdominals", "shoulders"],
+    "setup": [
+      "Begin in a strong high plank with shoulders stacked over wrists and body in one line."
+    ],
+    "instructions": [
+      "Shift slightly forward onto your toes, then bend your elbows straight back, hugging them against your ribs.",
+      "Lower in one piece until your upper arms are parallel to the floor — no lower.",
+      "Keep your shoulders level with your elbows and your body rigid from head to heels.",
+      "Hold the hover with steady breath, then push back up or move into Upward Dog."
+    ],
+    "category": "yoga",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Happy_Baby_Pose",
+    "name": "Happy Baby Pose (Ananda Balasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["adductors", "glutes"],
+    "secondaryMuscles": ["lower back", "hamstrings"],
+    "setup": [
+      "Lie on your back and draw your knees toward your armpits, shins vertical."
+    ],
+    "instructions": [
+      "Grip the outside edges of your feet with your hands, knees staying wide of your torso.",
+      "Gently pull your feet down so your knees draw toward the floor beside your ribs.",
+      "Keep your tailbone and shoulders melting into the floor.",
+      "Rock softly side to side if it feels good, breathing slowly throughout."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Low_Lunge",
+    "name": "Low Lunge (Anjaneyasana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["quadriceps", "glutes"],
+    "secondaryMuscles": ["abdominals", "abductors"],
+    "setup": [
+      "From a lunge with your right foot forward, lower your left knee to the floor and untuck the toes."
+    ],
+    "instructions": [
+      "Let your hips sink forward and down until you feel a deep stretch along the front of the left hip and thigh.",
+      "Sweep both arms overhead, lifting through the chest.",
+      "Keep the front knee over the ankle and the tailbone gently tucked.",
+      "Hold and breathe, then switch sides."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Legs_Up_The_Wall",
+    "name": "Legs-Up-the-Wall Pose (Viparita Karani)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": null,
+    "equipment": "body only",
+    "primaryMuscles": ["hamstrings"],
+    "secondaryMuscles": ["lower back"],
+    "setup": [
+      "Sit sideways against a wall, then swing your legs up the wall as you lie back, hips close to or touching the base."
+    ],
+    "instructions": [
+      "Rest your legs vertically against the wall, arms relaxed by your sides, palms up.",
+      "Let your whole back release into the floor and your breath slow.",
+      "Stay for the prescribed time, letting the legs drain and the nervous system settle.",
+      "Bend your knees and roll to one side to come out."
+    ],
+    "category": "yoga",
+    "restSeconds": 0,
+    "images": []
+  },
+  {
+    "id": "Puppy_Pose",
+    "name": "Puppy Pose (Uttana Shishosana)",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["shoulders", "lats"],
+    "secondaryMuscles": ["middle back", "chest"],
+    "setup": [
+      "Start on all fours with hips stacked over knees."
+    ],
+    "instructions": [
+      "Keeping your hips high over your knees, walk your hands far forward and melt your chest toward the floor.",
+      "Rest your forehead (or chin) on the mat, arms active and reaching.",
+      "Let your heart sink and your upper back open with each exhale.",
+      "Walk the hands back under your shoulders to come out."
+    ],
+    "category": "yoga",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Thread_The_Needle_Stretch",
+    "name": "Thread the Needle Stretch",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["middle back", "shoulders"],
+    "secondaryMuscles": ["traps", "neck"],
+    "setup": [
+      "Start on all fours with hands under shoulders and knees under hips."
+    ],
+    "instructions": [
+      "Slide your right arm palm-up underneath your left arm, lowering your right shoulder and ear to the floor.",
+      "Let your upper back rotate while your hips stay high and square.",
+      "Press lightly through the left hand to deepen the twist between your shoulder blades.",
+      "Breathe into the stretch, unwind, and repeat on the other side."
+    ],
+    "category": "stretching",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Butterfly_Stretch",
+    "name": "Butterfly Stretch",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": ["adductors"],
+    "secondaryMuscles": ["glutes", "lower back"],
+    "setup": [
+      "Sit tall and bring the soles of your feet together, letting your knees fall open."
+    ],
+    "instructions": [
+      "Hold your feet or ankles and draw your heels comfortably toward your hips.",
+      "Sit tall through the spine, then hinge gently forward from the hips for a deeper stretch.",
+      "Let gravity ease the knees toward the floor — never bounce or press them down.",
+      "Hold and breathe slowly into the inner thighs."
+    ],
+    "category": "stretching",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Frog_Stretch",
+    "name": "Frog Stretch",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": ["adductors"],
+    "secondaryMuscles": ["glutes"],
+    "setup": [
+      "On a padded surface, come to all fours and slide your knees wide apart, ankles in line with the knees, feet flexed and turned out."
+    ],
+    "instructions": [
+      "Lower onto your forearms and slowly rock your hips back toward your heels.",
+      "Stop where the inner-thigh stretch is strong but breathable, keeping the spine neutral.",
+      "Rock gently forward and back, or simply hold at your edge.",
+      "Walk your knees together carefully to come out."
+    ],
+    "category": "stretching",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Scorpion_Stretch",
+    "name": "Scorpion Stretch",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["chest", "abdominals"],
+    "secondaryMuscles": ["lower back", "shoulders", "glutes"],
+    "setup": [
+      "Lie face down with arms out to the sides at shoulder height, palms down."
+    ],
+    "instructions": [
+      "Bend your right knee and sweep your right foot up and across your body toward your left hand.",
+      "Let your right hip lift and rotate while your chest and arms stay anchored to the floor.",
+      "Pause at the end range, feeling the stretch through your hip flexor, trunk and chest.",
+      "Return slowly and alternate sides at a controlled pace."
+    ],
+    "category": "stretching",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Sleeper_Stretch",
+    "name": "Sleeper Stretch",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": ["shoulders"],
+    "secondaryMuscles": ["middle back"],
+    "setup": [
+      "Lie on your right side with your right arm straight out from the shoulder and the elbow bent to 90 degrees, fingers pointing up."
+    ],
+    "instructions": [
+      "With your left hand, gently press your right forearm down toward the floor, rotating the shoulder internally.",
+      "Keep your shoulder blade pinned beneath you and your torso from rolling backward.",
+      "Press only to a gentle stretch at the back of the shoulder — never into pain.",
+      "Hold, release slowly, and repeat on the other side."
+    ],
+    "category": "stretching",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Band_Shoulder_Dislocates",
+    "name": "Band Shoulder Dislocates",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "bands",
+    "primaryMuscles": ["shoulders"],
+    "secondaryMuscles": ["chest", "traps"],
+    "setup": [
+      "Hold a light resistance band in front of your thighs with a grip wide enough that there is gentle tension."
+    ],
+    "instructions": [
+      "With straight arms, raise the band up and over your head in a wide arc until it touches behind your hips.",
+      "Reverse the arc back over your head to the front.",
+      "Keep both arms straight and the movement slow — widen your grip if it pinches.",
+      "Gradually narrow the grip over weeks as your shoulders open up."
+    ],
+    "category": "mobility",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Cossack_Squat",
+    "name": "Cossack Squat",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": ["adductors", "quadriceps"],
+    "secondaryMuscles": ["hamstrings", "glutes", "calves"],
+    "setup": [
+      "Stand with your feet in a very wide stance, toes pointing slightly out, arms reaching forward for balance."
+    ],
+    "instructions": [
+      "Shift your weight onto your right leg and sit down into a deep squat over that side, left leg staying straight with toes pulling up toward the ceiling.",
+      "Keep the right heel planted and your chest as upright as possible.",
+      "Push back up through the right leg to the wide stance.",
+      "Flow smoothly across to the other side and alternate with control."
+    ],
+    "category": "mobility",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Jefferson_Curl",
+    "name": "Jefferson Curl",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "dumbbell",
+    "primaryMuscles": ["hamstrings", "lower back"],
+    "secondaryMuscles": ["middle back", "glutes"],
+    "setup": [
+      "Stand tall on a low box or step holding a light dumbbell in both hands in front of your thighs."
+    ],
+    "instructions": [
+      "Tuck your chin and roll down one vertebra at a time, letting the weight hang and pull you gently toward your toes.",
+      "Keep your legs straight and your hips stacked over your heels as your spine curls into a full stretch.",
+      "Pause briefly at your end range without forcing depth.",
+      "Re-stack the spine slowly from the tailbone up, head arriving last. Keep the load light — this is a mobility drill, not a lift."
+    ],
+    "category": "mobility",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Wall_Angels",
+    "name": "Wall Angels",
+    "force": "pull",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": ["shoulders", "middle back"],
+    "secondaryMuscles": ["traps", "neck"],
+    "setup": [
+      "Stand with your back, head and hips against a wall, feet a short step away, and press your lower back gently toward the wall."
+    ],
+    "instructions": [
+      "Place your arms against the wall in a goalpost position: elbows bent 90 degrees at shoulder height, backs of hands touching the wall.",
+      "Slowly slide your arms up the wall as far as you can without anything peeling away.",
+      "Slide them back down, drawing the elbows toward your ribs.",
+      "Move slowly and keep ribs down and contact constant throughout."
+    ],
+    "category": "mobility",
+    "restSeconds": 20,
+    "images": []
+  }
+]

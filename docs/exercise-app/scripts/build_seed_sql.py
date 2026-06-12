@@ -4,6 +4,7 @@
 Reads:
   data/exercises.json              (free-exercise-db, public domain, 873 exercises)
   data/supplemental-exercises.json (original additions: HIIT/conditioning/mobility)
+  data/yoga-stretch-exercises.json  (original: Bikram 26, other yoga, extra stretches)
 
 Writes:
   seed_exercises.sql      INSERTs for body_part, equipment, exercise,
@@ -33,6 +34,7 @@ MODALITY = {
     "cardio": "cardio",
     "hiit": "hiit",
     "mobility": "mobility",
+    "yoga": "yoga",
 }
 
 LEVEL = {"beginner": "beginner", "intermediate": "intermediate",
@@ -66,12 +68,12 @@ EQUIPMENT_CATEGORY = {
 DEFAULT_REST = {
     "strength": 90, "powerlifting": 150, "olympic_weightlifting": 120,
     "strongman": 120, "plyometrics": 60, "cardio": 60, "hiit": 45,
-    "stretching": 15, "mobility": 15,
+    "stretching": 15, "mobility": 15, "yoga": 15,
 }
 MIN_REST = {
     "strength": 30, "powerlifting": 60, "olympic_weightlifting": 60,
     "strongman": 60, "plyometrics": 30, "cardio": 15, "hiit": 15,
-    "stretching": 0, "mobility": 0,
+    "stretching": 0, "mobility": 0, "yoga": 0,
 }
 
 
@@ -89,7 +91,7 @@ def q(text):
 
 def metrics_for(ex, modality: str, loadable: bool):
     """Pick the tracked metrics; first entry is primary."""
-    if ex.get("force") == "static" or modality in ("stretching", "mobility"):
+    if ex.get("force") == "static" or modality in ("stretching", "mobility", "yoga"):
         return ["duration"]
     if modality == "cardio":
         return ["duration", "distance", "calories"]
@@ -103,6 +105,7 @@ def metrics_for(ex, modality: str, loadable: bool):
 def main():
     base = json.loads((ROOT / "data" / "exercises.json").read_text())
     extra = json.loads((ROOT / "data" / "supplemental-exercises.json").read_text())
+    extra += json.loads((ROOT / "data" / "yoga-stretch-exercises.json").read_text())
     for ex in base:
         ex["_source"] = "free-exercise-db"
     for ex in extra:
