@@ -49,6 +49,8 @@ EQUIPMENT_PHRASE = {
     "air bike": " on an air assault bike",
     "rowing machine": " on a rowing ergometer",
     "ski erg": " on a ski erg machine",
+    "rucksack": " carrying a loaded military rucksack",
+    "jerry can": " carrying a heavy jerry can in each hand",
     "body only": ", bodyweight only, no equipment",
     "other": "",
 }
@@ -126,6 +128,7 @@ def main():
     base = json.loads((ROOT / "data" / "exercises.json").read_text())
     extra = json.loads((ROOT / "data" / "supplemental-exercises.json").read_text())
     extra += json.loads((ROOT / "data" / "yoga-stretch-exercises.json").read_text())
+    extra += json.loads((ROOT / "data" / "military-exercises.json").read_text())
     curated = json.loads((ROOT / "data" / "curated-media-prompts.json").read_text())
     curated.pop("_comment", None)
 

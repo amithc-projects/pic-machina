@@ -11,6 +11,7 @@ hill-sprint,Hill Sprint,cardio,intermediate,push,compound,body only,quadriceps; 
 jogging-treadmill,"Jogging, Treadmill",cardio,beginner,,,machine,quadriceps,glutes; hamstrings,60,free-exercise-db
 jumping-jacks,Jumping Jacks,cardio,beginner,push,compound,body only,calves; shoulders,quadriceps; glutes; adductors; abductors,20,original
 lateral-shuffle,Lateral Shuffle,cardio,beginner,push,compound,body only,quadriceps; abductors,glutes; calves; adductors,30,original
+loaded-march-tab,Loaded March (Tab),cardio,intermediate,push,compound,rucksack,quadriceps; glutes,hamstrings; calves; traps; lower back; shoulders,180,original
 prowler-sprint,Prowler Sprint,cardio,beginner,push,compound,other,hamstrings,calves; chest; glutes; quadriceps; shoulders,60,free-exercise-db
 recumbent-bike,Recumbent Bike,cardio,beginner,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
 rope-jumping,Rope Jumping,cardio,intermediate,,,other,quadriceps,calves; hamstrings,60,free-exercise-db
@@ -127,6 +128,7 @@ quick-leap,Quick Leap,plyometrics,beginner,push,compound,other,quadriceps,calves
 return-push-from-stance,Return Push from Stance,plyometrics,beginner,push,compound,medicine ball,shoulders,chest; triceps,60,free-exercise-db
 rocket-jump,Rocket Jump,plyometrics,beginner,push,compound,body only,quadriceps,calves; hamstrings,60,free-exercise-db
 scissors-jump,Scissors Jump,plyometrics,beginner,push,compound,body only,quadriceps,glutes; hamstrings,60,free-exercise-db
+seated-medicine-ball-power-throw,Seated Medicine Ball Power Throw,plyometrics,beginner,push,compound,medicine ball,chest; shoulders,triceps; abdominals,90,original
 side-hop-sprint,Side Hop-Sprint,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
 side-standing-long-jump,Side Standing Long Jump,plyometrics,beginner,push,compound,,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
 side-to-side-box-shuffle,Side to Side Box Shuffle,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
@@ -435,6 +437,7 @@ internal-rotation-with-band,Internal Rotation with Band,strength,beginner,,isola
 inverted-row,Inverted Row,strength,beginner,pull,compound,,middle back,lats,90,free-exercise-db
 inverted-row-with-straps,Inverted Row with Straps,strength,beginner,pull,compound,other,middle back,biceps; lats,90,free-exercise-db
 iron-cross,Iron Cross,strength,intermediate,push,compound,dumbbell,shoulders,chest; glutes; hamstrings; lower back; quadriceps; traps,90,free-exercise-db
+isometric-mid-thigh-pull,Isometric Mid-Thigh Pull,strength,beginner,pull,compound,barbell,glutes; hamstrings,quadriceps; lower back; traps; forearms,120,original
 isometric-neck-exercise-front-and-back,Isometric Neck Exercise - Front And Back,strength,beginner,static,isolation,body only,neck,,90,free-exercise-db
 isometric-neck-exercise-sides,Isometric Neck Exercise - Sides,strength,beginner,static,isolation,body only,neck,,90,free-exercise-db
 isometric-wipers,Isometric Wipers,strength,beginner,push,compound,body only,chest,abdominals; shoulders; triceps,90,free-exercise-db
@@ -909,11 +912,14 @@ axle-deadlift,Axle Deadlift,strongman,intermediate,pull,compound,other,lower bac
 backward-drag,Backward Drag,strongman,beginner,pull,compound,other,quadriceps,calves; forearms; glutes; hamstrings; lower back,120,free-exercise-db
 bear-crawl-sled-drags,Bear Crawl Sled Drags,strongman,beginner,push,compound,other,quadriceps,calves; glutes; hamstrings,120,free-exercise-db
 car-deadlift,Car Deadlift,strongman,intermediate,pull,compound,other,quadriceps,forearms; glutes; hamstrings; lower back; traps,120,free-exercise-db
+casualty-drag,Casualty Drag,strongman,intermediate,pull,compound,sandbag,quadriceps; glutes,hamstrings; forearms; biceps; traps; abdominals,120,original
 circus-bell,Circus Bell,strongman,expert,push,compound,other,shoulders,forearms; glutes; hamstrings; lower back; traps; triceps,120,free-exercise-db
 conan-s-wheel,Conan's Wheel,strongman,intermediate,,compound,other,quadriceps,abdominals; biceps; calves; forearms; lower back; shoulders; traps,120,free-exercise-db
 crucifix,Crucifix,strongman,beginner,static,isolation,other,shoulders,forearms,120,free-exercise-db
 farmer-s-walk,Farmer's Walk,strongman,intermediate,,compound,other,forearms,abdominals; glutes; hamstrings; lower back; quadriceps; traps,120,free-exercise-db
+fireman-s-carry,Fireman's Carry,strongman,expert,static,compound,other,quadriceps; traps,glutes; hamstrings; abdominals; shoulders; lower back,120,original
 forward-drag-with-press,Forward Drag with Press,strongman,intermediate,push,compound,other,chest,calves; glutes; hamstrings; quadriceps; shoulders; triceps,120,free-exercise-db
+jerry-can-carry,Jerry Can Carry,strongman,beginner,static,compound,jerry can,forearms; traps,abdominals; shoulders; glutes; quadriceps,90,original
 keg-load,Keg Load,strongman,intermediate,pull,compound,other,lower back,abdominals; biceps; calves; forearms; glutes; hamstrings; middle back; quadriceps; shoulders; traps,120,free-exercise-db
 log-lift,Log Lift,strongman,intermediate,push,compound,other,shoulders,abdominals; chest; glutes; hamstrings; lower back; middle back; quadriceps; traps; triceps,120,free-exercise-db
 power-stairs,Power Stairs,strongman,intermediate,pull,compound,other,hamstrings,adductors; calves; glutes; lower back; quadriceps; shoulders; traps,120,free-exercise-db
@@ -923,6 +929,7 @@ sandbag-load,Sandbag Load,strongman,beginner,pull,compound,other,quadriceps,abdo
 sandbag-shouldering,Sandbag Shouldering,strongman,intermediate,pull,compound,sandbag,glutes; hamstrings,quadriceps; lower back; traps; biceps; abdominals,90,original
 sled-drag-harness,Sled Drag - Harness,strongman,beginner,push,compound,other,quadriceps,calves; glutes; hamstrings,120,free-exercise-db
 sled-push,Sled Push,strongman,beginner,push,compound,other,quadriceps,calves; chest; glutes; hamstrings; triceps,120,free-exercise-db
+stretcher-carry,Stretcher Carry,strongman,intermediate,static,compound,other,forearms; traps,shoulders; abdominals; glutes; quadriceps,120,original
 tire-flip,Tire Flip,strongman,intermediate,pull,compound,other,quadriceps,calves; chest; forearms; glutes; hamstrings; lower back; shoulders; traps; triceps,120,free-exercise-db
 yoke-walk,Yoke Walk,strongman,intermediate,,compound,other,quadriceps,abdominals; abductors; adductors; calves; glutes; hamstrings; lower back,120,free-exercise-db
 awkward-pose-utkatasana,Awkward Pose (Utkatasana),yoga,beginner,static,compound,body only,quadriceps,glutes; calves; shoulders,15,original

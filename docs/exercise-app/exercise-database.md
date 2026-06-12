@@ -1,6 +1,6 @@
 # Exercise App — Master Exercise Database
 
-**971 exercises**, ready to seed the schema in [`schema.sql`](schema.sql).
+**978 exercises**, ready to seed the schema in [`schema.sql`](schema.sql).
 Browse the combined index in
 [`data/master-exercise-list.csv`](data/master-exercise-list.csv).
 
@@ -11,6 +11,7 @@ Browse the combined index in
 | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) | 873 | **Unlicense (public domain)** | `data/exercises.json` — name, category, level, force, mechanic, equipment, primary/secondary muscles, step-by-step instructions, reference photos |
 | Original supplement | 44 | Ours | `data/supplemental-exercises.json` — HIIT/conditioning/mobility staples missing from the base set |
 | Yoga & stretching pack | 54 | Ours | `data/yoga-stretch-exercises.json` — the full Bikram 26 sequence, 19 foundational poses from other yoga traditions (Wheel, Dancer's, the Warriors, Pigeon, Crow, …), and 9 stretches/mobility drills not covered by the base set |
+| Military pack | 7 | Ours | `data/military-exercises.json` — British Army test events and tasks: loaded march, casualty drag, jerry can/stretcher/fireman's carries, isometric mid-thigh pull, seated medicine ball power throw |
 
 free-exercise-db was chosen as the base because it is genuinely public domain
 (no attribution or share-alike obligations), unlike the other large open

@@ -61,6 +61,7 @@ EQUIPMENT_CATEGORY = {
     "foam roll": ("accessory", False), "battle ropes": ("accessory", False),
     "jump rope": ("accessory", False), "plyo box": ("accessory", False),
     "agility ladder": ("accessory", False), "suspension trainer": ("accessory", False),
+    "rucksack": ("accessory", True), "jerry can": ("free_weights", True),
     "body only": ("none", False), "other": ("none", False),
 }
 
@@ -106,6 +107,7 @@ def main():
     base = json.loads((ROOT / "data" / "exercises.json").read_text())
     extra = json.loads((ROOT / "data" / "supplemental-exercises.json").read_text())
     extra += json.loads((ROOT / "data" / "yoga-stretch-exercises.json").read_text())
+    extra += json.loads((ROOT / "data" / "military-exercises.json").read_text())
     for ex in base:
         ex["_source"] = "free-exercise-db"
     for ex in extra:

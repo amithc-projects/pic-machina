@@ -1,0 +1,160 @@
+[
+  {
+    "id": "Loaded_March_Tab",
+    "name": "Loaded March (Tab)",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "rucksack",
+    "primaryMuscles": ["quadriceps", "glutes"],
+    "secondaryMuscles": ["hamstrings", "calves", "traps", "lower back", "shoulders"],
+    "setup": [
+      "Load a rucksack (bergen) to the prescribed weight, packed high and tight against your back, straps snug.",
+      "Wear broken-in boots or sturdy footwear and plan a measured route."
+    ],
+    "instructions": [
+      "March at a brisk, sustainable pace — around 6 to 7 km/h on flat ground — driving through the full foot.",
+      "Stay tall under the load: chest up, shoulders back, core braced against the pack.",
+      "Take shorter, quicker steps uphill and controlled steps downhill.",
+      "Cover the prescribed distance or time; build weight and distance gradually week on week."
+    ],
+    "category": "cardio",
+    "restSeconds": 180,
+    "images": []
+  },
+  {
+    "id": "Casualty_Drag",
+    "name": "Casualty Drag",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "sandbag",
+    "primaryMuscles": ["quadriceps", "glutes"],
+    "secondaryMuscles": ["hamstrings", "forearms", "biceps", "traps", "abdominals"],
+    "setup": [
+      "Lay a heavy sandbag or drag dummy (training standard is around 110 kg, scale to ability) on a smooth, flat surface.",
+      "Mark out a 20-metre course."
+    ],
+    "instructions": [
+      "Grip the bag's handles or straps with both hands, facing away from the direction of travel.",
+      "Sit into a low position with your chest up and arms locked long.",
+      "Drive backward with powerful steps, leaning your bodyweight against the load.",
+      "Keep your spine neutral and your steps short and fast until the full distance is covered."
+    ],
+    "category": "strongman",
+    "restSeconds": 120,
+    "images": []
+  },
+  {
+    "id": "Jerry_Can_Carry",
+    "name": "Jerry Can Carry",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "jerry can",
+    "primaryMuscles": ["forearms", "traps"],
+    "secondaryMuscles": ["abdominals", "shoulders", "glutes", "quadriceps"],
+    "setup": [
+      "Place a filled jerry can (or heavy dumbbell/kettlebell) beside each foot — the military standard is two 20 kg cans."
+    ],
+    "instructions": [
+      "Deadlift both cans to standing with a flat back.",
+      "Walk the prescribed distance at a brisk, controlled pace, cans held at your sides.",
+      "Stay perfectly upright — no leaning, no swinging the cans.",
+      "Set the cans down with a flat back, rest as prescribed, and repeat."
+    ],
+    "category": "strongman",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Stretcher_Carry",
+    "name": "Stretcher Carry",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "other",
+    "primaryMuscles": ["forearms", "traps"],
+    "secondaryMuscles": ["shoulders", "abdominals", "glutes", "quadriceps"],
+    "setup": [
+      "Load a stretcher, litter or long bar to the prescribed weight. Work with a partner of similar height when carrying as a pair."
+    ],
+    "instructions": [
+      "Squat down with a flat back and grip the handles at both ends.",
+      "Stand together on a count, keeping the stretcher level.",
+      "Walk the prescribed distance with short, synchronised steps, shoulders packed and core braced.",
+      "Lower together with control. Swap ends or hands each interval to balance the load."
+    ],
+    "category": "strongman",
+    "restSeconds": 120,
+    "images": []
+  },
+  {
+    "id": "Mid_Thigh_Pull",
+    "name": "Isometric Mid-Thigh Pull",
+    "force": "pull",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "barbell",
+    "primaryMuscles": ["glutes", "hamstrings"],
+    "secondaryMuscles": ["quadriceps", "lower back", "traps", "forearms"],
+    "setup": [
+      "Set a barbell in a power rack at mid-thigh height and pin it so it cannot move (or load it far beyond your maximum).",
+      "Stand with the bar at mid-thigh, hands just outside your legs in an overhand grip."
+    ],
+    "instructions": [
+      "Set a flat back, chest up, shoulders slightly over the bar — a strong deadlift lockout position.",
+      "Pull upward against the immovable bar as hard as possible for around 5 seconds.",
+      "Drive through your whole foot and keep your arms straight — the legs and hips produce the force.",
+      "Release gradually, never abruptly. Rest fully between efforts."
+    ],
+    "category": "strength",
+    "restSeconds": 120,
+    "images": []
+  },
+  {
+    "id": "Seated_Medicine_Ball_Power_Throw",
+    "name": "Seated Medicine Ball Power Throw",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "medicine ball",
+    "primaryMuscles": ["chest", "shoulders"],
+    "secondaryMuscles": ["triceps", "abdominals"],
+    "setup": [
+      "Sit on the floor with your back and head flat against a wall, legs extended in front of you.",
+      "Hold a 4 kg medicine ball at your chest with both hands."
+    ],
+    "instructions": [
+      "Keeping your back against the wall throughout, explosively press the ball up and out at roughly 45 degrees.",
+      "Throw as far as possible — the distance from the wall to first bounce is your score.",
+      "No rocking or leaning forward: all the power comes from your chest, shoulders and arms.",
+      "Take full rest between attempts and record your best."
+    ],
+    "category": "plyometrics",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Firemans_Carry",
+    "name": "Fireman's Carry",
+    "force": "static",
+    "level": "expert",
+    "mechanic": "compound",
+    "equipment": "other",
+    "primaryMuscles": ["quadriceps", "traps"],
+    "secondaryMuscles": ["glutes", "hamstrings", "abdominals", "shoulders", "lower back"],
+    "setup": [
+      "Work with a partner of similar size, or use a heavy sandbag. Practise the lift unloaded first."
+    ],
+    "instructions": [
+      "Squat and pull the partner's arm across your shoulders, ducking your head under so their torso lies across your upper back.",
+      "Wrap one arm behind their knee and grip their wrist with the same hand, locking the load to your shoulders.",
+      "Stand by driving through your legs with a neutral spine.",
+      "Walk the prescribed distance with short, stable steps, then lower them down with control."
+    ],
+    "category": "strongman",
+    "restSeconds": 120,
+    "images": []
+  }
+]
