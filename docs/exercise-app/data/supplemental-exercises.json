@@ -1,0 +1,1273 @@
+[
+  {
+    "id": "Burpee",
+    "name": "Burpee",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "chest"
+    ],
+    "secondaryMuscles": [
+      "shoulders",
+      "triceps",
+      "abdominals",
+      "glutes",
+      "calves"
+    ],
+    "setup": [
+      "Clear a space roughly two metres long and stand tall with feet shoulder-width apart."
+    ],
+    "instructions": [
+      "Squat down and place both hands on the floor just inside your feet.",
+      "Jump or step your feet back into a high plank, keeping your body in a straight line.",
+      "Lower your chest to the floor for a full push-up.",
+      "Push back up and jump your feet forward to your hands.",
+      "Drive through your heels and jump vertically, reaching your arms overhead.",
+      "Land softly with bent knees and move straight into the next rep."
+    ],
+    "category": "hiit",
+    "restSeconds": 45,
+    "images": []
+  },
+  {
+    "id": "Squat_Thrust",
+    "name": "Squat Thrust (Half Burpee)",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "shoulders",
+      "glutes",
+      "hamstrings"
+    ],
+    "setup": [
+      "Stand with feet shoulder-width apart and arms by your sides."
+    ],
+    "instructions": [
+      "Squat down and place your hands on the floor in front of your feet.",
+      "Jump both feet back into a high plank position.",
+      "Immediately jump your feet back to your hands.",
+      "Stand up tall to finish the rep. No push-up and no jump — keep the pace brisk."
+    ],
+    "category": "hiit",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Sprawl",
+    "name": "Sprawl",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "chest",
+      "shoulders",
+      "glutes"
+    ],
+    "setup": [
+      "Stand in an athletic stance with knees slightly bent."
+    ],
+    "instructions": [
+      "Drop your hands to the floor and shoot your legs back, letting your hips sink toward the ground while your chest stays off the floor.",
+      "Keep your head up and back flat at the bottom.",
+      "Snap your feet back underneath your hips in one explosive motion.",
+      "Return to standing and repeat."
+    ],
+    "category": "hiit",
+    "restSeconds": 45,
+    "images": []
+  },
+  {
+    "id": "Jumping_Jacks",
+    "name": "Jumping Jacks",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "calves",
+      "shoulders"
+    ],
+    "secondaryMuscles": [
+      "quadriceps",
+      "glutes",
+      "adductors",
+      "abductors"
+    ],
+    "setup": [
+      "Stand tall with feet together and arms at your sides."
+    ],
+    "instructions": [
+      "Jump your feet out to just wider than shoulder width while swinging your arms overhead.",
+      "Jump your feet back together while bringing your arms back to your sides.",
+      "Stay light on the balls of your feet and keep a steady rhythm."
+    ],
+    "category": "cardio",
+    "restSeconds": 20,
+    "images": []
+  },
+  {
+    "id": "High_Knees",
+    "name": "High Knees",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "calves",
+      "glutes",
+      "hamstrings"
+    ],
+    "setup": [
+      "Stand tall with feet hip-width apart, arms bent at 90 degrees."
+    ],
+    "instructions": [
+      "Run on the spot, driving each knee up to hip height.",
+      "Pump your arms in opposition to your legs as if sprinting.",
+      "Stay on the balls of your feet, keep your chest up and core braced.",
+      "Aim for fast turnover rather than height once warm."
+    ],
+    "category": "cardio",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Butt_Kick_Run",
+    "name": "Butt Kick Run",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "hamstrings",
+      "calves"
+    ],
+    "secondaryMuscles": [
+      "quadriceps",
+      "glutes"
+    ],
+    "setup": [
+      "Stand tall with feet hip-width apart."
+    ],
+    "instructions": [
+      "Run on the spot, flicking each heel up toward your glutes.",
+      "Keep your knees pointing down and your thighs roughly vertical.",
+      "Pump your arms and keep ground contact light and quick."
+    ],
+    "category": "cardio",
+    "restSeconds": 20,
+    "images": []
+  },
+  {
+    "id": "Skater_Jumps",
+    "name": "Skater Jumps",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "glutes"
+    ],
+    "secondaryMuscles": [
+      "abductors",
+      "adductors",
+      "calves",
+      "abdominals"
+    ],
+    "setup": [
+      "Clear a space about two metres wide. Stand on your right leg with your left foot off the floor."
+    ],
+    "instructions": [
+      "Bound sideways to your left, landing softly on your left foot with your knee tracking over your toes.",
+      "Swing your right leg behind your left and your arms across your body like a speed skater.",
+      "Pause briefly to control the landing, then bound back to the right.",
+      "Keep your chest up and sink into each landing to absorb the impact."
+    ],
+    "category": "plyometrics",
+    "restSeconds": 45,
+    "images": []
+  },
+  {
+    "id": "Alternating_Jump_Lunges",
+    "name": "Alternating Jump Lunges",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "glutes"
+    ],
+    "secondaryMuscles": [
+      "hamstrings",
+      "calves",
+      "abdominals"
+    ],
+    "setup": [
+      "Step into a lunge: front knee over ankle, back knee just above the floor."
+    ],
+    "instructions": [
+      "Drive through your front foot and jump straight up.",
+      "Switch legs in the air and land softly in a lunge with the opposite leg forward.",
+      "Keep your torso upright and absorb each landing through bent knees.",
+      "Alternate legs every rep at a controlled, rhythmic pace."
+    ],
+    "category": "plyometrics",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Plank_Jacks",
+    "name": "Plank Jacks",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "shoulders",
+      "glutes",
+      "abductors"
+    ],
+    "setup": [
+      "Set up in a high plank with hands under shoulders and feet together."
+    ],
+    "instructions": [
+      "Keeping your core braced and hips level, jump both feet out wide.",
+      "Jump them back together. That is one rep.",
+      "Do not let your hips bounce or sag — the plank stays rigid throughout."
+    ],
+    "category": "hiit",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Plank_Shoulder_Taps",
+    "name": "Plank Shoulder Taps",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "shoulders",
+      "triceps"
+    ],
+    "setup": [
+      "Set up in a high plank with feet slightly wider than hip width for stability."
+    ],
+    "instructions": [
+      "Lift your right hand and tap your left shoulder, then return it to the floor.",
+      "Repeat with the left hand to the right shoulder.",
+      "Brace your core so your hips stay square to the floor — no rocking side to side.",
+      "Alternate hands at a slow, controlled tempo."
+    ],
+    "category": "strength",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Bear_Crawl",
+    "name": "Bear Crawl",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "shoulders",
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "quadriceps",
+      "triceps",
+      "glutes"
+    ],
+    "setup": [
+      "Clear a path of five to ten metres.",
+      "Start on all fours with hands under shoulders, knees under hips and hovering a few centimetres off the floor."
+    ],
+    "instructions": [
+      "Crawl forward by moving your right hand and left foot together, then your left hand and right foot.",
+      "Keep your knees low, back flat and hips level — imagine balancing a cup of water on your lower back.",
+      "Take small, quiet steps and keep your core braced.",
+      "Crawl backward the same way to return."
+    ],
+    "category": "hiit",
+    "restSeconds": 45,
+    "images": []
+  },
+  {
+    "id": "Crab_Walk",
+    "name": "Crab Walk",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "triceps",
+      "glutes"
+    ],
+    "secondaryMuscles": [
+      "shoulders",
+      "hamstrings",
+      "abdominals"
+    ],
+    "setup": [
+      "Sit on the floor with knees bent, feet flat, hands behind you with fingers pointing toward your feet.",
+      "Press through hands and feet to lift your hips off the floor."
+    ],
+    "instructions": [
+      "Walk forward by moving your right hand and left foot together, then the opposite pair.",
+      "Keep your hips lifted throughout — do not let them sag to the floor.",
+      "Travel the set distance, then reverse direction."
+    ],
+    "category": "hiit",
+    "restSeconds": 45,
+    "images": []
+  },
+  {
+    "id": "Wall_Sit",
+    "name": "Wall Sit",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps"
+    ],
+    "secondaryMuscles": [
+      "glutes",
+      "calves",
+      "abdominals"
+    ],
+    "setup": [
+      "Stand with your back flat against a wall, feet about 60 cm out from it, hip-width apart."
+    ],
+    "instructions": [
+      "Slide down the wall until your thighs are parallel to the floor and knees are at 90 degrees.",
+      "Keep your knees over your ankles, back pressed into the wall and hands off your thighs.",
+      "Breathe steadily and hold for the prescribed time."
+    ],
+    "category": "strength",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Pogo_Hops",
+    "name": "Pogo Hops",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "calves"
+    ],
+    "secondaryMuscles": [
+      "quadriceps",
+      "abdominals"
+    ],
+    "setup": [
+      "Stand tall with feet hip-width apart and hands on hips or by your sides."
+    ],
+    "instructions": [
+      "Bounce vertically off the balls of your feet with minimal knee bend, like a pogo stick.",
+      "Keep ground contact as short as possible and use your ankles as springs.",
+      "Stay tall — no folding at the hips."
+    ],
+    "category": "plyometrics",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Lateral_Shuffle",
+    "name": "Lateral Shuffle",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "abductors"
+    ],
+    "secondaryMuscles": [
+      "glutes",
+      "calves",
+      "adductors"
+    ],
+    "setup": [
+      "Mark out five to ten metres. Start in an athletic stance: hips back, knees bent, chest up."
+    ],
+    "instructions": [
+      "Shuffle sideways with quick, low steps, pushing off the trailing leg.",
+      "Never let your feet cross or click together.",
+      "Stay low the whole way, touch the line, and shuffle back the other direction."
+    ],
+    "category": "cardio",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Shuttle_Run",
+    "name": "Shuttle Run",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "hamstrings"
+    ],
+    "secondaryMuscles": [
+      "calves",
+      "glutes",
+      "abdominals"
+    ],
+    "setup": [
+      "Place two markers 10–20 metres apart on a flat, non-slip surface."
+    ],
+    "instructions": [
+      "Sprint from the start line to the far marker and touch the line with your hand or foot.",
+      "Decelerate under control, turn, and sprint back.",
+      "Repeat for the prescribed number of lengths.",
+      "Focus on fast, choppy steps into each turn and a hard drive out of it."
+    ],
+    "category": "cardio",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Hill_Sprint",
+    "name": "Hill Sprint",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "glutes"
+    ],
+    "secondaryMuscles": [
+      "hamstrings",
+      "calves",
+      "abdominals"
+    ],
+    "setup": [
+      "Find a hill with a moderate gradient (5–10%) and 30–60 metres of clear run.",
+      "Warm up thoroughly with jogging and drills before the first sprint."
+    ],
+    "instructions": [
+      "Sprint up the hill at near-maximal effort, driving your knees and pumping your arms.",
+      "Lean slightly into the hill from the ankles, not the waist.",
+      "Walk back down slowly — the walk-down is part of your recovery.",
+      "Repeat for the prescribed number of efforts."
+    ],
+    "category": "cardio",
+    "restSeconds": 120,
+    "images": []
+  },
+  {
+    "id": "Stair_Run",
+    "name": "Stair Run",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps",
+      "glutes"
+    ],
+    "secondaryMuscles": [
+      "calves",
+      "hamstrings"
+    ],
+    "setup": [
+      "Find a staircase of at least 20 steps with a handrail available for safety."
+    ],
+    "instructions": [
+      "Run up the stairs one step at a time, driving through each foot and pumping your arms.",
+      "Keep your eyes on the steps ahead, not your feet.",
+      "Walk back down to recover, then repeat.",
+      "Progress to two steps at a time only when confident."
+    ],
+    "category": "cardio",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Shadow_Boxing",
+    "name": "Shadow Boxing",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "shoulders",
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "triceps",
+      "biceps",
+      "calves"
+    ],
+    "setup": [
+      "Stand in a boxing stance: non-dominant foot forward, hands up at chin height, elbows tucked."
+    ],
+    "instructions": [
+      "Throw combinations of jabs, crosses, hooks and uppercuts at an imaginary opponent.",
+      "Rotate your hips and pivot your feet with each punch — power comes from the ground up.",
+      "Stay light on your feet, moving and slipping between combinations.",
+      "Keep your hands returning to guard after every punch."
+    ],
+    "category": "cardio",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Bird_Dog",
+    "name": "Bird Dog",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "lower back",
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "glutes",
+      "shoulders",
+      "hamstrings"
+    ],
+    "setup": [
+      "Start on all fours with hands under shoulders and knees under hips, spine neutral."
+    ],
+    "instructions": [
+      "Extend your right arm forward and left leg back until both are level with your torso.",
+      "Hold for two to three seconds without letting your hips rotate or your back arch.",
+      "Return to the start under control and repeat on the opposite side.",
+      "Move slowly — the goal is stability, not speed."
+    ],
+    "category": "strength",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "V_Up",
+    "name": "V-Up",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "quadriceps"
+    ],
+    "setup": [
+      "Lie flat on your back with legs straight and arms extended overhead."
+    ],
+    "instructions": [
+      "Simultaneously lift your legs and torso, reaching your hands toward your toes so your body forms a V.",
+      "Keep your legs as straight as possible and lift from your abs, not your neck.",
+      "Lower back down with control, stopping just before your heels and shoulders touch the floor."
+    ],
+    "category": "strength",
+    "restSeconds": 45,
+    "images": []
+  },
+  {
+    "id": "Hollow_Body_Hold",
+    "name": "Hollow Body Hold",
+    "force": "static",
+    "level": "intermediate",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "abdominals"
+    ],
+    "secondaryMuscles": [
+      "quadriceps"
+    ],
+    "setup": [
+      "Lie on your back with arms extended overhead and legs straight."
+    ],
+    "instructions": [
+      "Press your lower back into the floor and lift your shoulders, arms and legs a few centimetres off the ground.",
+      "Your body should form a shallow banana shape, rigid from fingertips to toes.",
+      "Hold for the prescribed time while breathing shallowly.",
+      "If your lower back lifts off the floor, raise your legs higher or bend your knees to regress."
+    ],
+    "category": "strength",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Battle_Rope_Alternating_Waves",
+    "name": "Battle Rope Alternating Waves",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "battle ropes",
+    "primaryMuscles": [
+      "shoulders",
+      "forearms"
+    ],
+    "secondaryMuscles": [
+      "biceps",
+      "abdominals",
+      "lats"
+    ],
+    "setup": [
+      "Anchor the rope at its midpoint and hold one end in each hand.",
+      "Stand in a quarter squat with feet shoulder-width apart and enough slack in the rope."
+    ],
+    "instructions": [
+      "Whip your arms up and down in alternation, sending continuous waves down each side of the rope.",
+      "Keep your knees bent, core braced and torso steady — the arms do the whipping.",
+      "Maintain wave height and speed for the full work interval."
+    ],
+    "category": "hiit",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Battle_Rope_Slams",
+    "name": "Battle Rope Slams",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "battle ropes",
+    "primaryMuscles": [
+      "shoulders",
+      "lats"
+    ],
+    "secondaryMuscles": [
+      "abdominals",
+      "forearms",
+      "quadriceps"
+    ],
+    "setup": [
+      "Anchor the rope at its midpoint and hold one end in each hand.",
+      "Stand with feet shoulder-width apart, knees soft."
+    ],
+    "instructions": [
+      "Extend up onto your toes as you raise both rope ends overhead.",
+      "Slam the ropes into the floor as hard as possible, dropping into a quarter squat as you do.",
+      "Immediately rise and repeat in one fluid rhythm."
+    ],
+    "category": "hiit",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Backward_Sled_Drag",
+    "name": "Backward Sled Drag",
+    "force": "pull",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "sled",
+    "primaryMuscles": [
+      "quadriceps"
+    ],
+    "secondaryMuscles": [
+      "glutes",
+      "hamstrings",
+      "calves",
+      "forearms"
+    ],
+    "setup": [
+      "Attach a strap or handles to the sled and face it, holding the handles with arms extended."
+    ],
+    "instructions": [
+      "Walk backward with short, quick steps, keeping tension on the strap the whole time.",
+      "Sit slightly into your hips and keep your chest up.",
+      "Drive each step through the ball of the foot and into the heel.",
+      "Drag for the prescribed distance."
+    ],
+    "category": "strength",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Wall_Ball_Shot",
+    "name": "Wall Ball Shot",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "medicine ball",
+    "primaryMuscles": [
+      "quadriceps",
+      "shoulders"
+    ],
+    "secondaryMuscles": [
+      "glutes",
+      "triceps",
+      "abdominals"
+    ],
+    "setup": [
+      "Stand an arm's length from a sturdy wall with a target roughly 3 metres up.",
+      "Hold a medicine ball at chest height with elbows tucked."
+    ],
+    "instructions": [
+      "Squat to full depth, keeping the ball at your chest.",
+      "Drive up explosively and throw the ball at the wall target as you reach full extension.",
+      "Catch the ball as it rebounds and absorb it straight into the next squat.",
+      "Keep a smooth, continuous rhythm throughout the set."
+    ],
+    "category": "hiit",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Dumbbell_Thruster",
+    "name": "Dumbbell Thruster",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "dumbbell",
+    "primaryMuscles": [
+      "quadriceps",
+      "shoulders"
+    ],
+    "secondaryMuscles": [
+      "glutes",
+      "triceps",
+      "abdominals"
+    ],
+    "setup": [
+      "Hold a dumbbell in each hand at shoulder height, palms facing in, feet shoulder-width apart."
+    ],
+    "instructions": [
+      "Squat to at least parallel, keeping your elbows up and chest tall.",
+      "Drive up hard out of the squat and use the momentum to press both dumbbells overhead in one motion.",
+      "Lock out your arms with biceps by your ears, then lower the dumbbells back to your shoulders as you descend into the next rep."
+    ],
+    "category": "strength",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Devil_Press",
+    "name": "Devil Press",
+    "force": "push",
+    "level": "expert",
+    "mechanic": "compound",
+    "equipment": "dumbbell",
+    "primaryMuscles": [
+      "shoulders",
+      "quadriceps"
+    ],
+    "secondaryMuscles": [
+      "chest",
+      "glutes",
+      "hamstrings",
+      "abdominals"
+    ],
+    "setup": [
+      "Place two dumbbells on the floor shoulder-width apart and stand behind them."
+    ],
+    "instructions": [
+      "Grip the dumbbells and perform a burpee, lowering your chest between them.",
+      "Jump your feet back in, then in one motion swing both dumbbells between your legs and overhead.",
+      "Finish standing tall with arms locked out overhead.",
+      "Lower the dumbbells back to the floor under control and repeat."
+    ],
+    "category": "hiit",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Man_Maker",
+    "name": "Man Maker",
+    "force": "push",
+    "level": "expert",
+    "mechanic": "compound",
+    "equipment": "dumbbell",
+    "primaryMuscles": [
+      "shoulders",
+      "lats"
+    ],
+    "secondaryMuscles": [
+      "chest",
+      "quadriceps",
+      "glutes",
+      "abdominals",
+      "triceps"
+    ],
+    "setup": [
+      "Hold a dumbbell in each hand and stand with feet shoulder-width apart."
+    ],
+    "instructions": [
+      "Squat down, place the dumbbells on the floor and jump back to a plank on the handles.",
+      "Perform a push-up, then row the right dumbbell to your hip, then the left.",
+      "Jump your feet back in, clean the dumbbells to your shoulders and stand.",
+      "Finish with a push press overhead, then lower and repeat."
+    ],
+    "category": "hiit",
+    "restSeconds": 120,
+    "images": []
+  },
+  {
+    "id": "Two_Hand_Kettlebell_Swing",
+    "name": "Two-Hand Kettlebell Swing",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "kettlebells",
+    "primaryMuscles": [
+      "glutes",
+      "hamstrings"
+    ],
+    "secondaryMuscles": [
+      "lower back",
+      "abdominals",
+      "shoulders",
+      "forearms"
+    ],
+    "setup": [
+      "Place a kettlebell about 30 cm in front of your feet.",
+      "Hinge at the hips with a flat back and grip the handle with both hands."
+    ],
+    "instructions": [
+      "Hike the bell back between your legs like a centre snap.",
+      "Snap your hips forward explosively, squeezing your glutes to float the bell to chest height.",
+      "Let the bell swing back down and re-hinge — arms stay relaxed, the hips do all the work.",
+      "Keep your spine neutral and heels planted throughout.",
+      "On the final rep, guide the bell safely back to the floor between your feet."
+    ],
+    "category": "strength",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Double_Unders",
+    "name": "Double Unders",
+    "force": "push",
+    "level": "expert",
+    "mechanic": "isolation",
+    "equipment": "jump rope",
+    "primaryMuscles": [
+      "calves"
+    ],
+    "secondaryMuscles": [
+      "forearms",
+      "shoulders",
+      "quadriceps",
+      "abdominals"
+    ],
+    "setup": [
+      "Size the rope: standing on its middle, the handles should reach your armpits.",
+      "Stand tall with elbows tucked to your ribs and hands slightly in front of your hips."
+    ],
+    "instructions": [
+      "Jump slightly higher than a normal skip and spin the rope twice under your feet per jump.",
+      "Generate speed from the wrists, not the arms or shoulders.",
+      "Keep your jumps vertical with a tight, hollow body — avoid donkey-kicking or piking.",
+      "Build up with single-single-double rhythms before attempting consecutive doubles."
+    ],
+    "category": "cardio",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Assault_Bike_Intervals",
+    "name": "Assault Bike Intervals",
+    "force": "push",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "air bike",
+    "primaryMuscles": [
+      "quadriceps",
+      "shoulders"
+    ],
+    "secondaryMuscles": [
+      "hamstrings",
+      "calves",
+      "chest",
+      "biceps"
+    ],
+    "setup": [
+      "Adjust the seat so your knee is slightly bent at the bottom of the pedal stroke.",
+      "Grip the handles and place feet on the pedals."
+    ],
+    "instructions": [
+      "Drive the pedals and handles together, pushing and pulling with your arms as your legs pump.",
+      "Work at near-maximal effort for the prescribed interval.",
+      "Spin easily during recovery periods — keep the legs moving.",
+      "Maintain an upright torso; avoid collapsing over the handles as you fatigue."
+    ],
+    "category": "hiit",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Rowing_Sprint_Intervals",
+    "name": "Rowing Sprint Intervals",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "rowing machine",
+    "primaryMuscles": [
+      "lats",
+      "quadriceps"
+    ],
+    "secondaryMuscles": [
+      "middle back",
+      "hamstrings",
+      "glutes",
+      "biceps",
+      "abdominals"
+    ],
+    "setup": [
+      "Strap your feet in and set the damper between 4 and 6.",
+      "Grip the handle, sit tall at the catch with shins vertical."
+    ],
+    "instructions": [
+      "Drive in sequence: legs, then hips, then arms; reverse the order on the recovery.",
+      "Row at maximal sustainable power for the prescribed sprint interval.",
+      "Paddle lightly during recovery intervals without letting your form collapse.",
+      "Aim for consistent split times across all intervals."
+    ],
+    "category": "hiit",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Ski_Erg",
+    "name": "Ski Erg",
+    "force": "pull",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "ski erg",
+    "primaryMuscles": [
+      "lats",
+      "triceps"
+    ],
+    "secondaryMuscles": [
+      "abdominals",
+      "shoulders",
+      "glutes",
+      "hamstrings"
+    ],
+    "setup": [
+      "Stand facing the machine, feet hip-width apart, and grip both handles overhead."
+    ],
+    "instructions": [
+      "Pull both handles down in a powerful arc, hinging at the hips and crunching your torso.",
+      "Finish with hands past your hips and a strong hip hinge.",
+      "Let the handles ride back up as you extend tall, then repeat in rhythm.",
+      "Drive with your lats and core, not just your arms."
+    ],
+    "category": "cardio",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Box_Step_Over",
+    "name": "Box Step-Over",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "plyo box",
+    "primaryMuscles": [
+      "quadriceps",
+      "glutes"
+    ],
+    "secondaryMuscles": [
+      "hamstrings",
+      "calves"
+    ],
+    "setup": [
+      "Stand side-on or facing a stable box at knee height or below."
+    ],
+    "instructions": [
+      "Step up onto the box with your full foot, drive through that leg and step over to the other side.",
+      "Step down softly one foot at a time.",
+      "Continue over and back, alternating the leading leg.",
+      "Stay tall and avoid pushing off the trailing foot."
+    ],
+    "category": "cardio",
+    "restSeconds": 45,
+    "images": []
+  },
+  {
+    "id": "Agility_Ladder_In_In_Out_Out",
+    "name": "Agility Ladder In-In-Out-Out",
+    "force": "push",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "agility ladder",
+    "primaryMuscles": [
+      "calves",
+      "quadriceps"
+    ],
+    "secondaryMuscles": [
+      "abductors",
+      "abdominals"
+    ],
+    "setup": [
+      "Lay an agility ladder flat on a non-slip surface and stand at one end."
+    ],
+    "instructions": [
+      "Step into the first square with your right foot, then your left.",
+      "Step out wide to either side of the next square: right foot out, left foot out.",
+      "Repeat the in-in-out-out pattern down the full ladder, staying on the balls of your feet.",
+      "Keep your arms pumping and eyes ahead, not on your feet."
+    ],
+    "category": "cardio",
+    "restSeconds": 30,
+    "images": []
+  },
+  {
+    "id": "Sandbag_Shouldering",
+    "name": "Sandbag Shouldering",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "sandbag",
+    "primaryMuscles": [
+      "glutes",
+      "hamstrings"
+    ],
+    "secondaryMuscles": [
+      "quadriceps",
+      "lower back",
+      "traps",
+      "biceps",
+      "abdominals"
+    ],
+    "setup": [
+      "Stand over a sandbag with feet just wider than shoulder width."
+    ],
+    "instructions": [
+      "Squat down with a flat back and wrap your arms under the bag.",
+      "Deadlift it to your lap, then in one powerful hip extension pull it up and onto one shoulder.",
+      "Stand fully, then lower the bag back to the floor under control.",
+      "Alternate shoulders each rep."
+    ],
+    "category": "strongman",
+    "restSeconds": 90,
+    "images": []
+  },
+  {
+    "id": "Suitcase_Carry",
+    "name": "Suitcase Carry",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "dumbbell",
+    "primaryMuscles": [
+      "abdominals",
+      "forearms"
+    ],
+    "secondaryMuscles": [
+      "traps",
+      "shoulders",
+      "glutes"
+    ],
+    "setup": [
+      "Place a heavy dumbbell or kettlebell beside one foot.",
+      "Deadlift it to standing with a neutral spine."
+    ],
+    "instructions": [
+      "Walk the prescribed distance carrying the weight in one hand like a suitcase.",
+      "Stay perfectly upright — do not lean toward or away from the weight.",
+      "Keep your shoulder packed and core braced against the side-bend.",
+      "Swap hands and repeat in the other direction."
+    ],
+    "category": "strength",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Swimming_Freestyle",
+    "name": "Swimming, Freestyle",
+    "force": "pull",
+    "level": "intermediate",
+    "mechanic": "compound",
+    "equipment": "other",
+    "primaryMuscles": [
+      "lats",
+      "shoulders"
+    ],
+    "secondaryMuscles": [
+      "triceps",
+      "abdominals",
+      "quadriceps",
+      "glutes"
+    ],
+    "setup": [
+      "Use a pool with lane space; wear goggles and a swim cap if preferred."
+    ],
+    "instructions": [
+      "Swim front crawl: alternate overhead arm strokes with a steady flutter kick.",
+      "Keep your body long and horizontal, rotating slightly with each stroke.",
+      "Breathe to the side every two or three strokes.",
+      "Swim the prescribed distance or time at a sustainable effort."
+    ],
+    "category": "cardio",
+    "restSeconds": 60,
+    "images": []
+  },
+  {
+    "id": "Ninety_Ninety_Hip_Switch",
+    "name": "90/90 Hip Switch",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "abductors",
+      "glutes"
+    ],
+    "secondaryMuscles": [
+      "adductors"
+    ],
+    "setup": [
+      "Sit on the floor with your front leg bent at 90 degrees in front of you and your back leg bent at 90 degrees to the side."
+    ],
+    "instructions": [
+      "Keeping both heels planted, rotate your knees together across your body until the legs swap positions.",
+      "Sit tall through the movement — avoid slumping or supporting yourself heavily on your hands.",
+      "Pause in each position and breathe into the hip stretch.",
+      "Continue switching sides slowly and with control."
+    ],
+    "category": "mobility",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Cat_Cow",
+    "name": "Cat-Cow",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "lower back"
+    ],
+    "secondaryMuscles": [
+      "abdominals",
+      "neck"
+    ],
+    "setup": [
+      "Start on all fours with hands under shoulders and knees under hips."
+    ],
+    "instructions": [
+      "Inhale and let your belly drop while lifting your chest and tailbone (cow).",
+      "Exhale and round your spine toward the ceiling, tucking your chin and tailbone (cat).",
+      "Move slowly between the two positions, segment by segment.",
+      "Match each movement to your breath."
+    ],
+    "category": "mobility",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Open_Book_Thoracic_Rotation",
+    "name": "Open Book Thoracic Rotation",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "middle back"
+    ],
+    "secondaryMuscles": [
+      "shoulders",
+      "chest"
+    ],
+    "setup": [
+      "Lie on your side with knees bent and stacked at 90 degrees, arms extended together in front of your chest."
+    ],
+    "instructions": [
+      "Keeping your knees glued together on the floor, sweep your top arm up and over to the opposite side like opening a book.",
+      "Follow your hand with your eyes and let your upper back rotate.",
+      "Pause and breathe at your end range, then return slowly.",
+      "Complete all reps on one side before switching."
+    ],
+    "category": "mobility",
+    "restSeconds": 10,
+    "images": []
+  },
+  {
+    "id": "Couch_Stretch",
+    "name": "Couch Stretch",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "isolation",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "quadriceps"
+    ],
+    "secondaryMuscles": [
+      "glutes",
+      "abdominals"
+    ],
+    "setup": [
+      "Kneel in front of a wall or couch. Place one shin vertically up the wall with the knee tucked into the corner, and step the other foot forward into a half-kneel."
+    ],
+    "instructions": [
+      "Squeeze the glute of the back leg and gently push your hips forward.",
+      "Raise your torso as upright as the stretch allows, keeping your ribs down.",
+      "Hold and breathe for the prescribed time, then switch legs.",
+      "Back off if you feel pinching in the knee or lower back."
+    ],
+    "category": "mobility",
+    "restSeconds": 15,
+    "images": []
+  },
+  {
+    "id": "Downward_Dog_To_Cobra",
+    "name": "Downward Dog to Cobra",
+    "force": "static",
+    "level": "beginner",
+    "mechanic": "compound",
+    "equipment": "body only",
+    "primaryMuscles": [
+      "hamstrings",
+      "shoulders"
+    ],
+    "secondaryMuscles": [
+      "calves",
+      "lower back",
+      "abdominals",
+      "chest"
+    ],
+    "setup": [
+      "Start in a high plank with hands under shoulders."
+    ],
+    "instructions": [
+      "Push your hips up and back into downward dog, pressing your heels toward the floor.",
+      "Hold for a breath, then shift forward, dropping your hips toward the floor as your chest pulls through your arms into cobra.",
+      "Lift your chest, keeping hips low and legs relaxed.",
+      "Flow smoothly back to downward dog and repeat with your breath."
+    ],
+    "category": "mobility",
+    "restSeconds": 10,
+    "images": []
+  }
+]

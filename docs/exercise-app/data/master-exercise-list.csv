@@ -1,0 +1,918 @@
+slug,name,modality,level,force,mechanic,equipment,primary_muscles,secondary_muscles,rest_seconds,source
+agility-ladder-in-in-out-out,Agility Ladder In-In-Out-Out,cardio,beginner,push,compound,agility ladder,calves; quadriceps,abductors; abdominals,30,original
+bicycling,Bicycling,cardio,beginner,,,other,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+bicycling-stationary,"Bicycling, Stationary",cardio,beginner,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+box-step-over,Box Step-Over,cardio,beginner,push,compound,plyo box,quadriceps; glutes,hamstrings; calves,45,original
+butt-kick-run,Butt Kick Run,cardio,beginner,push,compound,body only,hamstrings; calves,quadriceps; glutes,20,original
+double-unders,Double Unders,cardio,expert,push,isolation,jump rope,calves,forearms; shoulders; quadriceps; abdominals,60,original
+elliptical-trainer,Elliptical Trainer,cardio,intermediate,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+high-knees,High Knees,cardio,beginner,push,compound,body only,quadriceps; abdominals,calves; glutes; hamstrings,30,original
+hill-sprint,Hill Sprint,cardio,intermediate,push,compound,body only,quadriceps; glutes,hamstrings; calves; abdominals,120,original
+jogging-treadmill,"Jogging, Treadmill",cardio,beginner,,,machine,quadriceps,glutes; hamstrings,60,free-exercise-db
+jumping-jacks,Jumping Jacks,cardio,beginner,push,compound,body only,calves; shoulders,quadriceps; glutes; adductors; abductors,20,original
+lateral-shuffle,Lateral Shuffle,cardio,beginner,push,compound,body only,quadriceps; abductors,glutes; calves; adductors,30,original
+prowler-sprint,Prowler Sprint,cardio,beginner,push,compound,other,hamstrings,calves; chest; glutes; quadriceps; shoulders,60,free-exercise-db
+recumbent-bike,Recumbent Bike,cardio,beginner,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+rope-jumping,Rope Jumping,cardio,intermediate,,,other,quadriceps,calves; hamstrings,60,free-exercise-db
+rowing-stationary,"Rowing, Stationary",cardio,intermediate,,,machine,quadriceps,biceps; calves; glutes; hamstrings; lower back; middle back,60,free-exercise-db
+running-treadmill,"Running, Treadmill",cardio,beginner,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+shadow-boxing,Shadow Boxing,cardio,beginner,push,compound,body only,shoulders; abdominals,triceps; biceps; calves,60,original
+shuttle-run,Shuttle Run,cardio,intermediate,push,compound,body only,quadriceps; hamstrings,calves; glutes; abdominals,90,original
+skating,Skating,cardio,intermediate,,,other,quadriceps,abductors; adductors; calves; glutes; hamstrings,60,free-exercise-db
+ski-erg,Ski Erg,cardio,beginner,pull,compound,ski erg,lats; triceps,abdominals; shoulders; glutes; hamstrings,60,original
+stair-run,Stair Run,cardio,intermediate,push,compound,body only,quadriceps; glutes,calves; hamstrings,90,original
+stairmaster,Stairmaster,cardio,intermediate,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+step-mill,Step Mill,cardio,intermediate,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+swimming-freestyle,"Swimming, Freestyle",cardio,intermediate,pull,compound,other,lats; shoulders,triceps; abdominals; quadriceps; glutes,60,original
+trail-running-walking,Trail Running/Walking,cardio,beginner,,,,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+walking-treadmill,"Walking, Treadmill",cardio,beginner,,,machine,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+assault-bike-intervals,Assault Bike Intervals,hiit,intermediate,push,compound,air bike,quadriceps; shoulders,hamstrings; calves; chest; biceps,90,original
+battle-rope-alternating-waves,Battle Rope Alternating Waves,hiit,intermediate,pull,compound,battle ropes,shoulders; forearms,biceps; abdominals; lats,60,original
+battle-rope-slams,Battle Rope Slams,hiit,intermediate,pull,compound,battle ropes,shoulders; lats,abdominals; forearms; quadriceps,60,original
+bear-crawl,Bear Crawl,hiit,beginner,push,compound,body only,shoulders; abdominals,quadriceps; triceps; glutes,45,original
+burpee,Burpee,hiit,intermediate,push,compound,body only,quadriceps; chest,shoulders; triceps; abdominals; glutes; calves,45,original
+crab-walk,Crab Walk,hiit,beginner,push,compound,body only,triceps; glutes,shoulders; hamstrings; abdominals,45,original
+devil-press,Devil Press,hiit,expert,push,compound,dumbbell,shoulders; quadriceps,chest; glutes; hamstrings; abdominals,90,original
+man-maker,Man Maker,hiit,expert,push,compound,dumbbell,shoulders; lats,chest; quadriceps; glutes; abdominals; triceps,120,original
+plank-jacks,Plank Jacks,hiit,beginner,static,compound,body only,abdominals,shoulders; glutes; abductors,30,original
+rowing-sprint-intervals,Rowing Sprint Intervals,hiit,intermediate,pull,compound,rowing machine,lats; quadriceps,middle back; hamstrings; glutes; biceps; abdominals,90,original
+sprawl,Sprawl,hiit,intermediate,push,compound,body only,quadriceps; abdominals,chest; shoulders; glutes,45,original
+squat-thrust-half-burpee,Squat Thrust (Half Burpee),hiit,beginner,push,compound,body only,quadriceps; abdominals,shoulders; glutes; hamstrings,30,original
+wall-ball-shot,Wall Ball Shot,hiit,intermediate,push,compound,medicine ball,quadriceps; shoulders,glutes; triceps; abdominals,60,original
+90-90-hip-switch,90/90 Hip Switch,mobility,beginner,static,isolation,body only,abductors; glutes,adductors,15,original
+cat-cow,Cat-Cow,mobility,beginner,static,isolation,body only,lower back,abdominals; neck,10,original
+couch-stretch,Couch Stretch,mobility,beginner,static,isolation,body only,quadriceps,glutes; abdominals,15,original
+downward-dog-to-cobra,Downward Dog to Cobra,mobility,beginner,static,compound,body only,hamstrings; shoulders,calves; lower back; abdominals; chest,10,original
+open-book-thoracic-rotation,Open Book Thoracic Rotation,mobility,beginner,static,isolation,body only,middle back,shoulders; chest,10,original
+clean,Clean,olympic_weightlifting,intermediate,pull,compound,barbell,hamstrings,calves; forearms; glutes; lower back; quadriceps; shoulders; traps,120,free-exercise-db
+clean-and-jerk,Clean and Jerk,olympic_weightlifting,expert,push,compound,barbell,shoulders,abdominals; glutes; hamstrings; lower back; quadriceps; traps; triceps,120,free-exercise-db
+clean-deadlift,Clean Deadlift,olympic_weightlifting,beginner,pull,compound,barbell,hamstrings,forearms; glutes; lower back; middle back; quadriceps; traps,120,free-exercise-db
+clean-from-blocks,Clean from Blocks,olympic_weightlifting,intermediate,pull,compound,barbell,quadriceps,calves; glutes; hamstrings; shoulders; traps,120,free-exercise-db
+clean-pull,Clean Pull,olympic_weightlifting,intermediate,pull,compound,barbell,quadriceps,forearms; glutes; hamstrings; lower back; traps,120,free-exercise-db
+clean-shrug,Clean Shrug,olympic_weightlifting,beginner,pull,compound,barbell,traps,forearms; shoulders,120,free-exercise-db
+frankenstein-squat,Frankenstein Squat,olympic_weightlifting,intermediate,push,compound,barbell,quadriceps,abdominals; calves; glutes; hamstrings,120,free-exercise-db
+hang-clean,Hang Clean,olympic_weightlifting,intermediate,pull,compound,barbell,quadriceps,calves; forearms; glutes; hamstrings; lower back; shoulders; traps,120,free-exercise-db
+hang-clean-below-the-knees,Hang Clean - Below the Knees,olympic_weightlifting,intermediate,pull,compound,barbell,quadriceps,calves; forearms; glutes; hamstrings; lower back; shoulders; traps,120,free-exercise-db
+hang-snatch,Hang Snatch,olympic_weightlifting,expert,pull,compound,barbell,hamstrings,abdominals; calves; forearms; glutes; lower back; quadriceps; shoulders; traps,120,free-exercise-db
+hang-snatch-below-knees,Hang Snatch - Below Knees,olympic_weightlifting,expert,pull,compound,barbell,hamstrings,abdominals; calves; forearms; glutes; lower back; quadriceps; shoulders; traps,120,free-exercise-db
+heaving-snatch-balance,Heaving Snatch Balance,olympic_weightlifting,intermediate,push,compound,barbell,quadriceps,abdominals; forearms; glutes; hamstrings; shoulders; triceps,120,free-exercise-db
+jerk-balance,Jerk Balance,olympic_weightlifting,intermediate,push,compound,barbell,shoulders,glutes; hamstrings; quadriceps; triceps,120,free-exercise-db
+jerk-dip-squat,Jerk Dip Squat,olympic_weightlifting,intermediate,push,compound,barbell,quadriceps,abdominals; calves,120,free-exercise-db
+kneeling-jump-squat,Kneeling Jump Squat,olympic_weightlifting,expert,push,compound,barbell,glutes,calves; hamstrings; quadriceps,120,free-exercise-db
+muscle-snatch,Muscle Snatch,olympic_weightlifting,intermediate,pull,compound,barbell,hamstrings,glutes; lower back; quadriceps; shoulders; triceps,120,free-exercise-db
+olympic-squat,Olympic Squat,olympic_weightlifting,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings,120,free-exercise-db
+overhead-squat,Overhead Squat,olympic_weightlifting,expert,push,compound,barbell,quadriceps,abdominals; calves; glutes; hamstrings; lower back; shoulders; triceps,120,free-exercise-db
+power-clean-from-blocks,Power Clean from Blocks,olympic_weightlifting,intermediate,pull,compound,barbell,hamstrings,quadriceps,120,free-exercise-db
+power-jerk,Power Jerk,olympic_weightlifting,expert,push,compound,barbell,quadriceps,abdominals; calves; glutes; hamstrings; shoulders; triceps,120,free-exercise-db
+power-snatch,Power Snatch,olympic_weightlifting,expert,pull,compound,barbell,hamstrings,calves; glutes; lower back; quadriceps; shoulders; traps; triceps,120,free-exercise-db
+power-snatch-from-blocks,Power Snatch from Blocks,olympic_weightlifting,intermediate,pull,compound,barbell,quadriceps,calves; forearms; glutes; hamstrings; lower back; shoulders; traps; triceps,120,free-exercise-db
+push-press,Push Press,olympic_weightlifting,expert,push,compound,barbell,shoulders,quadriceps; triceps,120,free-exercise-db
+push-press-behind-the-neck,Push Press - Behind the Neck,olympic_weightlifting,intermediate,push,compound,barbell,shoulders,calves; quadriceps; triceps,120,free-exercise-db
+rack-delivery,Rack Delivery,olympic_weightlifting,intermediate,pull,compound,barbell,shoulders,forearms; traps,120,free-exercise-db
+romanian-deadlift-from-deficit,Romanian Deadlift from Deficit,olympic_weightlifting,intermediate,pull,compound,barbell,hamstrings,forearms; glutes; lower back; traps,120,free-exercise-db
+snatch,Snatch,olympic_weightlifting,intermediate,pull,compound,barbell,quadriceps,biceps; glutes; hamstrings; lower back; shoulders; traps; triceps,120,free-exercise-db
+snatch-balance,Snatch Balance,olympic_weightlifting,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings; shoulders; triceps,120,free-exercise-db
+snatch-deadlift,Snatch Deadlift,olympic_weightlifting,intermediate,pull,compound,barbell,hamstrings,forearms; glutes; hamstrings; lower back; quadriceps; traps,120,free-exercise-db
+snatch-from-blocks,Snatch from Blocks,olympic_weightlifting,expert,pull,compound,barbell,quadriceps,calves; forearms; glutes; hamstrings; lower back; shoulders; traps; triceps,120,free-exercise-db
+snatch-shrug,Snatch Shrug,olympic_weightlifting,intermediate,pull,compound,barbell,traps,forearms; shoulders,120,free-exercise-db
+split-clean,Split Clean,olympic_weightlifting,intermediate,pull,compound,barbell,quadriceps,calves; forearms; glutes; hamstrings; lower back; shoulders; traps,120,free-exercise-db
+split-jerk,Split Jerk,olympic_weightlifting,intermediate,push,compound,barbell,quadriceps,glutes; hamstrings; shoulders; triceps,120,free-exercise-db
+split-snatch,Split Snatch,olympic_weightlifting,expert,pull,compound,barbell,hamstrings,calves; forearms; glutes; hamstrings; lower back; quadriceps; shoulders; traps; triceps,120,free-exercise-db
+wide-stance-stiff-legs,Wide Stance Stiff Legs,olympic_weightlifting,intermediate,pull,compound,barbell,hamstrings,adductors; glutes; lower back,120,free-exercise-db
+alternate-leg-diagonal-bound,Alternate Leg Diagonal Bound,plyometrics,beginner,push,compound,,quadriceps,abductors; adductors; calves; glutes; hamstrings,60,free-exercise-db
+alternating-jump-lunges,Alternating Jump Lunges,plyometrics,intermediate,push,compound,body only,quadriceps; glutes,hamstrings; calves; abdominals,60,original
+backward-medicine-ball-throw,Backward Medicine Ball Throw,plyometrics,beginner,push,compound,medicine ball,shoulders,,60,free-exercise-db
+bench-jump,Bench Jump,plyometrics,intermediate,push,compound,body only,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+bench-sprint,Bench Sprint,plyometrics,beginner,push,compound,other,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+box-jump-multiple-response,Box Jump (Multiple Response),plyometrics,beginner,push,compound,other,hamstrings,abductors; adductors; calves; glutes; quadriceps,60,free-exercise-db
+box-skip,Box Skip,plyometrics,beginner,push,compound,other,hamstrings,abductors; adductors; calves; glutes; quadriceps,60,free-exercise-db
+carioca-quick-step,Carioca Quick Step,plyometrics,beginner,,,,adductors,abdominals; abductors; calves; glutes; hamstrings; quadriceps,60,free-exercise-db
+catch-and-overhead-throw,Catch and Overhead Throw,plyometrics,beginner,push,compound,medicine ball,lats,abdominals; chest; shoulders,60,free-exercise-db
+chest-push-from-3-point-stance,Chest Push from 3 point stance,plyometrics,beginner,push,compound,medicine ball,chest,abdominals; shoulders; triceps,60,free-exercise-db
+chest-push-multiple-response,Chest Push (multiple response),plyometrics,beginner,push,compound,medicine ball,chest,abdominals; shoulders; triceps,60,free-exercise-db
+chest-push-single-response,Chest Push (single response),plyometrics,beginner,push,compound,medicine ball,chest,abdominals; shoulders; triceps,60,free-exercise-db
+chest-push-with-run-release,Chest Push with Run Release,plyometrics,beginner,push,compound,medicine ball,chest,abdominals; shoulders; triceps,60,free-exercise-db
+depth-jump-leap,Depth Jump Leap,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; glutes; hamstrings,60,free-exercise-db
+double-leg-butt-kick,Double Leg Butt Kick,plyometrics,beginner,push,compound,body only,quadriceps,abductors; adductors; calves; glutes; hamstrings,60,free-exercise-db
+drop-push,Drop Push,plyometrics,intermediate,push,compound,other,chest,shoulders; triceps,60,free-exercise-db
+dumbbell-seated-box-jump,Dumbbell Seated Box Jump,plyometrics,intermediate,push,compound,dumbbell,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+fast-skipping,Fast Skipping,plyometrics,beginner,push,compound,body only,quadriceps,abductors; adductors; calves; glutes; hamstrings,60,free-exercise-db
+front-box-jump,Front Box Jump,plyometrics,beginner,push,compound,other,hamstrings,abductors; adductors; calves; glutes; quadriceps,60,free-exercise-db
+front-cone-hops-or-hurdle-hops,Front Cone Hops (or hurdle hops),plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; glutes; hamstrings,60,free-exercise-db
+heavy-bag-thrust,Heavy Bag Thrust,plyometrics,beginner,push,compound,other,chest,abdominals; shoulders; triceps,60,free-exercise-db
+hurdle-hops,Hurdle Hops,plyometrics,beginner,push,compound,other,hamstrings,abductors; adductors; calves; glutes; hamstrings,60,free-exercise-db
+incline-push-up-depth-jump,Incline Push-Up Depth Jump,plyometrics,beginner,push,compound,other,chest,shoulders; triceps,60,free-exercise-db
+isometric-chest-squeezes,Isometric Chest Squeezes,plyometrics,beginner,static,compound,body only,chest,shoulders; triceps,60,free-exercise-db
+knee-tuck-jump,Knee Tuck Jump,plyometrics,beginner,push,compound,body only,hamstrings,abductors; adductors; calves; glutes; quadriceps,60,free-exercise-db
+kneeling-arm-drill,Kneeling Arm Drill,plyometrics,beginner,pull,,,shoulders,abdominals,60,free-exercise-db
+lateral-bound,Lateral Bound,plyometrics,beginner,push,compound,body only,adductors,abductors; calves; glutes; hamstrings; quadriceps,60,free-exercise-db
+lateral-box-jump,Lateral Box Jump,plyometrics,beginner,push,compound,other,adductors,abductors; calves; glutes; hamstrings; quadriceps,60,free-exercise-db
+lateral-cone-hops,Lateral Cone Hops,plyometrics,beginner,push,compound,other,adductors,abductors; calves; glutes; hamstrings; quadriceps,60,free-exercise-db
+linear-3-part-start-technique,Linear 3-Part Start Technique,plyometrics,beginner,push,compound,,hamstrings,calves; quadriceps,60,free-exercise-db
+linear-acceleration-wall-drill,Linear Acceleration Wall Drill,plyometrics,beginner,,compound,,hamstrings,calves; glutes; quadriceps,60,free-exercise-db
+linear-depth-jump,Linear Depth Jump,plyometrics,intermediate,push,compound,other,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+medicine-ball-chest-pass,Medicine Ball Chest Pass,plyometrics,beginner,push,compound,medicine ball,chest,shoulders; triceps,60,free-exercise-db
+medicine-ball-full-twist,Medicine Ball Full Twist,plyometrics,beginner,pull,compound,medicine ball,abdominals,shoulders,60,free-exercise-db
+medicine-ball-scoop-throw,Medicine Ball Scoop Throw,plyometrics,beginner,push,compound,medicine ball,shoulders,abdominals; hamstrings; quadriceps,60,free-exercise-db
+mountain-climbers,Mountain Climbers,plyometrics,beginner,pull,compound,,quadriceps,chest; hamstrings; shoulders,60,free-exercise-db
+moving-claw-series,Moving Claw Series,plyometrics,beginner,,compound,,hamstrings,calves; quadriceps,60,free-exercise-db
+overhead-slam,Overhead Slam,plyometrics,beginner,pull,compound,medicine ball,lats,,60,free-exercise-db
+plyo-push-up,Plyo Push-up,plyometrics,beginner,push,compound,body only,chest,shoulders; triceps,60,free-exercise-db
+pogo-hops,Pogo Hops,plyometrics,beginner,push,isolation,body only,calves,quadriceps; abdominals,30,original
+quick-leap,Quick Leap,plyometrics,beginner,push,compound,other,quadriceps,calves; hamstrings,60,free-exercise-db
+return-push-from-stance,Return Push from Stance,plyometrics,beginner,push,compound,medicine ball,shoulders,chest; triceps,60,free-exercise-db
+rocket-jump,Rocket Jump,plyometrics,beginner,push,compound,body only,quadriceps,calves; hamstrings,60,free-exercise-db
+scissors-jump,Scissors Jump,plyometrics,beginner,push,compound,body only,quadriceps,glutes; hamstrings,60,free-exercise-db
+side-hop-sprint,Side Hop-Sprint,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
+side-standing-long-jump,Side Standing Long Jump,plyometrics,beginner,push,compound,,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+side-to-side-box-shuffle,Side to Side Box Shuffle,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
+single-cone-sprint-drill,Single-Cone Sprint Drill,plyometrics,beginner,push,,other,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+single-leg-butt-kick,Single Leg Butt Kick,plyometrics,beginner,push,compound,body only,quadriceps,calves; hamstrings,60,free-exercise-db
+single-leg-hop-progression,Single-Leg Hop Progression,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
+single-leg-lateral-hop,Single-Leg Lateral Hop,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
+single-leg-push-off,Single Leg Push-off,plyometrics,beginner,push,compound,other,quadriceps,calves; hamstrings,60,free-exercise-db
+single-leg-stride-jump,Single-Leg Stride Jump,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
+skater-jumps,Skater Jumps,plyometrics,intermediate,push,compound,body only,quadriceps; glutes,abductors; adductors; calves; abdominals,45,original
+sledgehammer-swings,Sledgehammer Swings,plyometrics,beginner,pull,compound,other,abdominals,calves; forearms; lats; middle back; shoulders,60,free-exercise-db
+split-jump,Split Jump,plyometrics,beginner,push,compound,body only,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+standing-long-jump,Standing Long Jump,plyometrics,beginner,push,compound,body only,quadriceps,calves; glutes; hamstrings,60,free-exercise-db
+standing-two-arm-overhead-throw,Standing Two-Arm Overhead Throw,plyometrics,beginner,pull,compound,medicine ball,shoulders,chest; lats,60,free-exercise-db
+star-jump,Star Jump,plyometrics,beginner,push,compound,body only,quadriceps,calves; glutes; hamstrings; shoulders,60,free-exercise-db
+stride-jump-crossover,Stride Jump Crossover,plyometrics,beginner,push,compound,other,quadriceps,abductors; adductors; calves; hamstrings,60,free-exercise-db
+supine-chest-throw,Supine Chest Throw,plyometrics,beginner,push,compound,medicine ball,triceps,chest; shoulders,60,free-exercise-db
+supine-one-arm-overhead-throw,Supine One-Arm Overhead Throw,plyometrics,beginner,pull,compound,medicine ball,abdominals,chest; lats; shoulders,60,free-exercise-db
+supine-two-arm-overhead-throw,Supine Two-Arm Overhead Throw,plyometrics,beginner,pull,compound,medicine ball,abdominals,chest; lats; shoulders,60,free-exercise-db
+vertical-swing,Vertical Swing,plyometrics,beginner,pull,compound,dumbbell,hamstrings,glutes; quadriceps; shoulders,60,free-exercise-db
+band-good-morning,Band Good Morning,powerlifting,beginner,pull,compound,bands,hamstrings,glutes; lower back,150,free-exercise-db
+band-good-morning-pull-through,Band Good Morning (Pull Through),powerlifting,beginner,pull,compound,bands,hamstrings,glutes; lower back,150,free-exercise-db
+barbell-glute-bridge,Barbell Glute Bridge,powerlifting,intermediate,push,compound,barbell,glutes,calves; hamstrings,150,free-exercise-db
+barbell-hip-thrust,Barbell Hip Thrust,powerlifting,intermediate,push,compound,barbell,glutes,calves; hamstrings,150,free-exercise-db
+bench-press-powerlifting,Bench Press - Powerlifting,powerlifting,intermediate,push,compound,barbell,triceps,chest; forearms; lats; shoulders,150,free-exercise-db
+bench-press-with-chains,Bench Press with Chains,powerlifting,expert,push,compound,barbell,triceps,chest; lats; shoulders,150,free-exercise-db
+board-press,Board Press,powerlifting,intermediate,push,compound,barbell,triceps,chest; forearms; lats; shoulders,150,free-exercise-db
+box-squat,Box Squat,powerlifting,intermediate,push,compound,barbell,quadriceps,adductors; calves; glutes; hamstrings; lower back,150,free-exercise-db
+box-squat-with-bands,Box Squat with Bands,powerlifting,expert,push,compound,barbell,quadriceps,abductors; adductors; calves; glutes; hamstrings; lower back,150,free-exercise-db
+chain-handle-extension,Chain Handle Extension,powerlifting,intermediate,push,isolation,other,triceps,,150,free-exercise-db
+chain-press,Chain Press,powerlifting,intermediate,push,compound,other,chest,shoulders; triceps,150,free-exercise-db
+deadlift-with-bands,Deadlift with Bands,powerlifting,expert,pull,compound,barbell,lower back,forearms; glutes; hamstrings; middle back; quadriceps; traps,150,free-exercise-db
+deadlift-with-chains,Deadlift with Chains,powerlifting,expert,pull,compound,barbell,lower back,forearms; glutes; hamstrings; middle back; quadriceps; traps,150,free-exercise-db
+deficit-deadlift,Deficit Deadlift,powerlifting,intermediate,pull,compound,barbell,lower back,forearms; glutes; hamstrings; middle back; quadriceps; traps,150,free-exercise-db
+dumbbell-floor-press,Dumbbell Floor Press,powerlifting,intermediate,push,compound,dumbbell,triceps,chest; shoulders,150,free-exercise-db
+floor-press,Floor Press,powerlifting,intermediate,push,compound,barbell,triceps,chest; shoulders,150,free-exercise-db
+floor-press-with-chains,Floor Press with Chains,powerlifting,intermediate,push,compound,barbell,triceps,chest; shoulders,150,free-exercise-db
+glute-ham-raise,Glute Ham Raise,powerlifting,intermediate,pull,compound,machine,hamstrings,calves; glutes,150,free-exercise-db
+good-morning,Good Morning,powerlifting,intermediate,push,compound,barbell,hamstrings,abdominals; glutes; lower back,150,free-exercise-db
+good-morning-off-pins,Good Morning off Pins,powerlifting,intermediate,push,compound,barbell,hamstrings,abdominals; glutes; lower back,150,free-exercise-db
+hanging-bar-good-morning,Hanging Bar Good Morning,powerlifting,intermediate,push,compound,barbell,hamstrings,abdominals; glutes; lower back,150,free-exercise-db
+hip-lift-with-band,Hip Lift with Band,powerlifting,beginner,push,compound,bands,glutes,calves; hamstrings,150,free-exercise-db
+kneeling-squat,Kneeling Squat,powerlifting,intermediate,push,compound,barbell,glutes,abdominals; hamstrings; lower back,150,free-exercise-db
+pin-presses,Pin Presses,powerlifting,intermediate,push,compound,barbell,triceps,chest; forearms; lats; middle back; shoulders,150,free-exercise-db
+rack-pull-with-bands,Rack Pull with Bands,powerlifting,intermediate,pull,compound,barbell,lower back,forearms; glutes; hamstrings; quadriceps; traps,150,free-exercise-db
+rack-pulls,Rack Pulls,powerlifting,intermediate,pull,compound,barbell,lower back,forearms; glutes; hamstrings; traps,150,free-exercise-db
+reverse-band-bench-press,Reverse Band Bench Press,powerlifting,intermediate,push,compound,barbell,triceps,chest; forearms; lats; middle back; shoulders,150,free-exercise-db
+reverse-band-box-squat,Reverse Band Box Squat,powerlifting,intermediate,push,compound,barbell,quadriceps,abductors; adductors; calves; forearms; glutes; hamstrings; lower back,150,free-exercise-db
+reverse-band-deadlift,Reverse Band Deadlift,powerlifting,expert,pull,compound,barbell,lower back,abductors; adductors; calves; glutes; hamstrings; quadriceps,150,free-exercise-db
+reverse-band-power-squat,Reverse Band Power Squat,powerlifting,expert,push,compound,barbell,quadriceps,adductors; calves; glutes; hamstrings; lower back,150,free-exercise-db
+reverse-band-sumo-deadlift,Reverse Band Sumo Deadlift,powerlifting,expert,pull,compound,barbell,hamstrings,abductors; adductors; calves; forearms; glutes; lower back; quadriceps; traps,150,free-exercise-db
+seated-good-mornings,Seated Good Mornings,powerlifting,intermediate,pull,compound,barbell,lower back,glutes,150,free-exercise-db
+speed-box-squat,Speed Box Squat,powerlifting,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings,150,free-exercise-db
+squat-with-bands,Squat with Bands,powerlifting,intermediate,push,compound,barbell,quadriceps,adductors; calves; glutes; hamstrings; lower back,150,free-exercise-db
+squat-with-chains,Squat with Chains,powerlifting,intermediate,push,compound,barbell,quadriceps,adductors; calves; glutes; hamstrings; lower back,150,free-exercise-db
+sumo-deadlift,Sumo Deadlift,powerlifting,intermediate,pull,compound,barbell,hamstrings,adductors; forearms; glutes; lower back; middle back; quadriceps; traps,150,free-exercise-db
+sumo-deadlift-with-bands,Sumo Deadlift with Bands,powerlifting,intermediate,pull,compound,barbell,hamstrings,adductors; forearms; glutes; lower back; middle back; quadriceps; traps,150,free-exercise-db
+sumo-deadlift-with-chains,Sumo Deadlift with Chains,powerlifting,intermediate,pull,compound,barbell,hamstrings,abductors; adductors; forearms; glutes; lower back; middle back; quadriceps; traps,150,free-exercise-db
+3-4-sit-up,3/4 Sit-Up,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+ab-crunch-machine,Ab Crunch Machine,strength,intermediate,pull,isolation,machine,abdominals,,90,free-exercise-db
+ab-roller,Ab Roller,strength,intermediate,pull,compound,other,abdominals,shoulders,90,free-exercise-db
+advanced-kettlebell-windmill,Advanced Kettlebell Windmill,strength,intermediate,push,isolation,kettlebells,abdominals,glutes; hamstrings; shoulders,90,free-exercise-db
+air-bike,Air Bike,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+alternate-hammer-curl,Alternate Hammer Curl,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+alternate-heel-touchers,Alternate Heel Touchers,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+alternate-incline-dumbbell-curl,Alternate Incline Dumbbell Curl,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+alternating-cable-shoulder-press,Alternating Cable Shoulder Press,strength,beginner,push,compound,cable,shoulders,triceps,90,free-exercise-db
+alternating-deltoid-raise,Alternating Deltoid Raise,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+alternating-floor-press,Alternating Floor Press,strength,beginner,push,compound,kettlebells,chest,abdominals; shoulders; triceps,90,free-exercise-db
+alternating-hang-clean,Alternating Hang Clean,strength,intermediate,pull,compound,kettlebells,hamstrings,biceps; calves; forearms; glutes; lower back; traps,90,free-exercise-db
+alternating-kettlebell-press,Alternating Kettlebell Press,strength,intermediate,push,compound,kettlebells,shoulders,triceps,90,free-exercise-db
+alternating-kettlebell-row,Alternating Kettlebell Row,strength,intermediate,pull,isolation,kettlebells,middle back,biceps; lats,90,free-exercise-db
+alternating-renegade-row,Alternating Renegade Row,strength,expert,pull,compound,kettlebells,middle back,abdominals; biceps; chest; lats; triceps,90,free-exercise-db
+anti-gravity-press,Anti-Gravity Press,strength,beginner,push,compound,barbell,shoulders,middle back; traps; triceps,90,free-exercise-db
+arnold-dumbbell-press,Arnold Dumbbell Press,strength,intermediate,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+around-the-worlds,Around The Worlds,strength,intermediate,push,compound,dumbbell,chest,shoulders,90,free-exercise-db
+back-flyes-with-bands,Back Flyes - With Bands,strength,beginner,pull,compound,bands,shoulders,middle back; triceps,90,free-exercise-db
+backward-sled-drag,Backward Sled Drag,strength,beginner,pull,compound,sled,quadriceps,glutes; hamstrings; calves; forearms,90,original
+balance-board,Balance Board,strength,beginner,,compound,other,calves,hamstrings; quadriceps,90,free-exercise-db
+ball-leg-curl,Ball Leg Curl,strength,beginner,pull,isolation,exercise ball,hamstrings,calves; glutes,90,free-exercise-db
+band-assisted-pull-up,Band Assisted Pull-Up,strength,beginner,,compound,other,lats,abdominals; forearms; middle back,90,free-exercise-db
+band-hip-adductions,Band Hip Adductions,strength,beginner,pull,isolation,bands,adductors,,90,free-exercise-db
+band-pull-apart,Band Pull Apart,strength,beginner,pull,isolation,bands,shoulders,middle back; traps,90,free-exercise-db
+band-skull-crusher,Band Skull Crusher,strength,beginner,push,isolation,bands,triceps,,90,free-exercise-db
+barbell-ab-rollout,Barbell Ab Rollout,strength,intermediate,pull,compound,barbell,abdominals,lower back; shoulders,90,free-exercise-db
+barbell-ab-rollout-on-knees,Barbell Ab Rollout - On Knees,strength,expert,pull,compound,barbell,abdominals,lower back; shoulders,90,free-exercise-db
+barbell-bench-press-medium-grip,Barbell Bench Press - Medium Grip,strength,beginner,push,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+barbell-curl,Barbell Curl,strength,beginner,pull,isolation,barbell,biceps,forearms,90,free-exercise-db
+barbell-curls-lying-against-an-incline,Barbell Curls Lying Against An Incline,strength,beginner,pull,isolation,barbell,biceps,,90,free-exercise-db
+barbell-deadlift,Barbell Deadlift,strength,intermediate,pull,compound,barbell,lower back,calves; forearms; glutes; hamstrings; lats; middle back; quadriceps; traps,90,free-exercise-db
+barbell-full-squat,Barbell Full Squat,strength,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+barbell-guillotine-bench-press,Barbell Guillotine Bench Press,strength,intermediate,push,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+barbell-hack-squat,Barbell Hack Squat,strength,intermediate,push,compound,barbell,quadriceps,calves; forearms; hamstrings,90,free-exercise-db
+barbell-incline-bench-press-medium-grip,Barbell Incline Bench Press - Medium Grip,strength,beginner,push,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+barbell-incline-shoulder-raise,Barbell Incline Shoulder Raise,strength,beginner,push,compound,barbell,shoulders,chest,90,free-exercise-db
+barbell-lunge,Barbell Lunge,strength,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+barbell-rear-delt-row,Barbell Rear Delt Row,strength,beginner,pull,compound,barbell,shoulders,biceps; lats; middle back,90,free-exercise-db
+barbell-rollout-from-bench,Barbell Rollout from Bench,strength,intermediate,pull,compound,barbell,abdominals,glutes; hamstrings; lats; shoulders,90,free-exercise-db
+barbell-seated-calf-raise,Barbell Seated Calf Raise,strength,beginner,push,isolation,barbell,calves,,90,free-exercise-db
+barbell-shoulder-press,Barbell Shoulder Press,strength,intermediate,push,compound,barbell,shoulders,chest; triceps,90,free-exercise-db
+barbell-shrug,Barbell Shrug,strength,beginner,pull,isolation,barbell,traps,,90,free-exercise-db
+barbell-shrug-behind-the-back,Barbell Shrug Behind The Back,strength,beginner,pull,isolation,barbell,traps,forearms; middle back,90,free-exercise-db
+barbell-side-bend,Barbell Side Bend,strength,beginner,pull,isolation,barbell,abdominals,lower back,90,free-exercise-db
+barbell-side-split-squat,Barbell Side Split Squat,strength,beginner,push,compound,barbell,quadriceps,calves; hamstrings; lower back,90,free-exercise-db
+barbell-squat,Barbell Squat,strength,beginner,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+barbell-squat-to-a-bench,Barbell Squat To A Bench,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+barbell-step-ups,Barbell Step Ups,strength,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings; quadriceps,90,free-exercise-db
+barbell-walking-lunge,Barbell Walking Lunge,strength,beginner,push,compound,barbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+battling-ropes,Battling Ropes,strength,beginner,push,compound,other,shoulders,chest; forearms,90,free-exercise-db
+bench-dips,Bench Dips,strength,beginner,push,compound,body only,triceps,chest; shoulders,90,free-exercise-db
+bench-press-with-bands,Bench Press - With Bands,strength,beginner,push,compound,bands,chest,shoulders; triceps,90,free-exercise-db
+bent-arm-barbell-pullover,Bent-Arm Barbell Pullover,strength,intermediate,pull,compound,barbell,lats,chest; lats; shoulders; triceps,90,free-exercise-db
+bent-arm-dumbbell-pullover,Bent-Arm Dumbbell Pullover,strength,intermediate,push,compound,dumbbell,chest,lats; shoulders; triceps,90,free-exercise-db
+bent-knee-hip-raise,Bent-Knee Hip Raise,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+bent-over-barbell-row,Bent Over Barbell Row,strength,beginner,pull,compound,barbell,middle back,biceps; lats; shoulders,90,free-exercise-db
+bent-over-dumbbell-rear-delt-raise-with-head-on-bench,Bent Over Dumbbell Rear Delt Raise With Head On Bench,strength,beginner,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+bent-over-low-pulley-side-lateral,Bent Over Low-Pulley Side Lateral,strength,beginner,pull,isolation,cable,shoulders,lower back; middle back; traps,90,free-exercise-db
+bent-over-one-arm-long-bar-row,Bent Over One-Arm Long Bar Row,strength,beginner,pull,compound,barbell,middle back,biceps; lats; lower back; traps,90,free-exercise-db
+bent-over-two-arm-long-bar-row,Bent Over Two-Arm Long Bar Row,strength,intermediate,pull,compound,barbell,middle back,biceps; lats,90,free-exercise-db
+bent-over-two-dumbbell-row,Bent Over Two-Dumbbell Row,strength,beginner,pull,compound,dumbbell,middle back,biceps; lats; shoulders,90,free-exercise-db
+bent-over-two-dumbbell-row-with-palms-in,Bent Over Two-Dumbbell Row With Palms In,strength,beginner,pull,compound,dumbbell,middle back,biceps; lats,90,free-exercise-db
+bent-press,Bent Press,strength,expert,pull,compound,kettlebells,abdominals,glutes; hamstrings; lower back; quadriceps; shoulders; triceps,90,free-exercise-db
+bird-dog,Bird Dog,strength,beginner,static,compound,body only,lower back; abdominals,glutes; shoulders; hamstrings,30,original
+body-tricep-press,Body Tricep Press,strength,beginner,push,isolation,body only,triceps,,90,free-exercise-db
+body-up,Body-Up,strength,intermediate,push,isolation,body only,triceps,abdominals; forearms,90,free-exercise-db
+bodyweight-flyes,Bodyweight Flyes,strength,intermediate,push,isolation,e-z curl bar,chest,abdominals; shoulders; triceps,90,free-exercise-db
+bodyweight-mid-row,Bodyweight Mid Row,strength,intermediate,pull,compound,other,middle back,biceps; lats,90,free-exercise-db
+bodyweight-squat,Bodyweight Squat,strength,beginner,push,compound,body only,quadriceps,glutes; hamstrings,90,free-exercise-db
+bodyweight-walking-lunge,Bodyweight Walking Lunge,strength,beginner,push,compound,,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+bosu-ball-cable-crunch-with-side-bends,Bosu Ball Cable Crunch With Side Bends,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+bottoms-up,Bottoms Up,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+bottoms-up-clean-from-the-hang-position,Bottoms-Up Clean From The Hang Position,strength,intermediate,pull,compound,kettlebells,forearms,biceps; shoulders,90,free-exercise-db
+box-squat-with-chains,Box Squat with Chains,strength,expert,push,compound,barbell,quadriceps,abductors; adductors; calves; glutes; hamstrings; lower back,90,free-exercise-db
+bradford-rocky-presses,Bradford/Rocky Presses,strength,beginner,push,compound,barbell,shoulders,triceps,90,free-exercise-db
+butt-lift-bridge,Butt Lift (Bridge),strength,beginner,push,isolation,body only,glutes,hamstrings,90,free-exercise-db
+butt-ups,Butt-Ups,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+butterfly,Butterfly,strength,beginner,pull,isolation,machine,chest,,90,free-exercise-db
+cable-chest-press,Cable Chest Press,strength,beginner,push,compound,cable,chest,shoulders; triceps,90,free-exercise-db
+cable-crossover,Cable Crossover,strength,beginner,push,isolation,cable,chest,shoulders,90,free-exercise-db
+cable-crunch,Cable Crunch,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+cable-deadlifts,Cable Deadlifts,strength,beginner,pull,compound,cable,quadriceps,forearms; glutes; hamstrings; lower back,90,free-exercise-db
+cable-hammer-curls-rope-attachment,Cable Hammer Curls - Rope Attachment,strength,beginner,pull,isolation,cable,biceps,,90,free-exercise-db
+cable-hip-adduction,Cable Hip Adduction,strength,beginner,pull,isolation,cable,quadriceps,,90,free-exercise-db
+cable-incline-pushdown,Cable Incline Pushdown,strength,beginner,pull,isolation,cable,lats,,90,free-exercise-db
+cable-incline-triceps-extension,Cable Incline Triceps Extension,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+cable-internal-rotation,Cable Internal Rotation,strength,beginner,pull,compound,cable,shoulders,,90,free-exercise-db
+cable-iron-cross,Cable Iron Cross,strength,beginner,push,isolation,cable,chest,,90,free-exercise-db
+cable-judo-flip,Cable Judo Flip,strength,beginner,pull,compound,cable,abdominals,,90,free-exercise-db
+cable-lying-triceps-extension,Cable Lying Triceps Extension,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+cable-one-arm-tricep-extension,Cable One Arm Tricep Extension,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+cable-preacher-curl,Cable Preacher Curl,strength,beginner,pull,isolation,cable,biceps,forearms,90,free-exercise-db
+cable-rear-delt-fly,Cable Rear Delt Fly,strength,beginner,pull,isolation,cable,shoulders,,90,free-exercise-db
+cable-reverse-crunch,Cable Reverse Crunch,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+cable-rope-overhead-triceps-extension,Cable Rope Overhead Triceps Extension,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+cable-rope-rear-delt-rows,Cable Rope Rear-Delt Rows,strength,beginner,pull,compound,cable,shoulders,biceps; middle back,90,free-exercise-db
+cable-russian-twists,Cable Russian Twists,strength,beginner,pull,compound,cable,abdominals,,90,free-exercise-db
+cable-seated-crunch,Cable Seated Crunch,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+cable-seated-lateral-raise,Cable Seated Lateral Raise,strength,beginner,pull,isolation,cable,shoulders,middle back; traps,90,free-exercise-db
+cable-shoulder-press,Cable Shoulder Press,strength,beginner,push,compound,cable,shoulders,triceps,90,free-exercise-db
+cable-shrugs,Cable Shrugs,strength,beginner,pull,isolation,cable,traps,,90,free-exercise-db
+cable-wrist-curl,Cable Wrist Curl,strength,beginner,pull,isolation,cable,forearms,,90,free-exercise-db
+calf-machine-shoulder-shrug,Calf-Machine Shoulder Shrug,strength,beginner,pull,isolation,machine,traps,,90,free-exercise-db
+calf-press,Calf Press,strength,beginner,push,isolation,machine,calves,,90,free-exercise-db
+calf-press-on-the-leg-press-machine,Calf Press On The Leg Press Machine,strength,beginner,push,isolation,machine,calves,,90,free-exercise-db
+calf-raise-on-a-dumbbell,Calf Raise On A Dumbbell,strength,intermediate,push,isolation,dumbbell,calves,,90,free-exercise-db
+calf-raises-with-bands,Calf Raises - With Bands,strength,beginner,push,isolation,bands,calves,,90,free-exercise-db
+car-drivers,Car Drivers,strength,beginner,push,isolation,barbell,shoulders,forearms,90,free-exercise-db
+chair-squat,Chair Squat,strength,beginner,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+chin-up,Chin-Up,strength,beginner,pull,compound,body only,lats,biceps; forearms; middle back,90,free-exercise-db
+clean-and-press,Clean and Press,strength,intermediate,push,compound,barbell,shoulders,abdominals; calves; glutes; hamstrings; lower back; middle back; quadriceps; shoulders; traps; triceps,90,free-exercise-db
+clock-push-up,Clock Push-Up,strength,intermediate,push,compound,body only,chest,shoulders; triceps,90,free-exercise-db
+close-grip-barbell-bench-press,Close-Grip Barbell Bench Press,strength,beginner,push,compound,barbell,triceps,chest; shoulders,90,free-exercise-db
+close-grip-dumbbell-press,Close-Grip Dumbbell Press,strength,beginner,push,compound,dumbbell,triceps,chest; shoulders,90,free-exercise-db
+close-grip-ez-bar-curl,Close-Grip EZ Bar Curl,strength,beginner,pull,isolation,barbell,biceps,forearms,90,free-exercise-db
+close-grip-ez-bar-curl-with-band,Close-Grip EZ-Bar Curl with Band,strength,beginner,pull,isolation,e-z curl bar,biceps,forearms,90,free-exercise-db
+close-grip-ez-bar-press,Close-Grip EZ-Bar Press,strength,beginner,push,compound,e-z curl bar,triceps,chest; shoulders,90,free-exercise-db
+close-grip-front-lat-pulldown,Close-Grip Front Lat Pulldown,strength,beginner,pull,compound,cable,lats,biceps; middle back; shoulders,90,free-exercise-db
+close-grip-push-up-off-of-a-dumbbell,Close-Grip Push-Up off of a Dumbbell,strength,intermediate,push,compound,body only,triceps,abdominals; chest; shoulders,90,free-exercise-db
+close-grip-standing-barbell-curl,Close-Grip Standing Barbell Curl,strength,beginner,pull,isolation,barbell,biceps,forearms,90,free-exercise-db
+cocoons,Cocoons,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+concentration-curls,Concentration Curls,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+cross-body-crunch,Cross-Body Crunch,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+cross-body-hammer-curl,Cross Body Hammer Curl,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+cross-over-with-bands,Cross Over - With Bands,strength,beginner,push,compound,bands,chest,biceps; shoulders,90,free-exercise-db
+crunch-hands-overhead,Crunch - Hands Overhead,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+crunch-legs-on-exercise-ball,Crunch - Legs On Exercise Ball,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+crunches,Crunches,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+cuban-press,Cuban Press,strength,intermediate,push,compound,dumbbell,shoulders,traps,90,free-exercise-db
+dead-bug,Dead Bug,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+decline-barbell-bench-press,Decline Barbell Bench Press,strength,beginner,push,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+decline-close-grip-bench-to-skull-crusher,Decline Close-Grip Bench To Skull Crusher,strength,intermediate,push,compound,barbell,triceps,chest; shoulders,90,free-exercise-db
+decline-crunch,Decline Crunch,strength,intermediate,pull,isolation,body only,abdominals,,90,free-exercise-db
+decline-dumbbell-bench-press,Decline Dumbbell Bench Press,strength,beginner,push,compound,dumbbell,chest,shoulders; triceps,90,free-exercise-db
+decline-dumbbell-flyes,Decline Dumbbell Flyes,strength,beginner,push,compound,dumbbell,chest,,90,free-exercise-db
+decline-dumbbell-triceps-extension,Decline Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+decline-ez-bar-triceps-extension,Decline EZ Bar Triceps Extension,strength,beginner,push,isolation,barbell,triceps,,90,free-exercise-db
+decline-oblique-crunch,Decline Oblique Crunch,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+decline-push-up,Decline Push-Up,strength,beginner,push,compound,,chest,shoulders; triceps,90,free-exercise-db
+decline-reverse-crunch,Decline Reverse Crunch,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+decline-smith-press,Decline Smith Press,strength,beginner,push,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+dip-machine,Dip Machine,strength,beginner,push,compound,machine,triceps,chest; shoulders,90,free-exercise-db
+dips-chest-version,Dips - Chest Version,strength,intermediate,push,compound,other,chest,shoulders; triceps,90,free-exercise-db
+dips-triceps-version,Dips - Triceps Version,strength,beginner,push,compound,body only,triceps,chest; shoulders,90,free-exercise-db
+donkey-calf-raises,Donkey Calf Raises,strength,intermediate,push,isolation,other,calves,,90,free-exercise-db
+double-kettlebell-alternating-hang-clean,Double Kettlebell Alternating Hang Clean,strength,intermediate,pull,compound,kettlebells,hamstrings,biceps; calves; forearms; glutes; lower back; quadriceps; traps,90,free-exercise-db
+double-kettlebell-jerk,Double Kettlebell Jerk,strength,intermediate,push,compound,kettlebells,shoulders,calves; quadriceps; triceps,90,free-exercise-db
+double-kettlebell-push-press,Double Kettlebell Push Press,strength,intermediate,push,compound,kettlebells,shoulders,calves; quadriceps; triceps,90,free-exercise-db
+double-kettlebell-snatch,Double Kettlebell Snatch,strength,expert,pull,compound,kettlebells,shoulders,glutes; hamstrings; quadriceps,90,free-exercise-db
+double-kettlebell-windmill,Double Kettlebell Windmill,strength,intermediate,pull,,kettlebells,abdominals,glutes; hamstrings; shoulders; triceps,90,free-exercise-db
+downward-facing-balance,Downward Facing Balance,strength,intermediate,static,isolation,exercise ball,glutes,abdominals; hamstrings,90,free-exercise-db
+drag-curl,Drag Curl,strength,intermediate,pull,compound,barbell,biceps,forearms,90,free-exercise-db
+dumbbell-alternate-bicep-curl,Dumbbell Alternate Bicep Curl,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+dumbbell-bench-press,Dumbbell Bench Press,strength,beginner,push,compound,dumbbell,chest,shoulders; triceps,90,free-exercise-db
+dumbbell-bench-press-with-neutral-grip,Dumbbell Bench Press with Neutral Grip,strength,beginner,push,compound,dumbbell,chest,shoulders; triceps,90,free-exercise-db
+dumbbell-bicep-curl,Dumbbell Bicep Curl,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+dumbbell-clean,Dumbbell Clean,strength,intermediate,pull,compound,dumbbell,hamstrings,calves; forearms; glutes; lower back; quadriceps; shoulders; traps,90,free-exercise-db
+dumbbell-flyes,Dumbbell Flyes,strength,beginner,push,isolation,dumbbell,chest,,90,free-exercise-db
+dumbbell-incline-row,Dumbbell Incline Row,strength,beginner,pull,compound,dumbbell,middle back,biceps; forearms; lats; shoulders,90,free-exercise-db
+dumbbell-incline-shoulder-raise,Dumbbell Incline Shoulder Raise,strength,beginner,push,isolation,dumbbell,shoulders,triceps,90,free-exercise-db
+dumbbell-lunges,Dumbbell Lunges,strength,beginner,push,compound,dumbbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+dumbbell-lying-one-arm-rear-lateral-raise,Dumbbell Lying One-Arm Rear Lateral Raise,strength,intermediate,pull,isolation,dumbbell,shoulders,middle back,90,free-exercise-db
+dumbbell-lying-pronation,Dumbbell Lying Pronation,strength,intermediate,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+dumbbell-lying-rear-lateral-raise,Dumbbell Lying Rear Lateral Raise,strength,intermediate,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+dumbbell-lying-supination,Dumbbell Lying Supination,strength,intermediate,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+dumbbell-one-arm-shoulder-press,Dumbbell One-Arm Shoulder Press,strength,intermediate,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+dumbbell-one-arm-triceps-extension,Dumbbell One-Arm Triceps Extension,strength,intermediate,push,isolation,dumbbell,triceps,,90,free-exercise-db
+dumbbell-one-arm-upright-row,Dumbbell One-Arm Upright Row,strength,intermediate,pull,compound,dumbbell,shoulders,biceps; traps,90,free-exercise-db
+dumbbell-prone-incline-curl,Dumbbell Prone Incline Curl,strength,intermediate,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+dumbbell-raise,Dumbbell Raise,strength,beginner,pull,compound,dumbbell,shoulders,biceps,90,free-exercise-db
+dumbbell-rear-lunge,Dumbbell Rear Lunge,strength,intermediate,push,compound,dumbbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+dumbbell-scaption,Dumbbell Scaption,strength,beginner,push,isolation,dumbbell,shoulders,traps,90,free-exercise-db
+dumbbell-seated-one-leg-calf-raise,Dumbbell Seated One-Leg Calf Raise,strength,beginner,push,isolation,dumbbell,calves,,90,free-exercise-db
+dumbbell-shoulder-press,Dumbbell Shoulder Press,strength,intermediate,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+dumbbell-shrug,Dumbbell Shrug,strength,beginner,pull,isolation,dumbbell,traps,,90,free-exercise-db
+dumbbell-side-bend,Dumbbell Side Bend,strength,beginner,pull,isolation,dumbbell,abdominals,,90,free-exercise-db
+dumbbell-squat,Dumbbell Squat,strength,beginner,push,compound,dumbbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+dumbbell-squat-to-a-bench,Dumbbell Squat To A Bench,strength,intermediate,push,compound,dumbbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+dumbbell-step-ups,Dumbbell Step Ups,strength,intermediate,push,compound,dumbbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+dumbbell-thruster,Dumbbell Thruster,strength,intermediate,push,compound,dumbbell,quadriceps; shoulders,glutes; triceps; abdominals,90,original
+dumbbell-tricep-extension-pronated-grip,Dumbbell Tricep Extension -Pronated Grip,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+elbow-to-knee,Elbow to Knee,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+elevated-back-lunge,Elevated Back Lunge,strength,intermediate,push,compound,barbell,quadriceps,glutes; hamstrings,90,free-exercise-db
+elevated-cable-rows,Elevated Cable Rows,strength,intermediate,pull,compound,cable,lats,middle back; traps,90,free-exercise-db
+exercise-ball-crunch,Exercise Ball Crunch,strength,beginner,pull,isolation,exercise ball,abdominals,,90,free-exercise-db
+exercise-ball-pull-in,Exercise Ball Pull-In,strength,beginner,pull,compound,exercise ball,abdominals,,90,free-exercise-db
+extended-range-one-arm-kettlebell-floor-press,Extended Range One-Arm Kettlebell Floor Press,strength,beginner,push,compound,kettlebells,chest,shoulders; triceps,90,free-exercise-db
+external-rotation,External Rotation,strength,beginner,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+external-rotation-with-band,External Rotation with Band,strength,beginner,pull,compound,bands,shoulders,,90,free-exercise-db
+external-rotation-with-cable,External Rotation with Cable,strength,beginner,pull,isolation,cable,shoulders,,90,free-exercise-db
+ez-bar-curl,EZ-Bar Curl,strength,beginner,pull,isolation,e-z curl bar,biceps,,90,free-exercise-db
+ez-bar-skullcrusher,EZ-Bar Skullcrusher,strength,beginner,push,isolation,e-z curl bar,triceps,forearms,90,free-exercise-db
+face-pull,Face Pull,strength,intermediate,pull,compound,cable,shoulders,middle back,90,free-exercise-db
+finger-curls,Finger Curls,strength,beginner,pull,isolation,barbell,forearms,,90,free-exercise-db
+flat-bench-cable-flyes,Flat Bench Cable Flyes,strength,intermediate,push,isolation,cable,chest,,90,free-exercise-db
+flat-bench-leg-pull-in,Flat Bench Leg Pull-In,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+flat-bench-lying-leg-raise,Flat Bench Lying Leg Raise,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+flexor-incline-dumbbell-curls,Flexor Incline Dumbbell Curls,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+floor-glute-ham-raise,Floor Glute-Ham Raise,strength,intermediate,pull,isolation,,hamstrings,calves; glutes,90,free-exercise-db
+flutter-kicks,Flutter Kicks,strength,beginner,pull,compound,body only,glutes,hamstrings,90,free-exercise-db
+freehand-jump-squat,Freehand Jump Squat,strength,intermediate,push,compound,body only,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+frog-sit-ups,Frog Sit-Ups,strength,intermediate,pull,isolation,body only,abdominals,,90,free-exercise-db
+front-barbell-squat,Front Barbell Squat,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+front-barbell-squat-to-a-bench,Front Barbell Squat To A Bench,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+front-cable-raise,Front Cable Raise,strength,beginner,push,isolation,cable,shoulders,,90,free-exercise-db
+front-dumbbell-raise,Front Dumbbell Raise,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+front-incline-dumbbell-raise,Front Incline Dumbbell Raise,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+front-plate-raise,Front Plate Raise,strength,intermediate,push,isolation,other,shoulders,,90,free-exercise-db
+front-raise-and-pullover,Front Raise And Pullover,strength,beginner,pull,compound,barbell,chest,lats; shoulders; triceps,90,free-exercise-db
+front-squat-clean-grip,Front Squat (Clean Grip),strength,intermediate,push,compound,barbell,quadriceps,abdominals; glutes; hamstrings,90,free-exercise-db
+front-squats-with-two-kettlebells,Front Squats With Two Kettlebells,strength,intermediate,push,compound,kettlebells,quadriceps,calves; glutes,90,free-exercise-db
+front-two-dumbbell-raise,Front Two-Dumbbell Raise,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+full-range-of-motion-lat-pulldown,Full Range-Of-Motion Lat Pulldown,strength,intermediate,pull,compound,cable,lats,biceps; middle back; shoulders,90,free-exercise-db
+gironda-sternum-chins,Gironda Sternum Chins,strength,intermediate,pull,compound,other,lats,biceps; middle back,90,free-exercise-db
+glute-kickback,Glute Kickback,strength,beginner,push,compound,body only,glutes,hamstrings,90,free-exercise-db
+goblet-squat,Goblet Squat,strength,beginner,push,compound,kettlebells,quadriceps,calves; glutes; hamstrings; shoulders,90,free-exercise-db
+gorilla-chin-crunch,Gorilla Chin/Crunch,strength,intermediate,pull,compound,body only,abdominals,biceps; lats,90,free-exercise-db
+hack-squat,Hack Squat,strength,beginner,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+hammer-curls,Hammer Curls,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+hammer-grip-incline-db-bench-press,Hammer Grip Incline DB Bench Press,strength,beginner,push,compound,dumbbell,chest,shoulders; triceps,90,free-exercise-db
+handstand-push-ups,Handstand Push-Ups,strength,expert,push,compound,body only,shoulders,triceps,90,free-exercise-db
+hanging-leg-raise,Hanging Leg Raise,strength,expert,pull,isolation,body only,abdominals,,90,free-exercise-db
+hanging-pike,Hanging Pike,strength,expert,pull,compound,body only,abdominals,,90,free-exercise-db
+high-cable-curls,High Cable Curls,strength,intermediate,pull,compound,cable,biceps,,90,free-exercise-db
+hip-extension-with-bands,Hip Extension with Bands,strength,beginner,push,compound,bands,glutes,hamstrings,90,free-exercise-db
+hip-flexion-with-band,Hip Flexion with Band,strength,beginner,pull,compound,bands,quadriceps,,90,free-exercise-db
+hollow-body-hold,Hollow Body Hold,strength,intermediate,static,isolation,body only,abdominals,quadriceps,60,original
+hyperextensions-back-extensions,Hyperextensions (Back Extensions),strength,beginner,pull,isolation,other,lower back,glutes; hamstrings,90,free-exercise-db
+hyperextensions-with-no-hyperextension-bench,Hyperextensions With No Hyperextension Bench,strength,intermediate,pull,compound,body only,lower back,glutes; hamstrings,90,free-exercise-db
+incline-barbell-triceps-extension,Incline Barbell Triceps Extension,strength,intermediate,push,isolation,barbell,triceps,forearms,90,free-exercise-db
+incline-bench-pull,Incline Bench Pull,strength,beginner,pull,isolation,barbell,middle back,lats; shoulders,90,free-exercise-db
+incline-cable-chest-press,Incline Cable Chest Press,strength,beginner,push,compound,cable,chest,shoulders; triceps,90,free-exercise-db
+incline-cable-flye,Incline Cable Flye,strength,intermediate,push,isolation,cable,chest,shoulders,90,free-exercise-db
+incline-dumbbell-bench-with-palms-facing-in,Incline Dumbbell Bench With Palms Facing In,strength,beginner,push,compound,dumbbell,chest,shoulders; triceps,90,free-exercise-db
+incline-dumbbell-curl,Incline Dumbbell Curl,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+incline-dumbbell-flyes,Incline Dumbbell Flyes,strength,beginner,push,compound,dumbbell,chest,shoulders,90,free-exercise-db
+incline-dumbbell-flyes-with-a-twist,Incline Dumbbell Flyes - With A Twist,strength,beginner,push,compound,dumbbell,chest,shoulders,90,free-exercise-db
+incline-dumbbell-press,Incline Dumbbell Press,strength,beginner,push,compound,dumbbell,chest,shoulders; triceps,90,free-exercise-db
+incline-hammer-curls,Incline Hammer Curls,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+incline-inner-biceps-curl,Incline Inner Biceps Curl,strength,beginner,,isolation,dumbbell,biceps,,90,free-exercise-db
+incline-push-up,Incline Push-Up,strength,beginner,push,compound,body only,chest,shoulders; triceps,90,free-exercise-db
+incline-push-up-close-grip,Incline Push-Up Close-Grip,strength,beginner,push,compound,body only,triceps,chest; shoulders,90,free-exercise-db
+incline-push-up-medium,Incline Push-Up Medium,strength,beginner,push,compound,body only,chest,abdominals; shoulders; triceps,90,free-exercise-db
+incline-push-up-reverse-grip,Incline Push-Up Reverse Grip,strength,beginner,push,compound,body only,chest,abdominals; shoulders; triceps,90,free-exercise-db
+incline-push-up-wide,Incline Push-Up Wide,strength,beginner,push,compound,body only,chest,abdominals; shoulders; triceps,90,free-exercise-db
+internal-rotation-with-band,Internal Rotation with Band,strength,beginner,,isolation,bands,shoulders,,90,free-exercise-db
+inverted-row,Inverted Row,strength,beginner,pull,compound,,middle back,lats,90,free-exercise-db
+inverted-row-with-straps,Inverted Row with Straps,strength,beginner,pull,compound,other,middle back,biceps; lats,90,free-exercise-db
+iron-cross,Iron Cross,strength,intermediate,push,compound,dumbbell,shoulders,chest; glutes; hamstrings; lower back; quadriceps; traps,90,free-exercise-db
+isometric-neck-exercise-front-and-back,Isometric Neck Exercise - Front And Back,strength,beginner,static,isolation,body only,neck,,90,free-exercise-db
+isometric-neck-exercise-sides,Isometric Neck Exercise - Sides,strength,beginner,static,isolation,body only,neck,,90,free-exercise-db
+isometric-wipers,Isometric Wipers,strength,beginner,push,compound,body only,chest,abdominals; shoulders; triceps,90,free-exercise-db
+jackknife-sit-up,Jackknife Sit-Up,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+janda-sit-up,Janda Sit-Up,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+jefferson-squats,Jefferson Squats,strength,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back; traps,90,free-exercise-db
+jm-press,JM Press,strength,beginner,push,compound,barbell,triceps,chest; shoulders,90,free-exercise-db
+kettlebell-arnold-press,Kettlebell Arnold Press,strength,intermediate,push,compound,kettlebells,shoulders,triceps,90,free-exercise-db
+kettlebell-dead-clean,Kettlebell Dead Clean,strength,intermediate,pull,compound,kettlebells,hamstrings,calves; glutes; lower back; quadriceps; traps,90,free-exercise-db
+kettlebell-figure-8,Kettlebell Figure 8,strength,intermediate,pull,,kettlebells,abdominals,hamstrings; shoulders,90,free-exercise-db
+kettlebell-hang-clean,Kettlebell Hang Clean,strength,intermediate,pull,compound,kettlebells,hamstrings,calves; glutes; lower back; shoulders; traps,90,free-exercise-db
+kettlebell-one-legged-deadlift,Kettlebell One-Legged Deadlift,strength,intermediate,pull,compound,kettlebells,hamstrings,glutes; lower back,90,free-exercise-db
+kettlebell-pass-between-the-legs,Kettlebell Pass Between The Legs,strength,intermediate,pull,compound,kettlebells,abdominals,glutes; hamstrings; shoulders,90,free-exercise-db
+kettlebell-pirate-ships,Kettlebell Pirate Ships,strength,beginner,push,compound,kettlebells,shoulders,abdominals,90,free-exercise-db
+kettlebell-pistol-squat,Kettlebell Pistol Squat,strength,expert,push,compound,kettlebells,quadriceps,calves; glutes; hamstrings; shoulders,90,free-exercise-db
+kettlebell-seated-press,Kettlebell Seated Press,strength,intermediate,push,compound,kettlebells,shoulders,triceps,90,free-exercise-db
+kettlebell-seesaw-press,Kettlebell Seesaw Press,strength,intermediate,push,compound,kettlebells,shoulders,triceps,90,free-exercise-db
+kettlebell-sumo-high-pull,Kettlebell Sumo High Pull,strength,intermediate,pull,compound,kettlebells,traps,adductors; glutes; hamstrings; quadriceps; shoulders,90,free-exercise-db
+kettlebell-thruster,Kettlebell Thruster,strength,intermediate,push,compound,kettlebells,shoulders,quadriceps; triceps,90,free-exercise-db
+kettlebell-turkish-get-up-lunge-style,Kettlebell Turkish Get-Up (Lunge style),strength,intermediate,push,compound,kettlebells,shoulders,abdominals; hamstrings; quadriceps; triceps,90,free-exercise-db
+kettlebell-turkish-get-up-squat-style,Kettlebell Turkish Get-Up (Squat style),strength,intermediate,push,compound,kettlebells,shoulders,abdominals; calves; hamstrings; quadriceps; triceps,90,free-exercise-db
+kettlebell-windmill,Kettlebell Windmill,strength,intermediate,pull,compound,kettlebells,abdominals,glutes; hamstrings; shoulders; triceps,90,free-exercise-db
+kipping-muscle-up,Kipping Muscle Up,strength,intermediate,pull,compound,other,lats,abdominals; biceps; forearms; middle back; shoulders; traps; triceps,90,free-exercise-db
+knee-hip-raise-on-parallel-bars,Knee/Hip Raise On Parallel Bars,strength,beginner,pull,isolation,other,abdominals,,90,free-exercise-db
+kneeling-cable-crunch-with-alternating-oblique-twists,Kneeling Cable Crunch With Alternating Oblique Twists,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+kneeling-cable-triceps-extension,Kneeling Cable Triceps Extension,strength,intermediate,push,isolation,cable,triceps,,90,free-exercise-db
+kneeling-high-pulley-row,Kneeling High Pulley Row,strength,beginner,pull,compound,cable,lats,biceps; middle back,90,free-exercise-db
+kneeling-single-arm-high-pulley-row,Kneeling Single-Arm High Pulley Row,strength,beginner,pull,compound,cable,lats,biceps; middle back,90,free-exercise-db
+landmine-180-s,Landmine 180's,strength,beginner,pull,compound,barbell,abdominals,glutes; lower back; shoulders,90,free-exercise-db
+landmine-linear-jammer,Landmine Linear Jammer,strength,intermediate,push,compound,barbell,shoulders,abdominals; calves; chest; hamstrings; quadriceps; triceps,90,free-exercise-db
+lateral-raise-with-bands,Lateral Raise - With Bands,strength,beginner,push,isolation,bands,shoulders,,90,free-exercise-db
+leg-extensions,Leg Extensions,strength,beginner,push,isolation,machine,quadriceps,,90,free-exercise-db
+leg-lift,Leg Lift,strength,beginner,push,isolation,body only,glutes,hamstrings,90,free-exercise-db
+leg-over-floor-press,Leg-Over Floor Press,strength,intermediate,push,compound,kettlebells,chest,shoulders; triceps,90,free-exercise-db
+leg-press,Leg Press,strength,beginner,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+leg-pull-in,Leg Pull-In,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+leverage-chest-press,Leverage Chest Press,strength,beginner,push,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+leverage-deadlift,Leverage Deadlift,strength,beginner,pull,compound,machine,quadriceps,glutes; hamstrings,90,free-exercise-db
+leverage-decline-chest-press,Leverage Decline Chest Press,strength,beginner,push,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+leverage-high-row,Leverage High Row,strength,beginner,pull,compound,machine,middle back,lats,90,free-exercise-db
+leverage-incline-chest-press,Leverage Incline Chest Press,strength,beginner,push,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+leverage-iso-row,Leverage Iso Row,strength,beginner,pull,compound,machine,lats,biceps; middle back,90,free-exercise-db
+leverage-shoulder-press,Leverage Shoulder Press,strength,beginner,push,compound,machine,shoulders,triceps,90,free-exercise-db
+leverage-shrug,Leverage Shrug,strength,beginner,pull,isolation,machine,traps,forearms,90,free-exercise-db
+london-bridges,London Bridges,strength,intermediate,pull,compound,other,lats,biceps; forearms; middle back,90,free-exercise-db
+low-cable-crossover,Low Cable Crossover,strength,beginner,push,isolation,cable,chest,shoulders,90,free-exercise-db
+low-cable-triceps-extension,Low Cable Triceps Extension,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+low-pulley-row-to-neck,Low Pulley Row To Neck,strength,beginner,pull,compound,cable,shoulders,biceps; middle back; traps,90,free-exercise-db
+lunge-pass-through,Lunge Pass Through,strength,intermediate,push,compound,kettlebells,hamstrings,calves; glutes; quadriceps,90,free-exercise-db
+lunge-sprint,Lunge Sprint,strength,intermediate,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+lying-cable-curl,Lying Cable Curl,strength,intermediate,pull,isolation,cable,biceps,,90,free-exercise-db
+lying-cambered-barbell-row,Lying Cambered Barbell Row,strength,beginner,pull,isolation,barbell,middle back,biceps; lats; traps,90,free-exercise-db
+lying-close-grip-bar-curl-on-high-pulley,Lying Close-Grip Bar Curl On High Pulley,strength,beginner,pull,isolation,cable,biceps,,90,free-exercise-db
+lying-close-grip-barbell-triceps-extension-behind-the-head,Lying Close-Grip Barbell Triceps Extension Behind The Head,strength,intermediate,push,isolation,barbell,triceps,,90,free-exercise-db
+lying-close-grip-barbell-triceps-press-to-chin,Lying Close-Grip Barbell Triceps Press To Chin,strength,intermediate,push,isolation,e-z curl bar,triceps,,90,free-exercise-db
+lying-dumbbell-tricep-extension,Lying Dumbbell Tricep Extension,strength,intermediate,push,isolation,dumbbell,triceps,chest; shoulders,90,free-exercise-db
+lying-face-down-plate-neck-resistance,Lying Face Down Plate Neck Resistance,strength,intermediate,pull,isolation,other,neck,,90,free-exercise-db
+lying-face-up-plate-neck-resistance,Lying Face Up Plate Neck Resistance,strength,intermediate,pull,isolation,other,neck,,90,free-exercise-db
+lying-high-bench-barbell-curl,Lying High Bench Barbell Curl,strength,intermediate,pull,isolation,barbell,biceps,,90,free-exercise-db
+lying-leg-curls,Lying Leg Curls,strength,beginner,pull,isolation,machine,hamstrings,,90,free-exercise-db
+lying-machine-squat,Lying Machine Squat,strength,intermediate,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+lying-one-arm-lateral-raise,Lying One-Arm Lateral Raise,strength,intermediate,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+lying-rear-delt-raise,Lying Rear Delt Raise,strength,intermediate,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+lying-supine-dumbbell-curl,Lying Supine Dumbbell Curl,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+lying-t-bar-row,Lying T-Bar Row,strength,intermediate,pull,compound,machine,middle back,biceps; lats,90,free-exercise-db
+lying-triceps-press,Lying Triceps Press,strength,intermediate,push,isolation,e-z curl bar,triceps,,90,free-exercise-db
+machine-bench-press,Machine Bench Press,strength,beginner,push,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+machine-bicep-curl,Machine Bicep Curl,strength,beginner,pull,isolation,machine,biceps,,90,free-exercise-db
+machine-preacher-curls,Machine Preacher Curls,strength,beginner,pull,isolation,machine,biceps,,90,free-exercise-db
+machine-shoulder-military-press,Machine Shoulder (Military) Press,strength,beginner,push,compound,machine,shoulders,triceps,90,free-exercise-db
+machine-triceps-extension,Machine Triceps Extension,strength,beginner,push,isolation,machine,triceps,,90,free-exercise-db
+middle-back-shrug,Middle Back Shrug,strength,intermediate,pull,isolation,dumbbell,middle back,,90,free-exercise-db
+mixed-grip-chin,Mixed Grip Chin,strength,expert,pull,compound,other,middle back,biceps; lats,90,free-exercise-db
+monster-walk,Monster Walk,strength,beginner,pull,compound,bands,abductors,,90,free-exercise-db
+muscle-up,Muscle Up,strength,intermediate,pull,compound,other,lats,abdominals; biceps; forearms; middle back; shoulders; traps; triceps,90,free-exercise-db
+narrow-stance-hack-squats,Narrow Stance Hack Squats,strength,intermediate,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+narrow-stance-leg-press,Narrow Stance Leg Press,strength,intermediate,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+narrow-stance-squats,Narrow Stance Squats,strength,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+natural-glute-ham-raise,Natural Glute Ham Raise,strength,intermediate,pull,compound,body only,hamstrings,calves; glutes; lower back,90,free-exercise-db
+neck-press,Neck Press,strength,intermediate,push,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+oblique-crunches,Oblique Crunches,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+oblique-crunches-on-the-floor,Oblique Crunches - On The Floor,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+one-arm-chin-up,One Arm Chin-Up,strength,expert,pull,compound,other,middle back,biceps; forearms; lats,90,free-exercise-db
+one-arm-dumbbell-bench-press,One Arm Dumbbell Bench Press,strength,beginner,push,compound,dumbbell,chest,shoulders; triceps,90,free-exercise-db
+one-arm-dumbbell-preacher-curl,One Arm Dumbbell Preacher Curl,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+one-arm-dumbbell-row,One-Arm Dumbbell Row,strength,beginner,pull,compound,dumbbell,middle back,biceps; lats; shoulders,90,free-exercise-db
+one-arm-flat-bench-dumbbell-flye,One-Arm Flat Bench Dumbbell Flye,strength,beginner,push,isolation,dumbbell,chest,,90,free-exercise-db
+one-arm-floor-press,One Arm Floor Press,strength,intermediate,push,compound,barbell,triceps,chest; shoulders,90,free-exercise-db
+one-arm-high-pulley-cable-side-bends,One-Arm High-Pulley Cable Side Bends,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+one-arm-incline-lateral-raise,One-Arm Incline Lateral Raise,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+one-arm-kettlebell-clean,One-Arm Kettlebell Clean,strength,intermediate,pull,compound,kettlebells,hamstrings,glutes; lower back; shoulders; traps,90,free-exercise-db
+one-arm-kettlebell-clean-and-jerk,One-Arm Kettlebell Clean and Jerk,strength,intermediate,push,compound,kettlebells,shoulders,,90,free-exercise-db
+one-arm-kettlebell-floor-press,One-Arm Kettlebell Floor Press,strength,intermediate,push,compound,kettlebells,chest,triceps,90,free-exercise-db
+one-arm-kettlebell-jerk,One-Arm Kettlebell Jerk,strength,intermediate,push,compound,kettlebells,shoulders,calves; quadriceps; triceps,90,free-exercise-db
+one-arm-kettlebell-military-press-to-the-side,One-Arm Kettlebell Military Press To The Side,strength,intermediate,push,compound,kettlebells,shoulders,triceps,90,free-exercise-db
+one-arm-kettlebell-para-press,One-Arm Kettlebell Para Press,strength,intermediate,push,compound,kettlebells,shoulders,triceps,90,free-exercise-db
+one-arm-kettlebell-push-press,One-Arm Kettlebell Push Press,strength,intermediate,push,compound,kettlebells,shoulders,calves; quadriceps; triceps,90,free-exercise-db
+one-arm-kettlebell-row,One-Arm Kettlebell Row,strength,intermediate,pull,compound,kettlebells,middle back,biceps; lats,90,free-exercise-db
+one-arm-kettlebell-snatch,One-Arm Kettlebell Snatch,strength,expert,pull,compound,kettlebells,shoulders,calves; glutes; hamstrings; lower back; traps; triceps,90,free-exercise-db
+one-arm-kettlebell-split-jerk,One-Arm Kettlebell Split Jerk,strength,intermediate,push,compound,kettlebells,shoulders,glutes; hamstrings; quadriceps; triceps,90,free-exercise-db
+one-arm-kettlebell-split-snatch,One-Arm Kettlebell Split Snatch,strength,expert,pull,compound,kettlebells,shoulders,hamstrings; quadriceps,90,free-exercise-db
+one-arm-kettlebell-swings,One-Arm Kettlebell Swings,strength,intermediate,pull,compound,kettlebells,hamstrings,calves; glutes; lower back; shoulders,90,free-exercise-db
+one-arm-lat-pulldown,One Arm Lat Pulldown,strength,beginner,pull,compound,cable,lats,biceps; middle back,90,free-exercise-db
+one-arm-long-bar-row,One-Arm Long Bar Row,strength,beginner,pull,compound,barbell,middle back,biceps; lats,90,free-exercise-db
+one-arm-medicine-ball-slam,One-Arm Medicine Ball Slam,strength,beginner,pull,compound,medicine ball,abdominals,lats; shoulders,90,free-exercise-db
+one-arm-open-palm-kettlebell-clean,One-Arm Open Palm Kettlebell Clean,strength,intermediate,pull,compound,kettlebells,hamstrings,forearms; glutes; lower back; quadriceps; shoulders,90,free-exercise-db
+one-arm-overhead-kettlebell-squats,One-Arm Overhead Kettlebell Squats,strength,expert,push,compound,kettlebells,quadriceps,calves; glutes; hamstrings; shoulders,90,free-exercise-db
+one-arm-pronated-dumbbell-triceps-extension,One Arm Pronated Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+one-arm-side-deadlift,One-Arm Side Deadlift,strength,expert,pull,compound,barbell,quadriceps,abdominals; calves; glutes; hamstrings; lower back; traps,90,free-exercise-db
+one-arm-side-laterals,One-Arm Side Laterals,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+one-arm-supinated-dumbbell-triceps-extension,One Arm Supinated Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+one-leg-barbell-squat,One Leg Barbell Squat,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+one-legged-cable-kickback,One-Legged Cable Kickback,strength,intermediate,push,isolation,cable,glutes,hamstrings,90,free-exercise-db
+open-palm-kettlebell-clean,Open Palm Kettlebell Clean,strength,expert,pull,compound,kettlebells,hamstrings,glutes; lower back; quadriceps; shoulders,90,free-exercise-db
+otis-up,Otis-Up,strength,beginner,pull,compound,other,abdominals,chest; shoulders; triceps,90,free-exercise-db
+overhead-cable-curl,Overhead Cable Curl,strength,intermediate,pull,isolation,cable,biceps,,90,free-exercise-db
+pallof-press,Pallof Press,strength,beginner,pull,isolation,cable,abdominals,chest; shoulders; triceps,90,free-exercise-db
+pallof-press-with-rotation,Pallof Press With Rotation,strength,beginner,pull,compound,cable,abdominals,chest; shoulders; triceps,90,free-exercise-db
+palms-down-dumbbell-wrist-curl-over-a-bench,Palms-Down Dumbbell Wrist Curl Over A Bench,strength,beginner,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+palms-down-wrist-curl-over-a-bench,Palms-Down Wrist Curl Over A Bench,strength,beginner,pull,isolation,barbell,forearms,,90,free-exercise-db
+palms-up-barbell-wrist-curl-over-a-bench,Palms-Up Barbell Wrist Curl Over A Bench,strength,beginner,pull,isolation,barbell,forearms,,90,free-exercise-db
+palms-up-dumbbell-wrist-curl-over-a-bench,Palms-Up Dumbbell Wrist Curl Over A Bench,strength,beginner,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+parallel-bar-dip,Parallel Bar Dip,strength,beginner,push,compound,other,triceps,chest; shoulders,90,free-exercise-db
+physioball-hip-bridge,Physioball Hip Bridge,strength,beginner,push,compound,exercise ball,glutes,hamstrings,90,free-exercise-db
+plank,Plank,strength,beginner,static,isolation,body only,abdominals,,90,free-exercise-db
+plank-shoulder-taps,Plank Shoulder Taps,strength,beginner,static,compound,body only,abdominals,shoulders; triceps,30,original
+plate-pinch,Plate Pinch,strength,intermediate,static,isolation,other,forearms,,90,free-exercise-db
+plate-twist,Plate Twist,strength,intermediate,pull,compound,other,abdominals,,90,free-exercise-db
+platform-hamstring-slides,Platform Hamstring Slides,strength,beginner,pull,isolation,other,hamstrings,glutes,90,free-exercise-db
+plie-dumbbell-squat,Plie Dumbbell Squat,strength,beginner,push,compound,dumbbell,quadriceps,abdominals; calves; glutes; hamstrings,90,free-exercise-db
+plyo-kettlebell-pushups,Plyo Kettlebell Pushups,strength,expert,push,compound,kettlebells,chest,shoulders; triceps,90,free-exercise-db
+power-clean,Power Clean,strength,intermediate,pull,compound,barbell,hamstrings,calves; forearms; glutes; lower back; middle back; quadriceps; shoulders; traps; triceps,90,free-exercise-db
+power-partials,Power Partials,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+preacher-curl,Preacher Curl,strength,beginner,pull,isolation,barbell,biceps,,90,free-exercise-db
+preacher-hammer-dumbbell-curl,Preacher Hammer Dumbbell Curl,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+press-sit-up,Press Sit-Up,strength,expert,push,compound,barbell,abdominals,chest; shoulders; triceps,90,free-exercise-db
+prone-manual-hamstring,Prone Manual Hamstring,strength,beginner,static,isolation,,hamstrings,,90,free-exercise-db
+pull-through,Pull Through,strength,beginner,pull,compound,cable,glutes,hamstrings; lower back,90,free-exercise-db
+pullups,Pullups,strength,beginner,pull,compound,body only,lats,biceps; middle back,90,free-exercise-db
+push-up-to-side-plank,Push Up to Side Plank,strength,beginner,push,compound,body only,chest,abdominals; shoulders; triceps,90,free-exercise-db
+push-up-wide,Push-Up Wide,strength,beginner,,compound,body only,chest,abdominals; shoulders; triceps,90,free-exercise-db
+push-ups-close-triceps-position,Push-Ups - Close Triceps Position,strength,intermediate,push,compound,body only,triceps,chest; shoulders,90,free-exercise-db
+push-ups-with-feet-elevated,Push-Ups With Feet Elevated,strength,beginner,push,compound,body only,chest,shoulders; triceps,90,free-exercise-db
+push-ups-with-feet-on-an-exercise-ball,Push-Ups With Feet On An Exercise Ball,strength,intermediate,push,compound,exercise ball,chest,shoulders; triceps,90,free-exercise-db
+pushups,Pushups,strength,beginner,push,compound,body only,chest,shoulders; triceps,90,free-exercise-db
+pushups-close-and-wide-hand-positions,Pushups (Close and Wide Hand Positions),strength,beginner,push,compound,body only,chest,shoulders; triceps,90,free-exercise-db
+reverse-barbell-curl,Reverse Barbell Curl,strength,beginner,pull,isolation,barbell,biceps,forearms,90,free-exercise-db
+reverse-barbell-preacher-curls,Reverse Barbell Preacher Curls,strength,intermediate,pull,isolation,e-z curl bar,biceps,forearms,90,free-exercise-db
+reverse-cable-curl,Reverse Cable Curl,strength,beginner,pull,isolation,cable,biceps,forearms,90,free-exercise-db
+reverse-crunch,Reverse Crunch,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+reverse-flyes,Reverse Flyes,strength,beginner,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+reverse-flyes-with-external-rotation,Reverse Flyes With External Rotation,strength,intermediate,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+reverse-grip-bent-over-rows,Reverse Grip Bent-Over Rows,strength,intermediate,pull,compound,barbell,middle back,biceps; lats; shoulders,90,free-exercise-db
+reverse-grip-triceps-pushdown,Reverse Grip Triceps Pushdown,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+reverse-hyperextension,Reverse Hyperextension,strength,intermediate,pull,,machine,hamstrings,calves; glutes,90,free-exercise-db
+reverse-machine-flyes,Reverse Machine Flyes,strength,beginner,pull,isolation,machine,shoulders,,90,free-exercise-db
+reverse-plate-curls,Reverse Plate Curls,strength,beginner,pull,isolation,other,biceps,forearms,90,free-exercise-db
+reverse-triceps-bench-press,Reverse Triceps Bench Press,strength,intermediate,push,compound,barbell,triceps,chest; shoulders,90,free-exercise-db
+ring-dips,Ring Dips,strength,intermediate,push,compound,other,triceps,chest; shoulders,90,free-exercise-db
+rocking-standing-calf-raise,Rocking Standing Calf Raise,strength,beginner,push,isolation,barbell,calves,,90,free-exercise-db
+rocky-pull-ups-pulldowns,Rocky Pull-Ups/Pulldowns,strength,intermediate,pull,compound,other,lats,biceps; middle back; shoulders,90,free-exercise-db
+romanian-deadlift,Romanian Deadlift,strength,intermediate,pull,compound,barbell,hamstrings,calves; glutes; lower back,90,free-exercise-db
+rope-climb,Rope Climb,strength,intermediate,pull,compound,other,lats,biceps; forearms; middle back; shoulders,90,free-exercise-db
+rope-crunch,Rope Crunch,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+rope-straight-arm-pulldown,Rope Straight-Arm Pulldown,strength,beginner,pull,isolation,cable,lats,,90,free-exercise-db
+russian-twist,Russian Twist,strength,intermediate,pull,compound,body only,abdominals,lower back,90,free-exercise-db
+scapular-pull-up,Scapular Pull-Up,strength,beginner,pull,isolation,,traps,lats; middle back,90,free-exercise-db
+seated-band-hamstring-curl,Seated Band Hamstring Curl,strength,beginner,pull,isolation,other,hamstrings,,90,free-exercise-db
+seated-barbell-military-press,Seated Barbell Military Press,strength,intermediate,push,compound,barbell,shoulders,triceps,90,free-exercise-db
+seated-barbell-twist,Seated Barbell Twist,strength,beginner,pull,isolation,barbell,abdominals,,90,free-exercise-db
+seated-bent-over-one-arm-dumbbell-triceps-extension,Seated Bent-Over One-Arm Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+seated-bent-over-rear-delt-raise,Seated Bent-Over Rear Delt Raise,strength,intermediate,pull,isolation,dumbbell,shoulders,,90,free-exercise-db
+seated-bent-over-two-arm-dumbbell-triceps-extension,Seated Bent-Over Two-Arm Dumbbell Triceps Extension,strength,intermediate,push,isolation,dumbbell,triceps,,90,free-exercise-db
+seated-cable-rows,Seated Cable Rows,strength,beginner,pull,compound,cable,middle back,biceps; lats; shoulders,90,free-exercise-db
+seated-cable-shoulder-press,Seated Cable Shoulder Press,strength,beginner,push,compound,cable,shoulders,triceps,90,free-exercise-db
+seated-calf-raise,Seated Calf Raise,strength,beginner,push,isolation,machine,calves,,90,free-exercise-db
+seated-close-grip-concentration-barbell-curl,Seated Close-Grip Concentration Barbell Curl,strength,intermediate,pull,isolation,barbell,biceps,,90,free-exercise-db
+seated-dumbbell-curl,Seated Dumbbell Curl,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+seated-dumbbell-inner-biceps-curl,Seated Dumbbell Inner Biceps Curl,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+seated-dumbbell-palms-down-wrist-curl,Seated Dumbbell Palms-Down Wrist Curl,strength,beginner,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+seated-dumbbell-palms-up-wrist-curl,Seated Dumbbell Palms-Up Wrist Curl,strength,beginner,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+seated-dumbbell-press,Seated Dumbbell Press,strength,beginner,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+seated-flat-bench-leg-pull-in,Seated Flat Bench Leg Pull-In,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+seated-head-harness-neck-resistance,Seated Head Harness Neck Resistance,strength,intermediate,pull,isolation,other,neck,,90,free-exercise-db
+seated-leg-curl,Seated Leg Curl,strength,beginner,pull,isolation,machine,hamstrings,,90,free-exercise-db
+seated-leg-tucks,Seated Leg Tucks,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+seated-one-arm-cable-pulley-rows,Seated One-arm Cable Pulley Rows,strength,intermediate,pull,compound,cable,middle back,biceps; lats; traps,90,free-exercise-db
+seated-one-arm-dumbbell-palms-down-wrist-curl,Seated One-Arm Dumbbell Palms-Down Wrist Curl,strength,intermediate,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+seated-one-arm-dumbbell-palms-up-wrist-curl,Seated One-Arm Dumbbell Palms-Up Wrist Curl,strength,beginner,pull,isolation,dumbbell,forearms,,90,free-exercise-db
+seated-palm-up-barbell-wrist-curl,Seated Palm-Up Barbell Wrist Curl,strength,beginner,pull,isolation,barbell,forearms,,90,free-exercise-db
+seated-palms-down-barbell-wrist-curl,Seated Palms-Down Barbell Wrist Curl,strength,beginner,pull,isolation,barbell,forearms,,90,free-exercise-db
+seated-side-lateral-raise,Seated Side Lateral Raise,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+seated-triceps-press,Seated Triceps Press,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+seated-two-arm-palms-up-low-pulley-wrist-curl,Seated Two-Arm Palms-Up Low-Pulley Wrist Curl,strength,beginner,pull,isolation,cable,forearms,,90,free-exercise-db
+see-saw-press-alternating-side-press,See-Saw Press (Alternating Side Press),strength,intermediate,push,compound,dumbbell,shoulders,abdominals; triceps,90,free-exercise-db
+shotgun-row,Shotgun Row,strength,beginner,pull,compound,cable,lats,biceps; middle back,90,free-exercise-db
+shoulder-press-with-bands,Shoulder Press - With Bands,strength,beginner,push,compound,bands,shoulders,triceps,90,free-exercise-db
+side-bridge,Side Bridge,strength,beginner,static,,body only,abdominals,shoulders,90,free-exercise-db
+side-jackknife,Side Jackknife,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+side-lateral-raise,Side Lateral Raise,strength,beginner,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+side-laterals-to-front-raise,Side Laterals to Front Raise,strength,beginner,push,isolation,dumbbell,shoulders,traps,90,free-exercise-db
+side-to-side-chins,Side To Side Chins,strength,intermediate,pull,compound,other,lats,biceps; forearms; middle back; shoulders,90,free-exercise-db
+single-arm-cable-crossover,Single-Arm Cable Crossover,strength,beginner,push,isolation,cable,chest,,90,free-exercise-db
+single-arm-linear-jammer,Single-Arm Linear Jammer,strength,intermediate,push,compound,barbell,shoulders,chest; triceps,90,free-exercise-db
+single-arm-push-up,Single-Arm Push-Up,strength,intermediate,push,compound,body only,chest,shoulders; triceps,90,free-exercise-db
+single-dumbbell-raise,Single Dumbbell Raise,strength,beginner,,isolation,dumbbell,shoulders,forearms; traps,90,free-exercise-db
+single-leg-glute-bridge,Single Leg Glute Bridge,strength,beginner,push,isolation,body only,glutes,hamstrings,90,free-exercise-db
+single-leg-high-box-squat,Single-Leg High Box Squat,strength,beginner,push,compound,other,quadriceps,glutes; hamstrings,90,free-exercise-db
+single-leg-leg-extension,Single-Leg Leg Extension,strength,beginner,push,isolation,machine,quadriceps,,90,free-exercise-db
+sit-up,Sit-Up,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+sled-overhead-backward-walk,Sled Overhead Backward Walk,strength,beginner,pull,compound,other,shoulders,calves; middle back; quadriceps,90,free-exercise-db
+sled-overhead-triceps-extension,Sled Overhead Triceps Extension,strength,beginner,push,isolation,other,triceps,,90,free-exercise-db
+sled-reverse-flye,Sled Reverse Flye,strength,beginner,pull,isolation,other,shoulders,,90,free-exercise-db
+sled-row,Sled Row,strength,beginner,pull,compound,other,middle back,biceps; lats,90,free-exercise-db
+smith-incline-shoulder-raise,Smith Incline Shoulder Raise,strength,beginner,push,isolation,barbell,shoulders,chest,90,free-exercise-db
+smith-machine-behind-the-back-shrug,Smith Machine Behind the Back Shrug,strength,beginner,pull,isolation,machine,traps,shoulders,90,free-exercise-db
+smith-machine-bench-press,Smith Machine Bench Press,strength,beginner,push,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+smith-machine-bent-over-row,Smith Machine Bent Over Row,strength,beginner,pull,compound,machine,middle back,biceps; lats; shoulders,90,free-exercise-db
+smith-machine-calf-raise,Smith Machine Calf Raise,strength,beginner,push,isolation,machine,calves,,90,free-exercise-db
+smith-machine-close-grip-bench-press,Smith Machine Close-Grip Bench Press,strength,beginner,push,compound,machine,triceps,chest; shoulders,90,free-exercise-db
+smith-machine-decline-press,Smith Machine Decline Press,strength,beginner,,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+smith-machine-hang-power-clean,Smith Machine Hang Power Clean,strength,intermediate,pull,compound,machine,hamstrings,glutes; lower back; quadriceps; shoulders; traps,90,free-exercise-db
+smith-machine-hip-raise,Smith Machine Hip Raise,strength,beginner,pull,isolation,machine,abdominals,,90,free-exercise-db
+smith-machine-incline-bench-press,Smith Machine Incline Bench Press,strength,beginner,push,compound,machine,chest,shoulders; triceps,90,free-exercise-db
+smith-machine-leg-press,Smith Machine Leg Press,strength,intermediate,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+smith-machine-one-arm-upright-row,Smith Machine One-Arm Upright Row,strength,beginner,pull,compound,machine,shoulders,biceps; traps,90,free-exercise-db
+smith-machine-overhead-shoulder-press,Smith Machine Overhead Shoulder Press,strength,beginner,push,compound,machine,shoulders,triceps,90,free-exercise-db
+smith-machine-pistol-squat,Smith Machine Pistol Squat,strength,intermediate,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+smith-machine-reverse-calf-raises,Smith Machine Reverse Calf Raises,strength,beginner,push,isolation,machine,calves,,90,free-exercise-db
+smith-machine-squat,Smith Machine Squat,strength,beginner,push,compound,machine,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+smith-machine-stiff-legged-deadlift,Smith Machine Stiff-Legged Deadlift,strength,beginner,pull,compound,machine,hamstrings,glutes; lower back,90,free-exercise-db
+smith-machine-upright-row,Smith Machine Upright Row,strength,beginner,pull,compound,machine,traps,biceps; middle back; shoulders,90,free-exercise-db
+smith-single-leg-split-squat,Smith Single-Leg Split Squat,strength,beginner,push,compound,machine,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+snatch-pull,Snatch Pull,strength,intermediate,pull,compound,barbell,hamstrings,calves; glutes; lower back; quadriceps; traps,90,free-exercise-db
+speed-band-overhead-triceps,Speed Band Overhead Triceps,strength,beginner,push,isolation,bands,triceps,,90,free-exercise-db
+speed-squats,Speed Squats,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+spell-caster,Spell Caster,strength,beginner,pull,compound,dumbbell,abdominals,glutes; shoulders,90,free-exercise-db
+spider-crawl,Spider Crawl,strength,beginner,pull,compound,body only,abdominals,chest; shoulders; triceps,90,free-exercise-db
+spider-curl,Spider Curl,strength,beginner,pull,isolation,e-z curl bar,biceps,,90,free-exercise-db
+split-squat-with-dumbbells,Split Squat with Dumbbells,strength,beginner,push,compound,dumbbell,quadriceps,glutes; hamstrings,90,free-exercise-db
+squat-jerk,Squat Jerk,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings; shoulders; triceps,90,free-exercise-db
+squat-with-plate-movers,Squat with Plate Movers,strength,intermediate,push,compound,barbell,quadriceps,abductors; adductors; calves; glutes; hamstrings,90,free-exercise-db
+squats-with-bands,Squats - With Bands,strength,beginner,push,compound,bands,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+standing-alternating-dumbbell-press,Standing Alternating Dumbbell Press,strength,beginner,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+standing-barbell-calf-raise,Standing Barbell Calf Raise,strength,beginner,push,isolation,barbell,calves,,90,free-exercise-db
+standing-barbell-press-behind-neck,Standing Barbell Press Behind Neck,strength,intermediate,push,compound,barbell,shoulders,triceps,90,free-exercise-db
+standing-bent-over-one-arm-dumbbell-triceps-extension,Standing Bent-Over One-Arm Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,shoulders,90,free-exercise-db
+standing-bent-over-two-arm-dumbbell-triceps-extension,Standing Bent-Over Two-Arm Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+standing-biceps-cable-curl,Standing Biceps Cable Curl,strength,beginner,pull,isolation,cable,biceps,,90,free-exercise-db
+standing-bradford-press,Standing Bradford Press,strength,beginner,push,compound,barbell,shoulders,triceps,90,free-exercise-db
+standing-cable-chest-press,Standing Cable Chest Press,strength,beginner,push,compound,cable,chest,shoulders; triceps,90,free-exercise-db
+standing-cable-lift,Standing Cable Lift,strength,beginner,pull,compound,cable,abdominals,shoulders,90,free-exercise-db
+standing-cable-wood-chop,Standing Cable Wood Chop,strength,beginner,pull,compound,cable,abdominals,shoulders,90,free-exercise-db
+standing-calf-raises,Standing Calf Raises,strength,beginner,push,isolation,machine,calves,,90,free-exercise-db
+standing-concentration-curl,Standing Concentration Curl,strength,beginner,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+standing-dumbbell-calf-raise,Standing Dumbbell Calf Raise,strength,intermediate,push,isolation,dumbbell,calves,,90,free-exercise-db
+standing-dumbbell-press,Standing Dumbbell Press,strength,beginner,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+standing-dumbbell-reverse-curl,Standing Dumbbell Reverse Curl,strength,intermediate,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+standing-dumbbell-straight-arm-front-delt-raise-above-head,Standing Dumbbell Straight-Arm Front Delt Raise Above Head,strength,intermediate,push,isolation,dumbbell,shoulders,,90,free-exercise-db
+standing-dumbbell-triceps-extension,Standing Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+standing-dumbbell-upright-row,Standing Dumbbell Upright Row,strength,beginner,pull,compound,dumbbell,traps,biceps; shoulders,90,free-exercise-db
+standing-front-barbell-raise-over-head,Standing Front Barbell Raise Over Head,strength,intermediate,push,isolation,barbell,shoulders,,90,free-exercise-db
+standing-inner-biceps-curl,Standing Inner-Biceps Curl,strength,intermediate,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+standing-leg-curl,Standing Leg Curl,strength,beginner,pull,isolation,machine,hamstrings,,90,free-exercise-db
+standing-low-pulley-deltoid-raise,Standing Low-Pulley Deltoid Raise,strength,beginner,push,isolation,cable,shoulders,forearms,90,free-exercise-db
+standing-low-pulley-one-arm-triceps-extension,Standing Low-Pulley One-Arm Triceps Extension,strength,intermediate,push,isolation,cable,triceps,chest; shoulders,90,free-exercise-db
+standing-military-press,Standing Military Press,strength,beginner,push,compound,barbell,shoulders,triceps,90,free-exercise-db
+standing-olympic-plate-hand-squeeze,Standing Olympic Plate Hand Squeeze,strength,beginner,static,isolation,other,forearms,biceps,90,free-exercise-db
+standing-one-arm-cable-curl,Standing One-Arm Cable Curl,strength,intermediate,pull,isolation,cable,biceps,,90,free-exercise-db
+standing-one-arm-dumbbell-curl-over-incline-bench,Standing One-Arm Dumbbell Curl Over Incline Bench,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+standing-one-arm-dumbbell-triceps-extension,Standing One-Arm Dumbbell Triceps Extension,strength,beginner,push,isolation,dumbbell,triceps,chest; shoulders,90,free-exercise-db
+standing-overhead-barbell-triceps-extension,Standing Overhead Barbell Triceps Extension,strength,beginner,push,isolation,barbell,triceps,shoulders,90,free-exercise-db
+standing-palm-in-one-arm-dumbbell-press,Standing Palm-In One-Arm Dumbbell Press,strength,beginner,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+standing-palms-in-dumbbell-press,Standing Palms-In Dumbbell Press,strength,intermediate,push,compound,dumbbell,shoulders,triceps,90,free-exercise-db
+standing-palms-up-barbell-behind-the-back-wrist-curl,Standing Palms-Up Barbell Behind The Back Wrist Curl,strength,beginner,pull,isolation,barbell,forearms,,90,free-exercise-db
+standing-rope-crunch,Standing Rope Crunch,strength,beginner,pull,isolation,cable,abdominals,,90,free-exercise-db
+standing-towel-triceps-extension,Standing Towel Triceps Extension,strength,beginner,push,isolation,body only,triceps,,90,free-exercise-db
+step-up-with-knee-raise,Step-up with Knee Raise,strength,beginner,push,compound,body only,glutes,hamstrings; quadriceps,90,free-exercise-db
+stiff-leg-barbell-good-morning,Stiff Leg Barbell Good Morning,strength,beginner,push,compound,barbell,lower back,glutes; hamstrings,90,free-exercise-db
+stiff-legged-barbell-deadlift,Stiff-Legged Barbell Deadlift,strength,intermediate,pull,compound,barbell,hamstrings,glutes; lower back,90,free-exercise-db
+stiff-legged-dumbbell-deadlift,Stiff-Legged Dumbbell Deadlift,strength,beginner,pull,compound,dumbbell,hamstrings,glutes; lower back,90,free-exercise-db
+straight-arm-dumbbell-pullover,Straight-Arm Dumbbell Pullover,strength,intermediate,pull,compound,dumbbell,chest,lats; shoulders; triceps,90,free-exercise-db
+straight-arm-pulldown,Straight-Arm Pulldown,strength,beginner,pull,isolation,cable,lats,,90,free-exercise-db
+straight-bar-bench-mid-rows,Straight Bar Bench Mid Rows,strength,beginner,pull,compound,barbell,middle back,biceps; lats,90,free-exercise-db
+straight-raises-on-incline-bench,Straight Raises on Incline Bench,strength,beginner,push,isolation,barbell,shoulders,traps,90,free-exercise-db
+suitcase-carry,Suitcase Carry,strength,beginner,static,compound,dumbbell,abdominals; forearms,traps; shoulders; glutes,60,original
+suspended-fallout,Suspended Fallout,strength,intermediate,pull,isolation,other,abdominals,chest; lower back; shoulders,90,free-exercise-db
+suspended-push-up,Suspended Push-Up,strength,beginner,push,compound,other,chest,shoulders; triceps,90,free-exercise-db
+suspended-reverse-crunch,Suspended Reverse Crunch,strength,beginner,pull,isolation,other,abdominals,,90,free-exercise-db
+suspended-row,Suspended Row,strength,beginner,pull,compound,other,middle back,biceps; lats,90,free-exercise-db
+suspended-split-squat,Suspended Split Squat,strength,intermediate,push,compound,other,quadriceps,abductors; adductors; calves; glutes; hamstrings,90,free-exercise-db
+svend-press,Svend Press,strength,beginner,push,compound,other,chest,forearms; shoulders; triceps,90,free-exercise-db
+t-bar-row-with-handle,T-Bar Row with Handle,strength,beginner,pull,compound,barbell,middle back,biceps; lats,90,free-exercise-db
+tate-press,Tate Press,strength,intermediate,push,isolation,dumbbell,triceps,chest; shoulders,90,free-exercise-db
+thigh-abductor,Thigh Abductor,strength,beginner,push,isolation,machine,abductors,glutes,90,free-exercise-db
+thigh-adductor,Thigh Adductor,strength,beginner,pull,isolation,machine,adductors,glutes; hamstrings,90,free-exercise-db
+trap-bar-deadlift,Trap Bar Deadlift,strength,beginner,pull,compound,other,quadriceps,glutes; hamstrings,90,free-exercise-db
+tricep-dumbbell-kickback,Tricep Dumbbell Kickback,strength,beginner,push,isolation,dumbbell,triceps,,90,free-exercise-db
+triceps-overhead-extension-with-rope,Triceps Overhead Extension with Rope,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+triceps-pushdown,Triceps Pushdown,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+triceps-pushdown-rope-attachment,Triceps Pushdown - Rope Attachment,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+triceps-pushdown-v-bar-attachment,Triceps Pushdown - V-Bar Attachment,strength,beginner,push,isolation,cable,triceps,,90,free-exercise-db
+tuck-crunch,Tuck Crunch,strength,beginner,pull,isolation,body only,abdominals,,90,free-exercise-db
+two-arm-dumbbell-preacher-curl,Two-Arm Dumbbell Preacher Curl,strength,beginner,pull,isolation,dumbbell,biceps,,90,free-exercise-db
+two-arm-kettlebell-clean,Two-Arm Kettlebell Clean,strength,intermediate,pull,compound,kettlebells,shoulders,calves; glutes; hamstrings; lower back; traps,90,free-exercise-db
+two-arm-kettlebell-jerk,Two-Arm Kettlebell Jerk,strength,intermediate,push,compound,kettlebells,shoulders,calves; quadriceps; triceps,90,free-exercise-db
+two-arm-kettlebell-military-press,Two-Arm Kettlebell Military Press,strength,intermediate,push,compound,kettlebells,shoulders,triceps,90,free-exercise-db
+two-arm-kettlebell-row,Two-Arm Kettlebell Row,strength,intermediate,pull,compound,kettlebells,middle back,biceps; lats,90,free-exercise-db
+two-hand-kettlebell-swing,Two-Hand Kettlebell Swing,strength,intermediate,pull,compound,kettlebells,glutes; hamstrings,lower back; abdominals; shoulders; forearms,60,original
+underhand-cable-pulldowns,Underhand Cable Pulldowns,strength,beginner,pull,compound,cable,lats,biceps; middle back; shoulders,90,free-exercise-db
+upright-barbell-row,Upright Barbell Row,strength,beginner,pull,compound,barbell,shoulders,traps,90,free-exercise-db
+upright-cable-row,Upright Cable Row,strength,intermediate,pull,compound,cable,traps,shoulders,90,free-exercise-db
+upright-row-with-bands,Upright Row - With Bands,strength,beginner,pull,compound,bands,traps,shoulders,90,free-exercise-db
+v-bar-pulldown,V-Bar Pulldown,strength,intermediate,pull,compound,cable,lats,biceps; middle back; shoulders,90,free-exercise-db
+v-bar-pullup,V-Bar Pullup,strength,beginner,pull,compound,body only,lats,biceps; middle back; shoulders,90,free-exercise-db
+v-up,V-Up,strength,intermediate,pull,compound,body only,abdominals,quadriceps,45,original
+wall-sit,Wall Sit,strength,beginner,static,isolation,body only,quadriceps,glutes; calves; abdominals,60,original
+weighted-ball-hyperextension,Weighted Ball Hyperextension,strength,intermediate,pull,compound,exercise ball,lower back,glutes; hamstrings; middle back,90,free-exercise-db
+weighted-ball-side-bend,Weighted Ball Side Bend,strength,intermediate,pull,isolation,exercise ball,abdominals,,90,free-exercise-db
+weighted-bench-dip,Weighted Bench Dip,strength,intermediate,push,compound,other,triceps,chest; shoulders,90,free-exercise-db
+weighted-crunches,Weighted Crunches,strength,beginner,pull,isolation,medicine ball,abdominals,,90,free-exercise-db
+weighted-jump-squat,Weighted Jump Squat,strength,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+weighted-pull-ups,Weighted Pull Ups,strength,intermediate,pull,compound,other,lats,biceps; middle back,90,free-exercise-db
+weighted-sissy-squat,Weighted Sissy Squat,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+weighted-sit-ups-with-bands,Weighted Sit-Ups - With Bands,strength,intermediate,pull,isolation,other,abdominals,,90,free-exercise-db
+weighted-squat,Weighted Squat,strength,intermediate,push,compound,other,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+wide-grip-barbell-bench-press,Wide-Grip Barbell Bench Press,strength,intermediate,push,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+wide-grip-decline-barbell-bench-press,Wide-Grip Decline Barbell Bench Press,strength,intermediate,push,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+wide-grip-decline-barbell-pullover,Wide-Grip Decline Barbell Pullover,strength,intermediate,pull,compound,barbell,chest,shoulders; triceps,90,free-exercise-db
+wide-grip-lat-pulldown,Wide-Grip Lat Pulldown,strength,beginner,pull,compound,cable,lats,biceps; middle back; shoulders,90,free-exercise-db
+wide-grip-pulldown-behind-the-neck,Wide-Grip Pulldown Behind The Neck,strength,intermediate,pull,compound,cable,lats,biceps; middle back; shoulders,90,free-exercise-db
+wide-grip-rear-pull-up,Wide-Grip Rear Pull-Up,strength,intermediate,pull,compound,body only,lats,biceps; middle back; shoulders,90,free-exercise-db
+wide-grip-standing-barbell-curl,Wide-Grip Standing Barbell Curl,strength,beginner,pull,isolation,barbell,biceps,,90,free-exercise-db
+wide-stance-barbell-squat,Wide Stance Barbell Squat,strength,intermediate,push,compound,barbell,quadriceps,calves; glutes; hamstrings; lower back,90,free-exercise-db
+wind-sprints,Wind Sprints,strength,beginner,pull,compound,body only,abdominals,,90,free-exercise-db
+wrist-roller,Wrist Roller,strength,beginner,pull,isolation,other,forearms,shoulders,90,free-exercise-db
+wrist-rotations-with-straight-bar,Wrist Rotations with Straight Bar,strength,beginner,pull,isolation,barbell,forearms,,90,free-exercise-db
+zercher-squats,Zercher Squats,strength,expert,push,compound,barbell,quadriceps,calves; glutes; hamstrings,90,free-exercise-db
+zottman-curl,Zottman Curl,strength,intermediate,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+zottman-preacher-curl,Zottman Preacher Curl,strength,intermediate,pull,isolation,dumbbell,biceps,forearms,90,free-exercise-db
+90-90-hamstring,90/90 Hamstring,stretching,beginner,push,,body only,hamstrings,calves,15,free-exercise-db
+adductor,Adductor,stretching,intermediate,static,isolation,foam roll,adductors,,15,free-exercise-db
+adductor-groin,Adductor/Groin,stretching,intermediate,static,,,adductors,,15,free-exercise-db
+all-fours-quad-stretch,All Fours Quad Stretch,stretching,intermediate,static,,body only,quadriceps,quadriceps,15,free-exercise-db
+ankle-circles,Ankle Circles,stretching,beginner,pull,isolation,,calves,,15,free-exercise-db
+ankle-on-the-knee,Ankle On The Knee,stretching,beginner,static,,,glutes,,15,free-exercise-db
+anterior-tibialis-smr,Anterior Tibialis-SMR,stretching,intermediate,static,,other,calves,,15,free-exercise-db
+arm-circles,Arm Circles,stretching,beginner,push,isolation,,shoulders,traps,15,free-exercise-db
+behind-head-chest-stretch,Behind Head Chest Stretch,stretching,expert,static,isolation,other,chest,shoulders,15,free-exercise-db
+brachialis-smr,Brachialis-SMR,stretching,intermediate,static,,foam roll,biceps,,15,free-exercise-db
+calf-stretch-elbows-against-wall,Calf Stretch Elbows Against Wall,stretching,beginner,static,isolation,,calves,,15,free-exercise-db
+calf-stretch-hands-against-wall,Calf Stretch Hands Against Wall,stretching,beginner,static,isolation,,calves,,15,free-exercise-db
+calves-smr,Calves-SMR,stretching,intermediate,static,,foam roll,calves,,15,free-exercise-db
+cat-stretch,Cat Stretch,stretching,beginner,static,,,lower back,middle back; traps,15,free-exercise-db
+chair-leg-extended-stretch,Chair Leg Extended Stretch,stretching,beginner,static,isolation,other,hamstrings,adductors,15,free-exercise-db
+chair-lower-back-stretch,Chair Lower Back Stretch,stretching,beginner,static,isolation,,lats,lower back,15,free-exercise-db
+chair-upper-body-stretch,Chair Upper Body Stretch,stretching,beginner,static,,other,shoulders,biceps; chest,15,free-exercise-db
+chest-and-front-of-shoulder-stretch,Chest And Front Of Shoulder Stretch,stretching,beginner,static,isolation,other,chest,shoulders,15,free-exercise-db
+chest-stretch-on-stability-ball,Chest Stretch on Stability Ball,stretching,beginner,static,isolation,exercise ball,chest,,15,free-exercise-db
+child-s-pose,Child's Pose,stretching,beginner,static,,,lower back,glutes; middle back,15,free-exercise-db
+chin-to-chest-stretch,Chin To Chest Stretch,stretching,beginner,static,,,neck,traps,15,free-exercise-db
+crossover-reverse-lunge,Crossover Reverse Lunge,stretching,intermediate,pull,,,lower back,abdominals; abductors; glutes; hamstrings; quadriceps,15,free-exercise-db
+dancer-s-stretch,Dancer's Stretch,stretching,beginner,static,,,lower back,abductors; glutes,15,free-exercise-db
+dynamic-back-stretch,Dynamic Back Stretch,stretching,beginner,pull,,,lats,,15,free-exercise-db
+dynamic-chest-stretch,Dynamic Chest Stretch,stretching,beginner,pull,,,chest,middle back,15,free-exercise-db
+elbow-circles,Elbow Circles,stretching,beginner,pull,isolation,,shoulders,traps,15,free-exercise-db
+elbows-back,Elbows Back,stretching,beginner,static,isolation,,chest,shoulders,15,free-exercise-db
+foot-smr,Foot-SMR,stretching,intermediate,static,,other,calves,,15,free-exercise-db
+frog-hops,Frog Hops,stretching,intermediate,push,compound,,quadriceps,calves; glutes; hamstrings,15,free-exercise-db
+front-leg-raises,Front Leg Raises,stretching,beginner,pull,,body only,hamstrings,,15,free-exercise-db
+groin-and-back-stretch,Groin and Back Stretch,stretching,intermediate,static,compound,,adductors,,15,free-exercise-db
+groiners,Groiners,stretching,intermediate,pull,compound,body only,adductors,,15,free-exercise-db
+hamstring-smr,Hamstring-SMR,stretching,beginner,static,isolation,foam roll,hamstrings,,15,free-exercise-db
+hamstring-stretch,Hamstring Stretch,stretching,beginner,static,isolation,,hamstrings,,15,free-exercise-db
+hip-circles-prone,Hip Circles (prone),stretching,beginner,pull,isolation,body only,abductors,adductors,15,free-exercise-db
+hug-a-ball,Hug A Ball,stretching,beginner,static,isolation,exercise ball,lower back,calves; glutes,15,free-exercise-db
+hug-knees-to-chest,Hug Knees To Chest,stretching,beginner,static,,,lower back,glutes,15,free-exercise-db
+iliotibial-tract-smr,Iliotibial Tract-SMR,stretching,intermediate,static,isolation,foam roll,abductors,,15,free-exercise-db
+inchworm,Inchworm,stretching,beginner,,compound,body only,hamstrings,,15,free-exercise-db
+intermediate-groin-stretch,Intermediate Groin Stretch,stretching,intermediate,static,isolation,other,hamstrings,,15,free-exercise-db
+intermediate-hip-flexor-and-quad-stretch,Intermediate Hip Flexor and Quad Stretch,stretching,intermediate,static,compound,other,quadriceps,,15,free-exercise-db
+iron-crosses-stretch,Iron Crosses (stretch),stretching,intermediate,pull,compound,,quadriceps,,15,free-exercise-db
+it-band-and-glute-stretch,IT Band and Glute Stretch,stretching,intermediate,static,,other,abductors,,15,free-exercise-db
+knee-across-the-body,Knee Across The Body,stretching,beginner,static,,,glutes,abductors; lower back,15,free-exercise-db
+knee-circles,Knee Circles,stretching,beginner,pull,compound,body only,calves,hamstrings; quadriceps,15,free-exercise-db
+kneeling-forearm-stretch,Kneeling Forearm Stretch,stretching,beginner,static,isolation,,forearms,,15,free-exercise-db
+kneeling-hip-flexor,Kneeling Hip Flexor,stretching,beginner,static,isolation,,quadriceps,quadriceps,15,free-exercise-db
+latissimus-dorsi-smr,Latissimus Dorsi-SMR,stretching,beginner,static,isolation,foam roll,lats,,15,free-exercise-db
+leg-up-hamstring-stretch,Leg-Up Hamstring Stretch,stretching,beginner,push,isolation,,hamstrings,,15,free-exercise-db
+looking-at-ceiling,Looking At Ceiling,stretching,beginner,static,isolation,,quadriceps,,15,free-exercise-db
+lower-back-curl,Lower Back Curl,stretching,beginner,static,,body only,abdominals,,15,free-exercise-db
+lower-back-smr,Lower Back-SMR,stretching,beginner,static,,foam roll,lower back,,15,free-exercise-db
+lying-bent-leg-groin,Lying Bent Leg Groin,stretching,expert,static,,other,adductors,,15,free-exercise-db
+lying-crossover,Lying Crossover,stretching,expert,static,,body only,abductors,,15,free-exercise-db
+lying-glute,Lying Glute,stretching,expert,static,,body only,glutes,abductors,15,free-exercise-db
+lying-hamstring,Lying Hamstring,stretching,expert,static,,other,hamstrings,calves,15,free-exercise-db
+lying-prone-quadriceps,Lying Prone Quadriceps,stretching,expert,,,body only,quadriceps,,15,free-exercise-db
+middle-back-stretch,Middle Back Stretch,stretching,beginner,static,isolation,,middle back,abdominals; lats; lower back,15,free-exercise-db
+neck-smr,Neck-SMR,stretching,intermediate,static,,other,neck,,15,free-exercise-db
+on-your-back-quad-stretch,On-Your-Back Quad Stretch,stretching,beginner,static,isolation,other,quadriceps,,15,free-exercise-db
+on-your-side-quad-stretch,On Your Side Quad Stretch,stretching,beginner,static,isolation,,quadriceps,,15,free-exercise-db
+one-arm-against-wall,One Arm Against Wall,stretching,beginner,static,isolation,,lats,,15,free-exercise-db
+one-half-locust,One Half Locust,stretching,beginner,static,,,quadriceps,abdominals; biceps; chest,15,free-exercise-db
+one-handed-hang,One Handed Hang,stretching,beginner,static,,other,lats,biceps,15,free-exercise-db
+one-knee-to-chest,One Knee To Chest,stretching,beginner,static,compound,,glutes,hamstrings; lower back,15,free-exercise-db
+overhead-lat,Overhead Lat,stretching,expert,static,,other,lats,triceps,15,free-exercise-db
+overhead-stretch,Overhead Stretch,stretching,beginner,static,compound,,abdominals,chest; forearms; lats; triceps,15,free-exercise-db
+overhead-triceps,Overhead Triceps,stretching,expert,static,,body only,triceps,lats,15,free-exercise-db
+pelvic-tilt-into-bridge,Pelvic Tilt Into Bridge,stretching,intermediate,static,compound,,lower back,,15,free-exercise-db
+peroneals-smr,Peroneals-SMR,stretching,intermediate,static,,foam roll,calves,,15,free-exercise-db
+peroneals-stretch,Peroneals Stretch,stretching,intermediate,static,,other,calves,,15,free-exercise-db
+piriformis-smr,Piriformis-SMR,stretching,intermediate,static,isolation,foam roll,glutes,,15,free-exercise-db
+posterior-tibialis-stretch,Posterior Tibialis Stretch,stretching,intermediate,static,,other,calves,,15,free-exercise-db
+pyramid,Pyramid,stretching,beginner,static,,exercise ball,lower back,shoulders,15,free-exercise-db
+quad-stretch,Quad Stretch,stretching,intermediate,static,,other,quadriceps,,15,free-exercise-db
+quadriceps-smr,Quadriceps-SMR,stretching,intermediate,static,isolation,foam roll,quadriceps,,15,free-exercise-db
+rear-leg-raises,Rear Leg Raises,stretching,beginner,push,,body only,quadriceps,,15,free-exercise-db
+rhomboids-smr,Rhomboids-SMR,stretching,intermediate,static,,foam roll,middle back,traps,15,free-exercise-db
+round-the-world-shoulder-stretch,Round The World Shoulder Stretch,stretching,beginner,static,,other,shoulders,biceps; chest,15,free-exercise-db
+runner-s-stretch,Runner's Stretch,stretching,beginner,static,,,hamstrings,calves,15,free-exercise-db
+scissor-kick,Scissor Kick,stretching,beginner,pull,isolation,body only,abdominals,,15,free-exercise-db
+seated-biceps,Seated Biceps,stretching,expert,static,isolation,body only,biceps,chest; shoulders,15,free-exercise-db
+seated-calf-stretch,Seated Calf Stretch,stretching,beginner,static,,,calves,hamstrings; lower back,15,free-exercise-db
+seated-floor-hamstring-stretch,Seated Floor Hamstring Stretch,stretching,beginner,static,,,hamstrings,calves,15,free-exercise-db
+seated-front-deltoid,Seated Front Deltoid,stretching,expert,static,,body only,shoulders,chest,15,free-exercise-db
+seated-glute,Seated Glute,stretching,expert,static,,body only,glutes,adductors,15,free-exercise-db
+seated-hamstring,Seated Hamstring,stretching,expert,static,,,hamstrings,calves,15,free-exercise-db
+seated-hamstring-and-calf-stretch,Seated Hamstring and Calf Stretch,stretching,intermediate,static,,other,hamstrings,calves,15,free-exercise-db
+seated-overhead-stretch,Seated Overhead Stretch,stretching,beginner,static,isolation,,abdominals,,15,free-exercise-db
+shoulder-circles,Shoulder Circles,stretching,beginner,pull,,,shoulders,traps,15,free-exercise-db
+shoulder-raise,Shoulder Raise,stretching,beginner,pull,,,shoulders,lats,15,free-exercise-db
+shoulder-stretch,Shoulder Stretch,stretching,beginner,pull,,,shoulders,,15,free-exercise-db
+side-leg-raises,Side Leg Raises,stretching,beginner,pull,,body only,adductors,,15,free-exercise-db
+side-lying-floor-stretch,Side-Lying Floor Stretch,stretching,beginner,static,,,lats,,15,free-exercise-db
+side-lying-groin-stretch,Side Lying Groin Stretch,stretching,beginner,static,isolation,,adductors,hamstrings,15,free-exercise-db
+side-neck-stretch,Side Neck Stretch,stretching,beginner,static,isolation,,neck,,15,free-exercise-db
+side-wrist-pull,Side Wrist Pull,stretching,beginner,static,isolation,,shoulders,forearms; lats,15,free-exercise-db
+sit-squats,Sit Squats,stretching,beginner,push,,,quadriceps,abductors; glutes; hamstrings,15,free-exercise-db
+spinal-stretch,Spinal Stretch,stretching,beginner,static,isolation,,middle back,lats; lower back; neck; traps,15,free-exercise-db
+split-squats,Split Squats,stretching,intermediate,push,,,hamstrings,calves; glutes; quadriceps,15,free-exercise-db
+standing-biceps-stretch,Standing Biceps Stretch,stretching,beginner,static,isolation,other,biceps,chest; shoulders,15,free-exercise-db
+standing-elevated-quad-stretch,Standing Elevated Quad Stretch,stretching,beginner,static,,other,quadriceps,,15,free-exercise-db
+standing-gastrocnemius-calf-stretch,Standing Gastrocnemius Calf Stretch,stretching,beginner,static,,,calves,hamstrings,15,free-exercise-db
+standing-hamstring-and-calf-stretch,Standing Hamstring and Calf Stretch,stretching,beginner,static,,other,hamstrings,,15,free-exercise-db
+standing-hip-circles,Standing Hip Circles,stretching,beginner,pull,isolation,body only,abductors,adductors,15,free-exercise-db
+standing-hip-flexors,Standing Hip Flexors,stretching,beginner,static,isolation,,quadriceps,,15,free-exercise-db
+standing-lateral-stretch,Standing Lateral Stretch,stretching,beginner,static,,,abdominals,,15,free-exercise-db
+standing-pelvic-tilt,Standing Pelvic Tilt,stretching,beginner,static,isolation,,lower back,glutes,15,free-exercise-db
+standing-soleus-and-achilles-stretch,Standing Soleus And Achilles Stretch,stretching,beginner,static,isolation,,calves,,15,free-exercise-db
+standing-toe-touches,Standing Toe Touches,stretching,beginner,static,,,hamstrings,calves,15,free-exercise-db
+stomach-vacuum,Stomach Vacuum,stretching,beginner,static,isolation,body only,abdominals,,15,free-exercise-db
+superman,Superman,stretching,beginner,static,compound,body only,lower back,glutes; hamstrings,15,free-exercise-db
+the-straddle,The Straddle,stretching,beginner,static,,,hamstrings,adductors; calves,15,free-exercise-db
+toe-touchers,Toe Touchers,stretching,beginner,pull,isolation,body only,abdominals,,15,free-exercise-db
+torso-rotation,Torso Rotation,stretching,beginner,pull,,exercise ball,abdominals,,15,free-exercise-db
+tricep-side-stretch,Tricep Side Stretch,stretching,beginner,static,,,triceps,shoulders,15,free-exercise-db
+triceps-stretch,Triceps Stretch,stretching,beginner,static,isolation,,triceps,lats,15,free-exercise-db
+upper-back-leg-grab,Upper Back-Leg Grab,stretching,beginner,static,,,hamstrings,lower back; middle back,15,free-exercise-db
+upper-back-stretch,Upper Back Stretch,stretching,beginner,static,,,middle back,middle back,15,free-exercise-db
+upward-stretch,Upward Stretch,stretching,beginner,static,,,shoulders,chest; lats,15,free-exercise-db
+windmills,Windmills,stretching,intermediate,pull,,,abductors,glutes; hamstrings; lower back,15,free-exercise-db
+world-s-greatest-stretch,World's Greatest Stretch,stretching,intermediate,static,,,hamstrings,calves; glutes; quadriceps,15,free-exercise-db
+wrist-circles,Wrist Circles,stretching,beginner,pull,isolation,body only,forearms,,15,free-exercise-db
+atlas-stone-trainer,Atlas Stone Trainer,strongman,intermediate,pull,compound,other,lower back,biceps; forearms; glutes; hamstrings; quadriceps,120,free-exercise-db
+atlas-stones,Atlas Stones,strongman,expert,pull,compound,other,lower back,abdominals; adductors; biceps; calves; forearms; glutes; hamstrings; middle back; quadriceps; traps,120,free-exercise-db
+axle-deadlift,Axle Deadlift,strongman,intermediate,pull,compound,other,lower back,forearms; glutes; hamstrings; middle back; quadriceps; traps,120,free-exercise-db
+backward-drag,Backward Drag,strongman,beginner,pull,compound,other,quadriceps,calves; forearms; glutes; hamstrings; lower back,120,free-exercise-db
+bear-crawl-sled-drags,Bear Crawl Sled Drags,strongman,beginner,push,compound,other,quadriceps,calves; glutes; hamstrings,120,free-exercise-db
+car-deadlift,Car Deadlift,strongman,intermediate,pull,compound,other,quadriceps,forearms; glutes; hamstrings; lower back; traps,120,free-exercise-db
+circus-bell,Circus Bell,strongman,expert,push,compound,other,shoulders,forearms; glutes; hamstrings; lower back; traps; triceps,120,free-exercise-db
+conan-s-wheel,Conan's Wheel,strongman,intermediate,,compound,other,quadriceps,abdominals; biceps; calves; forearms; lower back; shoulders; traps,120,free-exercise-db
+crucifix,Crucifix,strongman,beginner,static,isolation,other,shoulders,forearms,120,free-exercise-db
+farmer-s-walk,Farmer's Walk,strongman,intermediate,,compound,other,forearms,abdominals; glutes; hamstrings; lower back; quadriceps; traps,120,free-exercise-db
+forward-drag-with-press,Forward Drag with Press,strongman,intermediate,push,compound,other,chest,calves; glutes; hamstrings; quadriceps; shoulders; triceps,120,free-exercise-db
+keg-load,Keg Load,strongman,intermediate,pull,compound,other,lower back,abdominals; biceps; calves; forearms; glutes; hamstrings; middle back; quadriceps; shoulders; traps,120,free-exercise-db
+log-lift,Log Lift,strongman,intermediate,push,compound,other,shoulders,abdominals; chest; glutes; hamstrings; lower back; middle back; quadriceps; traps; triceps,120,free-exercise-db
+power-stairs,Power Stairs,strongman,intermediate,pull,compound,other,hamstrings,adductors; calves; glutes; lower back; quadriceps; shoulders; traps,120,free-exercise-db
+rickshaw-carry,Rickshaw Carry,strongman,intermediate,,compound,other,forearms,abdominals; calves; glutes; hamstrings; lower back; quadriceps; traps,120,free-exercise-db
+rickshaw-deadlift,Rickshaw Deadlift,strongman,intermediate,pull,compound,other,quadriceps,forearms; glutes; hamstrings; lower back; traps,120,free-exercise-db
+sandbag-load,Sandbag Load,strongman,beginner,pull,compound,other,quadriceps,abdominals; biceps; calves; forearms; glutes; hamstrings; lower back; middle back; shoulders; traps,120,free-exercise-db
+sandbag-shouldering,Sandbag Shouldering,strongman,intermediate,pull,compound,sandbag,glutes; hamstrings,quadriceps; lower back; traps; biceps; abdominals,90,original
+sled-drag-harness,Sled Drag - Harness,strongman,beginner,push,compound,other,quadriceps,calves; glutes; hamstrings,120,free-exercise-db
+sled-push,Sled Push,strongman,beginner,push,compound,other,quadriceps,calves; chest; glutes; hamstrings; triceps,120,free-exercise-db
+tire-flip,Tire Flip,strongman,intermediate,pull,compound,other,quadriceps,calves; chest; forearms; glutes; hamstrings; lower back; shoulders; traps; triceps,120,free-exercise-db
+yoke-walk,Yoke Walk,strongman,intermediate,,compound,other,quadriceps,abdominals; abductors; adductors; calves; glutes; hamstrings; lower back,120,free-exercise-db
